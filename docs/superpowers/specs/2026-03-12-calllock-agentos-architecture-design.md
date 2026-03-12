@@ -1,5 +1,79 @@
 # CallLock AgentOS Architecture Spec
 
+## 0. Current State & Evolution Path
+
+CallLock is not greenfield. A production system is already handling real calls. This section maps the existing production components to their target-state equivalents in this spec.
+
+### Production System (as of March 2026)
+
+| Component | Stack | Status |
+|-----------|-------|--------|
+| Voice agent | Retell AI V10 (10-state FSM, LLM-driven transitions, GPT-4o) | **Live** |
+| Backend | Node.js / TypeScript / Express (V2), deployed on Render | **Live** |
+| Database | Supabase (PostgreSQL + realtime) | **Live** |
+| Dashboard | Next.js 16 / React 19, deployed on Vercel | **Live** |
+| Booking | Cal.com integration | **Live** |
+| Alerts | Twilio SMS (emergency + sales lead) | **Live** |
+| Industry logic | HVAC-only (117 smart tags, 3 emergency tiers, service taxonomy) | **Hardcoded in V2** |
+| Multi-tenant (voice) | Retell agent metadata routing (agent ID / phone number) | **Partial** |
+| Multi-tenant (app) | Not yet | **Not started** |
+| Tests | 31+ Vitest integration tests (V2), unit tests (dashboard) | **Partial** |
+
+### Evolution Map
+
+```
+  CURRENT PRODUCTION              TARGET SPEC LAYER                    ACTION
+  ──────────────────              ─────────────────                    ──────
+  Retell AI V10 (voice)           Voice Runtime (new layer)            KEEP — voice stays on Retell AI
+  Express V2 (backend)            Shared Product Core                  EVOLVE — becomes trade-neutral core
+  Supabase                        Application Database                 KEEP — already PostgreSQL
+  Next.js dashboard               Shared Product Core (web app)        KEEP — evolves with core
+  Cal.com                         Product Core integration             KEEP — booking stays
+  Twilio                          Product Core integration             KEEP — alerts stay
+  Pino logging                    Tracing / Observability (LangSmith)  ADD ALONGSIDE — Pino continues locally
+  HVAC smart tags (hardcoded)     Industry Pack (HVAC)                 EXTRACT — from V2 into pack format
+  Emergency tiers (hardcoded)     Compliance Graph                     EXTRACT — from V2 into graph
+  Retell webhook auth             Policy / Compliance Gate             CARRY FORWARD — existing security patterns
+  (nothing)                       Agent Harness Layer                  BUILD NEW
+  (nothing)                       Delegation & Jobs (Inngest)          BUILD NEW
+  (nothing)                       Knowledge Substrate (graphs)         BUILD NEW
+  (nothing)                       Worker Specs + Skill Packs           BUILD NEW
+  (nothing)                       Improvement Lab                      BUILD NEW
+  (nothing)                       Founder Cockpit                      BUILD NEW
+```
+
+### Architectural Boundary
+
+The Agent Harness Layer orchestrates **everything except real-time voice conversation**. Retell AI remains the voice runtime. The harness handles: internal workers, async/scheduled jobs, eval/improvement loops, tenant operations, and non-voice product workflows.
+
+```
+  ┌─────────────────────────────────────────────────────┐
+  │              AGENT HARNESS (LangGraph)               │
+  │  Workers, Jobs, Policy, Eval, Improvement Lab        │
+  └──────────────────────┬──────────────────────────────┘
+                         │ orchestrates
+  ┌──────────────────────┼──────────────────────────────┐
+  │                      │                              │
+  │  PRODUCT CORE        │    VOICE RUNTIME             │
+  │  (Express V2 +       │    (Retell AI V10)           │
+  │   Next.js +          │                              │
+  │   Supabase +         │    Handles: real-time calls, │
+  │   Cal.com + Twilio)  │    FSM transitions, GPT-4o   │
+  │                      │                              │
+  └──────────────────────┴──────────────────────────────┘
+```
+
+### What This Spec Does NOT Replace
+
+- Retell AI — stays as the voice runtime
+- Supabase — stays as the application database
+- Cal.com — stays as the booking provider
+- Twilio — stays as the alert provider
+- Express V2 — evolves into part of the product core, not replaced
+- Existing Vitest suite — carries forward, augmented by LangSmith evals
+
+---
+
 ## 1. Overview & Core Principle
 
 CallLock AgentOS is a multi-tenant, multi-industry operating platform for agent-powered home-services software.
@@ -33,6 +107,9 @@ The system is designed around a shared product core, harness-enforced governance
 ```
 Founder Cockpit
 ├── Safe Delivery Layer
+│   ├── Dashboard deploys (Vercel)
+│   ├── Backend deploys (Render)
+│   └── Voice agent deploys (Retell AI config)
 ├── Agent Harness Layer
 │   ├── Orchestration & State (LangGraph)
 │   ├── Delegation & Jobs (LangGraph subgraphs + Inngest)
@@ -45,6 +122,8 @@ Founder Cockpit
 │   ├── Verification & Validation
 │   ├── Tracing / Observability (LangSmith)
 │   └── Model Gateway (LiteLLM → Claude Sonnet 4.6 + Ollama)
+├── Voice Runtime (Retell AI)
+│   └── 10-state FSM, LLM-driven transitions, GPT-4o
 ├── Durable Workspace / Artifact Layer
 ├── Knowledge Substrate
 │   ├── Company Graph
@@ -54,7 +133,7 @@ Founder Cockpit
 │   ├── Customer Insight Graph
 │   ├── Worker Spec Library
 │   └── Skill Packs
-├── Shared Product Core
+├── Shared Product Core (Express V2 + Next.js + Supabase + Cal.com + Twilio)
 ├── Industry Pack Layer (HVAC, Plumbing, Rooter, ...)
 ├── Tenant Config / Isolation
 ├── Internal Workforce
@@ -91,16 +170,41 @@ The command layer. Not a worker agent — a control surface for the founder/oper
 
 Keeps coding agents and automated changes from breaking production. This layer governs changes to product code, configs, prompts, and other production-affecting artifacts.
 
-**Components:**
+**Three deployment surfaces:**
+
+| Surface | Platform | Rollback | Preview/Staging |
+|---------|----------|----------|-----------------|
+| Dashboard (Next.js) | Vercel | Instant rollback | Vercel preview deployments |
+| Backend (Express V2) | Render | Manual deploy to previous commit | Render preview environments or branch deploys |
+| Voice agent (Retell AI) | Retell API | Revert to previous agent config version | Blue/green agent configs or test phone numbers |
+
+**Components (dashboard — Vercel):**
 
 - Vercel preview deployments (non-production branches and PRs)
 - Vercel Flags (feature flags)
 - Vercel Deployment Protection (project-level)
 - Instant rollback (production deployments)
 - Promotion-based release flow (preview → production via approval gates)
+
+**Components (backend — Render):**
+
+- Branch-based preview environments
+- Manual rollback to previous deploy
+- Health check monitoring
+- Zero-downtime deploys
+
+**Components (voice agent — Retell AI):**
+
+- Agent config versioning (V4 → V6 → V10 history exists)
+- Test phone number for pre-production validation
+- Fallback to previous config version on failure
+- One PR per issue, no batch deploys (proven practice from V10 optimization log)
+
+**Shared:**
+
 - Branch-safe test environments / branchable data where supported (aspirational; specific tooling TBD, e.g., Neon branching for Postgres)
 
-**Design principle:** No automated change reaches production without passing through preview, protection, and promotion gates. This layer matters more than orchestration sophistication — a broken deploy costs more than a slow workflow.
+**Design principle:** No automated change reaches production without passing through preview, protection, and promotion gates. This applies to all three deployment surfaces — dashboard, backend, and voice agent. This layer matters more than orchestration sophistication — a broken deploy costs more than a slow workflow.
 
 ---
 
@@ -147,6 +251,7 @@ The policy gate checks every agent action before execution:
 - **What it checks:** forbidden claims, pricing language, required disclosures, tenant-specific restrictions, tool permissions, publish/send authorization
 - **When it fires:** pre-execution, before the harness grants tool access or allows output
 - **On violation:** block the action and log (default behavior), or escalate to Cockpit for approval if the tenant/global config allows escalation for that action type
+- **Default behavior when no rule matches:** **deny and log.** Actions with no matching allow/deny rule are blocked. Workers must have explicit permission. This follows the same "structural over prompt" principle proven in the V10 voice agent.
 - **Inputs:** compliance graph, industry pack rules, tenant config, current feature flags
 
 ---
@@ -218,6 +323,10 @@ Reusable domain method libraries organized by function (pm/, seo/, content/, res
 - MOCs (Maps of Content) / index files for navigation
 - Progressive disclosure (summary → detail)
 - Ownership + freshness metadata on every node
+
+**Trust levels:** Not all graph nodes are equal. Hand-curated graphs (company, product, compliance) are trusted input. Graphs derived from external or user-generated content (customer insight graph, built from call transcripts) must be treated as untrusted and sanitized before influencing agent behavior. This prevents data poisoning through adversarial caller content.
+
+**Caching:** At scale, reading and parsing markdown files per worker run will be slow. Graph nodes should be cached (Redis) with invalidation on file change. The context management priority ordering (Section 5) describes *what* to include; caching determines *how fast* it's available.
 
 **Design principle:** Knowledge graphs are the system's curated shared knowledge substrate. They are read by workers, the policy gate, industry packs, and the eval layer. They are not the orchestrator — they inform it.
 
@@ -316,16 +425,18 @@ references/
 
 ## 11. Shared Product Core
 
-The industry-agnostic product that every trade and every client uses.
+The industry-agnostic product that every trade and every client uses. Currently implemented as Express V2 (backend) + Next.js (dashboard) + Supabase (database).
 
 **Contains:**
 
-- Voice runtime
-- Web application
+- Voice runtime (Retell AI — see Section 0)
+- Web application (Next.js dashboard)
+- Backend API (Express V2)
 - Auth & permissions
 - Billing
-- Notifications
-- Logging
+- Notifications (Twilio SMS)
+- Logging (Pino)
+- Booking (Cal.com)
 - Reporting shell
 - APIs
 - Shared workflow framework
@@ -428,6 +539,7 @@ Scheduled jobs execute against current state at run time, not the state that exi
 - Concurrency limits
 - Budget limits
 - Retry / retry policy
+- **Idempotency keys** — required for all jobs that trigger external side effects (bookings via Cal.com, SMS alerts via Twilio, email sends, publish actions). Inngest supports idempotency keys natively. Without idempotency, a retried or duplicated job could create duplicate bookings or duplicate emergency alerts.
 - Approval gates for user-facing or risky work
 
 ---
@@ -445,6 +557,7 @@ Scheduled jobs execute against current state at run time, not the state that exi
 | `job_type` | Classification |
 | `status` | Lifecycle |
 | `supersedes_job_id` | Lineage (links replaced jobs) |
+| `source_call_id` | Correlation — links to originating Retell voice call when applicable (enables tracing from call → job → artifact) |
 | `created_at` | Temporal |
 | `updated_at` | Temporal |
 
@@ -534,6 +647,8 @@ Offline or pre-production improvement harness for systematic product improvement
 - Threshold rules
 - Industry-pack logic
 
+**Experiment isolation:** Only one experiment may mutate a given surface at a time. If two experiments target the same prompt file or workflow node, they must run sequentially, not concurrently. This prevents conflicting mutations from producing meaningless results. The Lab should maintain a simple lock registry of surfaces currently under experiment.
+
 **Design principle:** The Improvement Lab is a product improvement system, not part of the main app architecture. The Improvement Lab may propose changes, but it cannot directly promote them to production. Changes that survive experiments are promoted through the Safe Delivery Layer like any other change.
 
 ---
@@ -575,12 +690,15 @@ Do not make these foundational right now:
 
 | Category | Components |
 |----------|-----------|
-| **Core platform** | LangGraph, LangSmith, Claude Sonnet 4.6 (or current best Anthropic model), Ollama, LiteLLM, Redis, Qdrant/semantic cache, E2B, Stagehand |
-| **Application database** | PostgreSQL or equivalent relational database (required by product core: auth, billing, notifications, tenant configs) |
-| **Safe delivery** | Vercel previews, Vercel Flags, Deployment Protection, rollback, promotion-based release flow |
-| **Delegation/jobs** | LangGraph subgraphs (sync), Inngest (async/scheduled, handles, cancel/replace) |
+| **Voice runtime** | Retell AI (10-state FSM, LLM-driven transitions, GPT-4o) |
+| **Agent harness** | LangGraph, LangSmith, Claude Sonnet 4.6 (or current best Anthropic model), Ollama, LiteLLM, Redis, Qdrant/semantic cache, E2B, Stagehand |
+| **Application database** | Supabase (PostgreSQL + realtime) |
+| **Product core** | Express V2 (Node.js/TypeScript), Next.js 16 (React 19) |
+| **Integrations** | Cal.com (booking), Twilio (SMS alerts), Retell AI webhooks |
+| **Safe delivery** | Vercel (dashboard), Render (backend), Retell API (voice agent config) |
+| **Delegation/jobs** | LangGraph subgraphs (sync), Inngest (async/scheduled, handles, cancel/replace, idempotency) |
 | **Knowledge** | Markdown/YAML graphs, MOCs, wiki links, frontmatter metadata, worker specs, skill packs |
-| **Quality** | LangSmith evals (core/industry/tenant), autoresearch-style Improvement Lab |
+| **Quality** | LangSmith evals (core/industry/tenant), Vitest (existing test suite), autoresearch-style Improvement Lab |
 
 ---
 
