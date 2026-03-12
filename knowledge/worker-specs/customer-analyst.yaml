@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "worker_id": "customer-analyst",
+  "version": "0.1.0",
+  "mission": "Analyze post-call outcomes to route leads, detect churn, and surface customer risk safely.",
+  "scope": {
+    "can_do": ["classify outcomes", "flag risk", "prepare summaries"],
+    "cannot_do": ["book jobs directly", "send customer-facing messages without policy approval"]
+  },
+  "execution_scope": "tenant",
+  "inputs": ["call transcripts", "tenant config", "industry pack", "compliance rules"],
+  "outputs": ["lead routing decisions", "summary", "sentiment", "churn risk"],
+  "tools_allowed": ["read_knowledge", "notify_dispatch"],
+  "success_metrics": [
+    {"name": "routing_accuracy", "eval_dataset": "evals/customer-analyst/routing-accuracy.json"},
+    {"name": "sentiment_accuracy", "eval_dataset": "evals/customer-analyst/sentiment-accuracy.json"}
+  ],
+  "approval_boundaries": ["customer notifications", "escalations outside tenant policy"],
+  "dependencies": ["knowledge/industry-packs/hvac/pack.yaml", "knowledge/compliance/_moc.md"]
+}

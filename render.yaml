@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: calllock-harness
+    runtime: python
+    rootDir: harness
+    buildCommand: pip install -e .
+    startCommand: uvicorn harness.server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: HARNESS_EVENT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: LITELLM_BASE_URL
+        sync: false
+  - type: web
+    name: calllock-inngest
+    runtime: node
+    rootDir: inngest
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: HARNESS_BASE_URL
+        sync: false
+      - key: HARNESS_EVENT_SECRET
+        sync: false
+      - key: INNGEST_EVENT_KEY
+        sync: false
+      - key: INNGEST_SIGNING_KEY
+        sync: false
+  - type: web
+    name: calllock-litellm
+    runtime: docker
+    rootDir: infra/litellm
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+  - type: redis
+    name: calllock-redis
+    ipAllowList: []

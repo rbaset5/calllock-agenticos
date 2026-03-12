@@ -1,0 +1,9 @@
+{
+  "safety_emergency_regex": "gas\\s*leak|smell\\s*gas|carbon\\s*monoxide|co\\s*detector|smoke\\s*from|electrical\\s*fire|sparking|flooding",
+  "reply_instructions": "Reply: 1=Called 2=VM 3=Note 4=Booked 5=Lost",
+  "emergency_callback_rule": "Promised callback within {callbackMinutes} min",
+  "source_files": [
+    "extraction/post-call.ts",
+    "services/alerts.ts"
+  ]
+}

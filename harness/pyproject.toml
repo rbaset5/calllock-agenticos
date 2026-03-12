@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "calllock-harness"
+version = "0.1.0"
+description = "CallLock AgentOS harness"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "httpx>=0.28",
+  "langgraph>=0.2",
+  "langsmith>=0.1",
+  "litellm>=1.60",
+  "pydantic>=2.10",
+  "pytest>=8.4",
+  "pyyaml>=6.0",
+  "redis>=5.2",
+  "uvicorn>=0.34",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests", "../tests"]

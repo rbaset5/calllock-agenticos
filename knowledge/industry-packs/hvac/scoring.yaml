@@ -1,0 +1,16 @@
+{
+  "weights": {
+    "customerName": 15,
+    "customerPhone": 15,
+    "serviceAddress": 15,
+    "problemDescription": 15,
+    "urgency": 10,
+    "bookingOrCallback": 20,
+    "tags": 10
+  },
+  "warnings": [
+    "zero-tags",
+    "callback-gap"
+  ],
+  "scale": "0-100"
+}
