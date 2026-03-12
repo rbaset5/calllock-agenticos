@@ -470,7 +470,13 @@ provenance_chain:
   extraction_run_id: "run_20260312_ghi789"
 ```
 
-**Caching:** At scale, reading and parsing markdown files per worker run will be slow. Graph nodes should be cached (Redis) with invalidation on file change. Cache keys must be namespace-scoped by tenant where applicable, consistent with the tenant isolation principle (Section 13) — a cache key collision between tenants could serve wrong industry/compliance data. The invalidation mechanism must ensure compliance and policy graph nodes are never stale beyond a defined threshold (invalidated on every deploy, not TTL-based). The context management priority ordering (Section 5) describes *what* to include; caching determines *how fast* it's available. Performance targets for graph reads and context assembly are TBD pending baseline measurements from Phase 1 implementation.
+**Retrieval & Caching:** At scale, reading and parsing markdown files per worker run will be slow. Two complementary mechanisms address this:
+
+1. **Retrieval engine (evaluate in Phase 1):** QMD (github.com/tobi/qmd) or equivalent local hybrid search engine. Indexes markdown/YAML knowledge graph files into SQLite with BM25 full-text + optional vector semantic search + LLM re-ranking. Runs locally alongside the harness (Node.js/Bun, no cloud dependency). Collections map to graph categories (company, product, compliance, industry packs). MCP server mode integrates directly with the harness tool registry. Evaluate during Phase 1 Knowledge Substrate buildout — this determines how Section 5d item 5 ("knowledge graph nodes pulled by relevance") actually works at runtime.
+
+2. **Cache layer (Redis):** Hot-path caching for frequently accessed graph nodes. Cache keys must be namespace-scoped by tenant where applicable, consistent with the tenant isolation principle (Section 13) — a cache key collision between tenants could serve wrong industry/compliance data. The invalidation mechanism must ensure compliance and policy graph nodes are never stale beyond a defined threshold (invalidated on every deploy, not TTL-based).
+
+The retrieval engine handles *finding the right nodes*; the cache handles *serving them fast on repeat access*. The context management priority ordering (Section 5) describes *what* to include; retrieval + caching determines *how* it's available. Performance targets for graph reads and context assembly are TBD pending baseline measurements from Phase 1 implementation.
 
 **Design principle:** Knowledge graphs are the system's curated shared knowledge substrate. They are read by workers, the policy gate, industry packs, and the eval layer. They are not the orchestrator — they inform it.
 
@@ -946,7 +952,7 @@ Do not make these foundational right now:
 **Non-blocking for Phase 1** (resolve when needed):
 
 1. **Persistent memory provider** — Mem0 or alternative? Deferred until tenant memory scope is needed.
-2. **Semantic cache threshold** — When does repetition justify Qdrant over Redis? Needs usage data.
+2. **Semantic cache threshold** — When does repetition justify Qdrant over Redis? Needs usage data. When this is resolved, also evaluate multimodal embedding models (e.g., Gemini Embedding 2) for unified text + audio retrieval — call audio carries urgency/sentiment signal that transcripts drop. Not needed until vector search is justified.
 3. **Skill pack granularity** — How large should a single skill pack be? TBD as first packs are authored.
 5. **Improvement Lab cadence** — How often do experiment loops run? What's the fixed budget? Lab is Phase 3+.
 
@@ -1000,6 +1006,7 @@ Goal: Establish the knowledge substrate, industry pack format, tenant isolation,
 | Deliverable | Section | Acceptance criteria |
 |-------------|---------|-------------------|
 | Knowledge graph directory structure | 8 | Markdown/YAML graphs for company, product, HVAC industry, compliance. MOCs and wiki links working. |
+| Knowledge retrieval engine | 8 | Evaluate QMD or equivalent for hybrid search over knowledge graphs. Decision: adopt, adapt, or build custom. Indexed search returning relevant graph nodes for a test query within latency budget. |
 | Worker specs (5 initial) | 9, 10 | All 5 workers defined in Standard Worker Schema. CI validation passing. |
 | HVAC industry pack | 12 | 117 smart tags, 3 emergency tiers, service taxonomy extracted from V2 into pack format. |
 | Tenant config schema | 13 | Schema defined in Supabase. RLS policies active on all tenant-scoped tables. |

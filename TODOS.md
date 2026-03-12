@@ -14,6 +14,7 @@ Items identified during architecture reviews (2026-03-12).
 ### Define compliance graph conflict resolution rule
 **What:** Define what happens when the compliance graph returns contradictory rules (e.g., one rule requires a disclosure, another forbids it for the same context). Resolution principle (most-restrictive-wins) is now in Section 5; this TODO covers the full rule set.
 **Why:** Without a conflict resolution strategy, the policy gate could silently apply the wrong rule or block everything. Promoted from P2: the policy gate depends on this to function correctly.
+**Implementation consideration:** Cross-graph queries ("which compliance rules contradict each other?") require scanning all compliance graph nodes. With markdown/YAML files this is a full-text scan — consider whether the compliance graph specifically should be database-backed (Supabase table with typed relationships) rather than file-based, to enable indexed conflict detection. The rest of the Knowledge Substrate can remain file-based; compliance rules are the highest-stakes query surface.
 **Effort:** S
 **Depends on:** Policy Gate detail (Section 5) being finalized.
 **Source:** CEO review, Section 2 (Error & Rescue Map). Promoted by eng review.
