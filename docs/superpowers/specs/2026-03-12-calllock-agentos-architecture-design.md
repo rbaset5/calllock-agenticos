@@ -80,6 +80,7 @@ The command layer. Not a worker agent — a control surface for the founder/oper
 - Budget and margin oversight
 - Experiment oversight (Improvement Lab visibility)
 - Release oversight (Safe Delivery visibility)
+- Eval results visibility (promotion decisions require eval data)
 - Kill switches and pause controls
 
 **Design principle:** The Cockpit observes and approves. It does not perform routine delivery work. Workers propose; the Cockpit decides. This is the only layer with cross-tenant administrative override.
@@ -97,7 +98,7 @@ Keeps coding agents and automated changes from breaking production. This layer g
 - Vercel Deployment Protection (project-level)
 - Instant rollback (production deployments)
 - Promotion-based release flow (preview → production via approval gates)
-- Branch-safe test environments / branchable data where supported
+- Branch-safe test environments / branchable data where supported (aspirational; specific tooling TBD, e.g., Neon branching for Postgres)
 
 **Design principle:** No automated change reaches production without passing through preview, protection, and promotion gates. This layer matters more than orchestration sophistication — a broken deploy costs more than a slow workflow.
 
@@ -116,14 +117,37 @@ The runtime operating system for all agent work. Consolidates orchestration, del
 | Tool Registry / MCP | Harness-managed tool access |
 | Sandboxed Execution | E2B |
 | Browser Automation | Stagehand |
-| Context Management | Compaction, windowing, progressive disclosure |
+| Context Management | Context assembly, compaction, windowing, progressive disclosure (see below) |
 | Memory & Retrieval | Tenant-scoped retrieval, cache, and optional persistent memory services |
-| Policy / Compliance Gate | Centralized; reads from compliance graph + industry pack + tenant config |
-| Verification & Validation | Pre-execution checks, post-execution quality gates |
+| Policy / Compliance Gate | Centralized pre-execution gate; reads from compliance graph + industry pack + tenant config. On violation: block and log (default), or escalate to Cockpit for approval if configured. See below. |
+| Verification & Validation | Post-execution quality checks — output correctness, safety, and compliance. Distinct from the Policy Gate: policy fires before execution, V&V fires after. |
 | Tracing / Observability | LangSmith |
-| Model Gateway | LiteLLM → Claude Sonnet 4.6 (primary) + Ollama (cheap/local triage) |
+| Model Gateway | LiteLLM → Claude Sonnet 4.6 (primary, or current best Anthropic model at implementation time) + Ollama (cheap/local triage) |
 
 **Design principle:** The harness is the runtime enforcement point for what agents can do. Worker specs declare intent; the harness grants or denies at runtime based on tenant config, global policy, environment state, and current feature flags.
+
+**Context Management detail:**
+
+For each worker run, the harness assembles context from multiple sources. Priority order when context exceeds the model window:
+
+1. Worker spec (mission, scope, tools) — always included
+2. Active task/job context — always included
+3. Tenant config — always included for tenant-scoped runs
+4. Relevant industry pack sections — included, compacted if needed
+5. Knowledge graph nodes (pulled by relevance) — progressive disclosure, summarized first
+6. Memory & retrieval results — included up to budget
+7. Historical context — compacted or dropped first
+
+Compaction reduces lower-priority sources before higher-priority ones. The harness manages the context budget; workers do not assemble their own context.
+
+**Policy / Compliance Gate detail:**
+
+The policy gate checks every agent action before execution:
+
+- **What it checks:** forbidden claims, pricing language, required disclosures, tenant-specific restrictions, tool permissions, publish/send authorization
+- **When it fires:** pre-execution, before the harness grants tool access or allows output
+- **On violation:** block the action and log (default behavior), or escalate to Cockpit for approval if the tenant/global config allows escalation for that action type
+- **Inputs:** compliance graph, industry pack rules, tenant config, current feature flags
 
 ---
 
@@ -185,7 +209,7 @@ Canonical internal worker definitions. Each file uses the Standard Worker Schema
 
 **Skill Packs** (`knowledge/skill-packs/`)
 
-Reusable domain method libraries organized by function (pm/, seo/, content/, research/, compliance/). These are *what workers invoke*, not who workers are. Skill packs are reusable across workers; they are not owned by a single role. Informed by reference material (e.g., `phuryn/pm-skills`), owned by this repo.
+Reusable domain method libraries organized by function (pm/, seo/, content/, research/, compliance/). These are *what workers invoke*, not who workers are. Skill packs are reusable across workers; they are not owned by a single role. Informed by reference material (e.g., `phuryn/pm-skills`), owned by this repo. Note: `skill-packs/compliance/` contains *methods for applying compliance rules* (e.g., checking workflows, audit procedures); the Compliance Graph in the Knowledge Substrate contains the *rules themselves* (regulations, forbidden claims, disclosures). The skill pack queries the graph; it does not duplicate it.
 
 **Implementation:**
 
@@ -209,16 +233,20 @@ Every internal worker is defined by a YAML spec in `knowledge/worker-specs/`.
 # knowledge/worker-specs/{worker-name}.yaml
 
 # --- Required ---
-mission: ""          # What this worker exists to do
-scope: ""            # Boundaries of responsibility
-inputs: []           # What it receives to do its work
-outputs: []          # What it produces
-tools_allowed: []    # Tools this worker is designed to use
-success_metrics: []  # How to measure if this worker is effective
+mission: ""            # What this worker exists to do
+scope: ""              # Boundaries of responsibility
+execution_scope: ""    # "internal" or "tenant-bound" — where this worker operates
+inputs: []             # What it receives to do its work
+outputs: []            # What it produces
+tools_allowed: []      # Tools this worker is designed to use
+success_metrics: []    # How to measure if this worker is effective
+approval_boundaries: [] # Actions requiring human/cockpit approval
+                        # Valid: list of actions, or "inherits_global_policy"
 
 # --- Recommended ---
-approval_boundaries: []  # Actions requiring human/cockpit approval
-                         # Valid: list of actions, "inherits_global_policy", or "not_yet_defined"
+job_creation: ""       # Whether this worker can spawn async/scheduled jobs
+                       # Valid: "sync_only", "async_allowed", "scheduled_allowed", or "all"
+                       # Default assumption if omitted: "sync_only"
 
 # --- Optional ---
 escalation_rules: ""     # When/how to escalate
@@ -231,8 +259,8 @@ linked_skill_packs: []   # Skill packs this worker can invoke
 
 | Tier | Fields | Rule |
 |------|--------|------|
-| **Required** | mission, scope, inputs, outputs, tools_allowed, success_metrics | Absence makes the worker unsafe, ambiguous, or unusable by the eval layer |
-| **Recommended** | approval_boundaries | Should exist; `inherits_global_policy` or `not_yet_defined` are valid |
+| **Required** | mission, scope, execution_scope, inputs, outputs, tools_allowed, success_metrics, approval_boundaries | Absence makes the worker unsafe, ambiguous, or unusable by the eval/governance layer |
+| **Recommended** | job_creation | Should exist for workers that dispatch work; `sync_only` assumed if omitted |
 | **Optional** | escalation_rules, linked_skill_packs | Include only when they reflect real behavior |
 
 Required fields must contain either a real value or an explicit debt marker such as `not_yet_defined`; silent omission is not allowed.
@@ -366,6 +394,8 @@ Internal company workers used as specialist workflows/subgraphs, not wandering p
 
 **Pattern:** Supervisor + specialists (LangGraph multi-agent), not committee consensus.
 
+**Supervisor:** The supervisor is a **harness-level routing construct**, not a sixth worker with a persona. It is implemented as the top-level LangGraph graph that receives tasks, determines which specialist worker(s) to invoke, and routes results. It does not have a worker spec, a mission statement, or a personality — it is the orchestration logic of the harness applied to the workforce. Its behavior is governed by the harness policy gate and traced via LangSmith like any other harness operation.
+
 **Rules:**
 
 - Each worker is defined by a Standard Worker Schema spec in `knowledge/worker-specs/`
@@ -431,14 +461,14 @@ Scheduled jobs execute against current state at run time, not the state that exi
 - Job ownership is the default permission boundary
 - Replace is a first-class operation, not manual cancel + create
 - `supersedes_job_id` maintains audit trail across replacements
-- Other workers can only inspect or act on jobs if explicitly granted that authority by the harness
+- Other workers can only inspect jobs if their worker spec includes `job_read` in `tools_allowed` and the harness grants it at runtime (this is what "harness-granted readers" means in the permission model above)
 - Administrative override actions must be logged with actor identity and reason
 
 ---
 
 ## 17. Tenant Operations Layer
 
-Sits between internal workforce and client instances.
+Sits between internal workforce and client instances. Tenant Operations is an **operational system managed by the Agent Harness**, not a worker agent. It is a set of harness-orchestrated workflows and automations, not an autonomous agent with a persona.
 
 **Responsibilities:**
 
@@ -451,7 +481,9 @@ Sits between internal workforce and client instances.
 - Routing escalations
 - Safe deployment/release controls per tenant
 
-**Design principle:** It manages tenant lifecycle, provisioning, and operational health without becoming part of tenant-facing product behavior.
+**Governance:** Tenant Ops workflows execute under the harness with the same tool governance, policy gate, and tracing as any worker. Administrative actions (e.g., reassigning an industry pack, modifying tenant config) require Cockpit approval and are logged with actor identity and reason.
+
+**Design principle:** It manages tenant lifecycle, provisioning, and operational health without becoming part of tenant-facing product behavior. It is infrastructure, not an agent role.
 
 ---
 
@@ -489,7 +521,7 @@ Offline or pre-production improvement harness for systematic product improvement
 1. Propose a small change
 2. Mutate one bounded surface
 3. Run a fixed-budget experiment
-4. Score against a baseline metric
+4. Score against a baseline metric **using the same LangSmith evaluators from the Evaluation Layer** (this ensures experiments and promotions are measured by the same standard)
 5. Keep or discard the change
 6. Log the result
 
@@ -518,6 +550,7 @@ Offline or pre-production improvement harness for systematic product improvement
 | Deployment | All changes through Safe Delivery promotion gates |
 | Tenant isolation | Scoped memory, traces, evals, configs — no cross-tenant leakage |
 | Artifact governance | Persisted outputs inherit tenant/internal access controls and retention rules |
+| Worker inter-visibility | Workers cannot read other workers' job status unless `job_read` is in their `tools_allowed` and granted by the harness |
 
 ---
 
@@ -542,7 +575,8 @@ Do not make these foundational right now:
 
 | Category | Components |
 |----------|-----------|
-| **Core platform** | LangGraph, LangSmith, Claude Sonnet 4.6, Ollama, LiteLLM, Redis, Qdrant/semantic cache, E2B, Stagehand |
+| **Core platform** | LangGraph, LangSmith, Claude Sonnet 4.6 (or current best Anthropic model), Ollama, LiteLLM, Redis, Qdrant/semantic cache, E2B, Stagehand |
+| **Application database** | PostgreSQL or equivalent relational database (required by product core: auth, billing, notifications, tenant configs) |
 | **Safe delivery** | Vercel previews, Vercel Flags, Deployment Protection, rollback, promotion-based release flow |
 | **Delegation/jobs** | LangGraph subgraphs (sync), Inngest (async/scheduled, handles, cancel/replace) |
 | **Knowledge** | Markdown/YAML graphs, MOCs, wiki links, frontmatter metadata, worker specs, skill packs |
