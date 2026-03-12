@@ -162,6 +162,8 @@ The command layer. Not a worker agent — a control surface for the founder/oper
 - Eval results visibility (promotion decisions require eval data)
 - Kill switches and pause controls
 
+**Alerting:** The harness emits alerts to the Cockpit when: policy gate block rate exceeds threshold, worker success metrics degrade, job failure rate spikes, or external service errors exceed threshold. Without proactive alerting, kill switches and pause controls are reactive-only.
+
 **Design principle:** The Cockpit observes and approves. It does not perform routine delivery work. Workers propose; the Cockpit decides. This is the only layer with cross-tenant administrative override.
 
 ---
@@ -203,6 +205,8 @@ Keeps coding agents and automated changes from breaking production. This layer g
 **Shared:**
 
 - Branch-safe test environments / branchable data where supported (aspirational; specific tooling TBD, e.g., Neon branching for Postgres)
+- Feature flags should extend to harness capabilities (enabling/disabling workers, knowledge graphs, Improvement Lab experiments), not just dashboard UI
+- Knowledge graph, worker spec, and skill pack changes are deployed via git and rolled back via git revert — these are version-controlled markdown/YAML files with the same rollback affordance as code
 
 **Design principle:** No automated change reaches production without passing through preview, protection, and promotion gates. This applies to all three deployment surfaces — dashboard, backend, and voice agent. This layer matters more than orchestration sophistication — a broken deploy costs more than a slow workflow.
 
@@ -211,6 +215,8 @@ Keeps coding agents and automated changes from breaking production. This layer g
 ## 5. Agent Harness Layer
 
 The runtime operating system for all agent work. Consolidates orchestration, delegation, policy, tooling, and observability into one named layer.
+
+### 5a. Capabilities & Infrastructure
 
 **Contains:**
 
@@ -221,14 +227,102 @@ The runtime operating system for all agent work. Consolidates orchestration, del
 | Tool Registry / MCP | Harness-managed tool access |
 | Sandboxed Execution | E2B |
 | Browser Automation | Stagehand |
-| Context Management | Context assembly, compaction, windowing, progressive disclosure (see below) |
+| Context Management | Context assembly, compaction, windowing, progressive disclosure (see 5d) |
 | Memory & Retrieval | Tenant-scoped retrieval, cache, and optional persistent memory services |
-| Policy / Compliance Gate | Centralized pre-execution gate; reads from compliance graph + industry pack + tenant config. On violation: block and log (default), or escalate to Cockpit for approval if configured. See below. |
-| Verification & Validation | Post-execution quality checks — output correctness, safety, and compliance. Distinct from the Policy Gate: policy fires before execution, V&V fires after. |
-| Tracing / Observability | LangSmith |
-| Model Gateway | LiteLLM → Claude Sonnet 4.6 (primary, or current best Anthropic model at implementation time) + Ollama (cheap/local triage) |
+| Policy / Compliance Gate | Centralized pre-execution gate; reads from compliance graph + industry pack + tenant config. On violation: block and log (default), or escalate to Cockpit for approval if configured. See 5c. |
+| Verification & Validation | Post-execution quality checks — output correctness, safety, and compliance. Distinct from the Policy Gate: policy fires before execution, V&V fires after. See 5c. |
+| Tracing / Observability | LangSmith (PII redaction required — see 5e) |
+| Alerting | Harness emits alerts to Cockpit on policy gate block rate, worker metric degradation, job failure spikes, external service errors |
+| Model Gateway | LiteLLM → Claude Sonnet 4.6 (primary, or current best Anthropic model at implementation time) + Ollama (cheap/local triage). Per-tenant cost tracking required; budget enforcement at gateway level; Cockpit visibility into LLM spend per tenant. |
 
-**Design principle:** The harness is the runtime enforcement point for what agents can do. Worker specs declare intent; the harness grants or denies at runtime based on tenant config, global policy, environment state, and current feature flags.
+**Infrastructure resilience classification:**
+
+| Component | Classification | On failure |
+|-----------|---------------|------------|
+| LangGraph | **Blocking** | All harness work stops. No degraded mode — orchestration is foundational. |
+| Inngest | **Blocking for async/scheduled** | Sync work continues via LangGraph subgraphs. Async/scheduled jobs queue or fail. Stale job detection required. |
+| LiteLLM | **Blocking** | All LLM calls fail. No silent fallback — surface error immediately. If primary model (Claude) is unavailable, LiteLLM may route to Ollama for triage-level work only. |
+| LangSmith | **Degradable** | Tracing and evals stop, but worker execution continues. Log locally (Pino) as fallback. Alert on prolonged outage. |
+| E2B | **Degradable** | Sandboxed execution unavailable. Workers requiring sandbox are blocked; others continue. |
+| Stagehand | **Degradable** | Browser automation unavailable. Workers requiring it are blocked; others continue. |
+| Redis | **Degradable** | Cache miss falls back to file reads. Performance degrades but correctness maintained. |
+
+**Harness infrastructure deployment:**
+
+| Component | Hosting | Platform | Deploy mechanism |
+|-----------|---------|----------|-----------------|
+| LangGraph | Self-hosted (Node.js process) | Render (alongside or separate from Express V2) | Git push deploy |
+| Inngest | Managed SaaS | Inngest Cloud | API key + event routing config |
+| LiteLLM | Self-hosted proxy | Render (separate service) | Git push deploy |
+| LangSmith | Managed SaaS | LangChain Cloud | API key |
+| E2B | Managed SaaS | E2B Cloud | API key |
+| Stagehand | Self-hosted (within harness process) | Render (same as LangGraph) | Bundled with harness deploy |
+| Redis | Managed | Render Redis or Upstash | Platform-managed |
+
+### 5b. Triggering & Integration
+
+**Harness triggering:**
+
+The harness is triggered by events from the existing production system. The primary trigger path: Express V2 emits an Inngest event after processing a Retell webhook, and the harness subscribes to that event. This bridge must be backward-compatible — Express V2 emitting events that nothing yet listens to is safe; deploying harness listeners before Express V2 emits events means missed work.
+
+```
+  TRIGGER PATH (inbound):
+  Retell AI ──webhook──▶ Express V2 ──Inngest event──▶ Agent Harness
+  (call complete)         (process,                     (context assembly,
+                           persist to                    worker dispatch,
+                           Supabase)                     artifact creation)
+
+  RETURN PATH (outbound):
+  Agent Harness ──direct write──▶ Supabase        (persist results, artifacts, job status)
+                ──Inngest event──▶ Express V2      (notify product core of completed work)
+                ──API call──▶ Cal.com / Twilio      (external actions: bookings, alerts)
+                ──trace──▶ LangSmith                (observability, eval data)
+                ──git commit──▶ Artifact repo       (generated docs, reports, plans)
+```
+
+The return path uses direct Supabase writes for data persistence (harness has its own Supabase client) and Inngest events to notify Express V2 of completed work. External actions (bookings, alerts) go through the harness's tool registry and are subject to Policy Gate and V&V checks before execution.
+
+**Service authentication:**
+
+| Integration | Auth mechanism | Secret management |
+|-------------|---------------|-------------------|
+| Express V2 → Inngest | Inngest event key (signing key verifies source) | Render env var |
+| Harness → Inngest | Inngest event key | Render env var |
+| Harness → LangSmith | API key | Render env var |
+| Harness → E2B | API key | Render env var |
+| Harness → LiteLLM | Internal (same-process or localhost) | N/A or Render env var |
+| LiteLLM → Anthropic | API key | Render env var |
+| LiteLLM → Ollama | Local network (no auth) | N/A |
+| Harness → Supabase | Service role key (bypasses RLS for harness operations) | Render env var |
+| Harness → Redis | Connection string with auth token | Render env var |
+| Harness → Cal.com | API key | Render env var |
+| Harness → Twilio | Account SID + Auth Token | Render env var |
+
+All secrets are stored in platform env vars (Render environment groups), never in code. Secrets must be rotatable without code deploy (env var update + service restart).
+
+### 5c. Policy & Verification
+
+**Policy / Compliance Gate detail:**
+
+The policy gate checks every agent action before execution:
+
+- **What it checks:** forbidden claims, pricing language, required disclosures, tenant-specific restrictions, tool permissions, publish/send authorization
+- **When it fires:** pre-execution, before the harness grants tool access or allows output
+- **On violation:** block the action and log (default behavior), or escalate to Cockpit for approval if the tenant/global config allows escalation for that action type
+- **Default behavior when no rule matches:** **deny and log.** Actions with no matching allow/deny rule are blocked. Workers must have explicit permission. This follows the same "structural over prompt" principle proven in the V10 voice agent.
+- **Inputs:** compliance graph, industry pack rules, tenant config, current feature flags
+- **Conflict resolution principle:** When the compliance graph returns contradictory rules, **most-restrictive-wins.** If one rule requires a disclosure and another forbids it for the same context, the action is blocked and escalated to Cockpit. This prevents the gate from silently choosing the permissive interpretation. The full conflict resolution rule set is a P1 TODO.
+
+**Verification & Validation (V&V) detail:**
+
+V&V checks every worker output after execution but before persistence or external action:
+
+- **What it checks:** output format correctness, factual accuracy against knowledge graph, tone compliance with tenant config, safety (no forbidden claims, no PII leakage in outputs), booking/alert detail correctness
+- **When it fires:** post-execution, before artifact persistence or external action (Cal.com booking, Twilio SMS, publish)
+- **On failure:** block the output and log. Retry once with the original context + failure reason appended. If retry fails, escalate to Cockpit with the failed output attached for human review.
+- **Distinction from Policy Gate:** The Policy Gate fires *before* execution and checks whether the action is *permitted*. V&V fires *after* execution and checks whether the output is *correct and safe*. Both must pass for work to reach users or external systems.
+
+### 5d. Context & Memory
 
 **Context Management detail:**
 
@@ -244,15 +338,18 @@ For each worker run, the harness assembles context from multiple sources. Priori
 
 Compaction reduces lower-priority sources before higher-priority ones. The harness manages the context budget; workers do not assemble their own context.
 
-**Policy / Compliance Gate detail:**
+### 5e. Error Philosophy & Observability
 
-The policy gate checks every agent action before execution:
+**Error philosophy:**
 
-- **What it checks:** forbidden claims, pricing language, required disclosures, tenant-specific restrictions, tool permissions, publish/send authorization
-- **When it fires:** pre-execution, before the harness grants tool access or allows output
-- **On violation:** block the action and log (default behavior), or escalate to Cockpit for approval if the tenant/global config allows escalation for that action type
-- **Default behavior when no rule matches:** **deny and log.** Actions with no matching allow/deny rule are blocked. Workers must have explicit permission. This follows the same "structural over prompt" principle proven in the V10 voice agent.
-- **Inputs:** compliance graph, industry pack rules, tenant config, current feature flags
+1. **No silent failures** — every error must be logged with full context: worker, tenant, job, action attempted, and error detail
+2. **Fail loud, not fail silent** — if in doubt, block the action and surface to Cockpit rather than swallowing the error
+3. **LLM output validation** — all LLM responses go through V&V before being treated as actionable; malformed, empty, or refusal responses are retried once, then escalated
+4. **Partial state is the enemy** — multi-step operations (tenant onboarding, job replacement) must be atomic or have explicit rollback/cleanup
+
+**Trace data classification:**
+
+Traces contain customer PII (names, phone numbers, addresses, service requests from call transcripts). Before sending to LangSmith: (1) redact or hash direct identifiers (name, phone, address), (2) tag traces with data classification level, (3) apply tenant-scoped retention policies. Traces are governed by the same artifact governance rules (Section 20).
 
 ---
 
@@ -290,6 +387,16 @@ Where agents externalize work. Every agent operation that produces lasting outpu
 | Reporting docs | Human-readable summaries and dashboards (not the sole source of truth for raw artifacts) |
 | Planning documents | Specs, implementation plans, experiment designs |
 
+**Artifact governance:**
+
+| Rule | Detail |
+|------|--------|
+| **Access control** | Tenant-scoped artifacts are readable only by the originating tenant's workers, Tenant Ops, and Cockpit. Internal artifacts (company-wide reports, experiment results) are readable by internal workers and Cockpit. |
+| **Retention** | Tenant artifacts follow tenant-scoped retention policies (configurable per tenant). Internal artifacts follow a global retention policy. Ephemeral sandbox files are deleted on sandbox teardown. |
+| **Registry of record** | Git is the primary artifact registry for version-controlled outputs (code, configs, knowledge, plans). Supabase is the registry for structured data artifacts (reports, job results, eval scores). The artifact/log store (TBD: S3, Supabase storage, or equivalent) handles binary/large-file artifacts. |
+| **Lifecycle** | Created → Active → Archived → Deleted. Artifacts are never silently deleted; archival requires explicit action or retention policy expiry. |
+| **Auditability** | Every artifact records: `created_by` (worker/job), `tenant_id` (or `internal`), `created_at`, `source_job_id`, and `artifact_type`. |
+
 **Design principle:** Artifacts are the durable record of agent work. If a worker produces something, it should be retrievable, auditable, and scoped to the tenant or internal context that produced it. Artifacts inherit tenant/internal access boundaries and retention rules. Ephemeral work (sandbox scratch files) is acceptable, but any output that informs decisions or reaches users must be persisted.
 
 ---
@@ -324,9 +431,46 @@ Reusable domain method libraries organized by function (pm/, seo/, content/, res
 - Progressive disclosure (summary → detail)
 - Ownership + freshness metadata on every node
 
-**Trust levels:** Not all graph nodes are equal. Hand-curated graphs (company, product, compliance) are trusted input. Graphs derived from external or user-generated content (customer insight graph, built from call transcripts) must be treated as untrusted and sanitized before influencing agent behavior. This prevents data poisoning through adversarial caller content.
+**Trust levels:** Not all graph nodes are equal. Hand-curated graphs (company, product, compliance) are trusted input. Graphs derived from external or user-generated content (customer insight graph, built from call transcripts) must be treated as untrusted and pass through the customer-derived content pipeline before influencing agent behavior.
 
-**Caching:** At scale, reading and parsing markdown files per worker run will be slow. Graph nodes should be cached (Redis) with invalidation on file change. The context management priority ordering (Section 5) describes *what* to include; caching determines *how fast* it's available.
+**Customer-derived content pipeline:**
+
+Customer-derived content is untrusted input. Raw transcripts, summaries, and extracted insights must never be injected directly into agent prompts or policy decisions. Content passes through three states:
+
+| State | Examples | Trust | Rules |
+|-------|----------|-------|-------|
+| **Raw** | Transcript, message, call notes | Never trusted | Never directly injected into worker context or policy decisions. Stored as-is for audit/provenance. |
+| **Sanitized** | Neutralized transcript | Low trust | Instruction-like or adversarial content neutralized. Normalized into safe intermediate form. Not yet usable as knowledge input. |
+| **Structured insight** | Claims, labels, patterns with provenance | Usable with limits | Explicit claims/labels/patterns with provenance back to raw source. Confidence/verification status assigned. Emits structured claims, not free-form prompt text. Separates factual observations from user requests/opinions. Safe to use as knowledge input with policy limits. |
+
+Only structured insights may influence agent behavior, and only through the normal context assembly pipeline (Section 5) where they are lower-priority than curated knowledge. This prevents data poisoning through adversarial caller content.
+
+**Structured insight example:**
+
+```yaml
+# Example: structured insight extracted from a call transcript
+insight_id: "ins_20260312_abc123"
+source:
+  type: "call_transcript"
+  call_id: "call_xyz789"
+  tenant_id: "tenant_acme_hvac"
+  timestamp: "2026-03-12T14:30:00Z"
+claim: "Customer reports AC unit making grinding noise after recent filter replacement"
+category: "symptom_report"
+confidence: 0.85
+verification_status: "unverified"  # unverified | verified | disputed
+separations:
+  factual_observation: "AC unit making grinding noise"
+  customer_request: "Wants same-day service"
+  customer_opinion: "Thinks filter was installed wrong"
+provenance_chain:
+  raw_transcript_id: "raw_20260312_abc123"
+  sanitization_run_id: "san_20260312_def456"
+  extraction_model: "claude-sonnet-4.6"
+  extraction_run_id: "run_20260312_ghi789"
+```
+
+**Caching:** At scale, reading and parsing markdown files per worker run will be slow. Graph nodes should be cached (Redis) with invalidation on file change. Cache keys must be namespace-scoped by tenant where applicable, consistent with the tenant isolation principle (Section 13) — a cache key collision between tenants could serve wrong industry/compliance data. The invalidation mechanism must ensure compliance and policy graph nodes are never stale beyond a defined threshold (invalidated on every deploy, not TTL-based). The context management priority ordering (Section 5) describes *what* to include; caching determines *how fast* it's available. Performance targets for graph reads and context assembly are TBD pending baseline measurements from Phase 1 implementation.
 
 **Design principle:** Knowledge graphs are the system's curated shared knowledge substrate. They are read by workers, the policy gate, industry packs, and the eval layer. They are not the orchestrator — they inform it.
 
@@ -463,6 +607,38 @@ The right abstraction for serving multiple trades from one platform.
 - Trade-specific reporting logic
 - Trade-specific compliance nuances
 
+**Pack format and directory structure:**
+
+```
+knowledge/industry-packs/
+  hvac/
+    pack.yaml              # Pack manifest: name, version, trade, dependencies
+    taxonomy.yaml          # Service types, categories, smart tags
+    urgency.yaml           # Emergency tiers, escalation rules, priority logic
+    compliance.yaml        # Trade-specific disclosures, forbidden claims, licensing
+    scripts/               # Call scripts, objection handling, follow-up templates
+    booking-rules.yaml     # Trade-specific booking logic and constraints
+    reporting.yaml         # Trade-specific metrics and report templates
+  plumbing/
+    ...
+  rooter/
+    ...
+```
+
+**Pack manifest (`pack.yaml`) schema:**
+
+```yaml
+name: "hvac"
+version: "1.0.0"
+trade: "HVAC"
+description: "Heating, ventilation, and air conditioning"
+extends: []                # Other packs this one builds on (empty for base trades)
+requires_compliance: true  # Whether this pack has trade-specific compliance rules
+smart_tag_count: 117       # For the HVAC pack, migrated from V2
+```
+
+**Runtime loading:** The harness loads the active industry pack for a tenant by reading `tenant_config.industry_pack_id`, resolving the pack directory, and including relevant pack sections in the context assembly pipeline (Section 5d). Pack files are cached in Redis (Section 8) and invalidated on deploy.
+
 **Design principle:** Industry packs are primarily configuration, knowledge, and bounded workflow variants — not separate codebases. They extend the shared core with trade-specific behavior. Adding a new trade should mean adding a new pack, not forking the product.
 
 ---
@@ -484,6 +660,24 @@ Each client gets a private config and namespace within the platform.
 **Instance formula:**
 
 > `shared product core` + `one industry pack` + `one tenant config` = client instance
+
+**Data isolation mechanism:**
+
+Defense-in-depth with two layers:
+
+1. **Row-Level Security (RLS)** — Supabase RLS policies on all tenant-scoped tables enforce `tenant_id` filtering at the database level. This is the primary isolation boundary. RLS policies are applied even when using the service role key (harness operations), using `set_config('app.current_tenant', tenant_id)` at the start of each harness operation.
+2. **Application-layer filtering** — All queries include explicit `WHERE tenant_id = ?` as a secondary safeguard. This catches cases where RLS is misconfigured or bypassed.
+
+Cross-tenant data access is never permitted at the application layer. The only exception is the Cockpit's cross-tenant administrative view, which uses a dedicated admin role with explicit RLS bypass and audit logging.
+
+| Scope | Isolation mechanism |
+|-------|-------------------|
+| Database (Supabase) | RLS policies + app-layer `tenant_id` filtering |
+| Cache (Redis) | Tenant-namespaced cache keys (Section 8) |
+| Traces (LangSmith) | Tenant-scoped trace tags and retention |
+| Evals (LangSmith) | Tenant-scoped eval datasets and experiments |
+| Artifacts | `tenant_id` metadata on all artifacts (Section 7) |
+| Knowledge graphs | Shared graphs (company, product, compliance) are read-only for tenants; customer insight graphs are tenant-scoped |
 
 **Design principle:** Tenants are lightweight configurations with isolated namespaces, not bespoke systems. If persistent memory is added later, it must be scoped tightly per tenant (using fields like `tenant_id`, `agent_id`, `run_id`) to prevent cross-tenant leakage.
 
@@ -594,6 +788,26 @@ Sits between internal workforce and client instances. Tenant Operations is an **
 - Routing escalations
 - Safe deployment/release controls per tenant
 
+**Client onboarding workflow:**
+
+```
+  ONBOARDING STEPS:
+  1. Create tenant record ──▶ Supabase (tenant_id, tenant_name, contact)
+  2. Assign industry pack ──▶ Validate pack exists, set tenant_config.industry_pack_id
+  3. Load tenant config    ──▶ Populate defaults from industry pack, allow overrides
+  4. Apply RLS policies    ──▶ Ensure tenant_id RLS is active on all tenant-scoped tables
+  5. Provision automations ──▶ Set up Inngest scheduled jobs (follow-ups, reports)
+  6. Configure voice agent ──▶ Create/assign Retell agent with tenant-specific metadata
+  7. Verify isolation      ──▶ Automated check: can this tenant see other tenants' data? (must fail)
+  8. Cockpit notification  ──▶ Alert founder that new tenant is provisioned
+
+  ON FAILURE AT ANY STEP:
+  Roll back all completed steps. Tenant record marked as "onboarding_failed" with
+  failure step and error. Cockpit alerted. No partial tenant state left active.
+```
+
+**Required inputs for onboarding:** `tenant_name`, `industry_pack_id`, `contact_email`, `service_area`. Missing any required input → reject onboarding and surface error.
+
 **Governance:** Tenant Ops workflows execute under the harness with the same tool governance, policy gate, and tracing as any worker. Administrative actions (e.g., reassigning an industry pack, modifying tenant config) require Cockpit approval and are logged with actor identity and reason.
 
 **Design principle:** It manages tenant lifecycle, provisioning, and operational health without becoming part of tenant-facing product behavior. It is infrastructure, not an agent role.
@@ -621,6 +835,31 @@ Evals at three levels, powered by LangSmith datasets, evaluators, and experiment
 - Reporting quality
 - Worker `success_metrics` (from Standard Worker Schema)
 
+**Two testing concerns:**
+
+| Concern | Tool | What it covers |
+|---------|------|---------------|
+| **Behavioral evals** | LangSmith datasets + evaluators | AI output quality: lead routing accuracy, tone compliance, summary quality, booking correctness, worker success_metrics |
+| **Infrastructure tests** | Vitest (or equivalent) | Harness correctness: policy gate logic, context assembly priority ordering, tool governance pipeline, job lifecycle (create/cancel/replace), tenant isolation, idempotency key behavior, cache key scoping |
+| **Resilience tests** | Vitest with mocked service failures | Degradable component fallback behavior (Redis down → file reads, LangSmith down → Pino fallback), blocking component error surfacing (LangGraph down → all work stops with visible error, LiteLLM down → immediate error), stale job detection when Inngest is unavailable |
+
+Behavioral evals answer "does the AI do the right thing?" Infrastructure tests answer "does the harness machinery work correctly?" Resilience tests answer "does the system degrade gracefully when dependencies fail?" All three are required. Evals passing while harness infrastructure is broken is a silent failure.
+
+**Eval data sourcing:**
+
+| Source | Use | Notes |
+|--------|-----|-------|
+| **Synthetic test cases** | Infrastructure tests, policy gate logic, tenant isolation | Hand-written, deterministic, no PII concerns |
+| **Anonymized production data** | Behavioral evals (lead routing, booking, summary quality) | Derived from real call transcripts via the customer content pipeline (Section 8). PII redacted before use in eval datasets. Subject to tenant consent and retention policies. |
+| **Hand-curated golden examples** | Critical path evals, baseline comparisons | Founder-reviewed examples of correct behavior for each eval target. Minimum: 10 golden examples per eval target before first worker activation. |
+
+**Minimum viable eval suite (for first worker activation):**
+
+Before any worker is promoted from spec to active use, the following minimum coverage must exist:
+- At least 10 golden examples per `success_metric` in the worker's spec
+- Infrastructure tests covering the policy gate, context assembly, and tool governance for that worker's `tools_allowed`
+- One resilience test per blocking dependency (LangGraph, LiteLLM) and one per degradable dependency the worker uses
+
 **Design principle:** No worker is promoted to active use without eval coverage. No industry pack or tenant config change ships without passing its eval tier. Eval coverage should exist before promotion to active use, even if the initial suite is narrow. Evals are the gate between "this seems right" and "this works."
 
 ---
@@ -647,7 +886,7 @@ Offline or pre-production improvement harness for systematic product improvement
 - Threshold rules
 - Industry-pack logic
 
-**Experiment isolation:** Only one experiment may mutate a given surface at a time. If two experiments target the same prompt file or workflow node, they must run sequentially, not concurrently. This prevents conflicting mutations from producing meaningless results. The Lab should maintain a simple lock registry of surfaces currently under experiment.
+**Experiment isolation:** Only one experiment may mutate a given surface at a time. If two experiments target the same prompt file or workflow node, they must run sequentially, not concurrently. This prevents conflicting mutations from producing meaningless results. The Lab should maintain a simple lock registry of surfaces currently under experiment. Locks must have a TTL or heartbeat to prevent stale locks from permanently blocking a surface (e.g., process crash after acquiring lock). The Cockpit can force-release stale locks.
 
 **Design principle:** The Improvement Lab is a product improvement system, not part of the main app architecture. The Improvement Lab may propose changes, but it cannot directly promote them to production. Changes that survive experiments are promoted through the Safe Delivery Layer like any other change.
 
@@ -704,9 +943,91 @@ Do not make these foundational right now:
 
 ## 23. Open Questions
 
+**Non-blocking for Phase 1** (resolve when needed):
+
 1. **Persistent memory provider** — Mem0 or alternative? Deferred until tenant memory scope is needed.
 2. **Semantic cache threshold** — When does repetition justify Qdrant over Redis? Needs usage data.
 3. **Skill pack granularity** — How large should a single skill pack be? TBD as first packs are authored.
-4. **Minimum viable eval suite** — What is the minimum viable eval suite for first worker activation?
-5. **Improvement Lab cadence** — How often do experiment loops run? What's the fixed budget?
-6. **Artifact registry of record** — What is the first persistent artifact registry: git, object storage, docs layer, or a combination?
+5. **Improvement Lab cadence** — How often do experiment loops run? What's the fixed budget? Lab is Phase 3+.
+
+**Resolved:**
+
+4. **Minimum viable eval suite** — Resolved in Section 18: 10 golden examples per success_metric, infrastructure tests for policy gate / context assembly / tool governance, one resilience test per dependency the worker uses.
+6. **Artifact registry of record** — Resolved in Section 7: Git for version-controlled outputs (code, configs, knowledge, plans); Supabase for structured data artifacts (reports, job results, eval scores); TBD object store (S3, Supabase storage) for binary/large-file artifacts.
+
+---
+
+## 24. Implementation Phasing
+
+Build sequence organized by dependency. Each phase produces a deployable, testable increment.
+
+```
+  DEPENDENCY GRAPH:
+
+  Phase 1 (Foundation)
+  ├── Knowledge Substrate (graphs, worker specs, skill packs)
+  ├── Industry Pack format + HVAC extraction from V2
+  ├── Tenant Config schema + RLS isolation
+  └── Harness infrastructure (LangGraph + LiteLLM + Redis on Render)
+
+  Phase 2 (Core Harness)                    depends on Phase 1
+  ├── Policy Gate + compliance graph
+  ├── Context assembly pipeline
+  ├── Tool governance (authored → validated → granted)
+  ├── Harness triggering (Express V2 → Inngest → Harness)
+  ├── Return path (Harness → Supabase + Inngest events)
+  └── First worker activation (Customer Analyst) + minimum eval suite
+
+  Phase 3 (Full Operations)                 depends on Phase 2
+  ├── V&V pipeline
+  ├── Delegation & Jobs (async/scheduled via Inngest)
+  ├── Tenant Operations (onboarding workflow)
+  ├── Artifact governance + persistence
+  ├── Remaining workers (PM, Engineer, Designer, Marketer)
+  └── Cockpit alerting + kill switches
+
+  Phase 4 (Improvement)                     depends on Phase 3
+  ├── Improvement Lab (experiment isolation, lock registry)
+  ├── Full eval coverage (all three tiers)
+  ├── Customer content pipeline (Raw → Sanitized → Structured)
+  └── Founder Cockpit (portfolio KPIs, experiment oversight)
+```
+
+**Phase 1: Foundation**
+
+Goal: Establish the knowledge substrate, industry pack format, tenant isolation, and base harness infrastructure. No agent work runs yet — this phase builds what agents need to run.
+
+| Deliverable | Section | Acceptance criteria |
+|-------------|---------|-------------------|
+| Knowledge graph directory structure | 8 | Markdown/YAML graphs for company, product, HVAC industry, compliance. MOCs and wiki links working. |
+| Worker specs (5 initial) | 9, 10 | All 5 workers defined in Standard Worker Schema. CI validation passing. |
+| HVAC industry pack | 12 | 117 smart tags, 3 emergency tiers, service taxonomy extracted from V2 into pack format. |
+| Tenant config schema | 13 | Schema defined in Supabase. RLS policies active on all tenant-scoped tables. |
+| Harness infrastructure | 5a | LangGraph, LiteLLM, Redis deployed on Render. Health checks passing. |
+
+**Phase 2: Core Harness**
+
+Goal: The harness can receive an event from Express V2, assemble context, run a worker through the policy gate, and persist results. One worker (Customer Analyst) is live.
+
+| Deliverable | Section | Acceptance criteria |
+|-------------|---------|-------------------|
+| Policy Gate | 5c | Deny-by-default working. Compliance graph reads. Conflict resolution (most-restrictive-wins). |
+| Context assembly | 5d | Priority ordering correct. Compaction working. Budget enforced. |
+| Harness triggering | 5b | Express V2 → Inngest → Harness flow working end-to-end. |
+| Return path | 5b | Harness → Supabase writes + Inngest notification events. |
+| Customer Analyst worker | 14 | Activated with minimum eval suite (10 golden examples per metric). |
+| Service authentication | 5b | All integration points authenticated per service auth table. |
+
+**Phase 3: Full Operations**
+
+Goal: All workers active, tenant onboarding automated, async jobs running, full artifact governance.
+
+**Phase 4: Improvement**
+
+Goal: Improvement Lab, full eval coverage, customer content pipeline, Cockpit fully operational.
+
+**Phasing principles:**
+- Each phase is deployable independently — no phase depends on a later phase
+- Express V2 continues handling all production traffic throughout; harness work is additive
+- Feature flags (Section 4) gate new harness capabilities; partial phase completion is safe
+- Phase boundaries are not hard walls — work can start on Phase N+1 items once their dependencies in Phase N are complete
