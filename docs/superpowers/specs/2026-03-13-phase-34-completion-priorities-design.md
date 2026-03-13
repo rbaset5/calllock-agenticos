@@ -101,9 +101,19 @@ Docs-first, then metrics API. Documentation removes architectural ambiguity befo
 1. Tenant-scoped: `tenant_id = current_setting('app.current_tenant')::uuid` — matches existing isolation model, lets tenants see their own metric events
 2. Admin/platform: `current_setting('app.is_admin', true) = 'true'` — allows Cockpit/admin roles to see all rows including platform-wide events (null tenant_id). Non-admin users cannot see platform-wide events.
 
+**Admin context helper:** The migration includes a `set_admin_context()` SQL function alongside the existing `set_tenant_context()`. Uses `set_config('app.is_admin', 'true', true)` — transaction-local, same pattern as the existing tenant context, no leak across requests.
+
 **Emitter:** A thin `MetricsEmitter` class in the harness. Pipeline nodes call `emit(category, event_name, tenant_id, run_id, ...)`. Each node already knows when it blocks, fails, or retries.
 
-**Migration file:** `supabase/migrations/007_metric_events.sql`
+**Emitter failure contract:**
+- Observability is best-effort. Loss is acceptable; crash is not.
+- `emit()` wraps the Supabase write in `try/except`, catching `httpx.TimeoutException`, `httpx.HTTPStatusError`, `httpx.ConnectError`, and `TypeError`.
+- On failure: structured log via named logger `harness.metrics`, then return `None`. Never re-raise.
+- Log at `warning` for bad local inputs (missing `category` or `event_name`). Log at `error` for write failures.
+- Structured log fields: `category`, `event_name`, `tenant_id`, `run_id`, `job_id`, `worker_id`, `error_type`, `error_detail`.
+- `category` and `event_name` are required. If either is `None`, log a warning and skip the write.
+
+**Migration file:** Next available number in `supabase/migrations/`.
 
 ## Section 4: Operational Metrics Read API
 
@@ -156,9 +166,20 @@ Docs-first, then metrics API. Documentation removes architectural ambiguity befo
 
 **Auth:** Same auth model as existing harness endpoints. No new auth surface.
 
+**DB context selection:** The endpoint chooses tenant or admin context based on the query:
+- When `tenant_id` is provided: call `set_tenant_context(tenant_id)` — tenant sees only their own metric events via RLS policy 1.
+- When `tenant_id` is omitted (platform-wide view): call `set_admin_context()` — Cockpit sees all rows including platform-wide events via RLS policy 2.
+This keeps the read contract consistent with the rest of the repo: tenant-scoped reads use tenant context, cross-tenant reads require admin elevation.
+
+**Input validation:** `category` and `group_by` must be validated against hardcoded allowlists in the endpoint handler before any DB call. Parameterized queries only; no string interpolation.
+
 **When `group_by` is omitted:** `groups` is an empty array and `total_count` reflects the ungrouped count for the category and filters.
 
-**Error responses:** Validation errors (invalid category, invalid group_by, window out of range) return HTTP 400 with `{"error": "<error_code>", "detail": "<human-readable message>"}`. Auth errors return HTTP 401 with the same shape. No other error shapes in v1.
+**Error responses:**
+- Validation errors (invalid category, invalid group_by, window out of range): HTTP 400 with `{"error": "<error_code>", "detail": "<human-readable message>"}`.
+- Auth errors: HTTP 401 with the same shape.
+- Upstream failures (Supabase timeout or 5xx on read): HTTP 503 with `{"error": "upstream_unavailable", "detail": "Metrics store temporarily unavailable"}`.
+- No other error shapes in v1.
 
 **What it does not do:**
 - No streaming/websocket — poll-based is sufficient at this scale
@@ -191,6 +212,6 @@ These items are currently listed as open in TODOS.md but have been resolved thro
 |---|---|---|---|
 | 1 | Express V2 scaling ADR | Documentation | `docs/decisions/002-express-v2-scaling.md` |
 | 2 | Retrieval engine ADR finalization | Documentation | `docs/decisions/001-retrieval-engine.md` |
-| 3 | Metrics write model | Migration + Python | `supabase/migrations/007_metric_events.sql`, `harness/src/harness/metrics.py` |
+| 3 | Metrics write model | Migration + Python | `supabase/migrations/<next>_metric_events.sql`, `harness/src/harness/metrics.py` |
 | 4 | Metrics read API | Python | `harness/src/harness/server.py` |
 | 5 | TODOS.md cleanup | Documentation | `TODOS.md` |
