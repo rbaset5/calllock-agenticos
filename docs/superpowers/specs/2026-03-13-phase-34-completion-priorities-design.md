@@ -58,7 +58,7 @@ Docs-first, then metrics API. Documentation removes architectural ambiguity befo
 - Relevance is observably poor
 - Context assembly starts dropping important nodes under budget pressure
 
-**Future option:** Evaluate QMD or another hybrid index only when that trigger is hit.
+**Future option:** Evaluate QMD (Query-over-Markdown, a hybrid retrieval index that combines structured YAML frontmatter queries with full-text search) or another hybrid index only when that trigger is hit.
 
 **Impact on TODOS.md:** No direct TODO item; removes an open architectural question from the decisions directory.
 
@@ -97,11 +97,13 @@ Docs-first, then metrics API. Documentation removes architectural ambiguity befo
 
 **Index:** `(category, tenant_id, created_at)` for time-range queries.
 
-**RLS:** Scoped to `tenant_id`, consistent with existing isolation model. Platform-wide events (null tenant_id) are visible only to admin/Cockpit roles.
+**RLS:** Two policies on `metric_events`:
+1. Tenant-scoped: `tenant_id = current_setting('app.current_tenant')::uuid` — matches existing isolation model, lets tenants see their own metric events
+2. Admin/platform: `current_setting('app.is_admin', true) = 'true'` — allows Cockpit/admin roles to see all rows including platform-wide events (null tenant_id). Non-admin users cannot see platform-wide events.
 
 **Emitter:** A thin `MetricsEmitter` class in the harness. Pipeline nodes call `emit(category, event_name, tenant_id, run_id, ...)`. Each node already knows when it blocks, fails, or retries.
 
-**Migration file:** Next available number in `supabase/migrations/`.
+**Migration file:** `supabase/migrations/007_metric_events.sql`
 
 ## Section 4: Operational Metrics Read API
 
@@ -154,6 +156,10 @@ Docs-first, then metrics API. Documentation removes architectural ambiguity befo
 
 **Auth:** Same auth model as existing harness endpoints. No new auth surface.
 
+**When `group_by` is omitted:** `groups` is an empty array and `total_count` reflects the ungrouped count for the category and filters.
+
+**Error responses:** Validation errors (invalid category, invalid group_by, window out of range) return HTTP 400 with `{"error": "<error_code>", "detail": "<human-readable message>"}`. Auth errors return HTTP 401 with the same shape. No other error shapes in v1.
+
 **What it does not do:**
 - No streaming/websocket — poll-based is sufficient at this scale
 - No aggregation beyond counts — histograms and percentiles come later if needed
@@ -169,13 +175,15 @@ Docs-first, then metrics API. Documentation removes architectural ambiguity befo
 - P2 "Define external service resilience patterns" — partially resolved; narrow remaining scope to Retell/Cal.com/Twilio resilience when those integrations land in this repo
 - P3 "Define Cockpit alerting thresholds and channels" — partially resolved; narrow remaining work to production threshold tuning from baseline metrics collected via the metrics API
 
-**Does not touch (already closed):**
-- Inngest event validation schema (ADR 004)
-- Harness → Supabase write failure handling (ADR 002)
-- Compliance graph conflict resolution (ADR 009)
-- PII redaction implementation approach
+**Closes (already resolved in code and migrations, marking closed in TODOS.md):**
+- P1 "Define compliance graph conflict resolution rule" — resolved in `supabase/migrations/006_compliance_conflict_resolution.sql`
+- P2 "Define Inngest event validation schema" — resolved in implementation
+- P2 "Define harness → Supabase write failure handling" — resolved in implementation
+- P2 "Define PII redaction implementation approach" — resolved in implementation
 
-**End state:** 3 active TODOs. 1 newly closed. Already-resolved items untouched.
+These items are currently listed as open in TODOS.md but have been resolved through code and migrations. They do not have formal ADR files on disk. The TODOS.md update should mark them closed with references to the implementing code.
+
+**End state:** 3 active TODOs (HVAC extraction, external service resilience, alert threshold tuning). 5 newly closed (Express V2 scaling + 4 already-resolved items marked closed).
 
 ## Deliverables Summary
 
@@ -183,6 +191,6 @@ Docs-first, then metrics API. Documentation removes architectural ambiguity befo
 |---|---|---|---|
 | 1 | Express V2 scaling ADR | Documentation | `docs/decisions/002-express-v2-scaling.md` |
 | 2 | Retrieval engine ADR finalization | Documentation | `docs/decisions/001-retrieval-engine.md` |
-| 3 | Metrics write model | Migration + Python | `supabase/migrations/NNN_metric_events.sql`, `harness/src/harness/metrics.py` |
+| 3 | Metrics write model | Migration + Python | `supabase/migrations/007_metric_events.sql`, `harness/src/harness/metrics.py` |
 | 4 | Metrics read API | Python | `harness/src/harness/server.py` |
 | 5 | TODOS.md cleanup | Documentation | `TODOS.md` |
