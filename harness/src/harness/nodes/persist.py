@@ -18,4 +18,16 @@ def build_persist_record(state: dict[str, Any]) -> dict[str, Any]:
 
 def persist_node(state: dict[str, Any]) -> dict[str, Any]:
     record = build_persist_record(state)
-    return {"persistence": persist_run_record(record)}
+    try:
+        return {"persistence": persist_run_record(record)}
+    except Exception as exc:
+        from harness.metrics import MetricsEmitter
+
+        MetricsEmitter().emit(
+            category="job_failure",
+            event_name="write_failed",
+            tenant_id=state.get("tenant_id"),
+            run_id=state.get("run_id"),
+            dimensions={"error": str(exc)},
+        )
+        raise

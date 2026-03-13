@@ -50,12 +50,21 @@ def evaluate_policy(
 
 def policy_gate_node(state: dict[str, Any]) -> dict[str, Any]:
     task = state["task"]
-    return {
-        "policy_decision": evaluate_policy(
-            tool_name=state.get("tool_name"),
-            tenant_config=task.get("tenant_config", {}),
-            compliance_rules=task.get("compliance_rules", []),
-            feature_flags=task.get("feature_flags", {}),
-            granted_tools=state.get("tool_grants", []),
+    decision = evaluate_policy(
+        tool_name=state.get("tool_name"),
+        tenant_config=task.get("tenant_config", {}),
+        compliance_rules=task.get("compliance_rules", []),
+        feature_flags=task.get("feature_flags", {}),
+        granted_tools=state.get("tool_grants", []),
+    )
+    if decision["verdict"] == "deny":
+        from harness.metrics import MetricsEmitter
+
+        MetricsEmitter().emit(
+            category="policy_gate",
+            event_name="blocked",
+            tenant_id=state.get("tenant_id"),
+            run_id=state.get("run_id"),
+            dimensions={"reasons": decision["reasons"], "matched_rules": decision["matched_rules"]},
         )
-    }
+    return {"policy_decision": decision}

@@ -2,27 +2,41 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Close documentation gaps (2 ADRs), build an operational metrics surface (Supabase table + FastAPI endpoint), and clean up TODOS.md to reflect actual repo state.
+**Goal:** Close documentation gaps (2 ADRs), build an operational metrics surface (Supabase table + FastAPI endpoint), wire emit calls into pipeline nodes, and clean up TODOS.md to reflect actual repo state.
 
-**Architecture:** Docs-first, then metrics. Two ADR files resolve open architectural questions. A `metric_events` Supabase table with a best-effort emitter class provides the write model. A `/metrics/snapshot` FastAPI endpoint on the existing harness server provides the Cockpit-ready read API. TODOS.md is updated to reflect 5 closures and 3 narrowed active items.
+**Architecture:** Docs-first, then metrics. Two ADR files resolve open architectural questions. A `metric_events` Supabase table with a best-effort emitter class provides the write model. A single `get_metric_snapshot()` RPC function handles context-setting and aggregation in one transaction. A `/metrics/snapshot` FastAPI endpoint on the existing harness server provides the Cockpit-ready read API. Emit calls are wired into policy_gate, verification, and persist nodes. TODOS.md is updated to reflect 5 closures and 3 narrowed active items.
 
-**Tech Stack:** Python (FastAPI, httpx), PostgreSQL (Supabase migrations, RLS), Markdown (ADRs)
+**Tech Stack:** Python (FastAPI, httpx), PostgreSQL (Supabase migrations, RLS, PL/pgSQL RPC), Markdown (ADRs)
 
 **Spec:** `docs/superpowers/specs/2026-03-13-phase-34-completion-priorities-design.md`
 
 ---
 
-## File Structure
+## Eng Review Findings (applied during execution)
+
+1. **CRITICAL: Two-transaction RLS bug.** Original plan made two HTTP requests (POST /rpc/set_tenant_context + GET /metric_events). Transaction-local set_config expires between requests, so RLS returns 0 rows. **Fix:** Single `get_metric_snapshot()` RPC function sets context and queries in one transaction.
+2. **VALID_CATEGORIES duplicated.** Defined in both metrics.py and server.py. **Fix:** Define once in metrics.py, import in server.py.
+3. **Missing RPC failure test.** Only GET failure was tested; POST (RPC call) is a distinct failure path. **Fix:** Added `test_snapshot_returns_503_on_rpc_failure`.
+4. **Client-side aggregation.** Original plan fetched all rows and counted in Python. **Fix:** Server-side COUNT/GROUP BY in the RPC function.
+5. **Migration number.** Original plan used 007; production repo has migrations up to 044. **Fix:** Use 045.
+6. **Emit wiring is not a TODO.** Shipping metrics infra without emit sites produces an inert system. **Fix:** Wire emit calls into pipeline nodes as part of this implementation.
+
+---
+
+## File Structure (updated)
 
 | Action | File | Responsibility |
 |--------|------|----------------|
 | Create | `docs/decisions/002-express-v2-scaling.md` | Express V2 scaling ADR |
 | Modify | `docs/decisions/001-retrieval-engine.md` | Retrieval engine ADR finalization |
-| Create | `supabase/migrations/007_metric_events.sql` | metric_events table, RLS policies, set_admin_context() |
-| Create | `harness/src/harness/metrics.py` | MetricsEmitter class |
-| Modify | `harness/src/harness/server.py` | Add /metrics/snapshot endpoint |
+| Create | `supabase/migrations/045_metric_events.sql` | metric_events table, RLS, set_admin_context(), get_metric_snapshot() RPC |
+| Create | `harness/src/harness/metrics.py` | MetricsEmitter class + VALID_CATEGORIES (single source of truth) |
+| Modify | `harness/src/harness/server.py` | /metrics/snapshot endpoint (imports VALID_CATEGORIES from metrics.py) |
+| Modify | `harness/src/harness/nodes/policy_gate.py` | Emit on deny |
+| Modify | `harness/src/harness/nodes/verification.py` | Emit on failure |
+| Modify | `harness/src/harness/nodes/persist.py` | Emit on write failure |
 | Modify | `TODOS.md` | Close resolved items, narrow remaining scope |
-| Create | `harness/tests/test_metrics.py` | Tests for emitter and snapshot endpoint |
+| Create | `harness/tests/test_metrics.py` | Tests for emitter, snapshot endpoint, RPC failure |
 
 ---
 

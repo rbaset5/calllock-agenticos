@@ -1,12 +1,29 @@
 # ADR 001: Retrieval Engine Evaluation
 
-Status: Proposed
+Status: Accepted
 
-QMD or an equivalent hybrid markdown/YAML retrieval engine should be evaluated during Phase 1. The selection criteria are:
+## Context
 
-- relevance on a 10-query golden set
-- latency below 500ms for indexed retrieval
-- compatibility with the harness context assembly flow
-- acceptable local operational overhead
+The architecture spec called for evaluating QMD (Query-over-Markdown, a hybrid retrieval index combining structured YAML frontmatter queries with full-text search) or an equivalent during Phase 1.
 
-This ADR is intentionally left open until retrieval benchmarking is run.
+## Decision
+
+Accept the current file-backed retrieval approach. The knowledge volume is small enough that a heavier retrieval layer is not justified.
+
+Current approach: file-backed retrieval via markdown/YAML traversal, wiki-link resolution, and context assembly prioritization.
+
+## Upgrade Trigger
+
+Revisit when:
+
+- Measured retrieval p95 > 500ms
+- Relevance is observably poor
+- Context assembly starts dropping important nodes under budget pressure
+
+Evaluate QMD or another hybrid index only when a trigger is hit.
+
+## Consequences
+
+- No new retrieval infrastructure needed now
+- Upgrade path is documented and tied to observable metrics
+- The metrics API (ADR pending) will make retrieval p95 measurable

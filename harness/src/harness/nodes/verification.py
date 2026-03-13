@@ -35,10 +35,19 @@ def verify_output(
 
 def verification_node(state: dict[str, Any]) -> dict[str, Any]:
     task = state["task"]
-    return {
-        "verification": verify_output(
-            state.get("worker_output", {}),
-            tenant_config=task.get("tenant_config", {}),
-            required_fields=["summary", "lead_route", "sentiment"],
+    result = verify_output(
+        state.get("worker_output", {}),
+        tenant_config=task.get("tenant_config", {}),
+        required_fields=["summary", "lead_route", "sentiment"],
+    )
+    if not result["passed"]:
+        from harness.metrics import MetricsEmitter
+
+        MetricsEmitter().emit(
+            category="verification",
+            event_name="block",
+            tenant_id=state.get("tenant_id"),
+            run_id=state.get("run_id"),
+            dimensions={"reasons": result["reasons"]},
         )
-    }
+    return {"verification": result}
