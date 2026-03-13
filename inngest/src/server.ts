@@ -1,4 +1,4 @@
-import http from "node:http";
+import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { serve } from "inngest/node";
 
 import { client, functions } from "./index.js";
@@ -11,7 +11,7 @@ const inngestHandler = serve({
   servePath,
 });
 
-const server = http.createServer((req, res) => {
+const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
   const url = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
   if (url.pathname === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });

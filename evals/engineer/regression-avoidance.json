@@ -1,0 +1,12 @@
+[
+  {"input":"Preserve existing server response fields","expected":"backward compatible"},
+  {"input":"Keep local repository fallback","expected":"backward compatible"},
+  {"input":"Do not break phase1 smoke test","expected":"backward compatible"},
+  {"input":"Preserve process-call endpoint","expected":"backward compatible"},
+  {"input":"Keep worker specs readable","expected":"backward compatible"},
+  {"input":"Avoid cross-tenant reads","expected":"backward compatible"},
+  {"input":"Do not remove artifact writer","expected":"backward compatible"},
+  {"input":"Respect feature flags","expected":"backward compatible"},
+  {"input":"Keep PII redaction working","expected":"backward compatible"},
+  {"input":"Retain deny-by-default gate","expected":"backward compatible"}
+]

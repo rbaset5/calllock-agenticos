@@ -1,0 +1,12 @@
+[
+  {"input":"I am angry about this outage","expected":"negative"},
+  {"input":"Thank you for the quick follow-up","expected":"neutral"},
+  {"input":"I am frustrated and want help","expected":"negative"},
+  {"input":"Need an estimate for tomorrow","expected":"neutral"},
+  {"input":"This is unacceptable","expected":"negative"},
+  {"input":"Can you book maintenance","expected":"neutral"},
+  {"input":"I want a refund","expected":"negative"},
+  {"input":"Please send pricing","expected":"neutral"},
+  {"input":"I am upset about the delay","expected":"negative"},
+  {"input":"Need a quote for replacement","expected":"neutral"}
+]

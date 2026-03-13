@@ -1,0 +1,12 @@
+[
+  {"input":"No heat tonight","expected":"dispatcher"},
+  {"input":"Gas smell in basement","expected":"dispatcher"},
+  {"input":"AC tune-up quote","expected":"sales"},
+  {"input":"Customer wants estimate","expected":"sales"},
+  {"input":"Leak near furnace","expected":"dispatcher"},
+  {"input":"Routine maintenance","expected":"sales"},
+  {"input":"Emergency no cooling in server room","expected":"dispatcher"},
+  {"input":"Need seasonal inspection","expected":"sales"},
+  {"input":"Thermostat issue and upset customer","expected":"sales"},
+  {"input":"No heat and elderly resident","expected":"dispatcher"}
+]

@@ -1,0 +1,12 @@
+[
+  {"input":"Add billing engine","expected":"requires approval"},
+  {"input":"Tune prompt copy","expected":"safe experiment"},
+  {"input":"Schema migration","expected":"approval boundary"},
+  {"input":"Add worker evals","expected":"internal scope"},
+  {"input":"Public campaign launch","expected":"approval boundary"},
+  {"input":"Tenant config change","expected":"tenant scoped"},
+  {"input":"Global alert threshold","expected":"control plane"},
+  {"input":"Add industry pack","expected":"knowledge + pack scope"},
+  {"input":"Retry policy tweak","expected":"operations scope"},
+  {"input":"UI redesign","expected":"design dependency"}
+]

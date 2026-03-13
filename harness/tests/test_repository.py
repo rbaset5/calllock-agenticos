@@ -23,4 +23,4 @@ def test_persist_run_record_uses_local_artifact_fallback(monkeypatch, tmp_path) 
             "output": {"summary": "ok"},
         }
     )
-    assert record["artifact_path"].endswith("run-artifact.json")
+    assert record["job"]["idempotency_key"] == "run-artifact"

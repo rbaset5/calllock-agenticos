@@ -1,15 +1,14 @@
 export interface HarnessTriggerEvent {
-  name: "harness/process-call";
-  data: {
-    call_id: string;
-    tenant_id: string;
-    transcript?: string;
-    problem_description?: string;
-  };
+  name: "harness/process-call" | "harness/job-complete";
+  data: Record<string, unknown>;
 }
 
-export function buildHarnessEvent(data: HarnessTriggerEvent["data"]): HarnessTriggerEvent {
+export function buildHarnessEvent(data: Record<string, unknown>): HarnessTriggerEvent {
   return { name: "harness/process-call", data };
+}
+
+export function buildJobCompleteEvent(data: Record<string, unknown>): HarnessTriggerEvent {
+  return { name: "harness/job-complete", data };
 }
 
 export interface HarnessDispatchConfig {
@@ -22,7 +21,8 @@ export async function dispatchHarnessEvent(
   event: HarnessTriggerEvent,
   fetchImpl: typeof fetch = fetch,
 ) {
-  const response = await fetchImpl(`${config.baseUrl}/events/process-call`, {
+  const endpoint = event.name === "harness/job-complete" ? "/events/job-complete" : "/events/process-call";
+  const response = await fetchImpl(`${config.baseUrl}${endpoint}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

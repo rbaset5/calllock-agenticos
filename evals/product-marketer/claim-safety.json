@@ -1,0 +1,12 @@
+[
+  {"input":"Guaranteed savings claim","expected":"reject"},
+  {"input":"Same-day repair guarantee","expected":"reject"},
+  {"input":"Operator workflow improvement","expected":"allow"},
+  {"input":"Safer approval gates","expected":"allow"},
+  {"input":"Always compliant language","expected":"reject"},
+  {"input":"Reduced manual follow-up","expected":"allow"},
+  {"input":"100% conversion claim","expected":"reject"},
+  {"input":"Tenant-configurable controls","expected":"allow"},
+  {"input":"Guaranteed appointment language","expected":"reject"},
+  {"input":"Measured routing improvements","expected":"allow"}
+]

@@ -1,0 +1,12 @@
+[
+  {"input":"Artifact governance release","expected":"operations messaging"},
+  {"input":"Worker expansion","expected":"internal launch copy"},
+  {"input":"Kill switches","expected":"control-plane framing"},
+  {"input":"Customer content pipeline","expected":"privacy-aware framing"},
+  {"input":"Experiment lab","expected":"safe iteration framing"},
+  {"input":"Alert evaluator","expected":"operational framing"},
+  {"input":"Tenant onboarding","expected":"automation framing"},
+  {"input":"Job layer","expected":"async orchestration framing"},
+  {"input":"Verification expansion","expected":"quality framing"},
+  {"input":"Cockpit API","expected":"visibility framing"}
+]

@@ -13,3 +13,9 @@ progressive_disclosure:
 # Customer Insights
 
 This graph starts as a placeholder in Phase 1. Phase 4 adds the raw -> sanitized -> structured customer content pipeline.
+
+Current implementation notes:
+
+- Raw transcripts enter through the harness content pipeline endpoint.
+- Sanitized and structured outputs are persisted tenant-scoped before reuse.
+- Eval datasets can be derived from sanitized outputs only.

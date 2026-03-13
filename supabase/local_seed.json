@@ -18,51 +18,247 @@
       "tenant_id": "00000000-0000-0000-0000-000000000001",
       "slug": "tenant-alpha",
       "tone": "helpful",
+      "tone_profile": {"formality": "direct", "banned_words": ["guaranteed"]},
       "disclosures": ["Callback windows depend on dispatcher confirmation."],
       "allowed_tools": ["read_knowledge", "notify_dispatch"],
       "trace_namespace": "tenant-alpha",
       "eval_namespace": "tenant-alpha",
-      "industry_pack_id": "hvac"
+      "industry_pack_id": "hvac",
+      "timezone": "America/Detroit",
+      "retention_local_hour": 3,
+      "tenant_eval_local_hour": 4,
+      "max_schedule_lag_hours": 24,
+      "feature_flags": {"harness_enabled": true, "llm_workers_enabled": true},
+      "max_active_jobs": 5,
+      "alert_channels": ["dashboard"],
+      "alert_thresholds": {
+        "scheduler_backlog_age": 90
+      },
+      "alert_escalation_policy": {
+        "open": {"high": 45, "medium": 90}
+      },
+      "alert_suppression_window_minutes": 90,
+      "alert_recovery_cooldown_minutes": 30,
+      "incident_notification_channels": ["dashboard"],
+      "incident_assignees": {},
+      "incident_reminder_minutes": 60,
+      "incident_default_assignee": null,
+      "incident_reassign_after_reminders": 2,
+      "incident_oncall_rotation": [],
+      "incident_rotation_interval_hours": 24,
+      "incident_skill_requirements": {},
+      "incident_classification_rules": [],
+      "incident_runbooks": {},
+      "retention_policy": {
+        "artifacts": {"archive_after_days": 30, "delete_after_days": 90},
+        "customer_content_days": 30,
+        "audit_log_days": 90
+      }
     },
     {
       "tenant_id": "00000000-0000-0000-0000-000000000002",
       "slug": "tenant-beta",
       "tone": "direct",
+      "tone_profile": {"formality": "formal", "banned_words": ["cheap"]},
       "disclosures": ["Emergency callbacks are promised within 15 minutes."],
       "allowed_tools": ["read_knowledge"],
       "trace_namespace": "tenant-beta",
       "eval_namespace": "tenant-beta",
-      "industry_pack_id": "hvac"
+      "industry_pack_id": "hvac",
+      "timezone": "America/Detroit",
+      "retention_local_hour": 3,
+      "tenant_eval_local_hour": 4,
+      "max_schedule_lag_hours": 24,
+      "feature_flags": {"harness_enabled": true, "llm_workers_enabled": false},
+      "max_active_jobs": 2,
+      "alert_channels": ["dashboard", "webhook", "email", "sms", "pager"],
+      "alert_webhook_url": "https://tenant-beta.example.test/alerts",
+      "alert_email_to": ["ops-beta@example.test"],
+      "alert_sms_to": ["+15550000001"],
+      "alert_pager_to": ["ops-beta-primary"],
+      "alert_thresholds": {
+        "policy_block_rate": 1.1,
+        "job_failure_spike": 2
+      },
+      "alert_escalation_policy": {
+        "open": {"high": 10, "medium": 20},
+        "acknowledged": {"high": 30, "medium": 45}
+      },
+      "alert_suppression_window_minutes": 15,
+      "alert_recovery_cooldown_minutes": 5,
+      "incident_notification_channels": ["dashboard", "assignee_webhook", "assignee_email", "assignee_sms", "assignee_pager"],
+      "incident_assignees": {
+        "oncall-1": {
+          "webhook_url": "https://oncall-1.example.test/incidents",
+          "email": "oncall-1@example.test",
+          "phone": "+15550000011",
+          "pager_target": "ops-oncall-1",
+          "availability": {"days": ["mon", "tue", "wed", "thu", "fri"], "start_hour": 9, "end_hour": 17},
+          "fallback_assignee": "oncall-2",
+          "skills": ["billing"],
+          "routing_weight": 1.0,
+          "max_active_incidents": 2
+        },
+        "oncall-2": {
+          "webhook_url": "https://oncall-2.example.test/incidents",
+          "email": "oncall-2@example.test",
+          "phone": "+15550000012",
+          "pager_target": "ops-oncall-2",
+          "availability": {"days": ["mon", "tue", "wed", "thu", "fri"], "start_hour": 0, "end_hour": 24},
+          "skills": ["dispatch", "hvac"],
+          "routing_weight": 1.5,
+          "max_active_incidents": 4
+        }
+      },
+      "incident_reminder_minutes": 10,
+      "incident_default_assignee": "oncall-1",
+      "incident_reassign_after_reminders": 2,
+      "incident_oncall_rotation": ["oncall-1", "oncall-2"],
+      "incident_rotation_interval_hours": 12,
+      "incident_skill_requirements": {
+        "worker_reliability": ["hvac"],
+        "scheduler_health": ["dispatch"],
+        "vendor_dependency": ["dispatch"]
+      },
+      "incident_classification_rules": [
+        {
+          "match": {"alert_type_prefix": "job_failure_spike"},
+          "incident_domain": "operations",
+          "incident_category": "worker_reliability",
+          "remediation_category": "worker_debugging",
+          "urgency": "high"
+        },
+        {
+          "match": {"alert_type_prefix": "scheduler_"},
+          "incident_domain": "operations",
+          "incident_category": "scheduler_health",
+          "remediation_category": "scheduler_recovery",
+          "urgency": "medium"
+        },
+        {
+          "match": {"alert_type": "external_service_error"},
+          "incident_domain": "integrations",
+          "incident_category": "vendor_dependency",
+          "remediation_category": "vendor_escalation",
+          "urgency": "medium"
+        }
+      ],
+      "incident_runbooks": {
+        "worker_reliability": {
+          "runbook_id": "rb-worker-reliability",
+          "title": "Worker Reliability Response",
+          "steps": [
+            {
+              "title": "Review the latest failed jobs and verification findings.",
+              "required": true,
+              "parallel_group": "triage"
+            },
+            {
+              "title": "Confirm whether the issue is isolated to one worker or cross-worker.",
+              "required": true,
+              "parallel_group": "triage"
+            },
+            {
+              "title": "Decide whether execution can safely resume or requires rollback.",
+              "required": false,
+              "depends_on": [1, 2]
+            }
+          ],
+          "completion_policy": {
+            "required_workflow_statuses": ["closed"],
+            "notes": "All worker reliability checklist steps must be completed before closing."
+          },
+          "approval_policy": {
+            "required_workflow_statuses": ["closed"],
+            "notes": "Closing a worker reliability incident requires operator approval."
+          }
+        },
+        "scheduler_health": {
+          "runbook_id": "rb-scheduler-health",
+          "title": "Scheduler Health Recovery",
+          "steps": [
+            {
+              "title": "Inspect stale claims and pending backlog.",
+              "required": true
+            },
+            {
+              "title": "Sweep or override stuck scheduler claims if needed.",
+              "required": true,
+              "depends_on": [1]
+            },
+            {
+              "title": "Validate retention and eval schedulers are progressing again.",
+              "required": true,
+              "depends_on": [2]
+            }
+          ],
+          "completion_policy": {
+            "required_workflow_statuses": []
+          },
+          "approval_policy": {
+            "required_workflow_statuses": []
+          }
+        }
+      },
+      "retention_policy": {
+        "artifacts": {"archive_after_days": 30, "delete_after_days": 90},
+        "customer_content_days": 30,
+        "audit_log_days": 90
+      }
     }
   ],
   "compliance_rules": [
     {
       "id": "rule-booking-allow",
       "tenant_id": null,
+      "scope": "global",
+      "rule_type": "tool_access",
       "target": "book_appointment",
       "effect": "allow",
-      "reason": "Booking allowed when tenant policy permits it."
+      "reason": "Booking allowed when tenant policy permits it.",
+      "metadata": {"conflict_key": "booking-access"}
     },
     {
       "id": "rule-dispatch-allow",
       "tenant_id": null,
+      "scope": "global",
+      "rule_type": "tool_access",
       "target": "dispatch_emergency",
       "effect": "allow",
-      "reason": "Emergency dispatch alerts are allowed for life-safety events."
+      "reason": "Emergency dispatch alerts are allowed for life-safety events.",
+      "metadata": {"conflict_key": "dispatch-access"}
     },
     {
       "id": "rule-default-allow",
       "tenant_id": null,
+      "scope": "global",
+      "rule_type": "analysis_access",
       "target": "*",
       "effect": "allow",
-      "reason": "Default allow for internal analysis runs."
+      "reason": "Default allow for internal analysis runs.",
+      "metadata": {"conflict_key": "default-analysis"}
     },
     {
       "id": "rule-claims-deny",
       "tenant_id": null,
+      "scope": "global",
+      "rule_type": "marketing_claim",
       "target": "marketing_claims",
       "effect": "deny",
-      "reason": "Do not claim guaranteed savings or guaranteed same-day repair."
+      "reason": "Do not claim guaranteed savings or guaranteed same-day repair.",
+      "metadata": {"conflict_key": "marketing-guarantees"}
     }
-  ]
+  ],
+  "jobs": [],
+  "artifacts": [],
+  "kill_switches": [],
+  "alerts": [],
+  "experiments": [],
+  "locks": [],
+  "customer_content": [],
+  "eval_runs": [],
+  "audit_logs": [],
+  "approval_requests": [],
+  "scheduler_backlog": [],
+  "incidents": []
 }

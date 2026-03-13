@@ -15,12 +15,71 @@ def test_tool_registry_intersects_authoring_and_runtime() -> None:
 def test_policy_gate_denies_without_allow_rule() -> None:
     decision = evaluate_policy(
         tool_name="book_appointment",
+        worker_id="customer-analyst",
+        tenant_id="tenant-alpha",
+        approval_override=False,
         tenant_config={"industry_pack_id": "hvac"},
         compliance_rules=[],
         feature_flags={"harness_enabled": True},
         granted_tools=["book_appointment"],
     )
     assert decision["verdict"] == "deny"
+
+
+def test_policy_gate_escalates_conflicting_compliance_rules() -> None:
+    decision = evaluate_policy(
+        tool_name="book_appointment",
+        worker_id="customer-analyst",
+        tenant_id="tenant-alpha",
+        approval_override=False,
+        tenant_config={"industry_pack_id": "hvac", "escalate_policy_violations": False},
+        compliance_rules=[
+            {
+                "id": "allow-booking",
+                "target": "book_appointment",
+                "effect": "allow",
+                "reason": "Booking is generally permitted.",
+                "metadata": {"conflict_key": "booking-promise"},
+            },
+            {
+                "id": "deny-booking",
+                "target": "book_appointment",
+                "effect": "deny",
+                "reason": "Booking promises are restricted for this context.",
+                "metadata": {"conflict_key": "booking-promise"},
+            },
+        ],
+        feature_flags={"harness_enabled": True},
+        granted_tools=["book_appointment"],
+    )
+
+    assert decision["verdict"] == "escalate"
+    assert "allow-booking" in decision["matched_rules"]
+    assert "deny-booking" in decision["matched_rules"]
+    assert any("Compliance conflict" in reason for reason in decision["reasons"])
+
+
+def test_policy_gate_escalate_rules_are_honored() -> None:
+    decision = evaluate_policy(
+        tool_name="book_appointment",
+        worker_id="customer-analyst",
+        tenant_id="tenant-alpha",
+        approval_override=False,
+        tenant_config={"industry_pack_id": "hvac"},
+        compliance_rules=[
+            {
+                "id": "review-booking",
+                "target": "book_appointment",
+                "effect": "escalate",
+                "reason": "Manual review required before confirming this booking.",
+            }
+        ],
+        feature_flags={"harness_enabled": True},
+        granted_tools=["book_appointment"],
+    )
+
+    assert decision["verdict"] == "escalate"
+    assert decision["matched_rules"] == ["review-booking"]
 
 
 def test_pii_redactor_masks_email_and_phone() -> None:

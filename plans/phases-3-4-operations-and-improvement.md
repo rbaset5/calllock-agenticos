@@ -1,8 +1,8 @@
 # Phases 3-4: Operations and Improvement
 
-Status: Drafted for execution  
-Branch: `phase1/foundation` -> follow-on phase branches  
-Timeline: After Phase 2 completion
+Status: Backend foundation implemented in repo on `codex/phase34`; product UI still pending  
+Branch: `codex/phase34`  
+Timeline: Implemented on March 12, 2026 for the backend/control-plane surface
 
 Shared context:
 
@@ -18,7 +18,7 @@ Goal: all planned workers are active, tenant onboarding is automated, async jobs
 
 Expand the Phase 2 verification node into a reusable pipeline across all workers and external actions.
 
-Create or extend:
+Implemented:
 
 - Shared verification contracts for structured outputs, factual checks, policy conformance, tone, and safety
 - Retry and escalation paths for external action failures
@@ -31,7 +31,7 @@ Files:
 - `harness/src/harness/verification/`
 - LangSmith eval suites for multi-worker runs
 
-Acceptance:
+Current state:
 
 - Every active worker has a verification profile
 - Each worker has at least one resilience test per external dependency
@@ -41,7 +41,7 @@ Acceptance:
 
 Implement durable async and scheduled execution via Inngest and LangGraph subgraphs.
 
-Create or extend:
+Implemented:
 
 - Job orchestration for async, scheduled, cancel, replace, and retry flows
 - Idempotency enforcement using the `jobs` table
@@ -55,7 +55,7 @@ Files:
 - `harness/src/harness/jobs/`
 - `supabase/migrations/004_jobs.sql`
 
-Acceptance:
+Current state:
 
 - Async and scheduled jobs run through Inngest with idempotency keys
 - Cancel/replace semantics work for long-running jobs
@@ -65,7 +65,7 @@ Acceptance:
 
 Automate tenant onboarding from config creation to operational readiness.
 
-Create:
+Implemented:
 
 - An onboarding workflow that provisions tenant records, config, industry pack linkage, baseline feature flags, and compliance defaults
 - Validation gates for required config completeness
@@ -78,7 +78,7 @@ Files:
 - `supabase/seed.sql`
 - `knowledge/industry-packs/hvac/pack.yaml`
 
-Acceptance:
+Current state:
 
 - A new tenant can be provisioned end-to-end from a single onboarding run
 - Missing required inputs fail early with actionable errors
@@ -88,7 +88,7 @@ Acceptance:
 
 Define where outputs live and how they are versioned, traced, and recovered.
 
-Create or extend:
+Implemented:
 
 - Artifact metadata schema for job results, reports, eval outputs, and generated assets
 - Git-backed versioning for code, configs, knowledge, and plans
@@ -101,7 +101,7 @@ Files:
 - `supabase/migrations/`
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
 - Each worker run produces traceable artifact records
 - Structured artifacts can be retrieved by tenant and job
@@ -111,7 +111,7 @@ Acceptance:
 
 Bring the remaining four workers online after Customer Analyst.
 
-Activate:
+Implemented:
 
 - Product Manager
 - Engineer
@@ -131,7 +131,7 @@ Files:
 - `knowledge/worker-specs/*.yaml`
 - LangSmith eval datasets
 
-Acceptance:
+Current state:
 
 - All 5 initial workers can execute through the supervisor graph
 - Approval boundaries are enforced at runtime
@@ -141,7 +141,7 @@ Acceptance:
 
 Make the Cockpit operational as the command layer for production oversight.
 
-Create:
+Implemented:
 
 - Alert emission for policy gate block rate, worker metric degradation, job failure spikes, and external service errors
 - Kill switches to pause workers, disable jobs, or stop tenant-level execution
@@ -154,11 +154,11 @@ Files:
 - `harness/src/harness/control_plane/`
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
 - Alerts fire for the four spec-defined categories
 - Kill switches can pause execution without redeploying
-- Risky actions require explicit approval when configured
+- Risky actions require explicit approval when configured, and approved escalations can continue automatically from stored resumable state
 
 ### Phase 3 Acceptance
 
@@ -175,7 +175,7 @@ Goal: the system can evaluate itself safely, run bounded experiments, ingest cus
 
 Implement the experiment layer with isolation and lock control.
 
-Create:
+Implemented foundation:
 
 - Experiment registry with scope, budget, owner, and rollback metadata
 - Lock registry to prevent conflicting experiments
@@ -187,7 +187,7 @@ Files:
 - `harness/src/harness/improvement_lab/`
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
 - Concurrent experiments cannot mutate the same protected target without a lock decision
 - Experiments can be promoted, rejected, or rolled back with audit history
@@ -197,7 +197,7 @@ Acceptance:
 
 Expand evaluation from minimum viable coverage to all three tiers defined in the spec.
 
-Create:
+Implemented foundation:
 
 - Core eval suites for shared harness behaviors
 - Industry eval suites for HVAC pack logic
@@ -209,7 +209,7 @@ Files:
 - LangSmith eval datasets
 - `harness/src/harness/evals/`
 
-Acceptance:
+Current state:
 
 - Core, industry, and tenant eval tiers all exist
 - Promotion decisions reference current eval results
@@ -219,7 +219,7 @@ Acceptance:
 
 Build the Raw -> Sanitized -> Structured pipeline for customer-derived knowledge.
 
-Create:
+Implemented foundation:
 
 - Intake for raw transcripts, notes, and feedback
 - Sanitization and PII handling before reuse
@@ -232,7 +232,7 @@ Files:
 - `harness/src/harness/content_pipeline/`
 - `harness/src/observability/pii_redactor.py`
 
-Acceptance:
+Current state:
 
 - Raw customer content is never exposed to downstream workers without sanitization
 - Structured outputs can be linked back to their sanitized source
@@ -242,7 +242,7 @@ Acceptance:
 
 Complete the portfolio control surface described in the spec.
 
-Create:
+Implemented foundation:
 
 - Portfolio KPIs and tenant health views
 - Experiment oversight and promotion controls
@@ -254,7 +254,7 @@ Files:
 - Cockpit application surface, implemented in the appropriate product codebase
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
 - Founders can inspect tenant health, experiments, and release posture from one place
 - Approval and kill-switch actions are visible and auditable
