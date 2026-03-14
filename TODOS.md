@@ -27,6 +27,20 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** Proof coverage schema and Founder Weekly Operating Packet format being stable.
 **Source:** CEO mega-review v2, missing proof supply chain loop.
 
+### Assign runtime ownership for growth-system components
+**What:** Decide where the Prospect Enrichment Pipeline, Experiment Allocator, outbound send path, Growth Advisor batch jobs, and projection refresh jobs run in Phase 1-3: harness service, Inngest functions, product core, or a separate worker service.
+**Why:** The docs name these components and their write ownership, but not their runtime home. Without a concrete placement, implementers will invent execution boundaries, deployment units, and auth paths ad hoc.
+**Effort:** M
+**Depends on:** shared runtime split in the architecture spec remaining stable.
+**Source:** 2026-03-14 HOLD SCOPE audit follow-up.
+
+### Define attribution-token lifecycle and tenant-bound validation
+**What:** Specify the token payload, expiry window, tenant binding, validation steps, replay posture, and key-rotation strategy for signed attribution tokens and referral links.
+**Why:** The current docs say tokens are signed, but they do not yet lock the expiry duration, tenant-scope check, or dual-key rotation window. That leaves cross-tenant replay and secret-rotation behavior underspecified.
+**Effort:** M
+**Depends on:** touchpoint and attribution semantics remaining stable.
+**Source:** 2026-03-14 HOLD SCOPE audit follow-up.
+
 ### Define deterministic Growth Memory write and lineage contracts
 **Status:** Contract locked in docs on 2026-03-14 across `knowledge/growth-system/design-doc.md`, `plans/whole-system-executable-master-plan.md`, and `plans/phases-1-2-foundation-and-core-harness.md`. Implementation and tests still need to follow the named write categories, shared lineage fields, replay invariants, and projection-only read posture.
 **What:** Specify the stable write categories, idempotency keys, single-writer rules, merge precedence, replay invariants, and lineage linkage rules from source event through downstream effect. Keep explicit mapping back to the legacy `graph_mutation` and `lineage_chain` labels where those still appear.
@@ -108,6 +122,13 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** Data classification rules and `federated_benchmark` semantics being stable.
 **Source:** HOLD SCOPE review, Sections 3, 6, and 10.
 
+### Define event-specific idempotency formulas and DLQ backing store
+**What:** For each canonical ingest and derived-write path, name the exact idempotency key formula and the durable dead-letter queue storage location, retention, and replay path.
+**Why:** The docs require idempotency and DLQ depth, but they do not yet pin event-level key construction or where unrecoverable events live. That leaves duplicate-delivery behavior and observability implementation ambiguous.
+**Effort:** M
+**Depends on:** deterministic write contracts and event catalog remaining stable.
+**Source:** 2026-03-14 HOLD SCOPE audit follow-up.
+
 ### Implement canonical error and rescue taxonomy across runtime boundaries
 **What:** Carry the canonical Stage 0 exception vocabulary into event ingest, deterministic apply, projection refresh, founder review apply, control-plane auth, doctrine evaluation, and benchmark publish flows, including logs, counters, and test cases for each named failure.
 **Why:** The docs now name the failure contract. If runtime code invents different names or swallows these paths, the contract lock fails and silent errors return.
@@ -121,6 +142,27 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Effort:** M
 **Depends on:** canonical error taxonomy, projection freshness contract, and control-plane operations.
 **Source:** Hold Scope follow-up implementation pass, 2026-03-14.
+
+### Define wedge fitness computation and phase-gate thresholds
+**What:** Turn the named Wedge Fitness components into a canonical formula with weights, normalization rules, minimum sample sizes, and the exact thresholds that gate advisory, assisted, and closed-loop promotion.
+**Why:** The docs list the score inputs and mention thresholded phase decisions, but they still stop short of a computation that can be implemented or tested consistently.
+**Effort:** M
+**Depends on:** proof coverage, attribution completeness, retention quality, and conviction/readiness semantics remaining stable.
+**Source:** 2026-03-14 HOLD SCOPE audit follow-up.
+
+### Implement the Phase 1 Growth Memory schema and migration set
+**What:** Write the initial Supabase migrations for the Phase 1 Growth Memory subset, including canonical tables, compatibility views, indexes, and any required partitioning or projection scaffolding.
+**Why:** The authority doc names the table families, but the repo migration set still stops at harness-era foundations. Phase 1 growth work cannot start until the storage contract exists in SQL.
+**Effort:** L
+**Depends on:** event catalog, deterministic write contract, and attribution semantics being stable.
+**Source:** 2026-03-14 HOLD SCOPE audit follow-up.
+
+### Add fail-closed and duplicate-delivery regression coverage
+**What:** Add explicit tests for Outbound Health Gate fail-closed behavior, duplicate event delivery, exactly-once derived writes, and replay after partial failure.
+**Why:** The validation strategy names stage-gated coverage families, but the repo still lacks concrete regression tests for the highest-risk safety and data-integrity invariants.
+**Effort:** M
+**Depends on:** error taxonomy, idempotency formulas, and Growth Memory write paths being implemented.
+**Source:** 2026-03-14 HOLD SCOPE audit follow-up.
 
 ## P2 — Post-Contract-Lock Extensions
 
