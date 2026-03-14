@@ -98,7 +98,7 @@ Uses the proof coverage map from Growth Memory. An objection is "covered" when p
 | 70% | 75 |
 | ≥ 90% | 100 |
 
-**Linear interpolation:** `min(100, raw_rate / 0.90 * 100)` (simplified)
+**Piecewise linear interpolation** between breakpoints (same pattern as attribution completeness).
 
 **Data source:**
 ```sql
@@ -329,7 +329,7 @@ def evaluate_gates(composite: float, components: dict, context: dict) -> dict:
         ),
         "closed_loop_eligible": (  # Phase 2 → 3
             composite >= 60
-            and components["belief_depth"] >= 50              # maps to raw ≥ 0.20
+            and components["belief_depth"] >= 100             # maps to raw ≥ 0.40 (design doc §11)
             and context["founder_override_rate"] < 0.4
         ),
         "expansion_eligible": (  # Phase 3 → 5
