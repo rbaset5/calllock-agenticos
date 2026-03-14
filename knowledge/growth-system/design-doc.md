@@ -168,7 +168,7 @@ Every component follows five rules for error handling. No silent failures anywhe
 
 ### 5.9 Idempotency by default
 
-Every event handler is idempotent. Idempotency key = event_type + entity_id + timestamp_bucket. Duplicate processing produces the same result as single processing. The existing jobs table pattern (idempotency + superseding) is extended to all growth system event processing.
+Every event handler is idempotent. Idempotency is enforced at the database level via UNIQUE constraints on natural keys (not timestamp buckets). Each handler's idempotency key is defined in ADR 004 (`docs/decisions/004-idempotency-and-dlq-contract.md`). Duplicate processing produces the same result as single processing. Duplicate events hit the UNIQUE constraint, the handler catches the violation, logs a dedup hit, and returns success.
 
 ### 5.10 Fail-closed safety systems
 

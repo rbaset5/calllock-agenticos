@@ -16,7 +16,7 @@
 -- Partitioned by month for query performance and archival
 -- =============================================================================
 CREATE TABLE public.touchpoint_log (
-    touchpoint_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    touchpoint_id       UUID PRIMARY KEY,  -- caller MUST supply (no DEFAULT — prevents silent dedup bypass per ADR 004)
     tenant_id           UUID NOT NULL REFERENCES public.tenants(id),
     prospect_id         UUID NOT NULL,
     company_id          UUID,
@@ -317,6 +317,26 @@ CREATE TABLE public.founder_overrides (
 CREATE INDEX idx_override_tenant ON public.founder_overrides (tenant_id, created_at);
 
 -- =============================================================================
+-- 13. wedge_fitness_snapshots — weekly composite score per wedge (ADR 007)
+-- Write owner: Growth Advisor (weekly batch)
+-- =============================================================================
+CREATE TABLE public.wedge_fitness_snapshots (
+    snapshot_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id           UUID NOT NULL REFERENCES public.tenants(id),
+    wedge               TEXT NOT NULL,
+    score               NUMERIC(5,2) NOT NULL,  -- composite 0-100
+    component_scores    JSONB NOT NULL,          -- 9 component scores + cold_start flags
+    gates_status        JSONB NOT NULL,          -- automation_eligible, closed_loop_eligible, etc.
+    blocking_gaps       JSONB DEFAULT '[]',      -- human-readable reasons for blocked gates
+    launch_recommendation TEXT,
+    source_version      TEXT NOT NULL,
+    computed_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (tenant_id, wedge, computed_at)       -- one snapshot per wedge per computation
+);
+
+CREATE INDEX idx_wedge_fitness_latest ON public.wedge_fitness_snapshots (tenant_id, wedge, computed_at DESC);
+
+-- =============================================================================
 -- RLS policies for all new tables
 -- Uses the same pattern as migration 005
 -- =============================================================================
@@ -344,6 +364,8 @@ ALTER TABLE public.growth_dead_letter_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.growth_dead_letter_queue FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.founder_overrides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.founder_overrides FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.wedge_fitness_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wedge_fitness_snapshots FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY touchpoint_log_isolation ON public.touchpoint_log
     USING (tenant_id = public.current_tenant_id());
@@ -368,4 +390,6 @@ CREATE POLICY insight_log_isolation ON public.insight_log
 CREATE POLICY growth_dlq_isolation ON public.growth_dead_letter_queue
     USING (tenant_id = public.current_tenant_id());
 CREATE POLICY founder_overrides_isolation ON public.founder_overrides
+    USING (tenant_id = public.current_tenant_id());
+CREATE POLICY wedge_fitness_snapshots_isolation ON public.wedge_fitness_snapshots
     USING (tenant_id = public.current_tenant_id());
