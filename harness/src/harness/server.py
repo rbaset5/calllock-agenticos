@@ -35,6 +35,13 @@ from db.repository import (
     update_job_status,
     using_supabase,
 )
+from growth.batch.growth_advisor import run_growth_advisor_batch
+from growth.engine.allocator import allocate_experiment
+from growth.events.belief_handler import handle_belief_event
+from growth.events.lifecycle_handler import handle_lifecycle_transition
+from growth.events.touchpoint_handler import handle_touchpoint
+from growth.gate.health_gate import check_health_gate
+from growth.memory import repository as growth_repository
 from harness.alerts.evaluator import evaluate_alerts
 from harness.alerts.escalation import auto_escalate_alerts
 from harness.alerts.recovery import auto_resolve_recovered_alerts
@@ -68,6 +75,13 @@ from harness.models import (
     ContentPipelineRequest,
     DueTenantScheduleRequest,
     EvalRunRequest,
+    GrowthAdvisorWeeklyRequest,
+    GrowthAllocationResponse,
+    GrowthBeliefInferenceRequest,
+    GrowthGateCheckRequest,
+    GrowthGateCheckResponse,
+    GrowthLifecycleRequest,
+    GrowthTouchpointRequest,
     HarnessJobCompleteEvent,
     HarnessProcessCallEvent,
     ImprovementExperimentRequest,
@@ -86,6 +100,7 @@ from harness.models import (
     ScheduleHeartbeatRequest,
     ScheduleOverrideRequest,
     ScheduleSweepRequest,
+    WedgeFitnessSnapshotResponse,
 )
 from harness.resilience.recovery_journal import list_recovery_entries
 from harness.resilience.replayer import replay_recovery_entry
@@ -179,6 +194,10 @@ def _tenant_lookup_values(tenant_id: str | None) -> list[str]:
     return values
 
 
+def _canonical_tenant_id(identifier: str) -> str:
+    return get_tenant(identifier)["id"]
+
+
 def _merge_records_by_id(*record_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
     merged: dict[str, dict[str, Any]] = {}
     for records in record_lists:
@@ -251,6 +270,73 @@ if FastAPI:
     def job_complete(event: HarnessJobCompleteEvent, request: Request) -> dict[str, Any]:
         validate_event_auth(request)
         return update_job_status(event.data.job_id, event.data.status, result=event.data.result)
+
+    @app.post("/growth/handle-touchpoint")
+    def growth_handle_touchpoint(request_model: GrowthTouchpointRequest, request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        payload = request_model.model_dump()
+        payload["tenant_id"] = _canonical_tenant_id(request_model.tenant_id)
+        return handle_touchpoint(payload)
+
+    @app.post("/growth/handle-lifecycle")
+    def growth_handle_lifecycle(request_model: GrowthLifecycleRequest, request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        payload = request_model.model_dump()
+        payload["tenant_id"] = _canonical_tenant_id(request_model.tenant_id)
+        return handle_lifecycle_transition(payload)
+
+    @app.post("/growth/handle-belief")
+    def growth_handle_belief(request_model: GrowthBeliefInferenceRequest, request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        payload = request_model.model_dump()
+        payload["tenant_id"] = _canonical_tenant_id(request_model.tenant_id)
+        return handle_belief_event(payload)
+
+    @app.post("/growth/gate/check", response_model=GrowthGateCheckResponse)
+    def growth_gate_check(request_model: GrowthGateCheckRequest, request: Request) -> GrowthGateCheckResponse:
+        validate_event_auth(request)
+        result = check_health_gate([message.model_dump() for message in request_model.messages])
+        return GrowthGateCheckResponse(**result)
+
+    @app.get("/growth/experiment/{experiment_id}/allocate", response_model=GrowthAllocationResponse)
+    def growth_allocate_experiment(experiment_id: str, tenant_id: str, request: Request) -> GrowthAllocationResponse:
+        validate_event_auth(request)
+        canonical_tenant_id = _canonical_tenant_id(tenant_id)
+        experiment = growth_repository.get_experiment_history(experiment_id)
+        if experiment.get("tenant_id") != canonical_tenant_id:
+            raise HTTPException(status_code=404, detail=f"Unknown experiment: {experiment_id}")
+        allocation = allocate_experiment(experiment)
+        return GrowthAllocationResponse(
+            experiment_id=allocation.experiment_id,
+            chosen_arm_id=allocation.chosen_arm_id,
+            scores=allocation.scores,
+            mode=allocation.mode,
+        )
+
+    @app.get("/growth/metrics/wedge-fitness/{wedge_id}", response_model=WedgeFitnessSnapshotResponse)
+    def growth_wedge_fitness(wedge_id: str, tenant_id: str, request: Request) -> WedgeFitnessSnapshotResponse:
+        validate_event_auth(request)
+        snapshot = growth_repository.get_latest_wedge_fitness_snapshot(
+            tenant_id=_canonical_tenant_id(tenant_id),
+            wedge=wedge_id,
+        )
+        if snapshot is None:
+            raise HTTPException(status_code=404, detail=f"No wedge fitness snapshot found for {wedge_id}")
+        return WedgeFitnessSnapshotResponse(**snapshot)
+
+    @app.post("/growth/growth-advisor/weekly")
+    def growth_advisor_weekly(request_model: GrowthAdvisorWeeklyRequest, request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        now = None
+        if request_model.now_iso:
+            now = datetime.fromisoformat(request_model.now_iso.replace("Z", "+00:00"))
+        return run_growth_advisor_batch(
+            _canonical_tenant_id(request_model.tenant_id),
+            source_version=request_model.source_version,
+            wedges=request_model.wedges or None,
+            context=request_model.context,
+            now=now,
+        )
 
     @app.post("/onboard-tenant")
     def onboard_tenant_endpoint(request: OnboardTenantRequest, http_request: Request) -> dict[str, Any]:

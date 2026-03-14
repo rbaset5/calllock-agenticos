@@ -1,4 +1,4 @@
-# ADR 004: Event Idempotency and Dead-Letter Queue Contract
+# ADR 011: Event Idempotency and Dead-Letter Queue Contract
 
 Status: Proposed
 

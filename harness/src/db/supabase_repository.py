@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import os
 import re
 from typing import Any
@@ -12,6 +13,7 @@ except Exception:  # pragma: no cover
 
 from harness.artifacts.lifecycle import validate_transition
 from harness.alerts.lifecycle import validate_alert_transition
+from growth.memory.models import GrowthDuplicateError
 from harness.incident_sync_payload import build_incident_sync_payload
 from harness.jobs.state_machine import validate_transition as validate_job_transition
 from harness.resilience.retry import retry_call
@@ -79,6 +81,33 @@ def _request(method: str, table: str, *, params: dict[str, str] | None = None, j
         return None
 
     return retry_call(_perform, attempts=3, delay_seconds=0.15, retryable=_is_retryable_error)
+
+
+def _is_duplicate_status_error(exc: Exception) -> bool:
+    if httpx is None or not isinstance(exc, httpx.HTTPStatusError):
+        return False
+    if exc.response.status_code != 409:
+        return False
+    try:
+        payload = exc.response.json()
+    except Exception:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    code = payload.get("code")
+    message = str(payload.get("message", ""))
+    details = str(payload.get("details", ""))
+    return code == "23505" or "duplicate key value" in message.lower() or "duplicate key value" in details.lower()
+
+
+def _insert_growth_row(table: str, payload: dict[str, Any]) -> dict[str, Any]:
+    try:
+        data = _request("POST", table, json=payload, prefer="return=representation")
+    except Exception as exc:
+        if _is_duplicate_status_error(exc):
+            raise GrowthDuplicateError(table) from exc
+        raise
+    return data[0] if data else payload
 
 
 def _rpc(function_name: str, payload: dict[str, Any]) -> Any:
@@ -733,3 +762,119 @@ def claim_scheduler_backlog_entries(
         },
     )
     return data or []
+
+
+def insert_growth_touchpoint(payload: dict[str, Any]) -> dict[str, Any]:
+    return _insert_growth_row("touchpoint_log", payload)
+
+
+def list_growth_touchpoints(*, tenant_id: str, touchpoint_type: str | None = None) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"}
+    if touchpoint_type is not None:
+        params["touchpoint_type"] = f"eq.{touchpoint_type}"
+    return _request("GET", "touchpoint_log", params=params)
+
+
+def insert_growth_belief_event(payload: dict[str, Any]) -> dict[str, Any]:
+    return _insert_growth_row("belief_events", payload)
+
+
+def list_growth_belief_events(*, tenant_id: str) -> list[dict[str, Any]]:
+    return _request("GET", "belief_events", params={"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"})
+
+
+def insert_growth_dlq_entry(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request("POST", "growth_dead_letter_queue", json=payload, prefer="return=representation")
+    return data[0] if data else payload
+
+
+def resolve_growth_dlq_entry(entry_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(updates)
+    payload.setdefault("resolved_at", datetime.now(timezone.utc).isoformat())
+    data = _request(
+        "PATCH",
+        "growth_dead_letter_queue",
+        params={"id": f"eq.{entry_id}"},
+        json=payload,
+        prefer="return=representation",
+    )
+    return data[0]
+
+
+def list_growth_dlq_entries(*, tenant_id: str, unresolved_only: bool = False) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"}
+    if unresolved_only:
+        params["resolved_at"] = "is.null"
+    return _request("GET", "growth_dead_letter_queue", params=params)
+
+
+def upsert_growth_experiment_history(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "experiment_history",
+        params={"on_conflict": "experiment_id"},
+        json=payload,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else payload
+
+
+def get_growth_experiment_history(experiment_id: str) -> dict[str, Any]:
+    return _fetch_first("experiment_history", {"experiment_id": f"eq.{experiment_id}"})
+
+
+def list_growth_experiment_history(*, tenant_id: str) -> list[dict[str, Any]]:
+    return _request("GET", "experiment_history", params={"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"})
+
+
+def list_growth_segment_performance(*, tenant_id: str) -> list[dict[str, Any]]:
+    return _request("GET", "segment_performance", params={"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"})
+
+
+def list_growth_cost_per_acquisition(*, tenant_id: str) -> list[dict[str, Any]]:
+    return _request("GET", "cost_per_acquisition", params={"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"})
+
+
+def list_growth_insights(*, tenant_id: str) -> list[dict[str, Any]]:
+    return _request("GET", "insight_log", params={"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"})
+
+
+def list_growth_founder_overrides(*, tenant_id: str) -> list[dict[str, Any]]:
+    return _request("GET", "founder_overrides", params={"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"})
+
+
+def list_growth_loss_records(*, tenant_id: str) -> list[dict[str, Any]]:
+    return _request("GET", "loss_records", params={"tenant_id": f"eq.{tenant_id}", "order": "created_at.asc"})
+
+
+def list_growth_wedges(*, tenant_id: str) -> list[str]:
+    rows = _request("GET", "experiment_history", params={"tenant_id": f"eq.{tenant_id}", "select": "wedge_id"})
+    wedges = {str(row["wedge_id"]) for row in rows if row.get("wedge_id")}
+    return sorted(wedges)
+
+
+def upsert_growth_wedge_fitness_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "wedge_fitness_snapshots",
+        params={"on_conflict": "tenant_id,wedge,snapshot_week"},
+        json=payload,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else payload
+
+
+def get_latest_growth_wedge_fitness_snapshot(*, tenant_id: str, wedge: str) -> dict[str, Any] | None:
+    data = _request(
+        "GET",
+        "wedge_fitness_snapshots",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "wedge": f"eq.{wedge}",
+            "order": "snapshot_week.desc",
+            "limit": "1",
+        },
+    )
+    if not data:
+        return None
+    return data[0]

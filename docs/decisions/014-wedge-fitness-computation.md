@@ -1,4 +1,4 @@
-# ADR 007: Wedge Fitness Score Computation Specification
+# ADR 014: Wedge Fitness Score Computation Specification
 
 Status: Proposed
 
@@ -347,7 +347,7 @@ def evaluate_gates(composite: float, components: dict, context: dict) -> dict:
 
 ### Persistence
 
-Weekly computation persists to `wedge_fitness_snapshots` (schema 8.33 in design doc, table 13 in migration 007). The dedup key is `(tenant_id, wedge, snapshot_week)` where `snapshot_week` is the Monday of the reporting week (`DATE_TRUNC('week', now())::date`). Re-running the same week's computation upserts rather than creating a duplicate row. The `computed_at` column records actual execution time for observability but is not part of the uniqueness contract. The `component_scores` JSONB stores all 9 raw scores plus cold_start flags. The `gates_status` JSONB stores the 4 gate booleans. The `blocking_gaps` array lists human-readable reasons for any blocked gate.
+Weekly computation persists to `wedge_fitness_snapshots` (schema 8.33 in the design doc, table 13 in `growth_memory_phase1`). The dedup key is `(tenant_id, wedge, snapshot_week)` where `snapshot_week` is the Monday of the reporting week (`DATE_TRUNC('week', now())::date`). Re-running the same week's computation upserts rather than creating a duplicate row. The `computed_at` column records actual execution time for observability but is not part of the uniqueness contract. The `component_scores` JSONB stores all 9 raw scores plus cold_start flags. The `gates_status` JSONB stores the 4 gate booleans. The `blocking_gaps` array lists human-readable reasons for any blocked gate.
 
 ### Computation schedule
 

@@ -16,6 +16,11 @@ export interface HarnessDispatchConfig {
   eventSecret?: string;
 }
 
+export interface HarnessRequestConfig extends HarnessDispatchConfig {
+  path: string;
+  method?: "GET" | "POST";
+}
+
 export async function dispatchHarnessEvent(
   config: HarnessDispatchConfig,
   event: HarnessTriggerEvent,
@@ -33,6 +38,27 @@ export async function dispatchHarnessEvent(
 
   if (!response.ok) {
     throw new Error(`Harness event dispatch failed with status ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function dispatchHarnessRequest(
+  config: HarnessRequestConfig,
+  payload?: Record<string, unknown>,
+  fetchImpl: typeof fetch = fetch,
+) {
+  const response = await fetchImpl(`${config.baseUrl}${config.path}`, {
+    method: config.method ?? "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(config.eventSecret ? { Authorization: `Bearer ${config.eventSecret}` } : {}),
+    },
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Harness request failed with status ${response.status}`);
   }
 
   return response.json();

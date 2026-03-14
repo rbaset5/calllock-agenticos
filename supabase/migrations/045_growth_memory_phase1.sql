@@ -2,10 +2,10 @@
 -- Per design-doc.md §7.10: Phase 1 requires segment_performance, angle_effectiveness,
 -- touchpoint_log, experiment_history, cost_per_acquisition, routing_decision_log,
 -- journey_assignments (schema only), loss_records (schema only).
--- Plus: growth_dead_letter_queue (ADR 004), belief_events, and supporting tables.
+-- Plus: growth_dead_letter_queue (ADR 011), belief_events, and supporting tables.
 --
 -- All tables are tenant-scoped via RLS using the existing set_tenant_context() pattern
--- from migration 005. Idempotency enforced via UNIQUE constraints per ADR 004.
+-- from migration 005. Idempotency enforced via UNIQUE constraints per ADR 011.
 --
 -- Schema evolution policy (design-doc.md §7.10):
 --   Phase 1-2: additive only. No column removes, no type changes, no renames.
@@ -16,7 +16,7 @@
 -- Partitioned by month for query performance and archival
 -- =============================================================================
 CREATE TABLE public.touchpoint_log (
-    touchpoint_id       UUID PRIMARY KEY,  -- caller MUST supply (no DEFAULT — prevents silent dedup bypass per ADR 004)
+    touchpoint_id       UUID PRIMARY KEY,  -- caller MUST supply (no DEFAULT — prevents silent dedup bypass per ADR 011)
     tenant_id           UUID NOT NULL REFERENCES public.tenants(id),
     prospect_id         UUID NOT NULL,
     company_id          UUID,
@@ -35,7 +35,7 @@ CREATE TABLE public.touchpoint_log (
     partition_month     TEXT NOT NULL DEFAULT to_char(now(), 'YYYY-MM')
 );
 
--- Idempotency: touchpoint_id is PK (UUID set by sender per ADR 004)
+-- Idempotency: touchpoint_id is PK (UUID set by sender per ADR 011)
 CREATE INDEX idx_touchpoint_prospect ON public.touchpoint_log (tenant_id, prospect_id, created_at);
 CREATE INDEX idx_touchpoint_experiment ON public.touchpoint_log (tenant_id, experiment_id, arm_id) WHERE experiment_id IS NOT NULL;
 CREATE INDEX idx_touchpoint_month ON public.touchpoint_log (tenant_id, partition_month);
@@ -244,7 +244,7 @@ CREATE TABLE public.belief_events (
     signal_map_version  TEXT NOT NULL,
     source_version      TEXT NOT NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (tenant_id, source_touchpoint_id)  -- idempotent on touchpoint per ADR 004
+    UNIQUE (tenant_id, source_touchpoint_id)  -- idempotent on touchpoint per ADR 011
 );
 
 CREATE INDEX idx_belief_prospect ON public.belief_events (tenant_id, prospect_id, created_at);
@@ -276,7 +276,7 @@ CREATE INDEX idx_insight_pending ON public.insight_log (tenant_id, review_status
     WHERE review_status = 'pending';
 
 -- =============================================================================
--- 11. growth_dead_letter_queue — unrecoverable events (ADR 004)
+-- 11. growth_dead_letter_queue — unrecoverable events (ADR 011)
 -- =============================================================================
 CREATE TABLE public.growth_dead_letter_queue (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -317,7 +317,7 @@ CREATE TABLE public.founder_overrides (
 CREATE INDEX idx_override_tenant ON public.founder_overrides (tenant_id, created_at);
 
 -- =============================================================================
--- 13. wedge_fitness_snapshots — weekly composite score per wedge (ADR 007)
+-- 13. wedge_fitness_snapshots — weekly composite score per wedge (ADR 014)
 -- Write owner: Growth Advisor (weekly batch)
 -- =============================================================================
 CREATE TABLE public.wedge_fitness_snapshots (

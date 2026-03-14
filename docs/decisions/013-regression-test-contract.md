@@ -1,10 +1,10 @@
-# ADR 006: Fail-Closed and Duplicate-Delivery Regression Test Contract
+# ADR 013: Fail-Closed and Duplicate-Delivery Regression Test Contract
 
 Status: Proposed
 
 ## Context
 
-The design doc specifies fail-closed behavior as a "hard architectural invariant" (Principle 5.10) and idempotency as a universal requirement (Principle 5.9, ADR 004). These are safety-critical properties: if either regresses, the system sends unauthorized messages or corrupts Growth Memory.
+The design doc specifies fail-closed behavior as a "hard architectural invariant" (Principle 5.10) and idempotency as a universal requirement (Principle 5.9, ADR 011). These are safety-critical properties: if either regresses, the system sends unauthorized messages or corrupts Growth Memory.
 
 The design doc's 15 validation tests (§18) cover functional correctness but do not specify regression tests that run in CI to prevent these invariants from breaking during development. Droid needs a concrete test contract: what to test, what assertions to make, and where these tests live.
 
@@ -19,7 +19,7 @@ harness/tests/growth/
   test_fail_closed.py          # Outbound Health Gate fail-closed tests
   test_idempotency.py          # Duplicate-delivery dedup tests
   test_dlq.py                  # Dead-letter queue contract tests
-  test_attribution_token.py    # Token validation tests (ADR 005)
+  test_attribution_token.py    # Token validation tests (ADR 012)
   conftest.py                  # Shared fixtures: tenant setup, RLS context
 ```
 
@@ -81,7 +81,7 @@ async def test_partial_gate_failure_does_not_send_failed():
 
 ### Duplicate-delivery regression tests (`test_idempotency.py`)
 
-These tests verify ADR 004: database-level idempotency via UNIQUE constraints.
+These tests verify ADR 011: database-level idempotency via UNIQUE constraints.
 
 ```python
 # Test 1: Duplicate touchpoint → dedup hit, not error
@@ -209,7 +209,7 @@ growth-regression:
 - Fail-closed behavior is verified by 6 tests covering every failure mode (unavailable, error, timeout, rejection, partial batch)
 - Duplicate delivery is verified by 6 tests covering dedup, false-dedup, upsert versioning, and concurrency
 - DLQ contract is verified by 4 tests covering write, RLS isolation, resolution, and metrics
-- Attribution token validation is verified by 6 tests covering the full lifecycle (ADR 005)
+- Attribution token validation is verified by 6 tests covering the full lifecycle (ADR 012)
 - All tests run in CI — invariant regression blocks merge
-- Test patterns follow ADR 004's handler model: catch UniqueViolation → log → return success
+- Test patterns follow ADR 011's handler model: catch UniqueViolation → log → return success
 - Tests use real Supabase (not mocks) per project convention, ensuring constraint behavior matches production

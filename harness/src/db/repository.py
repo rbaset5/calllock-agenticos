@@ -460,3 +460,111 @@ def claim_scheduler_backlog_entries(
         claimer_id=claimer_id,
         claim_ttl_seconds=claim_ttl_seconds,
     )
+
+
+def insert_growth_touchpoint(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.insert_growth_touchpoint(payload)
+    return local_repository.insert_growth_touchpoint(payload)
+
+
+def list_growth_touchpoints(*, tenant_id: str, touchpoint_type: str | None = None) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_touchpoints(tenant_id=tenant_id, touchpoint_type=touchpoint_type)
+    return local_repository.list_growth_touchpoints(tenant_id=tenant_id, touchpoint_type=touchpoint_type)
+
+
+def insert_growth_belief_event(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.insert_growth_belief_event(payload)
+    return local_repository.insert_growth_belief_event(payload)
+
+
+def list_growth_belief_events(*, tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_belief_events(tenant_id=tenant_id)
+    return local_repository.list_growth_belief_events(tenant_id=tenant_id)
+
+
+def insert_growth_dlq_entry(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.insert_growth_dlq_entry(payload)
+    return local_repository.insert_growth_dlq_entry(payload)
+
+
+def resolve_growth_dlq_entry(entry_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.resolve_growth_dlq_entry(entry_id, updates)
+    return local_repository.resolve_growth_dlq_entry(entry_id, updates)
+
+
+def list_growth_dlq_entries(*, tenant_id: str, unresolved_only: bool = False) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_dlq_entries(tenant_id=tenant_id, unresolved_only=unresolved_only)
+    return local_repository.list_growth_dlq_entries(tenant_id=tenant_id, unresolved_only=unresolved_only)
+
+
+def upsert_growth_experiment_history(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_growth_experiment_history(payload)
+    return local_repository.upsert_growth_experiment_history(payload)
+
+
+def get_growth_experiment_history(experiment_id: str) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.get_growth_experiment_history(experiment_id)
+    return local_repository.get_growth_experiment_history(experiment_id)
+
+
+def list_growth_experiment_history(*, tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_experiment_history(tenant_id=tenant_id)
+    return local_repository.list_growth_experiment_history(tenant_id=tenant_id)
+
+
+def list_growth_segment_performance(*, tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_segment_performance(tenant_id=tenant_id)
+    return local_repository.list_growth_segment_performance(tenant_id=tenant_id)
+
+
+def list_growth_cost_per_acquisition(*, tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_cost_per_acquisition(tenant_id=tenant_id)
+    return local_repository.list_growth_cost_per_acquisition(tenant_id=tenant_id)
+
+
+def list_growth_insights(*, tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_insights(tenant_id=tenant_id)
+    return local_repository.list_growth_insights(tenant_id=tenant_id)
+
+
+def list_growth_founder_overrides(*, tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_founder_overrides(tenant_id=tenant_id)
+    return local_repository.list_growth_founder_overrides(tenant_id=tenant_id)
+
+
+def list_growth_loss_records(*, tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_growth_loss_records(tenant_id=tenant_id)
+    return local_repository.list_growth_loss_records(tenant_id=tenant_id)
+
+
+def list_growth_wedges(*, tenant_id: str) -> list[str]:
+    if using_supabase():
+        return supabase_repository.list_growth_wedges(tenant_id=tenant_id)
+    return local_repository.list_growth_wedges(tenant_id=tenant_id)
+
+
+def upsert_growth_wedge_fitness_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_growth_wedge_fitness_snapshot(payload)
+    return local_repository.upsert_growth_wedge_fitness_snapshot(payload)
+
+
+def get_latest_growth_wedge_fitness_snapshot(*, tenant_id: str, wedge: str) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_latest_growth_wedge_fitness_snapshot(tenant_id=tenant_id, wedge=wedge)
+    return local_repository.get_latest_growth_wedge_fitness_snapshot(tenant_id=tenant_id, wedge=wedge)

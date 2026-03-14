@@ -228,3 +228,104 @@ class ScheduleOverrideRequest(StrictModel):
     note: str = ""
     new_claimer_id: Optional[str] = None
     claim_ttl_seconds: int = Field(default=600, ge=1)
+
+
+class GrowthTouchpointRequest(StrictModel):
+    touchpoint_id: str
+    tenant_id: str
+    prospect_id: str
+    company_id: Optional[str] = None
+    touchpoint_type: str
+    channel: str = "cold_email"
+    experiment_id: Optional[str] = None
+    arm_id: Optional[str] = None
+    attribution_token: Optional[str] = None
+    signal_quality_score: Optional[float] = None
+    cost: float = 0
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    source_component: str
+    source_version: str
+    seasonal_context: dict[str, Any] = Field(default_factory=dict)
+    created_at: Optional[str] = None
+
+
+class GrowthLifecycleRequest(StrictModel):
+    touchpoint_id: str
+    tenant_id: str
+    prospect_id: str
+    trigger_id: str
+    to_state: str
+    channel: str = "cold_email"
+    experiment_id: Optional[str] = None
+    arm_id: Optional[str] = None
+    signal_quality_score: Optional[float] = None
+    cost: float = 0
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    source_component: str = "growth.lifecycle"
+    source_version: str
+    seasonal_context: dict[str, Any] = Field(default_factory=dict)
+    created_at: Optional[str] = None
+
+
+class GrowthBeliefInferenceRequest(StrictModel):
+    tenant_id: str
+    source_touchpoint_id: str
+    prospect_id: str
+    touchpoint_type: str
+    belief_shift: Literal["up", "down", "flat", "unknown"]
+    confidence: float = Field(default=0, ge=0, le=1)
+    signal_map_version: str
+    source_version: str
+    created_at: Optional[str] = None
+
+
+class GrowthGateMessage(StrictModel):
+    message_id: str
+    suppress_list_hit: bool = False
+    duplicate_send: bool = False
+    volume_cap_exceeded: bool = False
+    required_compliance_fields_present: bool = True
+    domain_reputation: Optional[str] = None
+    bounce_rate: float = 0
+    complaint_rate: float = 0
+    lifecycle_eligible: bool = True
+
+
+class GrowthGateCheckRequest(StrictModel):
+    messages: list[GrowthGateMessage] = Field(default_factory=list)
+
+
+class GrowthGateCheckResponse(StrictModel):
+    status: str
+    sent_count: int
+    queued_count: int
+    blocked_count: int
+    outcomes: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class GrowthAdvisorWeeklyRequest(StrictModel):
+    tenant_id: str
+    source_version: str
+    wedges: list[str] = Field(default_factory=list)
+    context: dict[str, Any] = Field(default_factory=dict)
+    now_iso: Optional[str] = None
+
+
+class GrowthAllocationResponse(StrictModel):
+    experiment_id: str
+    chosen_arm_id: str
+    scores: dict[str, float] = Field(default_factory=dict)
+    mode: str
+
+
+class WedgeFitnessSnapshotResponse(StrictModel):
+    tenant_id: str
+    wedge: str
+    snapshot_week: str
+    score: float
+    component_scores: dict[str, Any] = Field(default_factory=dict)
+    gates_status: dict[str, Any] = Field(default_factory=dict)
+    blocking_gaps: list[str] = Field(default_factory=list)
+    launch_recommendation: Optional[str] = None
+    source_version: str
+    computed_at: str

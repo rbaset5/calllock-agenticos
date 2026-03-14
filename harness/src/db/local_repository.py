@@ -12,6 +12,7 @@ from harness.artifacts.access import assert_tenant_access
 from harness.artifacts.lifecycle import validate_transition
 from harness.alerts.lifecycle import validate_alert_transition
 from harness.artifacts.storage import normalize_artifact, write_run_artifact
+from growth.memory.models import GrowthDuplicateError
 from harness.incident_runbooks import apply_runbook_step_assignment, apply_runbook_step_update, get_runbook_step
 from harness.jobs.state_machine import validate_transition as validate_job_transition
 
@@ -42,6 +43,16 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("approval_requests", [])
     seed.setdefault("scheduler_backlog", [])
     seed.setdefault("incidents", [])
+    seed.setdefault("touchpoint_log", [])
+    seed.setdefault("belief_events", [])
+    seed.setdefault("growth_dead_letter_queue", [])
+    seed.setdefault("experiment_history", [])
+    seed.setdefault("segment_performance", [])
+    seed.setdefault("cost_per_acquisition", [])
+    seed.setdefault("insight_log", [])
+    seed.setdefault("founder_overrides", [])
+    seed.setdefault("loss_records", [])
+    seed.setdefault("wedge_fitness_snapshots", [])
     return seed
 
 
@@ -61,6 +72,36 @@ def _matches(identifier: str, record: dict[str, Any]) -> bool:
     return identifier in {record.get("id"), record.get("slug"), record.get("tenant_id")}
 
 
+def _default_attribution_keys() -> dict[str, Any]:
+    return {
+        "current": {
+            "kid": "k1",
+            "secret": "Y2FsbGxvY2stZ3Jvd3RoLWRlbW8ta2V5LTAwMDAwMDAwMDAwMDA",
+            "created_at": "2026-03-14T00:00:00Z",
+        },
+        "previous": None,
+    }
+
+
+def _normalize_growth_tenant_id(identifier: str) -> str:
+    try:
+        return get_tenant(identifier)["id"]
+    except KeyError:
+        return identifier
+
+
+def _tenant_matches(record_tenant_id: str, tenant_id: str) -> bool:
+    try:
+        tenant = get_tenant(tenant_id)
+    except KeyError:
+        return record_tenant_id == tenant_id
+    return record_tenant_id in {tenant["id"], tenant.get("slug")}
+
+
+def _sort_by_created_at(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(records, key=lambda record: record.get("created_at", ""))
+
+
 def get_tenant(identifier: str) -> dict[str, Any]:
     for tenant in _state()["tenants"]:
         if _matches(identifier, tenant):
@@ -75,6 +116,7 @@ def list_tenants() -> list[dict[str, Any]]:
 def get_tenant_config(identifier: str) -> dict[str, Any]:
     for config in _state()["tenant_configs"]:
         if _matches(identifier, config):
+            config.setdefault("attribution_keys", _default_attribution_keys())
             return config
     tenant = get_tenant(identifier)
     return {
@@ -103,6 +145,7 @@ def get_tenant_config(identifier: str) -> dict[str, Any]:
         "incident_skill_requirements": {},
         "incident_classification_rules": [],
         "incident_runbooks": {},
+        "attribution_keys": _default_attribution_keys(),
     }
 
 
@@ -253,6 +296,7 @@ def create_tenant_config(payload: dict[str, Any]) -> dict[str, Any]:
         "incident_skill_requirements": payload.get("incident_skill_requirements", {}),
         "incident_classification_rules": payload.get("incident_classification_rules", []),
         "incident_runbooks": payload.get("incident_runbooks", {}),
+        "attribution_keys": payload.get("attribution_keys", _default_attribution_keys()),
         "voice_agent": payload.get("voice_agent", {}),
         "automations": payload.get("automations", []),
     }
@@ -263,13 +307,34 @@ def create_tenant_config(payload: dict[str, Any]) -> dict[str, Any]:
 def update_tenant_config(tenant_id: str, updates: dict[str, Any]) -> dict[str, Any]:
     config = get_tenant_config(tenant_id)
     config.update(updates)
+    config.setdefault("attribution_keys", _default_attribution_keys())
     return config
 
 
 def delete_tenant(identifier: str) -> None:
     tenant = get_tenant(identifier)
     tenant_id = tenant["id"]
-    for key in ("tenants", "tenant_configs", "jobs", "artifacts", "kill_switches", "alerts", "customer_content", "scheduler_backlog", "incidents"):
+    for key in (
+        "tenants",
+        "tenant_configs",
+        "jobs",
+        "artifacts",
+        "kill_switches",
+        "alerts",
+        "customer_content",
+        "scheduler_backlog",
+        "incidents",
+        "touchpoint_log",
+        "belief_events",
+        "growth_dead_letter_queue",
+        "experiment_history",
+        "segment_performance",
+        "cost_per_acquisition",
+        "insight_log",
+        "founder_overrides",
+        "loss_records",
+        "wedge_fitness_snapshots",
+    ):
         _state()[key] = [record for record in _state()[key] if record.get("tenant_id") != tenant_id and record.get("id") != tenant_id]
 
 
@@ -930,3 +995,227 @@ def claim_scheduler_backlog_entries(
         entry["updated_at"] = claimed_before_iso
         claimed.append(entry)
     return claimed
+
+
+def insert_growth_touchpoint(payload: dict[str, Any]) -> dict[str, Any]:
+    touchpoint_id = payload["touchpoint_id"]
+    for row in _state()["touchpoint_log"]:
+        if row["touchpoint_id"] == touchpoint_id:
+            raise GrowthDuplicateError(touchpoint_id)
+    now = datetime.now(timezone.utc).isoformat()
+    created_at = payload.get("created_at") or now
+    record = {
+        "touchpoint_id": touchpoint_id,
+        "tenant_id": _normalize_growth_tenant_id(payload["tenant_id"]),
+        "prospect_id": payload["prospect_id"],
+        "company_id": payload.get("company_id"),
+        "touchpoint_type": payload["touchpoint_type"],
+        "channel": payload.get("channel", "cold_email"),
+        "experiment_id": payload.get("experiment_id"),
+        "arm_id": payload.get("arm_id"),
+        "attribution_token": payload.get("attribution_token"),
+        "signal_quality_score": payload.get("signal_quality_score"),
+        "cost": payload.get("cost", 0),
+        "metadata": payload.get("metadata", {}),
+        "source_component": payload["source_component"],
+        "source_version": payload["source_version"],
+        "seasonal_context": payload.get("seasonal_context", {}),
+        "created_at": created_at,
+        "partition_month": created_at[:7],
+        "wedge_id": payload.get("wedge_id") or payload.get("wedge") or (payload.get("metadata") or {}).get("wedge"),
+    }
+    _state()["touchpoint_log"].append(record)
+    return record
+
+
+def list_growth_touchpoints(*, tenant_id: str, touchpoint_type: str | None = None) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["touchpoint_log"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    if touchpoint_type is not None:
+        rows = [row for row in rows if row.get("touchpoint_type") == touchpoint_type]
+    return _sort_by_created_at(rows)
+
+
+def insert_growth_belief_event(payload: dict[str, Any]) -> dict[str, Any]:
+    tenant_id = _normalize_growth_tenant_id(payload["tenant_id"])
+    source_touchpoint_id = payload["source_touchpoint_id"]
+    for row in _state()["belief_events"]:
+        if row["tenant_id"] == tenant_id and row["source_touchpoint_id"] == source_touchpoint_id:
+            raise GrowthDuplicateError(source_touchpoint_id)
+    record = {
+        "belief_event_id": payload.get("belief_event_id", str(uuid4())),
+        "tenant_id": tenant_id,
+        "source_touchpoint_id": source_touchpoint_id,
+        "prospect_id": payload["prospect_id"],
+        "touchpoint_type": payload["touchpoint_type"],
+        "belief_shift": payload.get("belief_shift", "unknown"),
+        "confidence": payload.get("confidence", 0),
+        "signal_map_version": payload["signal_map_version"],
+        "source_version": payload["source_version"],
+        "created_at": payload.get("created_at") or datetime.now(timezone.utc).isoformat(),
+    }
+    _state()["belief_events"].append(record)
+    return record
+
+
+def list_growth_belief_events(*, tenant_id: str) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["belief_events"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    return _sort_by_created_at(rows)
+
+
+def insert_growth_dlq_entry(payload: dict[str, Any]) -> dict[str, Any]:
+    record = {
+        "id": payload.get("id", str(uuid4())),
+        "tenant_id": _normalize_growth_tenant_id(payload["tenant_id"]),
+        "event_type": payload["event_type"],
+        "event_payload": payload["event_payload"],
+        "error_class": payload["error_class"],
+        "error_message": payload.get("error_message"),
+        "retry_count": payload.get("retry_count", 0),
+        "max_retries": payload.get("max_retries", 3),
+        "source_version": payload["source_version"],
+        "created_at": payload.get("created_at", datetime.now(timezone.utc).isoformat()),
+        "resolved_at": payload.get("resolved_at"),
+        "resolution": payload.get("resolution"),
+        "resolved_by": payload.get("resolved_by"),
+    }
+    _state()["growth_dead_letter_queue"].append(record)
+    return record
+
+
+def resolve_growth_dlq_entry(entry_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    for row in _state()["growth_dead_letter_queue"]:
+        if row["id"] == entry_id:
+            row.update(updates)
+            row["resolved_at"] = updates.get("resolved_at", datetime.now(timezone.utc).isoformat())
+            return row
+    raise KeyError(f"Unknown growth DLQ entry: {entry_id}")
+
+
+def list_growth_dlq_entries(*, tenant_id: str, unresolved_only: bool = False) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["growth_dead_letter_queue"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    if unresolved_only:
+        rows = [row for row in rows if row.get("resolved_at") is None]
+    return _sort_by_created_at(rows)
+
+
+def upsert_growth_experiment_history(payload: dict[str, Any]) -> dict[str, Any]:
+    tenant_id = _normalize_growth_tenant_id(payload["tenant_id"])
+    experiment_id = payload["experiment_id"]
+    now = datetime.now(timezone.utc).isoformat()
+    for row in _state()["experiment_history"]:
+        if row["experiment_id"] == experiment_id:
+            row.update(payload)
+            row["tenant_id"] = tenant_id
+            row["updated_at"] = payload.get("updated_at", now)
+            return row
+    record = {
+        "experiment_id": experiment_id,
+        "tenant_id": tenant_id,
+        "wedge_id": payload["wedge_id"],
+        "segment": payload["segment"],
+        "channel": payload.get("channel", "cold_email"),
+        "lifecycle_stage_scope": payload.get("lifecycle_stage_scope"),
+        "arms": payload.get("arms", []),
+        "status": payload.get("status", "exploring"),
+        "gate_status": payload.get("gate_status", {}),
+        "winner_arm_id": payload.get("winner_arm_id"),
+        "winner_declared_at": payload.get("winner_declared_at"),
+        "seasonal_context": payload.get("seasonal_context", {}),
+        "source_version": payload["source_version"],
+        "created_at": payload.get("created_at", now),
+        "updated_at": payload.get("updated_at", now),
+    }
+    _state()["experiment_history"].append(record)
+    return record
+
+
+def get_growth_experiment_history(experiment_id: str) -> dict[str, Any]:
+    for row in _state()["experiment_history"]:
+        if row["experiment_id"] == experiment_id:
+            return row
+    raise KeyError(f"Unknown growth experiment: {experiment_id}")
+
+
+def list_growth_experiment_history(*, tenant_id: str) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["experiment_history"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    return _sort_by_created_at(rows)
+
+
+def list_growth_segment_performance(*, tenant_id: str) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["segment_performance"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    return _sort_by_created_at(rows)
+
+
+def list_growth_cost_per_acquisition(*, tenant_id: str) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["cost_per_acquisition"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    return _sort_by_created_at(rows)
+
+
+def list_growth_insights(*, tenant_id: str) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["insight_log"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    return _sort_by_created_at(rows)
+
+
+def list_growth_founder_overrides(*, tenant_id: str) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["founder_overrides"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    return _sort_by_created_at(rows)
+
+
+def list_growth_loss_records(*, tenant_id: str) -> list[dict[str, Any]]:
+    rows = [row for row in _state()["loss_records"] if _tenant_matches(row["tenant_id"], tenant_id)]
+    return _sort_by_created_at(rows)
+
+
+def list_growth_wedges(*, tenant_id: str) -> list[str]:
+    wedges: set[str] = set()
+    for collection, keys in (
+        (_state()["experiment_history"], ("wedge_id",)),
+        (_state()["segment_performance"], ("wedge_id",)),
+        (_state()["touchpoint_log"], ("wedge_id", "wedge")),
+    ):
+        for row in collection:
+            if not _tenant_matches(row["tenant_id"], tenant_id):
+                continue
+            for key in keys:
+                value = row.get(key)
+                if isinstance(value, str) and value:
+                    wedges.add(value)
+    return sorted(wedges)
+
+
+def upsert_growth_wedge_fitness_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+    tenant_id = _normalize_growth_tenant_id(payload["tenant_id"])
+    now = datetime.now(timezone.utc).isoformat()
+    for row in _state()["wedge_fitness_snapshots"]:
+        if row["tenant_id"] == tenant_id and row["wedge"] == payload["wedge"] and row["snapshot_week"] == payload["snapshot_week"]:
+            row.update(payload)
+            row["tenant_id"] = tenant_id
+            row["computed_at"] = payload.get("computed_at", now)
+            return row
+    record = {
+        "snapshot_id": payload.get("snapshot_id", str(uuid4())),
+        "tenant_id": tenant_id,
+        "wedge": payload["wedge"],
+        "snapshot_week": payload["snapshot_week"],
+        "score": payload["score"],
+        "component_scores": payload["component_scores"],
+        "gates_status": payload["gates_status"],
+        "blocking_gaps": payload.get("blocking_gaps", []),
+        "launch_recommendation": payload.get("launch_recommendation"),
+        "source_version": payload["source_version"],
+        "computed_at": payload.get("computed_at", now),
+    }
+    _state()["wedge_fitness_snapshots"].append(record)
+    return record
+
+
+def get_latest_growth_wedge_fitness_snapshot(*, tenant_id: str, wedge: str) -> dict[str, Any] | None:
+    rows = [
+        row
+        for row in _state()["wedge_fitness_snapshots"]
+        if _tenant_matches(row["tenant_id"], tenant_id) and row["wedge"] == wedge
+    ]
+    if not rows:
+        return None
+    rows.sort(key=lambda row: (row.get("snapshot_week", ""), row.get("computed_at", "")), reverse=True)
+    return rows[0]

@@ -1,4 +1,4 @@
-# ADR 005: Attribution Token Lifecycle
+# ADR 012: Attribution Token Lifecycle
 
 Status: Proposed
 
@@ -116,7 +116,7 @@ def validate_token(token: str, expected_tenant_id: str) -> TokenPayload:
 Replay is mitigated by three layers:
 
 1. **Expiry window** — tokens older than 90 days are rejected (limits replay window)
-2. **Idempotency** — touchpoint_log deduplicates on `touchpoint_id` (ADR 004). Replaying the same click with the same touchpoint_id is a no-op.
+2. **Idempotency** — touchpoint_log deduplicates on `touchpoint_id` (ADR 011). Replaying the same click with the same touchpoint_id is a no-op.
 3. **Attribution is append-only** — recording the same attribution event twice does not change experiment outcomes because touchpoint_log uses `INSERT ... ON CONFLICT DO NOTHING` semantics.
 
 Explicit nonce-based replay prevention is NOT implemented in Phase 1. The cost of a successful replay (one extra touchpoint_log row if touchpoint_id differs) is low and detectable via Signal Quality scoring. Phase 2 can add rate limiting per prospect_id if replay volume becomes a concern.

@@ -5,6 +5,7 @@ import httpx
 import pytest
 
 from db import supabase_repository
+from growth.memory.models import GrowthDuplicateError
 
 
 def _http_error(message: str) -> httpx.HTTPStatusError:
@@ -318,3 +319,60 @@ def test_create_alert_and_sync_incident_uses_atomic_rpc(monkeypatch: pytest.Monk
     assert re.fullmatch(r"[0-9a-f-]{36}", captured["payload"]["p_alert"]["id"])
     assert captured["payload"]["p_incident_sync"]["incident_key"] == "00000000-0000-0000-0000-000000000002:job_failure_spike"
     assert captured["payload"]["p_incident_sync"]["alert_status"] == "open"
+
+
+def test_insert_growth_touchpoint_translates_duplicate_conflict(monkeypatch: pytest.MonkeyPatch) -> None:
+    request = httpx.Request("POST", "https://example.test/rest/v1/touchpoint_log")
+    response = httpx.Response(409, request=request, json={"code": "23505", "message": "duplicate key value violates unique constraint"})
+
+    def fake_request(method: str, table: str, **kwargs: object) -> list[dict[str, object]]:
+        raise httpx.HTTPStatusError("duplicate", request=request, response=response)
+
+    monkeypatch.setattr(supabase_repository, "_request", fake_request)
+
+    with pytest.raises(GrowthDuplicateError):
+        supabase_repository.insert_growth_touchpoint(
+            {
+                "touchpoint_id": "00000000-0000-0000-0000-00000000a201",
+                "tenant_id": "00000000-0000-0000-0000-000000000001",
+                "prospect_id": "00000000-0000-0000-0000-00000000b201",
+                "touchpoint_type": "email_sent",
+                "source_component": "growth.tests",
+                "source_version": "test",
+            }
+        )
+
+
+def test_upsert_growth_wedge_fitness_snapshot_uses_stable_conflict_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_request(method: str, table: str, **kwargs: object) -> list[dict[str, object]]:
+        captured["method"] = method
+        captured["table"] = table
+        captured["params"] = kwargs.get("params")
+        captured["prefer"] = kwargs.get("prefer")
+        captured["json"] = kwargs.get("json")
+        return [kwargs["json"]]  # type: ignore[index]
+
+    monkeypatch.setattr(supabase_repository, "_request", fake_request)
+
+    result = supabase_repository.upsert_growth_wedge_fitness_snapshot(
+        {
+            "tenant_id": "00000000-0000-0000-0000-000000000001",
+            "wedge": "hvac",
+            "snapshot_week": "2026-03-09",
+            "score": 82.5,
+            "component_scores": {"belief_depth": {"score": 100}},
+            "gates_status": {"closed_loop_eligible": True},
+            "blocking_gaps": [],
+            "launch_recommendation": "launch",
+            "source_version": "test",
+            "computed_at": "2026-03-14T12:00:00+00:00",
+        }
+    )
+
+    assert result["snapshot_week"] == "2026-03-09"
+    assert captured["method"] == "POST"
+    assert captured["table"] == "wedge_fitness_snapshots"
+    assert captured["params"] == {"on_conflict": "tenant_id,wedge,snapshot_week"}
+    assert captured["prefer"] == "resolution=merge-duplicates,return=representation"
