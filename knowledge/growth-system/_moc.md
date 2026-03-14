@@ -14,3 +14,4 @@ progressive_disclosure:
 
 - [[growth-system/design-doc]]
 - [[growth-system/hold-scope-review]]
+- [[growth-system/v3-editing-spec]]
