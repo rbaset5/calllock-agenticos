@@ -21,7 +21,7 @@ This plan preserves supporting implementation detail for the shared platform and
 
 - Growth Memory ownership and event-quality semantics
 - wedge, segment, angle, proof, doctrine, and wedge-fitness semantics
-- lifecycle, experimentation, belief, and founder-review behavior
+- lifecycle, experimentation, conviction/readiness, and founder-review behavior
 - future-phase module boundaries
 
 Legacy narrowed labels (`persuasion_path`, `graph_mutation`, `review_object`, `lineage_chain`, `decisioning_projections`, `operator_projections`, `control_plane_auth`, `federated_benchmark`) remain usable only through the compatibility bridge in the growth-system spec.
@@ -31,7 +31,7 @@ Phases 1-2 are responsible for the implementation foundations required by captur
 - append-only `event_spine` ingest with quarantine, idempotency, and audit visibility
 - deterministic Growth Memory write planning and apply semantics
 - canonical touchpoint, routing-decision, attribution, and lineage linkage
-- projection refresh/versioning plus stale markers
+- projection refresh/versioning plus stale markers and shared snapshot lineage ids
 - replay support for deterministic recompute
 
 If sequencing in this plan conflicts with growth-system semantics, the growth-system spec wins.
@@ -266,8 +266,9 @@ Tests:
 - Implement append-only `event_spine` persistence for growth evidence with typed validation, quarantine, duplicate/late event idempotency, and audit visibility
 - Define deterministic write categories and persist write attempts/results with stable idempotency keys
 - Persist touchpoints, routing decisions, attribution lineage, and legacy growth-path compatibility views as Phase 2 data contracts, even if only capture-only behavior is enabled initially
-- Add projection refresh/versioning scaffolding so operator and decisioning reads can pin to explicit snapshots later
+- Add projection refresh/versioning scaffolding so operator and decisioning reads can pin to explicit shared snapshots later
 - Keep runtime writes single-writer: ingest owns events, the growth-memory pipeline owns canonical writes, projection refresh owns materialized views
+- Keep operator and decisioning surfaces projection-only; no request-path joins across raw Growth Memory tables
 
 Files:
 
@@ -281,6 +282,7 @@ Tests:
 - Deterministic mutation replay
 - Projection stale-marker behavior
 - Lineage chain reconstruction from source events through mutation results
+- Shared snapshot fallback when one projection family fails to refresh
 
 ### Step 9: Context Assembly Pipeline
 

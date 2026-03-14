@@ -38,8 +38,9 @@ These interfaces and subsystems must not be silently redefined in phase plans or
 
 - Growth Memory table ownership and quality gates
 - touchpoint logging, routing decision logging, and attribution views
-- experiment allocator, belief layer, doctrine enforcement, proof coverage, and wedge-fitness semantics
+- experiment allocator, conviction/readiness semantics, doctrine enforcement, proof coverage, and wedge-fitness semantics
 - founder review workflow and delegation tiers
+- control-plane authorization and projection coherence semantics
 - Phase 7 aggregate-intelligence privacy thresholds
 - compatibility treatment for legacy narrowed terms from the prior persuasion-platform rewrite
 
@@ -70,16 +71,27 @@ Stages 0-4 must lock the following qualities before downstream implementation de
 - lock the Growth Memory Phase 1 subset, write ownership, and deterministic write path
 - lock touchpoint, routing-decision, attribution, and lineage semantics
 - lock founder review workflow, doctrine enforcement, and delegate scope rules
+- lock the canonical error taxonomy and rescue posture for each stateful growth contract
 - lock projection versioning, freshness, and skew behavior
+- lock the shared snapshot lineage contract and projection-only read posture
+- lock dual-axis `conviction_shift` and `buying_readiness` semantics
+- lock `control_plane_auth` role/action/scope/reason/audit rules
 - lock compatibility meaning for legacy narrowed terms that still appear in plans and code notes
 - lock aggregate-benchmark privacy thresholds and suppression rules
+- lock the day-1 observability pack and data-plane rollback drill
 
 **Concrete deliverables:**
 
 - implementation-safe sections in the growth-system authority doc for the critical Phase 0-2 objects
 - named failure states and rescue posture for each stateful growth contract
+- one explicit split between implementation-blocking contracts and later-stage directional modules
+- one projection coherence contract covering shared lineage, freshness budgets, and skew fallback
+- one `review_object` contract covering uniqueness, CAS apply, and failed-apply semantics
+- one `control_plane_auth` matrix for cross-tenant reads, writes, replay, and benchmark access
 - one dependency graph showing which contracts unblock which later stages
 - one explicit compatibility mapping for legacy persuasion-platform labels
+- one canonical stage-gated test matrix
+- one canonical day-1 observability and rollback package
 
 **Owned contracts:**
 
@@ -98,17 +110,21 @@ Stages 0-4 must lock the following qualities before downstream implementation de
 - no implementer has to invent meanings for the core growth-system contracts
 - every Stage 2-4 build item can point to a specific authority section
 - duplicate/late ingest, replay determinism, stale review handling, projection skew, doctrine fail-closed behavior, and benchmark suppression are all explicitly covered
+- operator and decisioning reads have one shared snapshot-lineage contract
+- dual-axis conviction and readiness semantics are canonical rather than implied
 - legacy narrowed terms are mapped rather than left ambiguous
 
 **Verification suite:**
 
 - contract consistency pass across architecture spec, growth-system spec, phase plans, and TODOs
 - reviewer confirmation that each critical growth contract has identity, lifecycle, and failure semantics
+- stage-gated matrix review for required unit, integration, system, and drill coverage
 - terminology pass confirming old narrowed labels only appear through compatibility context
 
 **Observability requirements:**
 
 - each contract names the metrics, logs, or audit signals needed to detect silent failure
+- advisory/assisted rollout gates include a data-plane freeze/replay drill, not just code rollback
 
 **Rollout gate:**
 
@@ -209,6 +225,7 @@ Stages 0-4 must lock the following qualities before downstream implementation de
 - end-to-end lineage linkage
 - replay tooling
 - projection refresh scaffolding with explicit stale markers
+- shared snapshot lineage ids and projection-only read contract
 
 **Concrete deliverables:**
 
@@ -217,6 +234,7 @@ Stages 0-4 must lock the following qualities before downstream implementation de
 - mutation logging and hold states
 - replayable graph evolution over a bounded sample window
 - graph/projection snapshot versioning scaffold
+- shared-lineage fallback that keeps operator and decisioning reads coherent under refresh failure
 
 **Owned contracts:**
 
@@ -244,6 +262,7 @@ Stages 0-4 must lock the following qualities before downstream implementation de
 - deterministic replay tests
 - mutation conflict hold tests
 - lineage reconstruction tests
+- projection skew fallback tests
 
 **Observability requirements:**
 
@@ -292,6 +311,7 @@ Stages 0-4 must lock the following qualities before downstream implementation de
 - proof debt, doctrine conflict, and asset-gap queues
 - founder-readable explanations
 - stale snapshot rejection semantics for review actions
+- shared review/apply idempotency semantics
 
 **Concrete deliverables:**
 
@@ -299,6 +319,7 @@ Stages 0-4 must lock the following qualities before downstream implementation de
 - `review_object` creation and durable state representation
 - packet/dashboard/queue consistency around shared review state
 - explicit stale review action handling
+- active-review uniqueness and supersede behavior
 
 **Owned contracts:**
 

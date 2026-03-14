@@ -108,9 +108,11 @@ The growth-system companion spec in `knowledge/growth-system/design-doc.md` is a
 
 - Growth Memory and growth-system object model
 - wedge, segment, angle, asset, proof, doctrine, and wedge-fitness semantics
-- routing, lifecycle, experimentation, and founder review behavior
+- routing, lifecycle, experimentation, conviction/readiness, and founder review behavior
 - advanced growth modules such as pricing, channel mix, geographic intelligence, and aggregate intelligence
 - rollout and trust-ladder behavior for the growth system
+
+That companion spec now explicitly separates implementation-blocking Stage 0-2 contracts from later-stage directional modules; shared-platform docs should not blur that boundary.
 
 Legacy narrowed terms from the prior persuasion-platform rewrite (`persuasion_path`, `graph_mutation`, `review_object`, `lineage_chain`, `decisioning_projections`, `operator_projections`, `control_plane_auth`, `federated_benchmark`) remain valid only through the explicit compatibility bridge in `knowledge/growth-system/design-doc.md`.
 

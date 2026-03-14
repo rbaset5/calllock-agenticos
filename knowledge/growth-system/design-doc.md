@@ -102,6 +102,11 @@ The authority split is deliberate:
 
 If this document conflicts with the architecture spec on a shared platform constraint, the architecture spec wins. If a phase plan conflicts with this document on growth-system behavior or object semantics, this document wins. If sequencing conflicts arise, the master plan wins.
 
+This authority is intentionally split into two speeds:
+
+- **Implementation-blocking contract authority (Stages 0-2):** identity, lifecycle, failure semantics, auth boundaries, projection coherence, observability, and rollback posture for the core growth contracts. These sections are normative before Stage 2-4 work proceeds.
+- **Directional later-stage authority (Stages 3-7):** system-shape modules and future growth capabilities remain authoritative, but they do not override stage gates or force implementation before the master plan enables them.
+
 ## 4. Compatibility Bridge for Legacy Contract Terms
 
 The repo currently contains narrowed persuasion-platform vocabulary from the immediately preceding rewrite. Those terms are not silently dropped. They are mapped here explicitly.
@@ -241,6 +246,51 @@ This document assumes the current shared platform split:
 - harness owns orchestration, policy, eval, observability, and async automation
 - growth system owns persuasion intelligence, routing and learning state, founder review semantics, and strategic GTM memory
 
+### 8.4 Implementation-blocking contract set
+
+Stages 0-2 depend on the following contracts being explicit here rather than inferred in code:
+
+- deterministic `event_spine` append, quarantine, idempotency, and replay behavior
+- canonical growth-path reporting plus legacy `persuasion_path` compatibility
+- single-writer Growth Memory categories, lineage, and rollback semantics
+- shared snapshot lineage, freshness, and skew handling for operator and decision reads
+- `review_object` lifecycle, uniqueness, CAS apply, stale snapshot rejection, and failed-apply posture
+- `control_plane_auth` role, scope, reason, audit, and fail-closed semantics
+- dual-axis `conviction_shift` and `buying_readiness` semantics
+- day-1 observability pack and data-plane rollback drill
+- federated benchmark privacy thresholds and suppression contract
+
+### 8.5 Directional later-stage modules
+
+Later-stage modules remain in this document because they define the intended system shape, but they are not implementation-blocking until their stage gates are active:
+
+- cross-funnel expansion
+- growth intelligence platform modules
+- network-effects and aggregate-intelligence modules
+- advanced intelligence modules listed in Section 12
+
+### 8.6 Canonical failure taxonomy
+
+The Stage 0 exception vocabulary is part of the contract. Implementations may wrap platform-specific exceptions, but they should preserve these names and outcomes:
+
+| Codepath | Canonical exception | Required rescue posture |
+|---|---|---|
+| `EventSpineIngest.validate` | `EventSchemaValidationError` | reject, quarantine, and audit |
+| `EventSpineIngest.append` | `EventAppendWriteError` | bounded retry, visible backlog or hold state, fail closed for promotion |
+| `EventSpineIngest.append` | `IdempotencyConflictError` | merge or no-op by idempotency key, audit duplicate path |
+| `GraphMutationPlanner.plan` | `MissingPathKeyError` | hold mutation and open repair queue |
+| `GraphMutationPlanner.plan` | `ConvictionReadinessInferenceParseError` | preserve analysis-only output, block canonical write |
+| `GraphMutationApplier.apply` | `PathMergeConflictError` | no apply, open visible conflict review |
+| `GraphMutationApplier.apply` | `ReplayDeterminismMismatchError` | freeze promotion, alert operator, replay before unfreeze |
+| `ProjectionRefresher.refresh*` | `ProjectionRefreshError` | keep last good snapshot, mark stale, alert |
+| `ProjectionRefresher.refresh*` | `ProjectionVersionSkewError` | pin both families to last good or mark both stale |
+| `ReviewObjectService.create` | `ActiveReviewConflictError` | dedupe or supersede atomically |
+| `ReviewObjectService.apply` | `ReviewSnapshotStaleError` | reject, refresh, preserve reviewable state |
+| `ReviewObjectService.apply` | `ReviewApplyFailedError` | mark `failed_apply`, preserve intent, retry or replay |
+| `ControlPlaneAuth.authorize` | `ControlPlaneAuthorizationError` | fail closed and audit |
+| `DoctrineEvaluator.evaluate` | `DoctrineRegistryUnavailable` | fail closed, block risky actions, page operator |
+| `BenchmarkAggregator.publish` | `UnsafeBenchmarkCohortError` | suppress output, log reason, expose privacy hold |
+
 ## 9. Growth Memory
 
 Growth Memory is the shared knowledge base that makes learning compound rather than remain isolated inside campaigns.
@@ -269,7 +319,8 @@ Primary Growth Memory tables include:
 - `churn_records`
 - `referral_links`
 - `geographic_market_density`
-- `belief_events`
+- `conviction_shift_events`
+- `buying_readiness_events`
 - `founder_doctrine`
 - `doctrine_conflict_log`
 - `proof_coverage_map`
@@ -277,6 +328,11 @@ Primary Growth Memory tables include:
 - `wedge_fitness_snapshots`
 - `product_usage_correlation`
 - `aggregate_intelligence`
+
+Derived compatibility views include:
+
+- `belief_events` as a compatibility projection over `conviction_shift_events` and `buying_readiness_events`
+- `persuasion_path` as a reporting view over the canonical growth path contracts
 
 ### 9.2 Write ownership
 
@@ -287,7 +343,7 @@ Single-writer ownership is a hard rule:
 - Segmentation Engine writes segment assignments and transitions
 - Cost Layer writes acquisition and budget views
 - Journey Orchestrator writes journey assignments
-- Belief Layer writes belief events
+- Conviction and Readiness Layer writes `conviction_shift_events` and `buying_readiness_events`
 - Founder Review UI writes doctrine and overrides
 - Growth Advisor writes strategic insights, lookalikes, anti-patterns, and wedge fitness snapshots
 - Aggregate Intelligence Layer writes cross-tenant benchmarks in Phase 7
@@ -297,14 +353,67 @@ Exceptions are append-only by design:
 - `touchpoint_log`
 - `insight_log`
 
-### 9.3 Data hygiene
+### 9.3 Deterministic write contract
+
+Canonical write categories:
+
+- `append_event`
+- `normalize_touchpoint`
+- `record_routing_decision`
+- `derive_conviction_shift`
+- `derive_buying_readiness`
+- `apply_segment_transition`
+- `apply_proof_coverage`
+- `apply_wedge_fitness`
+- `open_review_object`
+- `refresh_projection_snapshot`
+- `publish_benchmark`
+
+Every write attempt carries:
+
+- `tenant_id`
+- `write_category`
+- `idempotency_key`
+- `source_event_id` or `source_snapshot_id`
+- `source_version`
+- `lineage_root_id`
+- `applied_at`
+
+Determinism rules:
+
+- one write owner per canonical table or projection family
+- same ordered input set produces the same write plan and same snapshot lineage
+- duplicate or late inputs merge or no-op by idempotency key rather than forking state
+- replay may recompute derived state, but it may not mutate append-only evidence
+
+### 9.4 Projection and read contract
+
+Operator and decisioning reads are projection-only. Request paths do not join across raw Growth Memory tables.
+
+Each projection family must publish:
+
+- `snapshot_lineage_id`
+- `snapshot_version`
+- `source_high_watermark`
+- `generated_at`
+- `fresh_until`
+- `stale_after`
+
+Coherence rules:
+
+- operator and decisioning projections pin to the same `snapshot_lineage_id`
+- skew exists whenever either family advances without the other for the same high-watermark window
+- on skew or partial refresh failure, both families either stay on the same last-good snapshot or both render stale
+- stale-but-coherent reads are acceptable within the published freshness budget; mixed-freshness reads are not
+
+### 9.5 Data hygiene
 
 - performance data decays over time rather than disappearing
 - seasonal patterns preserve year-over-year comparability
 - all writes include version metadata
 - stale or suspect writes can be quarantined without destroying source evidence
 
-### 9.4 Quarantine and rollback
+### 9.6 Quarantine and rollback
 
 Every Growth Memory write is tagged with `source_version`. If a component writes bad data:
 
@@ -313,7 +422,15 @@ Every Growth Memory write is tagged with `source_version`. If a component writes
 3. review or purge them
 4. recompute derived state from append-only touchpoints and source evidence
 
-### 9.5 Data classification
+Data-plane rollback is separate from code rollback:
+
+1. freeze closed-loop actions
+2. freeze derived-state promotion if corruption risk exists
+3. keep event capture live
+4. keep last-good coherent projections readable
+5. replay from append-only evidence before unfreezing
+
+### 9.7 Data classification
 
 All data is classified:
 
@@ -323,6 +440,23 @@ All data is classified:
 - Tier 4: sensitive raw inputs that should be redacted at write time
 
 The growth system must preserve these classifications across tables, queries, and future aggregate intelligence.
+
+### 9.8 Aggregate-intelligence privacy contract
+
+Federated benchmark outputs remain aggregate-only and are blocked unless all of the following are true:
+
+- minimum cohort size is at least 20 tenants for any published slice
+- no slice may use more than 3 dimensions at once
+- no slice may include raw identifiers, tenant names, or replayable event payloads
+- any slice that would expose more than 20 percent contribution from a single tenant is suppressed
+- suppressed outputs remain auditable through lineage and reason codes
+
+Benchmark outputs must publish:
+
+- `cohort_definition_id`
+- `cohort_size`
+- `suppression_reason` when blocked
+- lineage back to the aggregate-safe inputs used
 
 ## 10. Core Components
 
@@ -571,6 +705,49 @@ Delegation tiers:
 
 Overrides are training signal. Doctrine constrains what can be proposed before it reaches review.
 
+`review_object` is the durable workflow primitive behind this surface.
+
+Canonical uniqueness key:
+
+- `tenant_scope`
+- `review_type`
+- `subject_type`
+- `subject_id`
+- `subject_version`
+
+Lifecycle states:
+
+- `proposed`
+- `blocked_pending_doctrine`
+- `approved`
+- `deferred`
+- `superseded`
+- `applying`
+- `applied`
+- `failed_apply`
+- `cancelled`
+
+Apply rules:
+
+- only one active `review_object` may exist for the uniqueness key at a time
+- new competing proposals must supersede or dedupe atomically
+- apply requires compare-and-set against the current `subject_version`
+- every apply carries an idempotency token so double-submit or retry does not double-apply
+- downstream side-effect failure moves the object to `failed_apply` and preserves retry or replay context
+
+### 10.15A Control-plane authorization matrix
+
+Delegation tiers describe product posture. `control_plane_auth` is the authorization contract that constrains the implementation.
+
+| Role | Allowed actions | Tenant scope | Reason required | Audit required | Failure posture |
+|---|---|---|---|---|---|
+| Founder | approve, override, replay, benchmark-read, emergency freeze | all tenants | yes for override, replay, and cross-tenant reads | always | fail closed |
+| Trusted delegate | asset approval, experiment tuning, packet triage, benchmark-read | assigned tenants only | yes for override-like actions | always | fail closed |
+| System autonomous | bounded allocation, winner declaration, re-segmentation, projection refresh | scoped tenant only | machine reason code required | always | fail closed |
+| Auditor / ops | read audit, review failures, replay diagnostics | approved support scope only | yes | always | fail closed |
+
+Authorization checks must bind actor, action, tenant scope, reason, and current subject version before state changes or replay begin.
+
 ### 10.16 Founder Dashboard
 
 The dashboard has four levels:
@@ -762,22 +939,27 @@ Activates ADVOCATE customers through signed referral links and attribution-aware
 
 ## 13. Belief, Doctrine, Proof, and Wedge Fitness
 
-### 13.1 Belief Layer
+### 13.1 Conviction and Readiness Layer
 
-The system should learn not just what converted, but what created conviction.
+The system should learn not just what converted, but what created conviction and whether the buyer was ready to act.
 
-Belief events are a derived layer over observable behavior. They are not raw truth claims about human psychology.
+Canonical derived signals:
 
-Belief Signal Map examples:
+- `conviction_shift`: did the evidence increase or decrease belief that CallLock solves the buyer's problem?
+- `buying_readiness`: did the evidence increase or decrease willingness to take the next commercial step now?
 
-- email open without click -> flat
-- demo watched deeply -> up
-- comparison page dwell -> up
-- objection reply -> down but engaged
-- meeting booked -> up
-- pilot cancelled -> down
+These are derived over observable behavior. They are not raw truth claims about human psychology.
 
-Belief data helps the system distinguish curiosity from conviction.
+Illustrative signal map:
+
+- email open without click -> conviction `flat`, readiness `flat`
+- demo watched deeply -> conviction `up`, readiness `flat` or `up`
+- comparison page dwell -> conviction `up`, readiness `flat`
+- objection reply -> conviction `down`, readiness `flat`
+- meeting booked -> conviction `up`, readiness `up`
+- pilot cancelled -> conviction `down`, readiness `down`
+
+Compatibility rule: legacy `belief_events` remain a derived compatibility view for older plans, but canonical writes and analytics use `conviction_shift` and `buying_readiness`.
 
 ### 13.2 Founder Doctrine Registry
 
@@ -823,7 +1005,8 @@ Components:
 - retention quality
 - segment clarity
 - cost efficiency
-- belief depth
+- conviction depth
+- readiness progression
 
 ### 13.6 Hard kill criteria
 
@@ -887,6 +1070,26 @@ Each phase requires:
 - safety gates
 - explicit acceptance criteria
 
+### 15.1 Day-1 observability pack
+
+Every implementation-blocking contract must ship with:
+
+- structured logs for entry, branch, and exit on write, apply, and refresh paths
+- counters: ingest accepted/quarantined/duplicate, mutation applied/held/conflict, replay mismatch, review apply success/stale/failed, doctrine blocked-action count, benchmark suppression count
+- gauges: projection stale age, projection skew duration, DLQ depth
+- dashboards: trust ladder readiness, event-spine health, projection freshness/skew, review queue/apply failures, benchmark suppression
+- runbooks: append failure backlog, mutation hold explosion, stale projection recovery, failed review apply replay, doctrine outage, benchmark suppression investigation
+
+### 15.2 Data-plane rollback drill
+
+Before assisted or closed-loop modes ship, the team must rehearse:
+
+1. freezing closed-loop actions
+2. freezing derived-state promotion while event capture stays live
+3. serving last-good coherent projections
+4. replaying from append-only evidence
+5. restoring advisory, then assisted, then closed-loop behavior in order
+
 ## 16. Validation Strategy
 
 The validation suite should cover at least the following families:
@@ -909,6 +1112,22 @@ The validation suite should cover at least the following families:
 
 These are not optional polish. They are what keeps the growth system from learning the wrong lesson at scale.
 
+### 16.1 Stage-gated contract matrix
+
+| Contract | Earliest gate | Required coverage |
+|---|---|---|
+| event ingest, quarantine, duplicate and late handling | Stage 2 | unit + integration + chaos replay |
+| deterministic write planning and lineage | Stage 2 | integration + replay determinism |
+| shared projection snapshot lineage and skew fallback | Stage 2 | integration + system coherence |
+| `review_object` uniqueness, stale apply, failed apply | Stage 3 | integration + system double-submit |
+| `control_plane_auth` | Stage 3 | unit + integration + audit-path coverage |
+| doctrine fail-closed behavior | Stage 3 | integration + outage scenario |
+| dual-axis conviction and readiness semantics | Stage 2 | unit + integration against routing and proof logic |
+| federated benchmark suppression | Stage 6 prerequisites locked in Stage 0 | integration + privacy threshold tests |
+| data-plane rollback drill | Stage 4 | operational drill + replay recovery verification |
+
+Promotion rule: no stage advances unless its required coverage is green and its rollback and observability expectations are demonstrated.
+
 ## 17. Immediate Priorities
 
 The immediate repo priority is not "invent more vision." It is to keep the ambitious vision and surrounding execution artifacts aligned.
@@ -919,8 +1138,10 @@ Near-term spec and implementation focus:
 - define the event catalog and Growth Memory subset for Phase 1
 - define touchpoint and routing decision logs
 - define doctrine enforcement semantics in implementation-ready form
+- keep the implementation-blocking contract set explicit and separate from later-stage directional modules
+- preserve dual-axis conviction and readiness semantics across schemas and analytics
 - define proof coverage computation and ownership loop
-- define belief signal map v1 and confidence rules
+- define confidence rules for conviction and readiness signals
 - define wedge fitness computation and phase-gate thresholds
 - keep master plan, phase plans, and TODOs synchronized with this authority model
 
