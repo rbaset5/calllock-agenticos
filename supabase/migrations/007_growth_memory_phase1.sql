@@ -324,17 +324,18 @@ CREATE TABLE public.wedge_fitness_snapshots (
     snapshot_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id           UUID NOT NULL REFERENCES public.tenants(id),
     wedge               TEXT NOT NULL,
-    score               NUMERIC(5,2) NOT NULL,  -- composite 0-100
-    component_scores    JSONB NOT NULL,          -- 9 component scores + cold_start flags
-    gates_status        JSONB NOT NULL,          -- automation_eligible, closed_loop_eligible, etc.
-    blocking_gaps       JSONB DEFAULT '[]',      -- human-readable reasons for blocked gates
+    snapshot_week       DATE NOT NULL,            -- Monday of the reporting week (stable dedup key)
+    score               NUMERIC(5,2) NOT NULL,   -- composite 0-100
+    component_scores    JSONB NOT NULL,           -- 9 component scores + cold_start flags
+    gates_status        JSONB NOT NULL,           -- automation_eligible, closed_loop_eligible, etc.
+    blocking_gaps       JSONB DEFAULT '[]',       -- human-readable reasons for blocked gates
     launch_recommendation TEXT,
     source_version      TEXT NOT NULL,
-    computed_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (tenant_id, wedge, computed_at)       -- one snapshot per wedge per computation
+    computed_at         TIMESTAMPTZ NOT NULL DEFAULT now(),  -- actual execution time (observability only)
+    UNIQUE (tenant_id, wedge, snapshot_week)      -- one snapshot per wedge per reporting week
 );
 
-CREATE INDEX idx_wedge_fitness_latest ON public.wedge_fitness_snapshots (tenant_id, wedge, computed_at DESC);
+CREATE INDEX idx_wedge_fitness_latest ON public.wedge_fitness_snapshots (tenant_id, wedge, snapshot_week DESC);
 
 -- =============================================================================
 -- RLS policies for all new tables
