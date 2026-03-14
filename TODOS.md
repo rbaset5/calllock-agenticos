@@ -11,6 +11,41 @@ Items identified during architecture reviews (2026-03-12).
 **Depends on:** Section 0 (Current State) being finalized, Industry Pack format being stable.
 **Source:** CEO review, Section 1A (Bridge Gap).
 
+### Define canonical persuasion_path vocabulary and reporting view
+**What:** Define `persuasion_path = segment x pain x objection x proof x belief delta x outcome` as the canonical reporting lens for the growth system and specify the reporting/view model that rolls metrics up through it.
+**Why:** Without a single atomic unit of learning, proof quality, routing quality, and founder review stay fragmented across disconnected metrics.
+**Effort:** M
+**Depends on:** Growth system design doc v4 framing being stable, especially Sections 1.1, 4, 11, and 14.1.
+**Source:** CEO mega-review v2, critical gap on atomic learning unit.
+
+### Define proof supply chain and owner loop
+**What:** Specify the operational loop from objection seen to proof brief creation, owner assignment, approval, deployment, and conviction re-measurement.
+**Why:** Proof gaps are only useful if they produce owned work and measurable proof quality improvement.
+**Effort:** M
+**Depends on:** Proof coverage schema and Founder Weekly Operating Packet format being stable.
+**Source:** CEO mega-review v2, missing proof supply chain loop.
+
+### Split belief into conviction_shift and buying_readiness
+**What:** Replace single-axis belief modeling with dual-axis conviction and readiness semantics across schemas, routing logic, and proof analysis.
+**Why:** A single belief axis hides the difference between "I believe it" and "I am ready to act," which weakens proof analysis and journey adaptation.
+**Effort:** S
+**Depends on:** Belief Layer v4 framing and schema updates being stable.
+**Source:** CEO mega-review v2, critical gap on belief precision.
+
+### Refactor growth system doc into Core Wedge Proof Spec + Future Modules Appendix
+**What:** Keep the core wedge-proof loop in the main body and move future analytical expansion into an appendix or deferred section.
+**Why:** Phase 6-7 ambition currently adds architectural gravity to Phase 0-3 and makes the design feel broader than the immediate product goal.
+**Effort:** S
+**Depends on:** 4-plane architecture framing being accepted as the top-level narrative.
+**Source:** CEO mega-review v2, warning on future-phase gravity.
+
+### Adopt 4-plane architecture framing
+**What:** Frame the growth system as four planes: Capture, Interpret, Decide, and Govern. This supersedes the older five-core narrative concept.
+**Why:** The 4-plane model keeps the system legible and ties every component back to the repeatable persuasion path loop.
+**Effort:** S
+**Depends on:** Core growth system vocabulary and phase framing being stable.
+**Source:** CEO mega-review v2, fundamental reframing.
+
 ### Define compliance graph conflict resolution rule
 **Status:** Resolved in code and ADR 009. Compliance rules now resolve by explicit conflict grouping (`metadata.conflict_key` / `metadata.disclosure_key` / `target`), mixed-effect matches always escalate, pure restrictions follow `deny > escalate > allow`, and tool execution remains deny-by-default when no explicit allow matches.
 **What:** Define what happens when the compliance graph returns contradictory rules (e.g., one rule requires a disclosure, another forbids it for the same context). Resolution principle (most-restrictive-wins) is now in Section 5; this TODO covers the full rule set.
@@ -21,6 +56,13 @@ Items identified during architecture reviews (2026-03-12).
 **Source:** CEO review, Section 2 (Error & Rescue Map). Promoted by eng review.
 
 ## P2 — Should Do
+
+### Add founder weekly operating packet spec
+**What:** Define a 15-minute weekly founder packet with four sections: What Changed, What to Approve, What to Kill, and What Proof to Build Next.
+**Why:** The system needs a bounded operating ritual, not just dashboards and digests.
+**Effort:** S
+**Depends on:** persuasion_path reporting view and proof supply chain being defined.
+**Source:** CEO mega-review v2, operator-surface recommendation.
 
 ### Define external service resilience patterns
 **Status:** Partially resolved in code and ADR 002 for Supabase, Inngest, and LangSmith. Remaining work is Retell AI, Cal.com, and Twilio once those integrations exist in this repo.
