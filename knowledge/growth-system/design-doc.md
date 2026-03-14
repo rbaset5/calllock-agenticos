@@ -1,6 +1,6 @@
 ---
 id: growth-system-design
-title: CallLock Agentic Growth Loop — Expanded Design Doc
+title: CallLock Persuasion Graph Platform Spec
 graph: growth-system
 owner: founder
 last_reviewed: 2026-03-14
@@ -8,1576 +8,616 @@ trust_level: curated
 progressive_disclosure:
   summary_tokens: 500
   full_tokens: 15000
-status: Draft — v4: Post CEO mega-review v2 (persuasion path, belief split, proof supply chain, 4-plane, scorecard gates)
+status: Draft - v5: Persuasion Graph Platform Spec
 ---
 
-# CallLock Agentic Growth Loop — Expanded Design Doc
+# CallLock Persuasion Graph Platform Spec
 
 **Date:** March 14, 2026  
-**Status:** Draft — v4  
-**Owner:** Founder / GTM / Product
+**Status:** Draft - v5  
+**Owner:** Founder / GTM / Product / Platform
 
 ## Summary
 
-CallLock should build a Persuasion OS for one wedge before it builds a broad growth machine.
+CallLock should build a wedge-first persuasion platform, not a loose collection of GTM modules.
 
-The system exists to discover, explain, and repeat booked-pilot paths for the right buyer. It should learn which segment, pain, objection, proof, and journey sequence create enough conviction and buying readiness to produce a booked pilot or customer. The growth loop is the mechanism. Repeatable persuasion path discovery is the goal.
+The platform exists to discover, explain, and repeat the persuasion paths that move the right home-service buyer from first signal to booked pilot, onboarding, retained usage, and referral. The system stays wedge-first in delivery, but it is cross-funnel in design: one canonical persuasion model should span acquisition, sales, onboarding, retention, and referral.
 
-This v4 revision keeps the conceptual richness of v3 while applying the CEO review’s corrections:
+This revision fixes the platform shape:
 
-- the atomic unit of learning is explicit
-- belief is split into conviction and readiness
-- proof quality gets an operating loop, not just a heat map
-- the architecture is framed as four planes, not a catalog of organs
-- phase gates are scorecards with floors, not a single blended number
-- future analytical modules are moved behind the core wedge-proof story
+- `persuasion_path` is a first-class persisted object, not only a reporting lens.
+- canonical graph state is mutated only by deterministic, validated code.
+- event capture is append-only; projections serve decisioning and operator views.
+- founder and operator access happens through a separate internal control plane.
+- founder decisions flow through one canonical `review_object` state machine.
+- observability follows a full lineage chain from raw event to downstream effect.
+- rollout follows a trust ladder: capture-only, advisory-only, assisted, then closed-loop.
+- future cross-tenant learning is aggregate-only via federated benchmarks, never shared raw graph state.
 
----
+The moat is not more automation volume. The moat is trustworthy persuasion memory with governed proof, decision, and founder-feedback loops.
 
 ## 1. Purpose
 
-Design a self-improving internal GTM operating system for CallLock that discovers, explains, and repeats booked-pilot paths inside one wedge before widening scope.
+Design a persuasion platform that learns which paths create believable movement for the right buyer and turns that learning into safe, explainable operating decisions.
 
-The system should help CallLock answer:
+The platform should answer:
 
-- who the right buyer is
-- which pain angle is most salient
-- which proof creates conviction
-- which objections block movement
-- which next action best advances the prospect
-- which repeatable patterns deserve more traffic and more investment
+- which buyer shape is actually valuable
+- which pain is activated
+- which objection blocks motion
+- which proof changes conviction
+- which next action matches readiness
+- which path produces booked pilots, successful onboarding, retained usage, and referrals
 
-### 1.1 The Atomic Unit of Learning
+### 1.1 Wedge-First Thesis
 
-The canonical unit of learning is:
+CallLock should still prove one wedge before broadening execution.
 
-`persuasion_path = segment × pain × objection × proof × belief_delta × outcome`
+Recommended initial wedge: **HVAC first**.
 
-This is the reporting lens for:
+Wedge-first delivery does not mean GTM-only architecture. The system should be able to connect:
 
-- routing decisions
-- proof quality analysis
-- weekly founder review
-- gate decisions
-- Growth Advisor recommendations
-- win-path replication
+- acquisition signals
+- sales interactions
+- booked pilot outcomes
+- onboarding progress
+- retained product usage
+- churn and win-back signals
+- referral activity
 
-The system should not ask only, "what converted?" It should ask:
+The first rollout can be HVAC plus cold email, but the core model should already support the full persuasion loop.
 
-1. Which segment was in play?
-2. Which pain was activated?
-3. Which objection surfaced?
-4. Which proof was shown?
-5. What changed in conviction and buying readiness?
-6. Did that path create a booked pilot or customer outcome?
+### 1.2 Core Outcome
 
-Every major metric should roll up by `persuasion_path`. Every decision surface should be able to explain itself in that language.
+The goal is not generic "growth automation."
 
-## 2. Core Thesis
+The goal is:
 
-CallLock should not optimize for arbitrary outbound automation, broad content volume, or abstract AI sophistication.
+**finding and repeating the fastest believable path to "that is exactly my problem" for the right home-service buyer, then extending that path through pilot, onboarding, retention, and referral.**
 
-It should optimize for one thing:
+### 1.3 What This System Is Not
 
-**finding and repeating the fastest believable path to "that is exactly my problem" for the right home-service buyer.**
+This system is not:
 
-The moat is not having more components. The moat is learning faster and more honestly than competitors which messages, proofs, and journeys actually create conviction and booked pilots.
+- a broad content farm
+- a freeform copy generator
+- a dashboard-only analytics sidecar
+- a second product core
+- a shared raw cross-tenant memory pool
 
-## 3. Strategic Context
+## 2. Fixed Decisions
 
-### Positioning anchor
+These decisions are part of the spec, not open questions:
 
-CallLock wins when positioned as the system that turns missed calls into booked jobs for home-service businesses.
+1. `persuasion_path` is a persisted canonical object.
+2. The platform spans acquisition, sales, onboarding, retention, and referral.
+3. Raw events are append-only source evidence.
+4. Canonical graph mutation is deterministic and validated.
+5. Models may propose annotations and recommendations, but they do not directly mutate canonical graph state.
+6. Decisioning and operator surfaces read materialized projections, not live multi-join graph queries.
+7. Founder decisions use one `review_object` state machine across packet, dashboard, and queues.
+8. Founder/operator access is a separate internal control plane, not an extension of tenant-facing roles.
+9. Cross-tenant learning is future aggregate benchmarking only.
+10. Existing harness/product-core boundaries from the architecture spec remain intact.
 
-### Best initial wedge
+## 3. System Boundary
 
-Start with one trade where:
+The platform sits on top of the existing CallLock architecture. It does not replace the shared product core or the agent harness.
 
-- urgency is obvious
-- missed calls are expensive
-- live response matters
-- booking speed matters
+Existing boundaries remain:
 
-Recommended starting wedge: **HVAC first**.
+- product core owns tenant-facing app behavior and shared operational workflows
+- harness owns orchestration, policy, eval, observability, and async automation
+- persuasion graph platform owns persuasion intelligence, review objects, scorecards, and operator projections
 
-### GTM implication
-
-The system should route prospects into simple, believable, operator-focused stories:
-
-- missed calls become booked jobs
-- answers live when you cannot
-- books while you work
-- better than voicemail or message-taking
-
-## 4. System Goal
-
-Build a repeatable persuasion path discovery system for one wedge.
-
-The growth loop remains the mechanism. The goal is not "closed-loop GTM automation" in the abstract; the goal is discovering repeatable `persuasion_path` patterns that reliably produce booked pilots and can later be replicated into new wedges.
-
-## 5. Design Principles
-
-### 5.1 Workflow-led outside, agentic inside
-
-Externally, the system should feel simple and operational. Internally, agents can enrich, route, analyze, and recommend.
-
-### 5.2 Customer path should be bounded
-
-Anything customer-facing and revenue-critical should operate inside clear policy and business rules. The model selects from approved inventory; it does not improvise claims.
-
-### 5.3 Strategy remains founder-owned
-
-The system can recommend wedges, proof priorities, and routing changes, but strategy, pricing, positioning, and claims remain human-controlled.
-
-### 5.4 Structured assets beat freeform sprawl
-
-Templates, pages, proof assets, and experiments are schema-first and versioned.
-
-### 5.5 Learning must be trustworthy
-
-Fast signals can guide exploration, but only deeper signals should justify strong belief or phase advancement.
-
-### 5.6 Observability is part of the product
-
-If the founder cannot understand what changed and why, the system is underbuilt.
-
-### 5.7 Single-writer state, append-only evidence
-
-Stateful tables should have clear ownership. Event logs, touchpoints, and insights can be append-only multi-writer streams with explicit source attribution.
-
-### 5.8 Universal Rescue Doctrine
-
-Every component must degrade visibly and safely.
-
-| Component | Failure Class | Degraded Mode | Visibility |
-|---|---|---|---|
-| Enrichment | scrape/classify failure | partial enrichment, low confidence | dashboard + quality counter |
-| Routing | missing template or page | bounded fallback asset | advisor alert |
-| Proof Supply Chain | proof gap detected but owner/brief generation fails | mark coverage as `gap`, queue manual proof brief | dashboard + advisor alert |
-| Conviction/Readiness Inference | dual-axis inference unavailable | fall back to legacy single-axis belief inference, exclude from routing upgrades | dashboard: inference fallback counter |
-| Founder Weekly Operating Packet | packet assembly fails | render raw scorecard + alerts + proof queue | founder alert + packet generation metric |
-| Doctrine Enforcement | doctrine registry unavailable | conservative mode, block risky actions, route for founder review | critical alert |
-| Wedge Fitness Scorecard | one component missing or stale | mark gate incomplete, prevent advancement | gate blocked + scorecard warning |
-
-### 5.9 Idempotency by default
-
-Every event handler is idempotent. Duplicate delivery should not distort outcomes or sends.
-
-### 5.10 Safety systems fail closed
-
-If the health gate or doctrine enforcement layer is unavailable, risky actions queue rather than execute.
-
-### 5.11 Channel-aware, wedge-first
-
-Schemas should be channel-aware from day one, but Phase 1 remains HVAC + cold email only.
-
-### 5.12 Keep future-phase gravity out of Phase 0-3
-
-Future ambition is allowed in vision and appendix. It should not distort the current loop unless it helps current wedge proof.
-
-## 6. What Is the Engine?
-
-The engine is the repeatable persuasion path discovery loop.
-
-It is not:
-
-- just an email writer
-- just a page generator
-- just a dashboard
-- just a bandit allocator
-- just an LLM
-
-It is the system that captures demand signals, interprets them, decides the next bounded action, and governs the learning quality of the resulting `persuasion_path`.
-
----
-
-## 7. System Architecture
-
-### 7.0 Architecture Overview
-
-The system is organized into four planes. This supersedes the old body-metaphor framing and any earlier five-core narrative.
-
-| Plane | Purpose | Representative Components |
-|---|---|---|
-| Capture | collect source-of-truth events and outcomes | Prospect Enrichment Pipeline, Touchpoint Log, Product-to-Growth Bridge, Sales Insight Layer, Referral Mechanism, Cost Layer |
-| Interpret | turn raw signals into usable meaning | Segmentation Engine, Belief Layer, Proof Selector, Signal Quality Layer, Prospect Scoring Model, Intent Signal Detector, Loss Analysis Engine, Decision Audit Engine |
-| Decide | choose the next best bounded action | Message Router, Page Router, Journey Orchestrator, Experiment Allocator, Outbound Health Gate, Lifecycle State Machine |
-| Govern | make the system legible, safe, and founder-aligned | Founder Doctrine Registry, Growth Advisor, Founder Dashboard, Learning Integrity Monitor, LLM Output Regression Monitor, Strategic Intelligence Briefing, feature flags |
-
-Later-phase analytical modules remain modules within these planes, not first-class organs.
+The platform reads from and writes back into those layers through controlled contracts.
 
 ```text
-                         PERSUASION PATH DISCOVERY
-
- Demand Signals
-      |
-      v
-  +-----------+      +-------------+      +-----------+      +-----------+
-  | CAPTURE   | ---> | INTERPRET   | ---> | DECIDE    | ---> | GOVERN    |
-  | source of |      | meaning,    |      | bounded   |      | safety,   |
-  | truth     |      | quality,    |      | next best |      | review,   |
-  | events    |      | doctrine    |      | action    |      | gates     |
-  +-----------+      +-------------+      +-----------+      +-----------+
-         ^                                                        |
-         |                                                        v
-         +---------------- outcomes and founder feedback ---------+
+   PRODUCT CORE + HARNESSED WORKFLOWS
+   ----------------------------------
+   acquisition       sales         product         retention      referral
+        \              |              |                |             /
+         \             |              |                |            /
+          +------------+--------------+----------------+-----------+
+                                       |
+                                       v
+                     +---------------------------------------+
+                     |   PERSUASION GRAPH PLATFORM           |
+                     |   event spine -> graph -> projections |
+                     +---------------------------------------+
+                                       |
+                      +----------------+----------------+
+                      |                                 |
+                      v                                 v
+             decisioning surfaces               operator control plane
 ```
 
-Every major component should be explainable in terms of how it improves or audits a `persuasion_path`.
+## 4. Canonical Model
 
-### 7.1 Prospect Enrichment Pipeline
+### 4.1 Canonical Learning Object
 
-Purpose: turn raw leads into usable profiles for routing.
+The canonical learning object is still the persuasion path, but now it is an owned platform object:
 
-Pipeline:
+`persuasion_path = segment x pain x objection x proof x conviction_shift x readiness_shift x outcome x lifecycle_context`
+
+Every major metric, recommendation, scorecard, proof decision, and founder review should be explainable in this language.
+
+### 4.2 Event Spine
+
+`event_spine` is the append-only evidence layer.
+
+It stores raw but validated events from:
+
+- acquisition
+- outbound and inbound sales
+- page and demo engagement
+- meetings and booked pilots
+- onboarding events
+- product usage outcomes
+- churn and win-back events
+- referral events
+- founder/operator actions
+
+The event spine is the highest truth for persuasion evidence. Nothing in a projection or packet is allowed to outrank the source evidence that generated it.
+
+### 4.3 Canonical Graph State
+
+Canonical graph state is derived from the event spine by deterministic mutation code.
+
+Graph state includes:
+
+- `persuasion_path` objects
+- evidence links and counts
+- proof coverage entries
+- doctrine conflict records
+- lifecycle path state
+- review-object references
+
+### 4.4 Projections
+
+The graph is not queried directly for every operational question.
+
+Instead, it feeds:
+
+- `decisioning_projections`
+- `operator_projections`
+- scorecard projections
+- audit and lineage projections
+
+This keeps hot decision paths, founder views, and replay/recompute paths separate.
+
+## 5. Durable Subsystems
+
+The platform should be described through durable subsystems, not a sprawling catalog of adjacent engines.
+
+### 5.1 Graph & Evidence
+
+Responsibilities:
+
+- ingest append-only evidence
+- validate, normalize, and store event records
+- deterministically mutate graph state
+- maintain proof and path state
+- preserve lineage and replayability
+
+### 5.2 Decisioning
+
+Responsibilities:
+
+- choose the next bounded action using projections
+- route approved proof, templates, and journeys
+- adapt sequencing based on conviction and readiness
+- remain bounded by doctrine, policy, and rollout mode
+
+### 5.3 Governance Intelligence
+
+Responsibilities:
+
+- score evidence quality
+- compute gates and scorecards
+- generate path-level recommendations
+- surface proof debt
+- detect doctrine conflicts
+- detect learning integrity issues
+
+### 5.4 Operator Control Plane
+
+Responsibilities:
+
+- expose review objects
+- render founder packet and dashboard views
+- show lineage and investigation views
+- enforce internal auth and action audit
+- support pause, retry, replay, and rollback workflows
+
+### 5.5 Outputs, Not Peer Subsystems
+
+These are outputs or views over the platform, not independent engines:
+
+- Founder Weekly Operating Packet
+- Founder Dashboard
+- Strategic Intelligence Briefing
+- audit summaries
+- scorecards
+- recommendation queues
+- proof debt queues
+- doctrine conflict queues
+
+## 6. Architecture Overview
 
 ```text
-raw lead
-  -> web scrape / source fetch
-  -> sanitize
-  -> classify
-  -> validate against enums
-  -> confidence scoring
-  -> profile write
+                                      EVENT SOURCES
+
+   acquisition     sales calls      meetings/pilots     product usage    churn/referral
+        |               |                 |                   |                |
+        +---------------+-----------------+-------------------+----------------+
+                                        |
+                                        v
+                              +----------------------+
+                              |  EVENT SPINE         |
+                              |  append-only evidence|
+                              +----------------------+
+                                        |
+                           schema valid? |  no -> quarantine + audit
+                                        v
+                              +----------------------+
+                              | GRAPH MUTATION       |
+                              | deterministic only   |
+                              +----------------------+
+                                        |
+                     +------------------+------------------+
+                     |                                     |
+                     v                                     v
+         +--------------------------+         +---------------------------+
+         | DECISIONING PROJECTIONS  |         | OPERATOR PROJECTIONS      |
+         | routing / proof / journey|         | packet / dashboard / queue|
+         +--------------------------+         +---------------------------+
+                     |                                     |
+                     v                                     v
+            bounded execution surfaces             founder/operator control plane
+                     |                                     |
+                     +------------------+------------------+
+                                        |
+                                        v
+                                 downstream effects
+                                        |
+                                        v
+                                   event spine
 ```
 
-Outputs:
+### 6.1 Mutation Boundary
 
-- trade
-- likely buyer type
-- likely pain profile
-- confidence per field
-- intent signals
-- enrichment freshness
+This boundary is strict:
 
-Guardrails:
+- models may classify, summarize, score, and propose
+- deterministic code validates those proposals
+- only deterministic code writes canonical graph state
 
-- sanitize all untrusted text before model use
-- validate outputs against enums
-- mark uncertain fields as estimated
-- route unknowns into explicit fallback segments
+If a proposed mutation cannot be validated, it is not applied.
 
-Error posture:
+### 6.2 Cross-Funnel Coverage
 
-- scrape timeout -> partial enrich with low confidence
-- classification ambiguity -> dual candidate profile + review flag
-- malformed source data -> discard source fragment, not the prospect
-- enrichment cost cap breach -> pause queue, preserve raw leads
+Every supported funnel stage should resolve into the same graph:
 
-### 7.2 Segmentation Engine
+- acquisition path discovery
+- sales conversion motion
+- booked pilot and onboarding transition
+- retained usage and expansion evidence
+- churn and recovery evidence
+- referral inheritance and transfer paths
 
-Purpose: map prospects into GTM buckets that determine initial messaging and destination.
+## 7. Public Interfaces and Core Types
 
-Segmentation is dynamic but bounded:
+This section defines the platform-critical interfaces that other layers should assume.
 
-- initial assignment at enrichment time
-- event-driven re-evaluation on meaningful new signals
-- oscillation counter and circuit breaker
-- primary/secondary segment support
+### 7.1 `persuasion_path`
 
-Rules:
+Canonical persisted object describing one path shape and its current state.
 
-- no more than three re-segmentations in seven days without review
-- unmatched prospects route to `unclassified`, not null
-- primary segment drives routing; secondary segment remains available for later recovery paths
+Ownership:
 
-Segmentation flow:
+- owner subsystem: Graph & Evidence
+- allowed writers: deterministic graph mutation code only
+- idempotency: path upsert by stable path key plus versioned mutation input
+- visibility: readable via projections, auditable via lineage
 
-```text
-prospect profile
-  -> initial segment score set
-  -> primary/secondary assignment
-  -> new evidence arrives
-  -> re-score candidate segments
-  -> transition log write
-  -> route or hold
+Representative schema:
+
+```json
+{
+  "persuasion_path_id": "ppath_01",
+  "path_key": {
+    "segment": "hvac_owner_operator_missed_calls",
+    "pain": "missed_calls",
+    "objection": "already_have_answering_service",
+    "proof": "comparison_asset_v2",
+    "conviction_shift": "up",
+    "readiness_shift": "flat",
+    "outcome": "meeting_booked",
+    "lifecycle_context": "acquisition_to_evaluation"
+  },
+  "current_state": "active",
+  "proof_coverage_status": "weak",
+  "confidence": 0.78,
+  "evidence_window": {
+    "touchpoints": 84,
+    "pilots": 6,
+    "retained_customers": 2
+  },
+  "latest_projection_version": 12
+}
 ```
 
-Shadow paths:
+### 7.2 `graph_mutation`
 
-- nil segment evidence -> keep prior segment and mark stale
-- competing scores within threshold -> preserve ambiguity and record both
-- oscillation limit exceeded -> freeze primary segment, escalate for review
+A deterministic mutation request generated from one or more validated events.
 
-Error table:
+Ownership:
 
-| Failure class | Rescue action | Degraded mode |
-|---|---|---|
-| no matching segment | assign `unclassified` | generic but bounded routing |
-| stale profile data | trigger re-enrichment | use prior segment with stale flag |
-| repeated oscillation | lock segment window | manual review before further changes |
+- owner subsystem: Graph & Evidence
+- allowed writers: mutation planner and replay system
+- idempotency: mutation key derived from lineage root plus mutation type
+- visibility: mutation result logged and auditable
 
-### 7.3 Message Router
+Representative schema:
 
-Purpose: choose the angle and approved template family most likely to advance the prospect.
-
-The model is a selector, not a freeform copywriter. It chooses among approved assets and slot values.
-
-Template architecture:
-
-```text
-approved template family
-  + validated slots
-  + approved angle statement
-  + approved proof statement
-  + approved CTA
+```json
+{
+  "graph_mutation_id": "gmut_01",
+  "mutation_type": "path_evidence_merge",
+  "source_event_ids": ["evt_01", "evt_02"],
+  "target_persuasion_path_id": "ppath_01",
+  "planner_version": 3,
+  "status": "applied",
+  "applied_at": "2026-03-14T12:00:00Z"
+}
 ```
 
-Inputs:
+### 7.3 `review_object`
 
-- segment
-- pain hypothesis
-- lifecycle stage
-- doctrine constraints
-- experiment assignment
-- proof context
+Unified state machine for founder/operator decisions.
 
-Outputs:
+Ownership:
 
-- selected template family
-- selected angle
-- fallback usage list
-- blocked options and why
+- owner subsystem: Operator Control Plane
+- allowed writers: governance intelligence creates; control plane applies state transitions
+- idempotency: one active review object per subject/version pair unless superseded
+- visibility: packet, dashboard, queues, and audit surfaces all read this object
 
-Example request flow:
-
-```text
-segment + pain hypothesis + doctrine snapshot + experiment arm
-  -> candidate template families
-  -> doctrine filter
-  -> slot resolution
-  -> fallback fill for missing fields
-  -> routing decision log write
-```
-
-### 7.4 Asset Inventory System
-
-Purpose: maintain a structured library of GTM assets that the routing layer can safely use.
-
-Asset types:
-
-- outbound templates
-- landing pages
-- comparison pages
-- calculators
-- demo-call pages
-- FAQs
-- proof assets
-- offers and CTAs
-
-Lifecycle:
-
-```text
-draft
-  -> approved
-  -> active
-  -> under_review
-  -> archived
-```
-
-Assets should be versioned. Routing references exact versions, not "latest."
-
-### 7.5 Page Router
-
-Purpose: choose where each prospect should go next.
-
-Destinations can include:
-
-- wedge page
-- comparison page
-- calculator
-- demo page
-- proof-rich FAQ
-- direct booking page
-
-Routing should be explicit about:
-
-- destination page
-- secondary destination if the first choice is blocked
-- proof order on-page
-- CTA path after proof consumption
-
-### 7.6 Proof Selector
-
-Purpose: decide what evidence to show to create conviction and move a prospect forward.
-
-Proof coverage is tracked per segment × objection × lifecycle stage with three states:
-
-- `gap` — no proof exists
-- `weak` — proof exists but conviction movement is below threshold
-- `covered` — proof exists and consistently creates conviction
-
-Proof quality uses `conviction_shift_rate`, not raw clicks and not a blended belief metric.
-
-#### Proof Supply Chain
-
-The system must not stop at "we have a gap." It needs an operating loop:
-
-```text
-objection seen
-    -> gap or weak coverage detected
-    -> proof brief created
-    -> owner assigned
-    -> approved
-    -> proof deployed
-    -> conviction re-measured
-    -> coverage state updated
-```
-
-`proof_brief` is the structured work object for missing or weak proof:
-
-- target segment
-- target objection
-- target stage
-- recommended proof type
-- why now
-- owner
-- status
-- expected revenue impact
-
-Growth Advisor should recommend both proof creation and proof improvement. The Founder Weekly Operating Packet should expose proof debt directly.
-
-Example coverage flow:
-
-```text
-touchpoint + objection + proof consumed
-  -> belief event derived
-  -> conviction shift aggregated by segment x objection x stage
-  -> coverage status recomputed
-  -> proof debt queue updated if still gap/weak
-```
-
-Error table:
-
-| Failure class | Rescue action | Degraded mode |
-|---|---|---|
-| no proof asset for objection | emit proof brief | route best available fallback proof |
-| conviction sample too small | mark state provisional | keep `weak`, avoid promotion to `covered` |
-| conflicting proof signals | split by stage/segment and re-score | do not collapse to one global winner |
-
-### 7.7 Experiment Allocator
-
-Purpose: manage traffic allocation and winner detection for bounded experiments.
-
-Principles:
-
-- optimize for value per dollar, not just click rate
-- use fast signals for exploration, deeper signals for confidence
-- declare winners only after enough sample and stability
-- never let one shallow metric dominate
-
-Winner declaration should pass three gates:
-
-1. minimum sample per arm
-2. strong enough posterior confidence on the relevant business outcome
-3. temporal stability across the measured period
-
-Feedback horizons:
-
-- Tier 1 fast signals: opens, clicks, shallow page engagement
-- Tier 2 medium signals: replies, demo plays, meetings
-- Tier 3 deep signals: pilot start, pilot conversion, early retention
-
-Tier 1 helps explore. Tier 2 helps allocate. Tier 3 decides what deserves durable trust.
-
-Error table:
-
-| Failure class | Rescue action | Degraded mode |
-|---|---|---|
-| no eligible experiment | create bounded exploration arm set | uniform allocation within safe inventory |
-| unstable posterior | floor values and recompute | freeze winner declaration |
-| scorecard floor not met | block automation promotion | continue manual or assisted mode |
-
-### 7.8 Sales Insight Layer
-
-Purpose: convert calls, replies, and notes into structured insight.
-
-Outputs:
-
-- objection taxonomy updates
-- competitor mentions
-- talk-track gaps
-- FAQ candidates
-- recurring blockers by segment
-
-### 7.9 Product Outcome Layer
-
-Purpose: feed real product performance back into GTM understanding without letting product ambitions dominate early phases.
-
-Key signals:
-
-- calls answered
-- booking completion
-- scenario performance
-- escalation rate
-- pilot-to-customer movement
-
-Flow:
-
-```text
-product event
-  -> transform to GTM-safe signal
-  -> join to attribution chain where possible
-  -> update persuasion-path evidence
-  -> influence proof and segment understanding
-```
-
-The layer should strengthen proof claims and scenario fit, not become a catch-all product analytics platform.
-
-### 7.10 Growth Memory
-
-Purpose: hold the shared knowledge that lets learning compound instead of reset every week.
-
-Core tables:
-
-- touchpoint_log
-- routing_decision_log
-- segment_performance
-- angle_effectiveness
-- proof_coverage_map
-- belief_events
-- founder_doctrine
-- doctrine_conflict_log
-- experiment_history
-- cost_per_acquisition
-- insight_log
-
-Supporting tables that matter early:
-
-- segment_transitions
-- journey_assignments
-- loss_records
-- anti_pattern_registry
-- wedge_fitness_snapshots
-
-Design rules:
-
-- source-of-truth logs are append-only
-- stateful tables have clear write owners
-- all important derived layers are recomputable from lower-level evidence
-
-Single-writer map, conceptually:
-
-- enrichment owns prospect-profile writes
-- segmentation owns segment transitions
-- experiment allocator owns experiment state
-- proof selector owns proof coverage recomputation
-- doctrine registry owns doctrine state
-- advisor owns synthesized insights, not raw evidence
-
-Evidence hierarchy:
-
-```text
-touchpoint_log / product events / explicit founder actions
-  -> derived belief + coverage + performance layers
-  -> scorecards + recommendations + dashboards
-```
-
-Rollback posture:
-
-- if a derived layer is wrong, recompute from lower evidence
-- if a routing recommendation is wrong, preserve the log and correct the model
-- if doctrine changes, preserve both the prior rule and the new effective rule
-
-### 7.11 Signal Quality Layer
-
-Purpose: score events before they influence memory, routing, or gates.
-
-Functions:
-
-- source verification
-- behavioral coherence
-- anomaly detection
-- quarantine of low-quality events
-
-Scoring bands:
-
-- `> 0.7` full weight
-- `0.3 - 0.7` reduced weight + reviewable
-- `< 0.3` quarantined from decisioning
-
-Scoring flow:
-
-```text
-raw event
-  -> source verification
-  -> coherence checks
-  -> anomaly checks
-  -> quality score
-  -> write / reduce / quarantine
-```
-
-Error table:
-
-| Failure class | Rescue action | Degraded mode |
-|---|---|---|
-| scorer unavailable | apply neutral reduced weight | preserve event, avoid full trust |
-| mass anomaly spike | assume possible scoring bug | pause quarantine, route to review |
-| missing source metadata | lower score and continue | analysis-only unless later corroborated |
-
-### 7.12 Learning Integrity Monitor
-
-Purpose: detect when the system is learning badly even if it is still operating.
-
-Questions:
-
-1. Is data flowing?
-2. Is attribution connecting?
-3. Is evidence trustworthy?
-4. Are gates being fed with enough qualified data?
-
-Alert surfaces:
-
-- attribution completeness drop
-- proof coverage stagnation
-- doctrine conflict spike
-- repeated gate blocks from the same failed floor
-- signal quality collapse
-
-### 7.13 Outbound Health Gate
-
-Purpose: enforce compliance and sender reputation before any outbound action executes.
-
-Checks:
-
-- suppression list
-- bounce/complaint thresholds
-- daily caps
-- duplicate send window
-- required legal fields
-- doctrine compliance
-- lifecycle eligibility
-
-Hard invariant:
-
-If the health gate itself is unavailable, outbound queues. It never fails open.
-
-Gate flow:
-
-```text
-routing decision
-  -> suppression check
-  -> doctrine check
-  -> sender health check
-  -> duplicate window check
-  -> lifecycle eligibility check
-  -> send or queue
-```
-
-### 7.14 Growth Advisor
-
-Purpose: synthesize learning into recommendations that the founder can approve, reject, or defer.
-
-It should recommend:
-
-- routing adjustments
-- proof creation or improvement
-- doctrine review when evidence conflicts with preferences
-- experiments worth launching or killing
-- stuck or decaying persuasion paths
-
-Output surfaces:
-
-- weekly operating packet
-- dashboard cards
-- recommendation queue
-- proof debt queue
-- doctrine conflict queue
-
-A recommendation is only valid if it can cite:
-
-- the relevant persuasion paths
-- the evidence window
-- any doctrine constraints
-- the expected impact of acting or not acting
-
-Recommendation states:
+State machine:
 
 ```text
 draft
   -> reviewable
-  -> approved / overridden / deferred
+  -> approved
+  -> overridden
+  -> deferred
+  -> failed_apply
+  -> superseded
 ```
 
-Overrides should carry reasoning when possible:
+Representative schema:
 
-- data wrong
-- timing wrong
-- strategy wrong
-- other
+```json
+{
+  "review_object_id": "rev_01",
+  "review_type": "proof_brief",
+  "subject_type": "persuasion_path",
+  "subject_id": "ppath_01",
+  "subject_version": 12,
+  "status": "reviewable",
+  "recommended_action": "build_comparison_asset",
+  "reasoning_summary": "High-volume objection with weak conviction movement",
+  "lineage_chain_id": "lin_01"
+}
+```
 
-### 7.15 Founder Dashboard
+### 7.4 `lineage_chain`
 
-Purpose: expose system health, winning paths, proof debt, doctrine conflicts, and decision queues.
+Stable end-to-end trace for one persuasion decision thread.
 
-Levels:
+Ownership:
 
-- daily health glance
-- weekly what's winning
-- weekly what should I do
-- investigation view for reasoning chains
+- owner subsystem: Graph & Evidence with Operator Control Plane hooks
+- allowed writers: deterministic lineage assembler only
+- idempotency: stable root chain per causal thread
+- visibility: required for audit, debugging, packet drill-down, and replay
 
-The dashboard should be able to answer:
+Representative schema:
 
-- which persuasion paths are improving?
-- which objections lack proof?
-- which doctrine rules are constraining experiments?
-- what changed since last week?
+```json
+{
+  "lineage_chain_id": "lin_01",
+  "raw_event_ids": ["evt_01", "evt_02"],
+  "graph_mutation_ids": ["gmut_01"],
+  "persuasion_path_id": "ppath_01",
+  "review_object_ids": ["rev_01"],
+  "founder_action_ids": ["act_01"],
+  "downstream_effect_ids": ["eff_01"]
+}
+```
 
-Minimum panes:
+### 7.5 `decisioning_projections`
 
-- health and scorecards
-- winning and decaying persuasion paths
-- proof debt and doctrine conflicts
-- review queue
-- audit trail for one prospect or one experiment
+Materialized views used for bounded runtime decisions.
 
-### 7.16 Touchpoint Log
+Ownership:
 
-Purpose: immutable source of truth for every relevant interaction.
+- owner subsystem: Decisioning
+- allowed writers: projection refresh pipeline only
+- idempotency: projection version pinned to graph version
+- visibility: decision logs must include projection version used
 
-It records:
+Representative contents:
 
-- prospect and company IDs
-- touchpoint type
-- channel
-- experiment and arm
-- cost
-- signal quality
-- timestamp
+- routing candidates
+- proof sequencing recommendations
+- journey next-step recommendations
+- scorecard eligibility views
+- safe fallback actions
 
-Touchpoint log remains the source of truth over any later belief or score interpretation.
+### 7.6 `operator_projections`
 
-### 7.17 Routing Decision Log
+Materialized views used for founder/operator interfaces.
 
-Purpose: preserve the full reasoning context behind each bounded action.
+Ownership:
 
-Each record should capture:
+- owner subsystem: Operator Control Plane
+- allowed writers: projection refresh pipeline only
+- idempotency: projection version pinned to graph and review-object versions
+- visibility: packet and dashboard show snapshot/version metadata
 
-- inputs
-- doctrine checks
-- selected assets
-- confidence
-- fallbacks used
-- gate results
+Representative contents:
 
-This is the main audit surface for "Why did the system choose this?"
+- weekly packet view
+- daily health view
+- review queue view
+- investigation view
+- doctrine conflict view
+- proof debt ranking view
 
-### 7.18 Cost & Unit Economics Layer
+### 7.7 `control_plane_auth`
 
-Purpose: let the system optimize for persuasion path quality per dollar, not just response rate.
+Separate internal authorization model for cross-tenant operator work.
 
-Track:
+Ownership:
 
-- enrichment cost
-- asset cost
-- send cost
-- review cost
-- cost per meeting
-- cost per pilot
+- owner subsystem: Operator Control Plane
+- allowed writers: internal auth administration only
+- idempotency: role grants are versioned and audited
+- visibility: every cross-tenant action must be audit logged with actor and reason
 
-The allocator should never consume a conversion metric without the corresponding cost context being available or explicitly missing.
+Principles:
 
-### 7.19 Prospect Lifecycle State Machine
+- tenant-facing roles do not expand into internal control-plane roles
+- cross-tenant reads are explicit
+- cross-tenant writes are rarer, reasoned, and auditable
+- approval and override actions are identity-bound
 
-Purpose: model where the prospect is in their journey and gate what actions are allowed.
+### 7.8 `federated_benchmark`
 
-Primary states:
+Future aggregate-only interface for cross-tenant learning.
 
-- UNKNOWN
-- REACHED
-- ENGAGED
-- EVALUATING
-- IN PIPELINE
-- PILOT STARTED
-- CUSTOMER
-- DORMANT
-- LOST
+Ownership:
 
-Key invalid transitions should be explicitly blocked, for example:
+- owner subsystem: Governance Intelligence
+- allowed writers: benchmark aggregation jobs only
+- idempotency: benchmarks versioned by cohort definition and time window
+- visibility: only aggregate-safe results may be exposed
 
-- UNKNOWN -> IN PIPELINE
-- LOST -> PILOT STARTED
-- DORMANT -> CUSTOMER without an intermediate engagement signal
+Principles:
 
-Canonical flow:
+- no raw tenant graph sharing
+- no tenant-identifying output
+- minimum cohort thresholds required
+- benchmark generation is blocked if privacy thresholds are not met
+
+## 8. Graph & Evidence Model
+
+### 8.1 Source of Truth Hierarchy
+
+1. event spine
+2. graph mutations
+3. canonical persuasion paths
+4. projections
+5. packets, dashboards, and summaries
+
+### 8.2 Single-Writer Rules
+
+- event ingestion owns event records
+- mutation pipeline owns canonical graph writes
+- governance intelligence owns scorecard and recommendation computation
+- operator control plane owns review-object state transitions
+- execution surfaces own downstream effect confirmation
+
+### 8.3 Proof and Belief Semantics
+
+Belief remains split:
+
+- `conviction_shift`: did the prospect become more convinced the claim is true?
+- `readiness_shift`: did the prospect become more ready to act now?
+
+Proof is evaluated primarily through conviction movement. Journey timing can use both conviction and readiness when confidence is sufficient.
+
+### 8.4 Proof Supply Chain
+
+Proof gaps are not a dashboard-only artifact. They become reviewable work.
 
 ```text
-UNKNOWN
-  -> REACHED
-  -> ENGAGED
-  -> EVALUATING
-  -> IN PIPELINE
-  -> PILOT STARTED
-  -> CUSTOMER
-
-Shadow paths:
-REACHED -> DORMANT
-EVALUATING -> LOST
-CUSTOMER -> DORMANT (win-back or expansion later)
+objection detected
+  -> persuasion path weak or gap state
+  -> governance intelligence creates recommendation
+  -> review_object created
+  -> founder/operator approves, overrides, or defers
+  -> proof asset work executes
+  -> downstream effect recorded
+  -> new evidence re-enters event spine
+  -> proof coverage recomputed
 ```
 
-### 7.20 Journey Orchestrator
+### 8.5 Referral Inheritance
 
-Purpose: choose and adapt multi-step journeys instead of treating every touch as isolated.
+Referral paths are not a separate funnel. They are persuasion paths with inherited proof context.
 
-The orchestrator should maintain narrative coherence:
+Default referral rule:
 
-- pain recognition
-- proof delivery
-- comparison or FAQ
-- urgency or CTA
+- referred prospects may skip generic pain-recognition steps
+- inherited trust should be explicit in the path context
+- referral evidence must remain attributable and audit-safe
 
-Adaptive examples:
+## 9. Decisioning Model
 
-- objection raised -> insert counter-proof
-- high conviction but low readiness -> reduce urgency, increase evaluation support
-- high readiness and covered objection set -> advance to CTA sooner
+Decisioning reads projections, not raw graph joins.
 
-Journey state flow:
+### 9.1 Bounded Runtime Decisions
 
-```text
-assigned
-  -> step_due
-  -> step_sent
-  -> response_evaluated
-  -> adapted / advanced / exited
-```
+Decisioning can:
 
-Exit conditions:
+- select from approved templates
+- choose approved proof order
+- adapt journey sequence within allowed boundaries
+- hold or queue risky actions when doctrine or health checks fail
 
-- meeting booked
-- pilot started
-- moved to dormant
-- explicit loss
+Decisioning cannot:
 
-Error table:
+- improvise new customer-facing claims
+- bypass doctrine
+- mutate canonical graph state directly
+- treat low-confidence evidence as action-grade truth
 
-| Failure class | Rescue action | Degraded mode |
-|---|---|---|
-| missing next step | fall back to safe default nurture step | preserve journey continuity |
-| conflicting active journeys | latest valid journey wins | archive the older one |
-| unsupported response pattern | continue default path | log unmatched response for later rule design |
+### 9.2 Runtime Inputs
 
-### 7.21 Prospect Scoring Model
+- decisioning projections
+- doctrine state
+- rollout mode
+- feature flags
+- lifecycle eligibility
+- health and suppression gates
 
-Purpose: prioritize enrichment depth, routing priority, and cadence based on expected fit and timing.
+### 9.3 Runtime Outputs
 
-Scoring inputs:
+- routing decision logs
+- proposed downstream actions
+- queued actions when blocked
+- effect confirmations written back as events
 
-- segment conversion rate
-- enrichment confidence
-- lookalike fit
-- intent signal strength
-- geographic context
-- seasonal alignment
+## 10. Governance Intelligence
 
-Score bands:
+Governance intelligence is the analysis layer that keeps the platform legible and safe.
 
-- hot
-- warm
-- cool
-- cold
+It computes:
 
-Use:
+- scorecards and gate eligibility
+- proof coverage state
+- doctrine conflicts
+- learning integrity alerts
+- path recommendations
+- proof debt priorities
+- benchmark candidates
 
-- enrichment depth
-- queue priority
-- cadence intensity
-- experiment allocation priority
+### 10.1 Wedge Fitness Scorecard
 
-Scoring should remain advisory to routing, not a hidden override of segment and doctrine.
-
-### 7.22 Intent Signal Detector
-
-Purpose: infer whether a prospect appears in-market now, not just whether they are theoretically a fit.
-
-Examples:
-
-- review surge
-- hiring signal
-- service-area expansion
-- seasonal emergency context
-
-### 7.23 Loss Analysis Engine
-
-Purpose: convert losses into targeting, proof, pricing, and qualification improvements.
-
-Loss reasons should be structured and queryable.
-
-Suggested taxonomy:
-
-- price
-- competitor
-- timing
-- no need
-- bad fit
-- feature gap
-- trust
-- unknown
-
-### 7.24 Decision Audit Engine
-
-Purpose: detect drift, exploration collapse, outcome disconnect, and blind spots in the system’s own choices.
-
-Audit questions:
-
-- are we over-routing to the same path without evidence?
-- are we exploring enough to discover new wins?
-- are Tier 1 gains disconnected from Tier 3 outcomes?
-- are some prospect shapes always getting the same answer regardless of evidence?
-
-Outputs:
-
-- weekly audit summary
-- flagged blind spots
-- exploration warnings
-- local-optimum warnings
-
-### 7.25 Referral Mechanism
-
-Purpose: activate advocate-driven acquisition without breaking attribution or narrative coherence.
-
-Referral-specific rule:
-
-A referred prospect starts with inherited social proof, so the journey should usually skip generic pain recognition and lead with proof and evaluation support.
-
-### 7.26 Strategic Intelligence Briefing
-
-Purpose: synthesize major learnings for leadership without turning future modules into present-tense dependencies.
-
-This remains a governed output, not an excuse to re-expand scope in the core loop.
-
-### 7.27 Future Module Boundary
-
-Any module justified only by later strategic intelligence belongs in Appendix B unless it improves current wedge proof.
-
-### 7.37 Belief Layer
-
-Purpose: infer what changed inside the prospect journey strongly enough to matter for routing and proof evaluation.
-
-Belief is split into two dimensions:
-
-- `conviction_shift` — did the prospect become more convinced the claim is true?
-- `buying_readiness_shift` — did the prospect become more ready to act now?
-
-These are related but not identical. A prospect can become more convinced while remaining unready, or become more ready while still carrying unresolved objections.
-
-#### Belief Inference Policy
-
-- touchpoint logs remain the source of truth
-- belief events are derived, recomputable annotations
-- low-confidence inferences are logged but excluded from routing decisions
-- proof coverage references `conviction_shift_rate`
-- journey adaptation can use both conviction and readiness when confidence is sufficient
-- conviction analysis should answer "did the proof work?"
-- readiness analysis should answer "is now the right next step?"
-
-#### Belief Signal Map
-
-| Observable behavior | Conviction shift | Buying readiness | Conviction confidence | Readiness confidence | Routing relevance |
-|---|---|---|---|---|---|
-| email opened, no click | flat | flat | 0.2 | 0.1 | none |
-| page depth > 2 | up | flat | 0.5 | 0.3 | moderate |
-| watched demo > 60% | up | up | 0.7 | 0.5 | high |
-| comparison page > 30s | up | flat | 0.6 | 0.3 | moderate |
-| calculator completed | up | up | 0.6 | 0.7 | high |
-| replied with objection | flat | up | 0.3 | 0.6 | high |
-| replied asking for call | up | up | 0.8 | 0.9 | very high |
-| meeting booked | up | up | 0.8 | 0.95 | very high |
-| meeting no-show | down | down | 0.6 | 0.8 | high |
-
-This keeps proof analysis honest: proof is judged primarily by its effect on conviction, while journey timing can respond to readiness.
-
-Interpretation rule:
-
-- conviction should answer "did this proof change their mind?"
-- readiness should answer "are they more prepared to take the next step now?"
-
-Error table:
-
-| Failure class | Rescue action | Degraded mode |
-|---|---|---|
-| evidence supports only one dimension | log the supported dimension and set the other to `flat` with low confidence | partial belief event |
-| signal map miss | log unmapped signal | no routing impact |
-| confidence below threshold | retain for analysis only | exclude from decisioning |
-
-### 7.38 Founder Doctrine Registry
-
-Purpose: encode founder strategy as explicit, queryable doctrine rather than relying on a trail of overrides.
-
-Doctrine fields:
-
-- `scope` — messaging, pricing, claims, wedge, approval, routing
-- `owner` — founder by default; delegates may propose soft doctrine only
-- `review_cadence` — weekly, monthly, quarterly
-- `affected_surfaces` — templates, pages, experiments, pricing tests, dashboards
-- `blast_radius` — low, medium, high
-
-Doctrine strengths:
-
-- `hard_rule` — cannot be violated by experiments, delegates, or automation
-- `soft_preference` — creates friction and a review path, not a silent override
-
-Doctrine is never silently overridden. All conflicts are logged with resolution metadata.
-
-Typical doctrine seeds:
-
-- approved claims
-- forbidden claims
-- pricing boundaries
-- strategic positioning rules
-- approval constraints
-
-Doctrine authoring flow:
-
-```text
-rule proposed
-  -> scope and blast radius assigned
-  -> founder review
-  -> active
-  -> future conflict logging and scheduled review
-```
-
-Error table:
-
-| Failure class | Rescue action | Degraded mode |
-|---|---|---|
-| conflicting hard rules | reject newer rule until resolved | existing doctrine stays active |
-| stale doctrine past review date | keep enforced, emit review prompt | no silent expiry |
-| doctrine registry unavailable | conservative mode | risky routing blocked |
-
----
-
-## 8. Schemas
-
-### 8.1 Prospect schema
-
-```json
-{
-  "prospect_id": "uuid",
-  "company_id": "uuid",
-  "trade": "hvac",
-  "buyer_type": "owner_operator",
-  "pain_profile": ["missed_calls", "after_hours"],
-  "primary_segment": "hvac_owner_operator_missed_calls",
-  "secondary_segments": ["hvac_owner_operator_after_hours"],
-  "lifecycle_state": "REACHED",
-  "source_channel": "cold_email",
-  "prospect_score": 72,
-  "intent_signals": {
-    "strength": "moderate",
-    "signals": ["review_volume_surge"]
-  },
-  "confidence": {
-    "trade": 0.95,
-    "pain_profile": 0.78
-  }
-}
-```
-
-### 8.2 Experiment schema
-
-```json
-{
-  "experiment_id": "uuid",
-  "segment": "hvac_owner_operator_missed_calls",
-  "channel": "cold_email",
-  "lifecycle_stage_scope": "UNKNOWN_TO_REACHED",
-  "arms": [
-    {
-      "arm_id": "a",
-      "angle": "booked_jobs",
-      "template_id": "tmpl_hvac_missed_001",
-      "destination_page": "/hvac/missed-call-booking-system",
-      "proof_asset": "demo_hvac_call_01"
-    }
-  ],
-  "status": "exploring"
-}
-```
-
-### 8.3 Outcome schema
-
-```json
-{
-  "outcome_id": "uuid",
-  "prospect_id": "uuid",
-  "experiment_id": "uuid",
-  "arm_id": "a",
-  "replied": true,
-  "clicked": true,
-  "meeting_booked": false,
-  "pilot_started": false,
-  "cost_to_date": 1.47
-}
-```
-
-### 8.4 Touchpoint log schema
-
-```json
-{
-  "touchpoint_id": "uuid",
-  "prospect_id": "uuid",
-  "touchpoint_type": "email_sent",
-  "channel": "cold_email",
-  "experiment_id": "uuid",
-  "arm_id": "a",
-  "signal_quality_score": 0.85,
-  "cost": 0.12,
-  "timestamp": "2026-03-14T12:00:00Z"
-}
-```
-
-### 8.5 Routing decision schema
-
-```json
-{
-  "decision_id": "uuid",
-  "prospect_id": "uuid",
-  "timestamp": "2026-03-14T12:05:00Z",
-  "inputs": {
-    "primary_segment": "hvac_owner_operator_missed_calls",
-    "pain_hypothesis": "missed_calls",
-    "lifecycle_state": "REACHED",
-    "doctrine_snapshot_version": 4
-  },
-  "outputs": {
-    "template_id": "tmpl_hvac_missed_001",
-    "destination_page": "/hvac/missed-call-booking-system",
-    "proof_asset_id": "demo_hvac_call_01"
-  },
-  "gates_passed": {
-    "health_gate": true,
-    "doctrine_gate": true,
-    "lifecycle_gate": true
-  },
-  "fallbacks_used": []
-}
-```
-
-### 8.6 Proof brief schema
-
-```json
-{
-  "proof_brief_id": "uuid",
-  "segment": "hvac_owner_operator_missed_calls",
-  "objection": "already_have_answering_service",
-  "lifecycle_stage": "EVALUATING",
-  "recommended_proof_type": "comparison",
-  "why_now": "high-volume objection with weak conviction movement",
-  "owner": "founder",
-  "status": "draft",
-  "expected_revenue_impact": "high",
-  "created_at": "2026-03-14T00:00:00Z"
-}
-```
-
-### 8.7 Template schema
-
-```json
-{
-  "template_id": "tmpl_hvac_missed_001",
-  "version": 3,
-  "target_segment": "hvac_owner_operator_missed_calls",
-  "target_angle": "booked_jobs",
-  "channel": "cold_email",
-  "subject_template": "{trade_title} companies are booking more jobs from missed calls",
-  "body_template": "Hi {first_name}, most {trade} companies tell us {angle_statement}. {proof_statement}. {cta_statement}.",
-  "slots": {
-    "first_name": {"source": "prospect.contact_name", "fallback": "there"},
-    "trade": {"source": "prospect.trade", "validation": "enum"},
-    "angle_statement": {"source": "approved_angle_library", "validation": "approved_only"},
-    "proof_statement": {"source": "approved_proof_library", "validation": "approved_only"},
-    "cta_statement": {"source": "approved_cta_library", "validation": "approved_only"}
-  },
-  "status": "active"
-}
-```
-
-### 8.8 Wedge configuration schema
-
-```json
-{
-  "wedge_id": "hvac",
-  "trade": "hvac",
-  "segments": [
-    {"id": "hvac_owner_missed", "name": "Owner-led + missed daytime calls"},
-    {"id": "hvac_owner_afterhours", "name": "Owner-led + after-hours pain"}
-  ],
-  "angles": [
-    {"id": "booked_jobs", "statement": "Missed calls become booked jobs"},
-    {"id": "after_hours", "statement": "After-hours leads should not hit voicemail"}
-  ],
-  "channels": ["cold_email"],
-  "proof_assets": ["demo_hvac_call_01", "calculator_01"],
-  "experiment_defaults": {
-    "min_sample_per_arm": 100,
-    "significance_threshold": 0.9,
-    "temporal_stability_required": true
-  }
-}
-```
-
-### 8.9 Cost per acquisition schema
-
-```json
-{
-  "cost_record_id": "uuid",
-  "experiment_id": "uuid",
-  "arm_id": "a",
-  "channel": "cold_email",
-  "enrichment_cost": 0.08,
-  "asset_cost": 0.03,
-  "send_cost": 0.12,
-  "review_cost": 0.09,
-  "total_cost_per_meeting": 42.0,
-  "total_cost_per_pilot": 210.0
-}
-```
-
-### 8.10 Journey assignment schema
-
-```json
-{
-  "journey_assignment_id": "uuid",
-  "prospect_id": "uuid",
-  "journey_id": "journey_hvac_owner_cold",
-  "current_step": 2,
-  "status": "active",
-  "next_step_due_at": "2026-03-18T09:00:00Z"
-}
-```
-
-### 8.11 Loss record schema
-
-```json
-{
-  "loss_id": "uuid",
-  "prospect_id": "uuid",
-  "loss_reason": "competitor",
-  "loss_reason_detail": "Chose incumbent answering service with lower monthly price",
-  "segment": "hvac_owner_operator_missed_calls",
-  "experiment_id": "uuid",
-  "arm_id": "a",
-  "recoverable": true,
-  "recovery_eligible_after": "2026-06-14T00:00:00Z",
-  "timestamp": "2026-03-14T00:00:00Z"
-}
-```
-
-### 8.12 Feature flag snapshot schema
-
-```json
-{
-  "flag_snapshot_id": "uuid",
-  "captured_at": "2026-03-14T00:00:00Z",
-  "flags": {
-    "growth.enrichment.enabled": true,
-    "growth.belief_layer.enabled": false,
-    "growth.doctrine_enforcement.enabled": true,
-    "growth.proof_coverage.enabled": false
-  },
-  "environment": "staging"
-}
-```
-
-### 8.13 Operating packet schema
-
-```json
-{
-  "packet_id": "uuid",
-  "period_start": "2026-03-07T00:00:00Z",
-  "period_end": "2026-03-14T00:00:00Z",
-  "what_changed": [
-    "after-hours HVAC owner-operators improved from weak to covered on demo proof"
-  ],
-  "what_to_approve": [
-    "approve comparison proof brief for answering-service objection"
-  ],
-  "what_to_kill": [
-    "retire interruption angle for dispatcher-heavy segment"
-  ],
-  "what_proof_to_build_next": [
-    "comparison proof for already-have-answering-service objection"
-  ]
-}
-```
-
-### 8.14 Churn record schema
-
-```json
-{
-  "churn_id": "uuid",
-  "customer_id": "uuid",
-  "prospect_id": "uuid",
-  "churn_reason": "price",
-  "churn_reason_detail": "Monthly cost too high relative to perceived value",
-  "acquisition_channel": "cold_email",
-  "acquisition_experiment_id": "uuid",
-  "segment_at_acquisition": "hvac_owner_operator_missed_calls",
-  "recoverable": true,
-  "recovery_eligible_after": "2026-06-14T00:00:00Z",
-  "timestamp": "2026-03-14T00:00:00Z"
-}
-```
-
-### 8.15 Referral link schema
-
-```json
-{
-  "referral_link_id": "uuid",
-  "referrer_customer_id": "uuid",
-  "referrer_trade": "hvac",
-  "attribution_token": "signed_token",
-  "status": "active",
-  "created_at": "2026-03-10T00:00:00Z",
-  "expires_at": "2026-06-10T00:00:00Z",
-  "referrals_generated": 3,
-  "referrals_converted": 1
-}
-```
-
-### 8.16 Learning score schema
-
-```json
-{
-  "score_id": "uuid",
-  "score_date": "2026-03-14T00:00:00Z",
-  "learning_score": 68,
-  "components": {
-    "knowledge_frontier": 72,
-    "prediction_accuracy": 65,
-    "discovery_rate": 74,
-    "transfer_success": 55,
-    "founder_alignment": 78
-  },
-  "trend": "up"
-}
-```
-
-### 8.17 Anti-pattern entry schema
-
-```json
-{
-  "anti_pattern_id": "uuid",
-  "pattern_type": "segment_angle_mismatch",
-  "segment": "hvac_dispatcher_heavy",
-  "angle": "interruption",
-  "channel": "cold_email",
-  "failure_mode": "zero_tier2_signals_after_200_prospects",
-  "confidence": 0.82,
-  "avoid_until_reviewed": true,
-  "review_trigger": "new_proof_asset_for_segment"
-}
-```
-
-### 8.18 Decision audit result schema
-
-```json
-{
-  "audit_id": "uuid",
-  "audit_date": "2026-03-14T00:00:00Z",
-  "overall_status": "healthy",
-  "analyses": {
-    "decision_drift": "ok",
-    "exploration_collapse": "warning",
-    "outcome_disconnect": "ok",
-    "systematic_blind_spots": "ok"
-  },
-  "recommendations": [
-    "increase exploration in hvac_owner_operator_missed_calls"
-  ]
-}
-```
-
-### 8.25 Aggregate intelligence schema
-
-Reserved stub. Full description moved to Appendix B: Future Analytical Modules.
-
-### 8.26 Product usage correlation schema
-
-Reserved stub. Full description moved to Appendix B: Future Analytical Modules.
-
-### 8.28 Belief event schema
-
-```json
-{
-  "belief_event_id": "uuid",
-  "prospect_id": "uuid",
-  "touchpoint_id": "uuid",
-  "lifecycle_stage": "EVALUATING",
-  "pain_hypothesis": "missed_calls",
-  "objection": "already_have_answering_service",
-  "proof_asset_id": "demo_hvac_call_01",
-  "conviction_shift": "up",
-  "buying_readiness_shift": "flat",
-  "conviction_confidence": 0.72,
-  "buying_readiness_confidence": 0.48,
-  "evidence_source": "page_behavior",
-  "evidence_detail": "demo viewed 78% duration",
-  "belief_signal_map_version": 2,
-  "next_best_action": "comparison_proof",
-  "timestamp": "2026-03-14T14:32:00Z"
-}
-```
-
-### 8.29 Founder doctrine schema
-
-```json
-{
-  "doctrine_id": "uuid",
-  "scope": "messaging",
-  "decision_type": "forbidden_claim",
-  "strength": "hard_rule",
-  "rule": "Never claim CallLock replaces human dispatchers",
-  "rationale": "Legal risk and misrepresentation. CallLock augments, not replaces.",
-  "effective_from": "2026-03-14T00:00:00Z",
-  "review_after": "2026-06-14T00:00:00Z",
-  "priority": 1,
-  "created_by": "founder",
-  "review_cadence": "monthly",
-  "affected_surfaces": ["templates", "landing_pages", "experiments"],
-  "blast_radius": "high"
-}
-```
-
-### 8.30 Doctrine conflict schema
-
-```json
-{
-  "conflict_id": "uuid",
-  "doctrine_id": "uuid",
-  "conflicting_signal_type": "experiment_data",
-  "conflicting_signal_detail": "price-first angle won 3 consecutive experiments",
-  "resolution": "doctrine_reaffirmed",
-  "resolved_by": "founder",
-  "resolved_at": "2026-03-15T00:00:00Z"
-}
-```
-
-### 8.31 Proof coverage entry schema
-
-```json
-{
-  "coverage_id": "uuid",
-  "segment": "hvac_owner_operator_missed_calls",
-  "objection": "already_have_answering_service",
-  "lifecycle_stage": "EVALUATING",
-  "coverage_status": "weak",
-  "conviction_shift_rate": 0.31,
-  "proof_assets": [
-    {
-      "proof_asset_id": "demo_hvac_call_01",
-      "proof_type": "demo_call",
-      "conviction_shift_rate": 0.31,
-      "sample_size": 34
-    }
-  ],
-  "proof_brief": {
-    "recommended_proof_type": "comparison",
-    "why_now": "high-volume objection with weak conviction movement",
-    "owner": "founder",
-    "status": "draft",
-    "expected_revenue_impact": "high"
-  }
-}
-```
-
-### 8.33 Wedge fitness snapshot schema
-
-```json
-{
-  "snapshot_id": "uuid",
-  "wedge": "hvac",
-  "trend_score": 62,
-  "component_scores": {
-    "booked_pilot_rate": 0.65,
-    "attribution_completeness": 0.88,
-    "proof_coverage": 0.55,
-    "founder_alignment": 0.78,
-    "learning_velocity": 0.70,
-    "retention_quality": 0.60,
-    "segment_clarity": 0.80,
-    "cost_efficiency": 0.72,
-    "conviction_depth": 0.45,
-    "readiness_quality": 0.52
-  },
-  "gates_status": {
-    "automation_eligible": true,
-    "closed_loop_eligible": false,
-    "expansion_eligible": false,
-    "pricing_experiment_eligible": true
-  }
-}
-```
-
----
-
-## 9. Data Classification & Privacy
-
-Four tiers:
-
-- Tier 1 — aggregate metrics and safe summaries
-- Tier 2 — pseudonymous prospect-linked operating data
-- Tier 3 — identifiable PII
-- Tier 4 — sensitive raw content, redacted or discarded at write time
-
-Examples:
-
-- Tier 1: proof coverage, scorecards, aggregate performance, doctrine rules
-- Tier 2: belief events, touchpoints, routing logs, loss records
-- Tier 3: prospect identity, company domain, contact details
-- Tier 4: raw transcripts, raw replies, raw recordings
-
-Rules:
-
-- raw transcripts and raw replies should not become permanent growth memory
-- dashboard and API queries over Tier 2 should enforce minimum cohort safeguards
-- deletion requests should sever identity links while preserving safe aggregates
-
-## 10. Agentic vs Non-Agentic Split
-
-### Fully agentic
-
-- enrichment
-- classification
-- routing selection from approved inventory
-- signal quality scoring
-- bounded experiment allocation
-- proof gap detection
-
-These are safe only when their outputs remain bounded by doctrine, inventory, and gates.
-
-### Bounded agentic with human oversight
-
-- strategic recommendations
-- proof brief drafting
-- doctrine review prompts
-- asset proposals
-
-### Human-controlled
-
-- positioning
-- pricing
-- legal and compliance claims
-- doctrine authoring
-- wedge expansion decisions
-- hard-kill decisions
-
-Delegate approvals may exist between these surfaces, but they should remain narrower than founder-owned strategy.
-
----
-
-## 11. Wedge Fitness Score & Phase Gates
-
-The composite Wedge Fitness Score remains a trend metric. It is not, by itself, permission to advance.
-
-`persuasion_path` quality should rise alongside the score. If the composite improves while proof quality, doctrine alignment, or attribution integrity falls, the system is not actually ready to advance.
-
-### Wedge Fitness Trend Metric
-
-Track a 0-100 composite for momentum and comparison over time.
+The wedge fitness score remains a trend metric, not a permission slip.
 
 Representative components:
 
@@ -1592,450 +632,411 @@ Representative components:
 - conviction depth
 - readiness quality
 
-### Gate Scorecards
+Gate floors remain binding:
 
-One strong component cannot compensate for a component below its floor.
-
-| Gate | Trend requirement | Component floors that ALL must pass |
+| Gate | Trend requirement | Component floors that all must pass |
 |---|---|---|
-| Automation eligibility | Wedge Fitness trending above 40 | attribution completeness >= 0.8; proof coverage >= 0.5; doctrine stable for 2 weeks |
-| Closed-loop eligibility | Wedge Fitness trending above 60 | conviction coverage on top objections >= 0.6; readiness confidence usable in routing; founder override rate < 0.4 |
-| Expansion eligibility | Wedge Fitness trending above 75 | retention quality >= 0.7; proof coverage on top objections >= 0.7; at least one proven `persuasion_path` replicated twice |
-| Pricing experiment eligibility | Wedge Fitness trending above 50 | loss analysis sample >= 30; price-related losses >= 20%; doctrine allows pricing test |
+| Advisory eligibility | Trend above 30 | attribution completeness >= 0.7; doctrine stable for 1 week |
+| Assisted eligibility | Trend above 45 | proof coverage >= 0.5; conviction confidence usable on top objections |
+| Closed-loop eligibility | Trend above 60 | founder override rate < 0.4; readiness confidence usable in routing |
+| Cross-funnel eligibility | Trend above 70 | onboarding attribution usable; retention quality >= 0.7 |
+| Replication eligibility | Trend above 75 | at least one proven path repeated twice across qualified cohorts |
 
-Hard operational kills remain outside the scorecard:
+Hard kills remain outside the scorecard:
 
 - sender reputation failure
 - attribution collapse
-- no-pilot threshold after meaningful volume
 - major data integrity failure
+- doctrine unavailability on risky paths
 
----
+### 10.2 Recommendation Types
 
-## 12. Phase Plan
+Governance intelligence can emit review objects for:
 
-### Phase 0 — Foundation and Instrumentation
+- proof creation or improvement
+- routing changes
+- journey changes
+- doctrine review prompts
+- experiment proposals
+- kill recommendations
 
-Goal: create the minimum structure needed to learn.
+## 11. Operator Control Plane
 
-Build:
+The founder/operator experience should feel like one control plane with multiple views, not many overlapping tools.
 
-- wedge taxonomy
-- segment taxonomy
-- angle taxonomy
-- Growth Memory core schemas
-- touchpoint log
-- routing decision log
-- doctrine seed set
-- proof coverage map
-- feature flags
-- signal quality rules
-- scorecard gate definitions
+### 11.1 Core Views
+
+- daily health glance
+- weekly operating packet
+- review queue
+- proof debt queue
+- doctrine conflict queue
+- investigation view
+
+### 11.2 Unified Review Model
+
+All founder decisions should resolve through the same `review_object` state machine.
+
+That means:
+
+- packet items are review-object slices
+- dashboard cards are review-object slices
+- queue entries are review-object slices
+- audit summaries reference review objects directly
+
+This prevents stale-state divergence across surfaces.
+
+### 11.3 Internal Control Plane Boundary
+
+The operator control plane is a separate trust zone.
+
+It should support:
+
+- explicit cross-tenant read access
+- narrow cross-tenant write access
+- reason-required overrides
+- replay and rollback actions
+- approval history and actor identity
+
+## 12. Failure Handling and Rescue Registry
+
+General degraded-mode language is not sufficient. Failure handling must be codepath-specific.
+
+### 12.1 Failure Policy
+
+- silent drop is forbidden
+- every failure has a named state
+- every risky failure is either quarantined, held, retried, or failed closed
+- every rescue path is observable in logs, metrics, and operator views
+
+### 12.2 Error and Rescue Registry
+
+| Codepath | Failure mode | Named failure | Rescue action | Resulting state | Visibility |
+|---|---|---|---|---|---|
+| event ingest | malformed payload | `EventSchemaValidationError` | reject and quarantine | `quarantined_event` | ingest failure counter + audit |
+| event ingest | duplicate or late event | `IdempotencyConflictError` | merge or noop by idempotency key | `accepted_duplicate` | duplicate-event metric |
+| graph mutation | missing path key | `MissingPathKeyError` | hold mutation; require reviewable repair path | `mutation_hold` | critical operator alert |
+| graph mutation | conflicting merge target | `PathMergeConflictError` | do not apply; create conflict review object | `mutation_hold` | mutation conflict queue |
+| belief inference | malformed model output | `BeliefInferenceParseError` | store analysis-only note; no graph mutation | `analysis_only` | inference failure counter |
+| belief inference | low-confidence result | `BeliefInferenceLowConfidence` | exclude from decisioning | `analysis_only` | low-confidence metric |
+| doctrine evaluation | registry unavailable | `DoctrineRegistryUnavailable` | fail closed; queue risky actions | `blocked_pending_doctrine` | critical alert |
+| doctrine evaluation | hard-rule conflict | `DoctrineConflictError` | block or escalate through review object | `blocked_for_review` | doctrine conflict queue |
+| review apply | stale snapshot | `ReviewSnapshotStaleError` | reject and require refresh or rebase | `reviewable` | stale-action warning |
+| review apply | downstream change failed | `ReviewApplyFailedError` | mark failed_apply; preserve intent and retry path | `failed_apply` | review failure queue |
+| packet assembly | projection stale or missing | `OperatorPacketAssemblyError` | render raw scorecard plus open review objects | `degraded_packet` | founder alert + metric |
+| projection refresh | refresh job failed | `ProjectionRefreshError` | keep last good projection; mark stale | `stale_projection` | stale projection alert |
+
+### 12.3 Four Shadow Paths
+
+Every data flow should be traceable through four paths:
+
+```text
+happy path:
+  valid event -> applied mutation -> refreshed projections -> visible output
+
+nil path:
+  missing required source fields -> quarantine -> no mutation
+
+empty path:
+  low-information event -> accepted into event spine -> no promotion
+
+error path:
+  upstream or mutation failure -> hold/fallback/fail-closed with visible state
+```
+
+## 13. Security, Privacy, and Tenant Safety
+
+### 13.1 Tenant Isolation
+
+Existing tenant isolation rules from the architecture spec remain in force.
+
+Requirements:
+
+- tenant-scoped evidence and graph state remain tenant-scoped
+- cache and projection keys remain tenant namespaced where applicable
+- internal control-plane actions are identity-bound and audited
+- service-role machinery is never a substitute for human auth design
+
+### 13.2 Data Classification
+
+Four operating tiers:
+
+- Tier 1: aggregate-safe metrics and scorecards
+- Tier 2: pseudonymous prospect-linked operating data
+- Tier 3: identifiable prospect or tenant data
+- Tier 4: sensitive raw content that must be redacted, minimized, or discarded
+
+Rules:
+
+- raw transcripts and raw replies do not become durable persuasion memory
+- dashboard and API views over Tier 2 must enforce minimum cohort safeguards
+- benchmark outputs must satisfy privacy thresholds before release
+
+### 13.3 Federated Benchmark Guardrails
+
+Future benchmark aggregation must:
+
+- operate over aggregate-safe cohorts
+- reject undersized cohorts
+- block tenant-identifying slices
+- log benchmark generation lineage
+- never expose raw event, path, or review-object data across tenants
+
+## 14. Rollout Ladder
+
+The platform should not launch as one large feature. It should earn trust layer by layer.
+
+### Phase 1 - Capture-Only
+
+Goal: establish the event spine, graph mutation pipeline, and lineage.
+
+Enabled:
+
+- event capture
+- canonical path construction
+- mutation logging
+- replay tooling
+
+Disabled:
+
+- runtime decision influence
+- founder recommendations
+- automated downstream actions
 
 Exit criteria:
 
-- every outbound touch can be tied to a segment, pain hypothesis, proof context, and outcome
-- doctrine seed rules exist for claims and pricing boundaries
-- proof coverage starter map exists for top HVAC objections
-- scorecard definitions exist even if many floors are initially unmet
+- event schema coverage is stable
+- graph mutation results are reproducible
+- lineage chain is queryable end to end
 
-### Phase 1 — Manual Wedge Proof
+### Phase 2 - Advisory-Only
 
-Goal: prove one wedge with humans in the loop while building trusted instrumentation.
+Goal: make the graph visible to operators without letting it steer behavior.
 
-Scope:
+Enabled:
 
-- HVAC only
-- cold email only
-- limited proof inventory
-- strong event capture
-- founder-reviewed templates and proof
+- weekly packet
+- dashboard and queue views
+- proof debt recommendations
+- doctrine conflict views
 
-Success:
+Disabled:
 
-- at least one repeatable `persuasion_path`
-- traceable path from segment -> pain -> proof -> booked pilot
-- founder can explain why it works
+- runtime decision changes
+- auto-applied founder actions
+- closed-loop execution
 
-Kill criteria:
+Exit criteria:
 
-- sender reputation breach
-- attribution collapse
-- zero pilots after meaningful volume
-- inability to define a clean segment taxonomy
+- packet, dashboard, and queues stay consistent through shared review objects
+- stale review actions are rejected correctly
+- founder can explain the winning and decaying paths
 
-### Phase 2 — Assisted Routing and Asset Selection
+### Phase 3 - Assisted Decisioning
 
-Same loop, less manual effort, more trust.
+Goal: let projections influence routing and proof sequencing with human approval.
 
-Phase 2 should automate more of the existing `persuasion_path` loop, not introduce a new ambition layer. New analytical modules are opportunistic, not prerequisites, unless they improve trust or explanation.
+Enabled:
 
-Success:
+- routing suggestions
+- journey suggestions
+- proof improvement recommendations
+- approved action application through control plane
 
-- routing suggestions outperform static defaults
-- proof sequencing improves movement into meetings or pilots
-- doctrine conflicts are visible and reviewable
+Disabled:
 
-### Phase 3 — Closed-Loop GTM Optimization
+- fully automatic risky downstream actions
 
-Same loop, closed automatically.
+Exit criteria:
 
-Phase 3 should automate the already-proven loop. Anything that does not clearly improve `persuasion_path` discovery, proof quality, or founder trust should remain optional.
+- assisted decisions outperform static defaults
+- doctrine conflicts remain visible and reviewable
+- founder override rate stays within scorecard bounds
 
-Success:
+### Phase 4 - Closed-Loop Actioning
 
-- the system can reliably identify and scale winning paths
-- automation stays bounded by doctrine and scorecard floors
-- founder review shifts from tactical routing to strategic approval
+Goal: allow bounded automatic actions once trust thresholds are met.
 
-### Phase 4 — Product Feedback Integration
+Enabled:
 
-Goal: feed real product outcomes back into persuasion analysis and proof selection.
+- bounded closed-loop routing and sequencing
+- controlled downstream actions in approved domains
+- fail-closed pauses when doctrine or health gates are unavailable
 
-Success:
+Exit criteria:
 
-- product outcomes improve proof prioritization
-- proof assets start reflecting real scenario performance
-- GTM language and proof claims become more grounded in actual customer behavior
+- replay, rescue, and lineage remain trustworthy under production load
+- closed-loop behavior respects all scorecard floors
 
-### Phase 5 — Wedge Replication Engine
+### Phase 5 - Cross-Funnel Expansion
 
-Goal: replicate a proven wedge using configuration, proof inventory, and doctrine, not a rewrite of the core loop.
+Goal: extend the graph from acquisition and sales into onboarding, retention, and referral.
 
-Success:
+Enabled:
 
-- new wedge launch time falls materially relative to the first wedge
-- the replicated wedge reuses core routing, doctrine, and proof processes
-- at least one winning persuasion path transfers with less time-to-proof
+- onboarding and retained-usage evidence
+- churn and win-back path analysis
+- referral inheritance rules
 
-### Phase 6
+Exit criteria:
 
-Future analytical expansion is deferred to Appendix B: Future Analytical Modules.
+- cross-funnel evidence improves proof and routing quality
+- explanation quality survives broader scope
 
-### Phase 7
+### Phase 6 - Federated Benchmark Layer
 
-Future network and aggregate intelligence expansion is deferred to Appendix B: Future Analytical Modules.
+Goal: introduce aggregate-only cross-tenant learning.
 
----
+Enabled:
 
-## 13. Initial Asset Inventory for Phase 1
+- benchmark cohorts
+- path-level aggregate comparisons
+- benchmark-informed review objects
 
-Pages:
+Exit criteria:
 
-- `/`
-- `/hvac/`
-- `/hvac/missed-call-booking-system`
-- `/compare/hvac-answering-service-vs-ai-receptionist`
-- `/tools/missed-call-revenue-calculator`
-- `/demo/hvac-booking-call`
+- privacy thresholds proven
+- no tenant-identifying leakage in benchmark outputs
 
-Proof assets:
+### Phase 7 - Wedge Replication Platform
 
-- one HVAC demo call
-- one workflow visual
-- one calculator
-- one FAQ pack
-- one voicemail comparison
+Goal: replicate proven persuasion paths into new wedges using the same platform contracts.
 
-Outbound template families:
+Enabled:
 
-- missed calls
-- after-hours
-- interruption
-- better than voicemail
+- wedge transfer templates
+- proof-transfer candidates
+- replication scorecards
 
-## 14. Metrics
+Exit criteria:
 
-The key question is whether the system is getting better at discovering and repeating winning `persuasion_path` patterns.
+- new wedge setup reuses graph, governance, and control-plane primitives
+- replication time drops materially versus the first wedge
 
-Core metrics:
+## 15. Validation Strategy
 
-- reply rate by segment
-- proof-driven conviction movement
-- meeting-book rate
-- pilot-start rate
-- attribution completeness
-- proof coverage state
-- cost per meeting
-- cost per pilot
+This platform should ship only with replayable, deterministic confidence.
 
-Interpretive metrics:
+### 15.1 Required Test Layers
 
-- conviction movement rate by proof asset
-- readiness movement rate by journey step
-- doctrine conflict rate
-- proof debt backlog size
-- repeatability of top persuasion paths
+- unit tests for mutation planners, validators, and state machines
+- integration tests for graph writes, projection refresh, and review-object application
+- resilience tests for fail-closed and degraded paths
+- replay tests for end-to-end graph evolution
 
-### 14.1 Founder Weekly Operating Packet
+### 15.2 Required Scenarios
 
-The founder should get one weekly packet that is readable in 15 minutes and decidable in 15 minutes.
+1. deterministic replay of one week of mixed events, graph mutations, review decisions, and outcomes
+2. duplicate and late event ingest with idempotent graph results
+3. graph mutation conflict enters a visible hold state
+4. stale review action is rejected or rebased explicitly
+5. packet, dashboard, and queue stay consistent because they read the same `review_object` state
+6. graph promotion is frozen while event capture remains live
+7. doctrine unavailability causes fail-closed actioning
+8. federated benchmark output proves no tenant-level raw data leakage
 
-The packet is organized around `persuasion_path` changes:
+### 15.3 Shipping Confidence Test
 
-- **What Changed** — which paths improved, degraded, or stalled
-- **What to Approve** — doctrine changes, proof briefs, bounded experiments, routing changes
-- **What to Kill** — weak paths, stale proof, non-performing angles, blocked experiments
-- **What Proof to Build Next** — highest-value proof debt ranked by expected revenue impact
+The shipping-confidence test is not a single unit suite.
 
-The packet replaces dashboard wandering with a bounded decision ritual.
+It is a deterministic replay that proves the same evidence set produces:
 
-## 15. Risks
+- the same path states
+- the same proof debt
+- the same blocked gates
+- the same review-object queue
+- the same founder packet output
 
-- premature automation before wedge proof
-- overfitting on shallow signals
-- doctrine drift or silent policy bypass
-- proof sprawl without proof quality
-- false confidence from noisy data
-- sender reputation damage
-- attribution breakage
-- future-phase gravity distorting the current loop
+### 15.4 Example Replay Scenario
 
-Mitigation posture:
+```text
+Monday:
+  acquisition and outreach events arrive
 
-- use scorecard floors, not just trend scores
-- treat touchpoint log as higher truth than derived interpretation
-- require doctrine conflict visibility, never silent override
-- keep proof debt visible in weekly operations
+Tuesday:
+  objections and proof-consumption events create a weak path
 
-## 16. What This System Is Not
+Wednesday:
+  governance intelligence emits a proof review object
 
-This system is not:
+Thursday:
+  founder approves the proof action
 
-- a generic autonomous SDR
-- a broad content farm
-- a replacement for positioning clarity
-- a giant catalog of unrelated growth modules
-- an LLM content generator for customer-facing copy
+Friday:
+  downstream effect lands and new evidence improves the path
 
-## 17. Existing Infrastructure to Reuse
+Replay requirement:
+  same event set -> same lineage -> same path version -> same review state -> same packet summary
+```
 
-Existing systems and patterns that should shape implementation:
+## 16. Immediate Spec Priorities
 
-- HVAC industry knowledge and taxonomy
-- event infrastructure
-- multi-tenant data isolation
-- async job patterns
-- observability conventions
-- existing database migration patterns
+The next concept work should sharpen, not broaden:
 
-The implementation should reuse existing event, database, and multi-tenant patterns wherever possible instead of inventing parallel substrate.
+1. define the stable `persuasion_path` key and versioning rules
+2. define deterministic `graph_mutation` categories and merge rules
+3. define `review_object` subject types and apply semantics
+4. define projection versioning and staleness rules
+5. define control-plane roles and audit requirements
+6. define federated benchmark privacy thresholds
 
-## 18. Validation Strategy
+## 17. Assumptions and Defaults
 
-The doc should support explicit validation, not hand-wavy confidence.
+- This remains concept/spec work only; no implementation starts in this step.
+- Existing harness/product-core boundaries remain intact.
+- Existing audit, resilience, and tenant-isolation ADRs are reused rather than replaced.
+- The wedge-first thesis remains intact.
+- Any concept that cannot justify itself through the canonical persuasion graph should be removed, merged, or moved to an appendix.
 
-Core tests:
+## Appendix A: Operating Diagrams
 
-1. Full-loop simulation
-2. Learning correctness test
-3. Proof coverage test
-4. Belief split test for conviction vs readiness
-5. Doctrine conflict test
-6. Anti-pattern suppression test
-7. Wedge Fitness scorecard gate test
+### A.1 Review Object Apply Flow
 
-Suggested named scenarios:
+```text
+review_object opened
+  -> snapshot/version checked
+  -> action approved or overridden
+  -> downstream change attempted
+      -> success -> applied and audited
+      -> failure -> failed_apply + retry/replay path
+      -> stale snapshot -> reject and refresh
+```
 
-1. Full-loop simulation: synthetic prospects move through enrichment, routing, proof, and outcomes
-2. Learning correctness test: allocator converges on the right path using deeper signals
-3. Conviction vs readiness split test: the system treats "interested but unconvinced" differently from "convinced but not ready"
-4. Proof supply chain test: a gap creates a proof brief and later recomputes coverage
-5. Doctrine conflict test: hard doctrine blocks, soft doctrine escalates
-6. Anti-pattern test: known bad combinations are suppressed from new experiment proposals
-7. Scorecard gate test: a strong trend score cannot mask a failed floor
+### A.2 Rollback Flow
 
-Pass criteria:
+```text
+incident detected
+  -> freeze closed-loop actioning
+  -> if needed, freeze graph promotion
+  -> keep event spine live
+  -> keep last good projections readable
+  -> repair or replay from append-only evidence
+  -> re-enable advisory
+  -> re-enable assisted
+  -> re-enable closed-loop last
+```
 
-- routing changes can be explained from logged evidence
-- proof coverage state changes can be reproduced from touchpoints plus belief events
-- doctrine conflicts always emit a record
-- blocked gates identify which floor failed
-- packet generation produces an actionable weekly decision set without manual assembly
+### A.3 Projection Refresh Flow
 
-Expanded scenario detail:
+```text
+graph version committed
+  -> decisioning projections refresh
+  -> operator projections refresh
+  -> stale marker cleared
 
-### Test 1: Full-loop simulation
+failure:
+  keep last good projection
+  mark stale
+  alert control plane
+```
 
-Inject synthetic prospects across three segments with mixed confidence and missing-field cases. Verify:
+## Appendix B: Deferred Expansion Boundary
 
-- enrichment writes profiles with confidence
-- segmentation routes unknowns explicitly
-- routing decisions log doctrine and gate context
-- outcomes update the relevant persuasion-path metrics
+Only concepts that strengthen the canonical persuasion graph belong in the main body.
 
-### Test 2: Learning correctness test
+These remain deferred until graph quality, governance, and privacy prove them safe:
 
-Create arms with known outcome distributions and different costs. Verify:
-
-- allocator explores broadly early
-- deeper signals dominate winner confidence later
-- value-per-dollar beats click-rate-only optimization
-
-### Test 3: Conviction vs readiness split test
-
-Create two groups:
-
-- Group A: high clicks, low conviction, low readiness
-- Group B: moderate clicks, strong conviction, moderate readiness
-
-Verify:
-
-- proof coverage prefers Group B evidence
-- journeys give Group A more proof and Group B more CTA support
-
-### Test 4: Proof supply chain test
-
-Create one uncovered objection and one weak objection. Verify:
-
-- both create visible proof debt
-- only the weak objection references proof improvement rather than proof creation
-- deployed proof can later move the state to `covered`
-
-### Test 5: Doctrine conflict test
-
-Set one hard doctrine and one soft preference. Verify:
-
-- hard doctrine blocks conflicting routing
-- soft doctrine allows review with explicit conflict logging
-- founder resolution updates future decisions
-
-### Test 6: Anti-pattern suppression test
-
-Register a known-bad segment/angle combination. Verify:
-
-- allocator excludes that combination from new proposals
-- exclusion appears in logs and recommendation context
-
-### Test 7: Scorecard gate test
-
-Create a wedge with a strong composite trend but weak proof coverage. Verify:
-
-- gate remains blocked
-- blocking reason identifies the weak floor
-- no automation or expansion action proceeds on trend score alone
-
-Desired test questions:
-
-- can the system distinguish clicks from conviction?
-- can it distinguish conviction from readiness?
-- can proof gaps create owned work?
-- can doctrine constrain routing without silent failure?
-- can a strong trend score still be blocked by a weak floor?
-
-## 19. Feature Flags
-
-Representative flags:
-
-| Flag | Default | Controls |
-|---|---|---|
-| `growth.enrichment.enabled` | `false` | enrichment pipeline |
-| `growth.experiment.enabled` | `false` | experiment allocator |
-| `growth.outbound.enabled` | `false` | automated outbound execution |
-| `growth.quality.enabled` | `true` | signal quality layer |
-| `growth.belief_layer.enabled` | `false` | dual-axis belief inference |
-| `growth.doctrine_enforcement.enabled` | `true` | doctrine gating |
-| `growth.proof_coverage.enabled` | `false` | proof coverage recomputation |
-| `growth.wedge_fitness.enabled` | `false` | scorecard and trend computation |
-| `growth.journey_orchestrator.enabled` | `false` | multi-step journey planning |
-| `growth.loss_analysis.enabled` | `false` | structured loss analysis |
-
-## 20. Delight Features
-
-- **Why This Worked** — a card on every winning persuasion path showing pain, proof, objection, conviction change, readiness change, and booked outcome
-- **Belief Replay** — a view of conviction and readiness over time for one prospect
-- **Proof Debt Queue** — rank missing or weak proof by expected revenue impact
-- **Doctrine Diff** — show which founder rules blocked recommendations this week and why
-- **Pilot Path Hall of Fame** — the top repeatable booked-pilot paths, updated weekly
-
-## 21. Immediate Next Steps
-
-### Week 1
-
-- finalize HVAC wedge config
-- define segment and angle taxonomy
-- define touchpoint log and routing decision log
-- define doctrine seed rules
-- define proof coverage starter map
-
-### Week 2
-
-- define scorecard gates
-- define signal quality thresholds
-- define packet structure
-- define proof brief schema
-
-### Week 3
-
-- launch initial page and proof inventory
-- instrument all touches
-- begin founder-reviewed outbound
-
-### Week 4
-
-- run full-loop simulation
-- review first outcomes
-- identify first repeatable persuasion path
-
-## 22. Final Summary
-
-The system is a Persuasion OS for repeatable booked-pilot paths.
-
-It is organized as four planes:
-
-- Capture
-- Interpret
-- Decide
-- Govern
-
-Its canonical learning object is `persuasion_path`, not a generic experiment arm or an isolated growth metric.
-
-The growth loop remains the mechanism. The goal is discovering which segment, pain, objection, proof, and outcome patterns can be repeated with enough conviction and buying readiness movement to generate booked pilots.
-
-That is the loop worth automating.
-
----
-
-## Appendix A: Component Notes
-
-### A.1 Source of truth hierarchy
-
-1. touchpoint log
-2. routing decision log
-3. derived belief and proof-quality layers
-4. scorecards and summaries
-
-### A.2 Doctrine precedence
-
-1. hard doctrine beats automation
-2. hard doctrine beats delegate action
-3. soft doctrine creates review friction
-4. doctrine conflicts are logged, not hidden
-
-### A.3 Proof debt definition
-
-Proof debt is the backlog of missing or weak proof required to move high-value objections from `gap` or `weak` to `covered`.
-
-## Appendix B: Future Analytical Modules
-
-Future analytical expansion lives here so it does not distort the Phase 0-3 core.
-
-These modules are valuable, but they are modules within the four planes, not prerequisites for core wedge proof.
-
-### B.1 Product and aggregate intelligence
-
-- aggregate intelligence: cross-tenant benchmarks and network learning
-- product usage correlation: retention and feature-usage insight
-- channel mix optimization: budget-level portfolio decisions
-- growth simulator: strategic scenario modeling
-- strategic briefing: monthly or quarterly synthesis
-
-These modules should remain dormant until the wedge-proof loop has enough trustworthy evidence to justify broader synthesis.
-
-### B.2 Appendix schema notes
-
-`8.25` and `8.26` remain reserved in the main schema section and are described here because they belong to later analytical expansion, not the core wedge-proof loop.
-
-### B.3 Boundary rule
-
-Any field, table, or module justified only by later strategic intelligence should live here until it can prove a Phase 1-3 use case.
+- portfolio-level strategic simulations
+- broad channel mix optimization beyond proven wedge needs
+- benchmark-heavy executive reporting beyond aggregate-safe cohorts
+- new modules that do not materially improve path quality, proof quality, or founder trust
