@@ -1,5 +1,7 @@
 # Phases 1-2: Foundation and Core Harness
 
+Supporting detail only. Canonical sequencing, readiness gates, and dependency order now live in `plans/whole-system-executable-master-plan.md`.
+
 Status: Ready for execution  
 Branch: `rbaset5/agent-arch-spec` -> `phase1/foundation`  
 Timeline: Weeks 1-7
@@ -7,9 +9,32 @@ Timeline: Weeks 1-7
 Shared context:
 
 - Architecture spec: `docs/superpowers/specs/2026-03-12-calllock-agentos-architecture-design.md`
+- Growth system spec: `knowledge/growth-system/design-doc.md`
+- HOLD SCOPE review: `knowledge/growth-system/hold-scope-review.md`
 - Open TODOs: `TODOS.md`
 - Key decision: Python harness (LangGraph Python SDK) as separate Render service
 - V2 codebase: `/Users/rashidbaset/conductor/workspaces/calllock-app/hong-kong-v`
+
+## Cross-Cutting Contract Dependency
+
+This plan preserves supporting implementation detail for the shared platform and early growth-system phases. It does not redefine growth-system behavior or override the master plan on execution order. `knowledge/growth-system/design-doc.md` is authoritative for:
+
+- Growth Memory ownership and event-quality semantics
+- wedge, segment, angle, proof, doctrine, and wedge-fitness semantics
+- lifecycle, experimentation, belief, and founder-review behavior
+- future-phase module boundaries
+
+Legacy narrowed labels (`persuasion_path`, `graph_mutation`, `review_object`, `lineage_chain`, `decisioning_projections`, `operator_projections`, `control_plane_auth`, `federated_benchmark`) remain usable only through the compatibility bridge in the growth-system spec.
+
+Phases 1-2 are responsible for the implementation foundations required by capture-only and advisory-only:
+
+- append-only `event_spine` ingest with quarantine, idempotency, and audit visibility
+- deterministic Growth Memory write planning and apply semantics
+- canonical touchpoint, routing-decision, attribution, and lineage linkage
+- projection refresh/versioning plus stale markers
+- replay support for deterministic recompute
+
+If sequencing in this plan conflicts with growth-system semantics, the growth-system spec wins.
 
 ## Phase 1: Foundation (Weeks 1-3)
 
@@ -216,6 +241,8 @@ Output:
 
 Goal: the harness receives events from Express V2, assembles context, runs workers through the policy gate, and persists results. Customer Analyst is the first live worker.
 
+Phase 2 also establishes the capture-only growth-system foundations that later advisory-only and assisted phases depend on. That means Phase 2 work must leave explicit seams for `event_spine`, deterministic Growth Memory writes, growth-path reporting compatibility, lineage linkage, and projection refresh rather than treating them as future ad hoc additions.
+
 ### Step 8: Policy Gate Implementation
 
 - Replace `stub_policy_gate` with a real implementation
@@ -233,6 +260,27 @@ Tests:
 - Infrastructure tests for gate logic
 - Conflict resolution tests
 - Deny-by-default tests
+
+### Step 8A: Event Spine and Growth Memory Foundations
+
+- Implement append-only `event_spine` persistence for growth evidence with typed validation, quarantine, duplicate/late event idempotency, and audit visibility
+- Define deterministic write categories and persist write attempts/results with stable idempotency keys
+- Persist touchpoints, routing decisions, attribution lineage, and legacy growth-path compatibility views as Phase 2 data contracts, even if only capture-only behavior is enabled initially
+- Add projection refresh/versioning scaffolding so operator and decisioning reads can pin to explicit snapshots later
+- Keep runtime writes single-writer: ingest owns events, the growth-memory pipeline owns canonical writes, projection refresh owns materialized views
+
+Files:
+
+- `supabase/migrations/`
+- `harness/src/db/`
+- `harness/src/harness/`
+
+Tests:
+
+- Event append/quarantine/idempotency
+- Deterministic mutation replay
+- Projection stale-marker behavior
+- Lineage chain reconstruction from source events through mutation results
 
 ### Step 9: Context Assembly Pipeline
 

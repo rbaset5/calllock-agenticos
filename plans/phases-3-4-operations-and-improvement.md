@@ -1,5 +1,7 @@
 # Phases 3-4: Operations and Improvement
 
+Supporting detail only. Canonical sequencing, readiness gates, and dependency order now live in `plans/whole-system-executable-master-plan.md`.
+
 Status: Backend foundation implemented in repo on `codex/phase34`; product UI still pending  
 Branch: `codex/phase34`  
 Timeline: Implemented on March 12, 2026 for the backend/control-plane surface
@@ -7,8 +9,24 @@ Timeline: Implemented on March 12, 2026 for the backend/control-plane surface
 Shared context:
 
 - Architecture spec: `docs/superpowers/specs/2026-03-12-calllock-agentos-architecture-design.md`
+- Persuasion platform spec: `knowledge/growth-system/design-doc.md`
+- HOLD SCOPE review: `knowledge/growth-system/hold-scope-review.md`
 - Open TODOs: `TODOS.md`
 - Depends on all Phase 1-2 acceptance criteria completing first
+
+## Cross-Cutting Contract Dependency
+
+This plan preserves supporting detail for later operational surfaces on top of persuasion-platform foundations that should already exist from earlier stages. It does not redefine persuasion-specific contract semantics or override the master plan on execution order.
+
+The following objects must retain the semantics defined in `knowledge/growth-system/design-doc.md`:
+
+- `review_object`
+- `operator_projections`
+- `decisioning_projections`
+- `control_plane_auth`
+- `lineage_chain`
+
+Phase 3-4 work should assume those contracts already exist and should extend them operationally rather than replacing them with ad hoc Cockpit approval or dashboard state.
 
 ## Phase 3: Full Operations
 
@@ -94,6 +112,7 @@ Implemented:
 - Git-backed versioning for code, configs, knowledge, and plans
 - Supabase-backed persistence for structured operational artifacts
 - Retention and retrieval rules for artifacts referenced by the Cockpit
+- Persuasion-platform artifact linkage should attach to `lineage_chain` and `review_object` identifiers where applicable rather than inventing a parallel trace vocabulary
 
 Files:
 
@@ -145,7 +164,7 @@ Implemented:
 
 - Alert emission for policy gate block rate, worker metric degradation, job failure spikes, and external service errors
 - Kill switches to pause workers, disable jobs, or stop tenant-level execution
-- Operator approval flows for risky actions
+- Operator approval flows for risky actions, with persuasion-platform decisions modeled through `review_object` rather than audit-log-only approval state
 - Admin override paths limited to Cockpit-level permissions
 
 Files:
@@ -159,6 +178,7 @@ Current state:
 - Alerts fire for the four spec-defined categories
 - Kill switches can pause execution without redeploying
 - Risky actions require explicit approval when configured, and approved escalations can continue automatically from stored resumable state
+- Cockpit approval surfaces should read `operator_projections` and durable `review_object` state rather than deriving approval state only from logs
 
 ### Phase 3 Acceptance
 
@@ -248,6 +268,7 @@ Implemented foundation:
 - Experiment oversight and promotion controls
 - Budget, margin, and risk monitoring
 - Release oversight across dashboard, backend, and voice deployments
+- Persuasion-platform surfaces should include the weekly packet, review queue, proof debt queue, and doctrine conflict queue backed by `operator_projections`
 
 Files:
 
@@ -258,6 +279,7 @@ Current state:
 
 - Founders can inspect tenant health, experiments, and release posture from one place
 - Approval and kill-switch actions are visible and auditable
+- Persuasion-specific queues and packet views should remain slices over the same `review_object` state, not separate UI-owned workflow state
 - Cockpit surfaces alert history and current system posture
 
 ### Phase 4 Acceptance

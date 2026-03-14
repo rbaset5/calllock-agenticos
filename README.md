@@ -2,6 +2,8 @@
 
 CallLock AgentOS is a greenfield monorepo for the multi-tenant harness described in the architecture spec. It combines a Python orchestration service, TypeScript Inngest event wiring, file-backed knowledge graphs, industry packs, and Supabase-backed tenant/compliance data.
 
+If you are starting cold, read [plans/start-here-no-context.md](/Users/rashidbaset/Documents/calllock-agenticos/plans/start-here-no-context.md) first, then [plans/whole-system-executable-master-plan.md](/Users/rashidbaset/Documents/calllock-agenticos/plans/whole-system-executable-master-plan.md).
+
 ## Layout
 
 - `knowledge/`: markdown and YAML knowledge graphs, worker specs, and industry packs

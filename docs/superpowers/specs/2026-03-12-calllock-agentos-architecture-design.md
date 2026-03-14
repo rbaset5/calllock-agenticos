@@ -100,6 +100,24 @@ The system is designed around a shared product core, harness-enforced governance
 - A "mini agency" of personality-driven specialists
 - A prompt library masquerading as a production system
 
+### Companion Spec Authority
+
+This architecture spec remains authoritative for shared platform boundaries, runtime split, tenant isolation, deployment posture, and ADR-backed infrastructure constraints.
+
+The growth-system companion spec in `knowledge/growth-system/design-doc.md` is authoritative for GTM and growth-system behavior:
+
+- Growth Memory and growth-system object model
+- wedge, segment, angle, asset, proof, doctrine, and wedge-fitness semantics
+- routing, lifecycle, experimentation, and founder review behavior
+- advanced growth modules such as pricing, channel mix, geographic intelligence, and aggregate intelligence
+- rollout and trust-ladder behavior for the growth system
+
+Legacy narrowed terms from the prior persuasion-platform rewrite (`persuasion_path`, `graph_mutation`, `review_object`, `lineage_chain`, `decisioning_projections`, `operator_projections`, `control_plane_auth`, `federated_benchmark`) remain valid only through the explicit compatibility bridge in `knowledge/growth-system/design-doc.md`.
+
+The canonical program sequence now lives in `plans/whole-system-executable-master-plan.md`.
+
+Phase plans may provide supporting detail, but they should not redefine those persuasion-platform contracts or override the master plan on sequencing, readiness gates, or execution priority.
+
 ---
 
 ## 2. Architecture Hierarchy

@@ -11,12 +11,12 @@ Items identified during architecture reviews (2026-03-12).
 **Depends on:** Section 0 (Current State) being finalized, Industry Pack format being stable.
 **Source:** CEO review, Section 1A (Bridge Gap).
 
-### Define canonical persuasion_path vocabulary and reporting view
-**What:** Define `persuasion_path = segment x pain x objection x proof x belief delta x outcome` as the canonical reporting lens for the growth system and specify the reporting/view model that rolls metrics up through it.
-**Why:** Without a single atomic unit of learning, proof quality, routing quality, and founder review stay fragmented across disconnected metrics.
+### Implement canonical growth-path reporting view and legacy persuasion_path compatibility
+**What:** Define the canonical growth-path reporting lens `channel x segment x message x page x proof x CTA x sales outcome x product outcome`, plus the legacy `persuasion_path` compatibility view derived from touchpoints, routing decisions, belief events, and attribution.
+**Why:** The main growth doc is ambitious again, but implementation artifacts still need one atomic reporting unit and one explicit backward-compatible mapping for older terminology.
 **Effort:** M
-**Depends on:** Growth system design doc v4 framing being stable, especially Sections 1.1, 4, 11, and 14.1.
-**Source:** CEO mega-review v2, critical gap on atomic learning unit.
+**Depends on:** Growth system authority restore being stable, especially Growth Memory, attribution, and compatibility-bridge sections.
+**Source:** Ambitious authority restore, 2026-03-14.
 
 ### Define proof supply chain and owner loop
 **What:** Specify the operational loop from objection seen to proof brief creation, owner assignment, approval, deployment, and conviction re-measurement.
@@ -25,6 +25,27 @@ Items identified during architecture reviews (2026-03-12).
 **Depends on:** Proof coverage schema and Founder Weekly Operating Packet format being stable.
 **Source:** CEO mega-review v2, missing proof supply chain loop.
 
+### Define deterministic Growth Memory write and lineage contracts
+**What:** Specify the stable write categories, idempotency keys, single-writer rules, merge precedence, replay invariants, and lineage linkage rules from source event through downstream effect. Keep explicit mapping back to the legacy `graph_mutation` and `lineage_chain` labels where those still appear.
+**Why:** Without deterministic writes and lineage contracts, the event spine cannot support replayable growth memory or trustworthy operator investigation.
+**Effort:** M
+**Depends on:** Growth-path reporting semantics and event-spine ingest contracts being stable.
+**Source:** HOLD SCOPE review, Sections 1-2, plus authority restore translation work.
+
+### Define review_object lifecycle and apply semantics
+**What:** Specify legal `review_object` transitions, terminal states, duplicate/supersede rules, stale snapshot handling, and the apply contract when downstream effects partially fail.
+**Why:** The founder/operator control plane depends on `review_object` being a durable workflow object, not just an audit event or UI state.
+**Effort:** M
+**Depends on:** Proof supply chain framing and operator control-plane boundaries being stable.
+**Source:** HOLD SCOPE review, Sections 1-6.
+
+### Define projection versioning and stale-read behavior
+**What:** Specify how decision and operator views version against Growth Memory state, what counts as stale, how skew is detected, and what users see when refresh fails. Preserve explicit mapping back to legacy `decisioning_projections` and `operator_projections`.
+**Why:** Advisory-only and assisted modes are unsafe if digest, queue, and runtime reads can silently diverge.
+**Effort:** M
+**Depends on:** deterministic write contracts and operator surface requirements being stable.
+**Source:** HOLD SCOPE review, Sections 2, 4, 6, and 9.
+
 ### Split belief into conviction_shift and buying_readiness
 **What:** Replace single-axis belief modeling with dual-axis conviction and readiness semantics across schemas, routing logic, and proof analysis.
 **Why:** A single belief axis hides the difference between "I believe it" and "I am ready to act," which weakens proof analysis and journey adaptation.
@@ -32,12 +53,12 @@ Items identified during architecture reviews (2026-03-12).
 **Depends on:** Belief Layer v4 framing and schema updates being stable.
 **Source:** CEO mega-review v2, critical gap on belief precision.
 
-### Refactor growth system doc into Core Wedge Proof Spec + Future Modules Appendix
-**What:** Keep the core wedge-proof loop in the main body and move future analytical expansion into an appendix or deferred section.
-**Why:** Phase 6-7 ambition currently adds architectural gravity to Phase 0-3 and makes the design feel broader than the immediate product goal.
+### Keep the ambitious growth-system authority synchronized across execution artifacts
+**What:** Ensure the master plan, phase plans, architecture cross-references, and implementation notes continue to describe the restored ambitious growth authority rather than drifting back to the narrowed persuasion-graph framing.
+**Why:** The current risk is spec drift, not lack of vision. A split between ambitious authority and narrow execution docs will recreate ambiguity quickly.
 **Effort:** S
-**Depends on:** 4-plane architecture framing being accepted as the top-level narrative.
-**Source:** CEO mega-review v2, warning on future-phase gravity.
+**Depends on:** authority split and compatibility bridge remaining stable.
+**Source:** Ambitious authority restore, 2026-03-14.
 
 ### Adopt 4-plane architecture framing
 **What:** Frame the growth system as four planes: Capture, Interpret, Decide, and Govern. This supersedes the older five-core narrative concept.
@@ -45,6 +66,13 @@ Items identified during architecture reviews (2026-03-12).
 **Effort:** S
 **Depends on:** Core growth system vocabulary and phase framing being stable.
 **Source:** CEO mega-review v2, fundamental reframing.
+
+### Implement founder review workflow data model from the compatibility bridge
+**What:** Define the durable workflow object and state transitions that bridge the legacy `review_object` term to the restored Founder Review UI, doctrine conflicts, recommendation approvals, overrides, and asset approval flows.
+**Why:** The documentation now maps the old review-object term to a broader founder-review workflow, but implementation cannot rely on prose-only translation.
+**Effort:** M
+**Depends on:** doctrine registry semantics and operator surface requirements being stable.
+**Source:** Ambitious authority restore, 2026-03-14.
 
 ### Define compliance graph conflict resolution rule
 **Status:** Resolved in code and ADR 009. Compliance rules now resolve by explicit conflict grouping (`metadata.conflict_key` / `metadata.disclosure_key` / `target`), mixed-effect matches always escalate, pure restrictions follow `deny > escalate > allow`, and tool execution remains deny-by-default when no explicit allow matches.
@@ -61,8 +89,22 @@ Items identified during architecture reviews (2026-03-12).
 **What:** Define a 15-minute weekly founder packet with four sections: What Changed, What to Approve, What to Kill, and What Proof to Build Next.
 **Why:** The system needs a bounded operating ritual, not just dashboards and digests.
 **Effort:** S
-**Depends on:** persuasion_path reporting view and proof supply chain being defined.
+**Depends on:** growth-path reporting view and proof supply chain being defined.
 **Source:** CEO mega-review v2, operator-surface recommendation.
+
+### Define control_plane_auth role matrix
+**What:** Specify the internal roles, permitted actions, reason requirements, and audit expectations for cross-tenant reads, writes, overrides, replay, and benchmark access.
+**Why:** Audit logging exists, but audit is not authorization. The control plane is unsafe until its access model is explicit and testable.
+**Effort:** M
+**Depends on:** Cockpit surface boundaries and tenant-isolation rules remaining stable.
+**Source:** HOLD SCOPE review, Sections 1 and 3.
+
+### Define federated benchmark privacy thresholds
+**What:** Specify minimum cohort sizes, allowed slice dimensions, suppression behavior, and lineage requirements for aggregate-only benchmark outputs.
+**Why:** The growth spec keeps benchmarks aggregate-only, but without concrete privacy thresholds later phases could leak tenant-identifying patterns.
+**Effort:** S
+**Depends on:** Data classification rules and `federated_benchmark` semantics being stable.
+**Source:** HOLD SCOPE review, Sections 3, 6, and 10.
 
 ### Define external service resilience patterns
 **Status:** Partially resolved in code and ADR 002 for Supabase, Inngest, and LangSmith. Remaining work is Retell AI, Cal.com, and Twilio once those integrations exist in this repo.
