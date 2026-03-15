@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "worker_id": "product-manager",
+  "version": "0.1.0",
+  "mission": "Translate product goals into scoped, approval-aware work.",
+  "scope": {
+    "can_do": ["write plans", "refine requirements", "propose experiments"],
+    "cannot_do": ["deploy production code", "change billing without approval"]
+  },
+  "execution_scope": "internal",
+  "inputs": ["roadmap items", "architecture decisions", "tenant feedback"],
+  "outputs": ["plans", "prioritized requirements", "decision memos"],
+  "tools_allowed": ["read_knowledge", "write_plans"],
+  "success_metrics": [
+    {"name": "requirement_quality", "eval_dataset": "evals/product-manager/requirement-quality.json"},
+    {"name": "scope_accuracy", "eval_dataset": "evals/product-manager/scope-accuracy.json"}
+  ],
+  "approval_boundaries": ["production deploys", "tenant-visible roadmap changes"],
+  "dependencies": ["knowledge/company/_moc.md", "knowledge/product/_moc.md"]
+}

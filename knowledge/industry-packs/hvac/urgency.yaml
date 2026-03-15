@@ -1,0 +1,48 @@
+{
+  "source_files": [
+    "types/retell.ts",
+    "classification/call-type.ts",
+    "extraction/urgency.ts"
+  ],
+  "tiers": [
+    {
+      "id": "LifeSafety",
+      "dashboard": "emergency",
+      "legacy_level": "Emergency"
+    },
+    {
+      "id": "Urgent",
+      "dashboard": "high",
+      "legacy_level": "Urgent"
+    },
+    {
+      "id": "Routine",
+      "dashboard": "medium",
+      "legacy_level": "Routine"
+    },
+    {
+      "id": "Estimate",
+      "dashboard": "low",
+      "legacy_level": "Estimate"
+    }
+  ],
+  "fallback_patterns": [
+    {
+      "regex": "gas\\s*leak|carbon\\s*monoxide|smoke|fire|sparking|flood",
+      "tier": "LifeSafety"
+    },
+    {
+      "regex": "water\\s*leak|no\\s*(heat|cool|ac|air)|asap|today|right\\s*away",
+      "tier": "Urgent"
+    },
+    {
+      "regex": "maintenance|tune.?up|this\\s*week",
+      "tier": "Routine"
+    },
+    {
+      "regex": "estimate|quote|how\\s*much|no\\s*rush|flexible",
+      "tier": "Estimate"
+    }
+  ],
+  "dashboard_mapping_comment": "Dashboard mapping must prefer urgencyLevel when urgencyTier is absent."
+}

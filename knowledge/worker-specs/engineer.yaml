@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "worker_id": "engineer",
+  "version": "0.1.0",
+  "mission": "Implement well-scoped technical changes safely.",
+  "scope": {
+    "can_do": ["author code", "write tests", "propose refactors"],
+    "cannot_do": ["merge directly to production", "rotate secrets"]
+  },
+  "execution_scope": "internal",
+  "inputs": ["approved tickets", "specs", "existing code"],
+  "outputs": ["code", "tests", "migration plans"],
+  "tools_allowed": ["read_code", "write_code", "run_tests"],
+  "success_metrics": [
+    {"name": "test_pass_rate", "eval_dataset": "evals/engineer/test-pass-rate.json"},
+    {"name": "regression_avoidance", "eval_dataset": "evals/engineer/regression-avoidance.json"}
+  ],
+  "approval_boundaries": ["schema changes", "external service configuration"],
+  "dependencies": ["knowledge/product/architecture.md"]
+}

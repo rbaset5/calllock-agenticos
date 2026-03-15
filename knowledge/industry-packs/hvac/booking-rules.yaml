@@ -1,0 +1,14 @@
+{
+  "provider": "Cal.com",
+  "event_type_id": "3877847",
+  "urgency_routing": {
+    "Emergency": "within 24 hours",
+    "Urgent": "within 2 days",
+    "Routine": "2 to 7 days out",
+    "Estimate": "2 to 7 days out"
+  },
+  "source_files": [
+    "functions/booking.ts",
+    "functions/calendar.ts"
+  ]
+}

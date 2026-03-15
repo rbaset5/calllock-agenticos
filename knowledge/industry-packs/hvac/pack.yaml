@@ -1,0 +1,22 @@
+{
+  "pack_id": "hvac",
+  "version": "0.1.0",
+  "industry": "HVAC",
+  "smart_tag_count": 120,
+  "migrated_from": "express-v2-hardcoded",
+  "source_root": "/Users/rashidbaset/conductor/workspaces/retellai-calllock/madrid/V2/src",
+  "files": [
+    "taxonomy.yaml",
+    "urgency.yaml",
+    "service-types.yaml",
+    "scoring.yaml",
+    "priority-detection.yaml",
+    "revenue-estimation.yaml",
+    "compliance.yaml",
+    "booking-rules.yaml",
+    "reporting.yaml",
+    "scripts/inbound-call.md",
+    "scripts/emergency-dispatch.md",
+    "scripts/booking-confirmation.md"
+  ]
+}

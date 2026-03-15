@@ -1,0 +1,1000 @@
+{
+  "categories": {
+    "HAZARD": [
+      {
+        "id": "GAS_LEAK",
+        "aliases": [
+          "rotten egg smell",
+          "hissing sound",
+          "sulfur",
+          "gas smell",
+          "dead grass near unit",
+          "smell gas",
+          "smells like gas"
+        ]
+      },
+      {
+        "id": "CO_EVENT",
+        "aliases": [
+          "co alarm",
+          "carbon monoxide",
+          "detector going off",
+          "co detector",
+          "carbon monoxide alarm",
+          "carbon monoxide detector"
+        ]
+      },
+      {
+        "id": "ELECTRICAL_FIRE",
+        "aliases": [
+          "burning smell from unit",
+          "smoke from furnace",
+          "sparking from",
+          "sparks from",
+          "breaker keeps tripping",
+          "smell like burning plastic",
+          "burning wire",
+          "electrical smell",
+          "electrical fire"
+        ]
+      },
+      {
+        "id": "ACTIVE_FLOODING",
+        "aliases": [
+          "water pouring",
+          "ceiling sagging",
+          "burst pipe",
+          "flooding",
+          "water everywhere",
+          "gallons of water"
+        ]
+      },
+      {
+        "id": "CONDENSATE_CLOG",
+        "aliases": [
+          "drain pan full",
+          "small puddle",
+          "condensate",
+          "water under unit",
+          "condensate line",
+          "condensate drain"
+        ]
+      },
+      {
+        "id": "HEALTH_RISK",
+        "aliases": [
+          "no heat",
+          "freezing",
+          "no ac",
+          "heat wave",
+          "extreme cold",
+          "extreme heat"
+        ]
+      },
+      {
+        "id": "REFRIGERANT_LEAK",
+        "aliases": [
+          "chemical smell",
+          "sweet smell",
+          "hissing outdoor",
+          "icing up",
+          "frozen coil",
+          "refrigerant"
+        ]
+      }
+    ],
+    "URGENCY": [
+      {
+        "id": "CRITICAL_EVACUATE",
+        "aliases": [
+          "evacuation",
+          "need to leave",
+          "call 911",
+          "gas company"
+        ]
+      },
+      {
+        "id": "CRITICAL_DISPATCH",
+        "aliases": [
+          "complete failure",
+          "extreme temp",
+          "vulnerable",
+          "infant",
+          "elderly"
+        ]
+      },
+      {
+        "id": "EMERGENCY_SAMEDAY",
+        "aliases": [
+          "not working at all",
+          "completely dead",
+          "no air coming out",
+          "froze up",
+          "completely stopped"
+        ]
+      },
+      {
+        "id": "URGENT_24HR",
+        "aliases": [
+          "barely working",
+          "running constantly",
+          "won't shut off",
+          "strange noise"
+        ]
+      },
+      {
+        "id": "PRIORITY_48HR",
+        "aliases": [
+          "repeat customer",
+          "concerning symptoms",
+          "getting worse",
+          "been a few days"
+        ]
+      },
+      {
+        "id": "STANDARD",
+        "aliases": [
+          "would like to schedule",
+          "routine",
+          "normal maintenance"
+        ]
+      },
+      {
+        "id": "FLEXIBLE",
+        "aliases": [
+          "no rush",
+          "planning ahead",
+          "whenever convenient"
+        ]
+      },
+      {
+        "id": "SEASONAL_RUSH",
+        "aliases": [
+          "first hot day",
+          "first cold day",
+          "peak season"
+        ]
+      }
+    ],
+    "SERVICE_TYPE": [
+      {
+        "id": "REPAIR_AC",
+        "aliases": [
+          "ac not cooling",
+          "warm air",
+          "air conditioner broken",
+          "ac issue",
+          "hvac issue",
+          "hvac unit",
+          "ac unit",
+          "ac problem"
+        ]
+      },
+      {
+        "id": "REPAIR_HEATING",
+        "aliases": [
+          "furnace not working",
+          "no heat",
+          "heater broken",
+          "heat not working"
+        ]
+      },
+      {
+        "id": "REPAIR_HEATPUMP",
+        "aliases": [
+          "heat pump",
+          "mode switching",
+          "reversing valve"
+        ]
+      },
+      {
+        "id": "REPAIR_THERMOSTAT",
+        "aliases": [
+          "thermostat",
+          "blank display",
+          "won't change temp"
+        ]
+      },
+      {
+        "id": "REPAIR_IAQ",
+        "aliases": [
+          "humidifier",
+          "air purifier",
+          "uv light",
+          "air quality"
+        ]
+      },
+      {
+        "id": "REPAIR_DUCTWORK",
+        "aliases": [
+          "duct disconnected",
+          "air not reaching room",
+          "ductwork"
+        ]
+      },
+      {
+        "id": "TUNEUP_AC",
+        "aliases": [
+          "ac tune-up",
+          "ac tuneup",
+          "summer maintenance",
+          "ac checkup"
+        ]
+      },
+      {
+        "id": "TUNEUP_HEATING",
+        "aliases": [
+          "furnace tune-up",
+          "furnace tuneup",
+          "fall checkup",
+          "heating maintenance"
+        ]
+      },
+      {
+        "id": "DUCT_CLEANING",
+        "aliases": [
+          "duct cleaning",
+          "dusty vents",
+          "clean ducts"
+        ]
+      },
+      {
+        "id": "FILTER_SERVICE",
+        "aliases": [
+          "filter replacement",
+          "need new filter",
+          "change filter"
+        ]
+      },
+      {
+        "id": "INSTALL_REPLACEMENT",
+        "aliases": [
+          "need new system",
+          "replacing unit",
+          "new hvac",
+          "replace furnace"
+        ]
+      },
+      {
+        "id": "INSTALL_NEWCONSTRUCTION",
+        "aliases": [
+          "new build",
+          "building a house",
+          "new construction"
+        ]
+      },
+      {
+        "id": "INSTALL_UPGRADE",
+        "aliases": [
+          "more efficient",
+          "higher seer",
+          "upgrade system"
+        ]
+      },
+      {
+        "id": "INSTALL_ADDON",
+        "aliases": [
+          "add humidifier",
+          "add zone",
+          "install thermostat"
+        ]
+      },
+      {
+        "id": "DIAGNOSTIC_INTERMITTENT",
+        "aliases": [
+          "works sometimes",
+          "comes and goes",
+          "intermittent"
+        ]
+      },
+      {
+        "id": "DIAGNOSTIC_PERFORMANCE",
+        "aliases": [
+          "not cooling well",
+          "takes long time",
+          "running all day"
+        ]
+      },
+      {
+        "id": "DIAGNOSTIC_NOISE",
+        "aliases": [
+          "loud noise",
+          "grinding",
+          "squealing",
+          "banging"
+        ]
+      },
+      {
+        "id": "DIAGNOSTIC_CYCLE",
+        "aliases": [
+          "short cycling",
+          "won't stay on",
+          "keeps turning off"
+        ]
+      },
+      {
+        "id": "DIAGNOSTIC_AIRFLOW",
+        "aliases": [
+          "weak airflow",
+          "barely any air",
+          "not much coming out"
+        ]
+      },
+      {
+        "id": "DIAGNOSTIC_SMELL",
+        "aliases": [
+          "musty smell",
+          "odd odor",
+          "smells weird"
+        ]
+      },
+      {
+        "id": "DIAGNOSTIC_ENERGY",
+        "aliases": [
+          "high bill",
+          "electric bill doubled",
+          "using too much energy"
+        ]
+      },
+      {
+        "id": "SECONDOPINION",
+        "aliases": [
+          "second opinion",
+          "got a quote",
+          "someone else said"
+        ]
+      },
+      {
+        "id": "WARRANTY_CLAIM",
+        "aliases": [
+          "under warranty",
+          "warranty claim",
+          "covered by warranty"
+        ]
+      }
+    ],
+    "REVENUE": [
+      {
+        "id": "HOT_LEAD",
+        "aliases": [
+          "need new system",
+          "replace",
+          "quote",
+          "estimate"
+        ]
+      },
+      {
+        "id": "R22_RETROFIT",
+        "aliases": [
+          "r-22",
+          "r22",
+          "freon",
+          "old refrigerant"
+        ]
+      },
+      {
+        "id": "REPLACE_OPP",
+        "aliases": [
+          "old system",
+          "keeps breaking",
+          "tired of repairs"
+        ]
+      },
+      {
+        "id": "COMMERCIAL_LEAD",
+        "aliases": [
+          "commercial",
+          "office",
+          "business",
+          "building"
+        ]
+      },
+      {
+        "id": "FINANCING_REQ",
+        "aliases": [
+          "financing",
+          "payment plan",
+          "monthly payments"
+        ]
+      },
+      {
+        "id": "MULTI_PROPERTY",
+        "aliases": [
+          "multiple properties",
+          "rental properties",
+          "landlord"
+        ]
+      },
+      {
+        "id": "SERVICE_PLAN",
+        "aliases": [
+          "service plan",
+          "maintenance plan",
+          "membership"
+        ]
+      },
+      {
+        "id": "IAQ_UPSELL",
+        "aliases": [
+          "air quality",
+          "allergies",
+          "dust"
+        ]
+      },
+      {
+        "id": "ZONING_INTEREST",
+        "aliases": [
+          "zone control",
+          "different temps",
+          "upstairs hot"
+        ]
+      }
+    ],
+    "RECOVERY": [
+      {
+        "id": "CALLBACK_RISK",
+        "aliases": [
+          "couldn't reach me",
+          "never called back",
+          "waiting for call"
+        ]
+      },
+      {
+        "id": "COMPLAINT_PRICE",
+        "aliases": [
+          "too expensive",
+          "overcharged",
+          "price too high"
+        ]
+      },
+      {
+        "id": "COMPLAINT_SERVICE",
+        "aliases": [
+          "poor service",
+          "rude technician",
+          "didn't show up"
+        ]
+      },
+      {
+        "id": "COMPLAINT_NOFIX",
+        "aliases": [
+          "still broken",
+          "didn't fix",
+          "same problem"
+        ]
+      },
+      {
+        "id": "ESCALATION_REQ",
+        "aliases": [
+          "speak to manager",
+          "need supervisor",
+          "not satisfied"
+        ]
+      },
+      {
+        "id": "REVIEW_THREAT",
+        "aliases": [
+          "leave review",
+          "tell everyone",
+          "report you"
+        ]
+      },
+      {
+        "id": "LEGAL_MENTION",
+        "aliases": [
+          "lawyer",
+          "sue you",
+          "suing",
+          "attorney",
+          "legal action",
+          "take legal"
+        ]
+      },
+      {
+        "id": "REFUND_REQ",
+        "aliases": [
+          "want refund",
+          "money back",
+          "charge back"
+        ]
+      },
+      {
+        "id": "COMPETITOR_MENTION",
+        "aliases": [
+          "other company",
+          "someone else said",
+          "got cheaper quote"
+        ]
+      },
+      {
+        "id": "LOST_CUSTOMER",
+        "aliases": [
+          "switching companies",
+          "going elsewhere",
+          "done with you"
+        ]
+      }
+    ],
+    "LOGISTICS": [
+      {
+        "id": "GATE_CODE",
+        "aliases": [
+          "gate code",
+          "gated community",
+          "keypad"
+        ]
+      },
+      {
+        "id": "ALARM_CODE",
+        "aliases": [
+          "alarm code",
+          "security system",
+          "disarm"
+        ]
+      },
+      {
+        "id": "PET_SECURE",
+        "aliases": [
+          "dog",
+          "cat",
+          "pet",
+          "secure the dog"
+        ]
+      },
+      {
+        "id": "PARKING_ISSUE",
+        "aliases": [
+          "no parking",
+          "parking difficult",
+          "street parking"
+        ]
+      },
+      {
+        "id": "ACCESS_RESTRICT",
+        "aliases": [
+          "access restricted",
+          "need escort",
+          "limited hours"
+        ]
+      },
+      {
+        "id": "LADDER_ATTIC",
+        "aliases": [
+          "attic access",
+          "need ladder",
+          "crawlspace"
+        ]
+      },
+      {
+        "id": "ROOF_EQUIP",
+        "aliases": [
+          "roof access",
+          "equipment on roof",
+          "rooftop"
+        ]
+      },
+      {
+        "id": "LOCKBOX",
+        "aliases": [
+          "lockbox",
+          "key box",
+          "combination"
+        ]
+      },
+      {
+        "id": "TENANT_COORD",
+        "aliases": [
+          "tenant occupied",
+          "renter",
+          "coordinate with tenant"
+        ]
+      },
+      {
+        "id": "LANDLORD_AUTH",
+        "aliases": [
+          "landlord approval",
+          "owner permission",
+          "not my property"
+        ]
+      },
+      {
+        "id": "UTILITY_SHUTOFF",
+        "aliases": [
+          "shut off gas",
+          "turn off power",
+          "utility shutoff"
+        ]
+      },
+      {
+        "id": "SCOPE_LIMITED",
+        "aliases": [
+          "only look at",
+          "just check",
+          "specific issue only"
+        ]
+      },
+      {
+        "id": "VENDOR_ACCESS",
+        "aliases": [
+          "vendor entrance",
+          "loading dock",
+          "service entrance"
+        ]
+      },
+      {
+        "id": "SNOW_ICE",
+        "aliases": [
+          "snow",
+          "ice storm",
+          "iced over",
+          "ice on",
+          "icy",
+          "winter weather"
+        ]
+      },
+      {
+        "id": "SEASONAL_PREP",
+        "aliases": [
+          "winterize",
+          "summer prep",
+          "seasonal"
+        ]
+      },
+      {
+        "id": "MULTIUNIT_COORD",
+        "aliases": [
+          "multiple units",
+          "condo",
+          "apartment complex"
+        ]
+      },
+      {
+        "id": "HOA_APPROVAL",
+        "aliases": [
+          "hoa approval",
+          "homeowners association",
+          "need hoa ok"
+        ]
+      },
+      {
+        "id": "PERMIT_REQ",
+        "aliases": [
+          "permit required",
+          "need permit",
+          "permitting"
+        ]
+      },
+      {
+        "id": "SCOPE_CREEP",
+        "aliases": [
+          "while you're here",
+          "also look at",
+          "can you check"
+        ]
+      },
+      {
+        "id": "PARTS_DELAY",
+        "aliases": [
+          "parts on order",
+          "waiting for parts",
+          "backorder"
+        ]
+      }
+    ],
+    "CUSTOMER": [
+      {
+        "id": "NEW_CUSTOMER",
+        "aliases": [
+          "first time",
+          "never used",
+          "heard about you"
+        ]
+      },
+      {
+        "id": "EXISTING_CUSTOMER",
+        "aliases": [
+          "used before",
+          "customer",
+          "been with you"
+        ]
+      },
+      {
+        "id": "REFERRAL",
+        "aliases": [
+          "friend referred",
+          "recommended",
+          "someone told me"
+        ]
+      },
+      {
+        "id": "OWNER_OCCUPIED",
+        "aliases": [
+          "my house",
+          "live here",
+          "homeowner"
+        ]
+      },
+      {
+        "id": "RENTAL_PROPERTY",
+        "aliases": [
+          "rental",
+          "investment property",
+          "don't live there"
+        ]
+      },
+      {
+        "id": "COMMERCIAL_ACCT",
+        "aliases": [
+          "business",
+          "commercial",
+          "office"
+        ]
+      },
+      {
+        "id": "PROPERTY_MANAGER",
+        "aliases": [
+          "property manager",
+          "manage properties"
+        ]
+      },
+      {
+        "id": "DECISION_MAKER",
+        "aliases": [
+          "i'm the owner",
+          "my decision",
+          "i can decide"
+        ]
+      },
+      {
+        "id": "NEEDS_APPROVAL",
+        "aliases": [
+          "ask my spouse",
+          "need to check with",
+          "not my decision"
+        ]
+      },
+      {
+        "id": "AGENT_PROXY",
+        "aliases": [
+          "calling for",
+          "on behalf of",
+          "helping my"
+        ]
+      },
+      {
+        "id": "VIP_ACCOUNT",
+        "aliases": [
+          "premium",
+          "service plan member",
+          "maintenance contract"
+        ]
+      },
+      {
+        "id": "WARRANTY_CUSTOMER",
+        "aliases": [
+          "warranty",
+          "under warranty"
+        ]
+      },
+      {
+        "id": "REPEAT_CALLER",
+        "aliases": [
+          "called before",
+          "talked earlier",
+          "follow up"
+        ]
+      },
+      {
+        "id": "SEASONAL_CUSTOMER",
+        "aliases": [
+          "every year",
+          "annual",
+          "seasonal service"
+        ]
+      },
+      {
+        "id": "COMMERCIAL_NEW",
+        "aliases": [
+          "new business",
+          "first time commercial",
+          "opening soon"
+        ]
+      }
+    ],
+    "NON_CUSTOMER": [
+      {
+        "id": "JOB_APPLICANT",
+        "aliases": [
+          "applying for job",
+          "hiring",
+          "employment"
+        ]
+      },
+      {
+        "id": "VENDOR_SALES",
+        "aliases": [
+          "selling",
+          "offer",
+          "products"
+        ]
+      },
+      {
+        "id": "SPAM_TELEMARKETING",
+        "aliases": [
+          "telemarketing",
+          "spam"
+        ]
+      },
+      {
+        "id": "WRONG_NUMBER",
+        "aliases": [
+          "wrong number",
+          "didn't mean to call"
+        ]
+      },
+      {
+        "id": "PARTS_SUPPLIER",
+        "aliases": [
+          "parts supplier",
+          "supply house"
+        ]
+      },
+      {
+        "id": "COMPETITOR_INTEL",
+        "aliases": [
+          "competitor",
+          "research",
+          "market"
+        ]
+      },
+      {
+        "id": "INSPECTOR_CALL",
+        "aliases": [
+          "inspection",
+          "inspector",
+          "code compliance"
+        ]
+      },
+      {
+        "id": "UTILITY_COMPANY",
+        "aliases": [
+          "gas company",
+          "electric company",
+          "utility"
+        ]
+      },
+      {
+        "id": "MANUFACTURER_REP",
+        "aliases": [
+          "manufacturer",
+          "warranty rep"
+        ]
+      },
+      {
+        "id": "INSURANCE_CLAIM",
+        "aliases": [
+          "insurance claim",
+          "adjuster"
+        ]
+      },
+      {
+        "id": "REALTOR_INQUIRY",
+        "aliases": [
+          "realtor",
+          "real estate",
+          "home sale"
+        ]
+      },
+      {
+        "id": "MEDIA_PRESS",
+        "aliases": [
+          "media",
+          "press",
+          "interview",
+          "news"
+        ]
+      }
+    ],
+    "CONTEXT": [
+      {
+        "id": "DURATION_ACUTE",
+        "aliases": []
+      },
+      {
+        "id": "DURATION_RECENT",
+        "aliases": []
+      },
+      {
+        "id": "DURATION_ONGOING",
+        "aliases": []
+      },
+      {
+        "id": "PEAK_SUMMER",
+        "aliases": []
+      },
+      {
+        "id": "PEAK_WINTER",
+        "aliases": []
+      },
+      {
+        "id": "HOLIDAY_WEEK",
+        "aliases": []
+      },
+      {
+        "id": "AFTER_HOURS",
+        "aliases": []
+      },
+      {
+        "id": "WEEKEND",
+        "aliases": []
+      },
+      {
+        "id": "ELDERLY_OCCUPANT",
+        "aliases": [
+          "elderly",
+          "senior",
+          "old person",
+          "grandma",
+          "grandpa"
+        ]
+      },
+      {
+        "id": "INFANT_NEWBORN",
+        "aliases": [
+          "baby",
+          "infant",
+          "newborn"
+        ]
+      },
+      {
+        "id": "MEDICAL_NEED",
+        "aliases": [
+          "medical",
+          "oxygen",
+          "health condition"
+        ]
+      },
+      {
+        "id": "VULNERABLE_POP",
+        "aliases": [
+          "vulnerable",
+          "disabled",
+          "special needs"
+        ]
+      },
+      {
+        "id": "EXTREME_WEATHER",
+        "aliases": [
+          "heat wave",
+          "cold snap",
+          "storm",
+          "extreme weather"
+        ]
+      },
+      {
+        "id": "POST_STORM",
+        "aliases": [
+          "after storm",
+          "since storm",
+          "storm damage"
+        ]
+      },
+      {
+        "id": "POWER_OUTAGE",
+        "aliases": [
+          "power outage",
+          "electricity out",
+          "power came back"
+        ]
+      },
+      {
+        "id": "RECENT_INSTALL",
+        "aliases": [
+          "just installed",
+          "new system",
+          "recently replaced"
+        ]
+      }
+    ]
+  }
+}

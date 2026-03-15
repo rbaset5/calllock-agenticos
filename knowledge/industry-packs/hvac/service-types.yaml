@@ -1,0 +1,25 @@
+{
+  "issue_types": [
+    "Cooling",
+    "Heating",
+    "Maintenance",
+    "Leaking",
+    "No Cool",
+    "No Heat",
+    "Noisy System",
+    "Odor",
+    "Not Running",
+    "Thermostat"
+  ],
+  "regex_sources": [
+    "water\\s*(leak|puddle|drip|pool)",
+    "no\\s*(cold|cool)|warm\\s*air",
+    "no\\s*heat|furnace\\s*(not|won)",
+    "noise|loud|bang|rattle|squeal|grind",
+    "smell|odor|musty|mold",
+    "won.t\\s*(start|turn|run)|dead|no\\s*power",
+    "thermostat|temperature.*wrong",
+    "maintenance|tune.?up|check.?up|seasonal|filter"
+  ],
+  "inferred_from": "inferHvacIssueType()"
+}

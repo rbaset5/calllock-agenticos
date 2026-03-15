@@ -1,0 +1,107 @@
+{
+  "tiers": {
+    "replacement": {
+      "tier": "replacement",
+      "label": "$$$$",
+      "description": "Potential Replacement",
+      "range": "$5,000-$15,000+"
+    },
+    "major_repair": {
+      "tier": "major_repair",
+      "label": "$$$",
+      "description": "Major Repair",
+      "range": "$800-$3,000"
+    },
+    "standard_repair": {
+      "tier": "standard_repair",
+      "label": "$$",
+      "description": "Standard Repair",
+      "range": "$200-$800"
+    },
+    "minor": {
+      "tier": "minor",
+      "label": "$",
+      "description": "Maintenance/Minor",
+      "range": "$75-$250"
+    },
+    "diagnostic": {
+      "tier": "diagnostic",
+      "label": "$$?",
+      "description": "Diagnostic Needed",
+      "range": "$99 Diagnostic"
+    }
+  },
+  "signals": {
+    "replacement_refrigerant": [
+      "r-22",
+      "r22",
+      "freon",
+      "old refrigerant"
+    ],
+    "replacement_intent": [
+      "new unit",
+      "new system",
+      "replace",
+      "replacement",
+      "upgrade",
+      "quote for new",
+      "time to replace",
+      "need a new",
+      "want a new"
+    ],
+    "major_repair_components": [
+      "compressor",
+      "heat exchanger",
+      "coil",
+      "evaporator coil",
+      "condenser coil",
+      "evaporator",
+      "condenser"
+    ],
+    "major_repair_severity": [
+      "completely dead",
+      "won't turn on at all",
+      "totally dead",
+      "smoke",
+      "burning smell",
+      "burning"
+    ],
+    "standard_repair_components": [
+      "motor",
+      "fan",
+      "blower",
+      "capacitor",
+      "leak",
+      "leaking",
+      "recharge",
+      "refrigerant"
+    ],
+    "standard_repair_scope": [
+      "ductwork",
+      "duct",
+      "ducts",
+      "adding zone",
+      "zone",
+      "vent"
+    ],
+    "maintenance_service": [
+      "tune-up",
+      "tune up",
+      "tuneup",
+      "maintenance",
+      "cleaning",
+      "filter",
+      "check-up",
+      "checkup",
+      "inspection",
+      "annual"
+    ],
+    "maintenance_simple": [
+      "thermostat",
+      "weird noise",
+      "running loud",
+      "making noise",
+      "strange sound"
+    ]
+  }
+}

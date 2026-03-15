@@ -1,0 +1,68 @@
+{
+  "tenants": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "slug": "tenant-alpha",
+      "name": "Tenant Alpha HVAC",
+      "industry_pack_id": "hvac"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "slug": "tenant-beta",
+      "name": "Tenant Beta HVAC",
+      "industry_pack_id": "hvac"
+    }
+  ],
+  "tenant_configs": [
+    {
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "slug": "tenant-alpha",
+      "tone": "helpful",
+      "disclosures": ["Callback windows depend on dispatcher confirmation."],
+      "allowed_tools": ["read_knowledge", "notify_dispatch"],
+      "trace_namespace": "tenant-alpha",
+      "eval_namespace": "tenant-alpha",
+      "industry_pack_id": "hvac"
+    },
+    {
+      "tenant_id": "00000000-0000-0000-0000-000000000002",
+      "slug": "tenant-beta",
+      "tone": "direct",
+      "disclosures": ["Emergency callbacks are promised within 15 minutes."],
+      "allowed_tools": ["read_knowledge"],
+      "trace_namespace": "tenant-beta",
+      "eval_namespace": "tenant-beta",
+      "industry_pack_id": "hvac"
+    }
+  ],
+  "compliance_rules": [
+    {
+      "id": "rule-booking-allow",
+      "tenant_id": null,
+      "target": "book_appointment",
+      "effect": "allow",
+      "reason": "Booking allowed when tenant policy permits it."
+    },
+    {
+      "id": "rule-dispatch-allow",
+      "tenant_id": null,
+      "target": "dispatch_emergency",
+      "effect": "allow",
+      "reason": "Emergency dispatch alerts are allowed for life-safety events."
+    },
+    {
+      "id": "rule-default-allow",
+      "tenant_id": null,
+      "target": "*",
+      "effect": "allow",
+      "reason": "Default allow for internal analysis runs."
+    },
+    {
+      "id": "rule-claims-deny",
+      "tenant_id": null,
+      "target": "marketing_claims",
+      "effect": "deny",
+      "reason": "Do not claim guaranteed savings or guaranteed same-day repair."
+    }
+  ]
+}
