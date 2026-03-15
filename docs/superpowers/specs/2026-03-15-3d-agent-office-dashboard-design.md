@@ -229,51 +229,14 @@ type LangGraphState =
 
 ### Phase 1 Tables
 
-```sql
--- Current agent states (upserted on every transition)
-CREATE TABLE agent_office_state (
-  agent_id TEXT PRIMARY KEY,
-  department TEXT NOT NULL,
-  role TEXT NOT NULL,            -- "director" | "worker"
-  supervisor_id TEXT,
-  current_state TEXT NOT NULL,   -- LangGraph node name
-  description TEXT,
-  call_id TEXT,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Quest log (policy gate decisions)
-CREATE TABLE quest_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_id TEXT NOT NULL,
-  department TEXT NOT NULL,
-  call_id TEXT,
-  rule_violated TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  options JSONB NOT NULL,
-  urgency TEXT NOT NULL DEFAULT 'medium',
-  status TEXT NOT NULL DEFAULT 'pending',
-  resolution TEXT,
-  resolved_by TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  resolved_at TIMESTAMPTZ
-);
-
--- Daily memos
-CREATE TABLE daily_memo (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  memo_date DATE UNIQUE NOT NULL,
-  content JSONB NOT NULL,
-  generated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+See **Tenant Isolation** section below for complete Phase 1 table definitions with RLS policies and indexes.
 
 ### Phase 2 Tables
 
 ```sql
--- Meetings
 CREATE TABLE meeting (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id TEXT NOT NULL,
   type TEXT NOT NULL,
   trigger_event TEXT,
   department TEXT,
@@ -283,9 +246,14 @@ CREATE TABLE meeting (
   completed_at TIMESTAMPTZ
 );
 
--- Meeting turns (round-robin transcript)
+ALTER TABLE meeting ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON meeting
+  USING (tenant_id = current_setting('app.current_tenant', true));
+
 CREATE TABLE meeting_turn (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id TEXT NOT NULL,
   meeting_id UUID NOT NULL REFERENCES meeting(id),
   agent_id TEXT NOT NULL,
   round INTEGER NOT NULL,
@@ -293,9 +261,14 @@ CREATE TABLE meeting_turn (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Meeting action items
+ALTER TABLE meeting_turn ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_turn FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON meeting_turn
+  USING (tenant_id = current_setting('app.current_tenant', true));
+
 CREATE TABLE meeting_action_item (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id TEXT NOT NULL,
   meeting_id UUID NOT NULL REFERENCES meeting(id),
   assigned_to TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -303,6 +276,11 @@ CREATE TABLE meeting_action_item (
   due_by TIMESTAMPTZ,
   completed_at TIMESTAMPTZ
 );
+
+ALTER TABLE meeting_action_item ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_action_item FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON meeting_action_item
+  USING (tenant_id = current_setting('app.current_tenant', true));
 ```
 
 ## Quest Log
@@ -493,6 +471,175 @@ Build Acceleration:
 | Structured agent meetings in lobby | 2 | Round-robin LangGraph subgraph, conference table scene |
 | Meeting transcript + action items | 2 | Floating sticky notes dispatched to agents |
 | Optional Electron desktop wrap | 2 | Always-on desktop window |
+
+## Backend Prerequisites
+
+The dashboard visualizes agent activity, but several backend capabilities must exist for features to show real data rather than static placeholders.
+
+### Agent Reality vs. Vision
+
+The existing codebase has 5 worker specs: `customer-analyst`, `designer`, `engineer`, `product-manager`, `product-marketer`. The spec envisions 24 agents across 5 departments. The gap:
+
+| Status | Agents |
+|---|---|
+| **Exist as worker specs** | Engineering, Design, Product Manager, Product Marketing, Data/Analytics (customer-analyst) |
+| **Planned -- need worker specs** | QA/Testing, Growth/Perf, Content/SEO, Brand/Comms, SDR, Account Executive, Demo/Closer, Customer Support, Onboarding, Process/Systems, Accounting, Legal/Compliance, Admin |
+| **New concept -- supervisor agents** | Head of Product, Head of Marketing, Sales Director, Ops Manager, Finance Lead |
+
+**Phase 1 approach:** Ship the dashboard with all 24 characters. Agents without worker specs show as perpetually idle with a "Coming Soon" badge. As worker specs are built, they come alive. This lets the dashboard drive backend development priorities -- "which idle character do we want to activate next?"
+
+### Harness Event Emission
+
+The current Python LangGraph harness does not emit Inngest events on state transitions. The `MetricsEmitter` writes to Supabase's `metric_events` table via HTTP.
+
+**Recommended approach (two paths):**
+
+- **Write path:** Add an `InngestEventEmitter` to the harness that fires `calllock/agent.state.changed` on each LangGraph node entry. This parallels the existing `MetricsEmitter` pattern.
+- **Read path:** The dashboard frontend subscribes to Supabase Realtime channels on `agent_office_state` rather than SSE from Next.js. This eliminates the need for a custom SSE endpoint and leverages Supabase's existing real-time infrastructure.
+
+The Inngest event bus remains the canonical write path (harness → Inngest → Inngest function upserts `agent_office_state`). The read path uses Supabase Realtime directly.
+
+### Supervisor Graph Generalization
+
+The existing `supervisor.py` compiles a single fixed graph wired to `run_customer_analyst`. For the dashboard to show meaningful state diversity across departments, the supervisor must become parameterized by worker spec, or each department needs its own compiled graph.
+
+This is a Phase 1 prerequisite for real data but not for the dashboard shell. The dashboard can render mock/demo state transitions to validate the visualization while the supervisor is being generalized.
+
+### Inngest Event Naming Convention
+
+Existing events use no namespace prefix (e.g., `ProcessCallPayload`). This spec introduces `calllock/` prefixed events. This should be adopted as the standard going forward, with the existing event type backfilled for consistency. Document as an ADR.
+
+## State Model Reconciliation
+
+The spec's 7 states vs. actual LangGraph nodes:
+
+| Spec State | LangGraph Node | Notes |
+|---|---|---|
+| idle | _(none -- inferred)_ | No active run. Derived from absence of recent state change. |
+| context-assembly | `context_assembly` | Direct mapping |
+| policy-gate | `policy_gate` | Direct mapping |
+| execution | `worker` | Renamed for clarity in the UI |
+| verification | `verification` | Direct mapping |
+| persistence | `persist` | Renamed for clarity in the UI |
+| error | _(none -- inferred)_ | Derived from exception in any node |
+
+**Additional state:** The harness has a `blocked` node (policy denial). In the dashboard, `blocked` maps to the policy-gate zone with a distinct visual treatment (red barrier instead of yellow pulse).
+
+## Tenant Isolation
+
+Although this is an internal tool, all new tables follow the existing tenant isolation convention.
+
+Updated table definitions:
+
+```sql
+CREATE TABLE agent_office_state (
+  agent_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  department TEXT NOT NULL,
+  role TEXT NOT NULL,
+  supervisor_id TEXT,
+  current_state TEXT NOT NULL,
+  description TEXT,
+  call_id TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (tenant_id, agent_id)
+);
+
+ALTER TABLE agent_office_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_office_state FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON agent_office_state
+  USING (tenant_id = current_setting('app.current_tenant', true));
+
+CREATE TABLE quest_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id TEXT NOT NULL,
+  agent_id TEXT NOT NULL,
+  department TEXT NOT NULL,
+  call_id TEXT,
+  rule_violated TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  options JSONB NOT NULL,
+  urgency TEXT NOT NULL DEFAULT 'medium',
+  status TEXT NOT NULL DEFAULT 'pending',
+  resolution TEXT,
+  resolved_by TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ
+);
+
+ALTER TABLE quest_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quest_log FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON quest_log
+  USING (tenant_id = current_setting('app.current_tenant', true));
+
+CREATE INDEX idx_quest_log_pending ON quest_log (tenant_id, status) WHERE status = 'pending';
+CREATE INDEX idx_quest_log_created ON quest_log (tenant_id, created_at DESC);
+
+CREATE TABLE daily_memo (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id TEXT NOT NULL,
+  memo_date DATE NOT NULL,
+  content JSONB NOT NULL,
+  generated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (tenant_id, memo_date)
+);
+
+ALTER TABLE daily_memo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_memo FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON daily_memo
+  USING (tenant_id = current_setting('app.current_tenant', true));
+```
+
+## Error Handling & Degradation
+
+### Connection Health
+- Dashboard shows a "Connection Status" indicator: green dot (live), yellow (reconnecting), red (disconnected)
+- Supabase Realtime subscription auto-reconnects with exponential backoff
+- When disconnected, all agent positions freeze and a "Last updated X seconds ago" timestamp appears
+- On reconnect, full state is re-fetched from `agent_office_state` to reconcile any missed transitions
+
+### Quest Resolution Safety
+- Quest resolution endpoint requires Supabase auth (internal SSO via Supabase Auth)
+- Optimistic locking: quest resolution checks `status = 'pending'` in the UPDATE WHERE clause to prevent double-resolution
+- Rate limiting: 1 resolution per quest per second (debounce on frontend)
+
+### 3D Rendering Fallback
+- If WebGL context is lost, show a graceful fallback: 2D table view of agent states (HTML-only, no canvas)
+- `<Canvas>` component catches WebGL errors and swaps to fallback view
+
+### Authentication
+- Supabase Auth with internal SSO (Google Workspace or similar)
+- All API routes and Supabase queries require authenticated session
+- Quest resolution endpoint additionally checks user role (must be `operator` or `admin`)
+
+## Phase 1 Done Criteria
+
+Phase 1 is complete when:
+
+1. 3D office renders with 5 rooms + central lobby in orbital view
+2. Camera fly-in works for each room, showing 7 LangGraph zones
+3. At least 5 agent characters (the existing worker specs) show real state transitions from live Inngest events
+4. Remaining 19 agent characters render in idle state with "Coming Soon" indicator
+5. Hallway handoff animation plays on `calllock/agent.handoff` events
+6. Quest Log overlay displays pending quests and resolves them via button click
+7. Daily Memo overlay shows aggregated activity for the previous day
+8. Connection health indicator is visible and functional
+9. All tables have tenant isolation (RLS) enabled
+10. Authentication gates access to the dashboard
+
+## Runtime Split ADR
+
+**Decision:** The 3D office dashboard introduces a significant Next.js (TypeScript) surface area beyond the existing convention of "TypeScript only where it interfaces with Inngest or repository validation/extraction."
+
+**Context:** The dashboard is a standalone visualization and control surface. It is not part of the core orchestration runtime. The Python harness remains the sole orchestration layer. TypeScript is used here for:
+- React Three Fiber rendering (no Python alternative)
+- Next.js API routes for quest resolution (thin HTTP layer over Supabase)
+- SSE/Realtime subscription management (browser-native)
+
+**Consequence:** This is a deliberate, bounded expansion. The TypeScript surface area is limited to the `office-dashboard/` directory and does not leak into the harness, knowledge system, or compliance graph.
 
 ## Open Questions
 
