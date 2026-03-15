@@ -1,12 +1,14 @@
 # 3D Agent Office Dashboard
 
 **Date:** 2026-03-15
-**Status:** Draft
+**Status:** Reviewed (CEO mega-review complete)
 **Author:** Rashid Baset + Claude
 
 ## Overview
 
-A 3D pixel-office-style dashboard that visualizes CallLock AgentOS worker agents in real-time. Inspired by Star-Office-UI (2D pixel art agent status board) and CrewHub (3D toon world with rooms), this system renders a low-poly toon 3D office building where each department occupies a room, agents are persistent characters, and LangGraph orchestration states map to physical zones within each room.
+A 3D agent command center that visualizes and controls CallLock AgentOS worker agents in real-time. Inspired by Star-Office-UI (2D pixel art agent status board) and CrewHub (3D toon world with rooms), this system renders a low-poly toon 3D office building where each department occupies a room, agents are persistent characters, and LangGraph orchestration states map to physical zones within each room.
+
+**This is not just a monitor — it is a bidirectional control surface.** Operators can resolve policy gate quests, dispatch tasks to idle agents, override in-flight handoffs, and adjust policy thresholds. All actions are audit-logged.
 
 **Audience:** Internal -- engineering and product teams. Not tenant-facing.
 
@@ -23,6 +25,10 @@ A 3D pixel-office-style dashboard that visualizes CallLock AgentOS worker agents
 | State model | LangGraph node mapping | 7 states: idle, context-assembly, policy-gate, execution, verification, persistence, error. Each maps to a furniture cluster (zone) within a room. |
 | Density handling | 3D depth + camera fly-in | Orbital view shows all rooms; click a room to fly camera inside. No tabs or artificial pagination needed. |
 | Build acceleration | Droid CLI | Room shells, agent models, animation controllers, and UI overlays are parallelizable across Droid agents. |
+| Dashboard role | Bidirectional command center | Not just monitoring — operators can dispatch tasks, override handoffs, resolve quests, adjust policy thresholds. All actions audit-logged. |
+| State management | Zustand | Lightweight, R3F-friendly state management for agent positions, quests, camera, and offline action queue. |
+| Realtime delivery | Supabase Realtime | Frontend subscribes to `agent_office_state` and `quest_log` changes via Supabase Realtime channels. No custom SSE endpoint needed. |
+| Feature flag | Tenant-level `office_dashboard_enabled` | InngestEmitter in harness checks tenant config before emitting. Per-tenant rollout control. |
 
 ## Department Structure
 
@@ -159,6 +165,7 @@ This makes cross-department bottlenecks visible -- a busy hallway means lots of 
   from_state: LangGraphState,
   to_state: LangGraphState,
   description: string,        // "Assembling context for call #4821"
+  triggered_by: "system" | "human",  // who initiated the state change
   call_id?: string,
   timestamp: string
 }
@@ -200,6 +207,27 @@ This makes cross-department bottlenecks visible -- a busy hallway means lots of 
 "calllock/memo.daily.generate" -> {
   date: string,
   tenant_id: string
+}
+
+// Command center: task dispatch
+"calllock/agent.dispatch" -> {
+  agent_id: string,
+  tenant_id: string,
+  department: string,
+  task_description: string,
+  dispatched_by: string,        // user_id of the operator
+  priority: "low" | "medium" | "high",
+  timestamp: string
+}
+
+// Command center: handoff override
+"calllock/handoff.override" -> {
+  handoff_id: string,
+  original_target: string,
+  new_target: string,
+  overridden_by: string,        // user_id of the admin
+  reason: string,
+  timestamp: string
 }
 
 // Meeting requested (Phase 2)
@@ -410,15 +438,20 @@ Frontend:
   ├── React Three Fiber (3D renderer)
   ├── Drei (R3F helpers: Outlines, Html, OrbitControls, CameraControls)
   ├── Three.js (underlying engine)
+  ├── Zustand (state management: agents, quests, camera, offline queue)
   └── Tailwind CSS (HTML overlay panels)
 
 Backend:
-  ├── Next.js API routes (SSE endpoint, quest resolution)
-  ├── Supabase (agent_office_state, quest_log, daily_memo)
+  ├── Next.js API routes (command center: quest/resolve, agent/dispatch, handoff/override, policy/threshold, memo/generate)
+  ├── Supabase (agent_office_state, quest_log, daily_memo, command_audit_log)
+  ├── Supabase Realtime (read path for agent state + quest status changes)
+  ├── Supabase Auth (3-tier roles: viewer/operator/admin)
   └── Inngest (event bus, cron for daily memo)
 
-Agent Runtime (existing):
-  ├── Python LangGraph harness (emits Inngest events on state transitions)
+Agent Runtime (existing + new emitter):
+  ├── Python LangGraph harness
+  ├── InngestEventEmitter (new, behind tenant-level feature flag)
+  ├── Supabase Realtime subscription on quest_log (backup channel)
   └── Inngest TypeScript functions (event processing)
 
 Build Acceleration:
@@ -441,8 +474,10 @@ Build Acceleration:
 | 1 | 5 room shell components (geometry + furniture zones) | 5 |
 | 2 | 24 agent character model variants (from shared template) | Config-driven batch |
 | 3 | Animation state machine, camera controller, lobby/hallway geometry | 3 |
-| 4 | SSE → R3F state bridge, Quest Log overlay, Daily Memo overlay | 3 |
-| 5 (Phase 2) | Meeting scene, transcript panel, action item animations | 2 |
+| 4 | Supabase Realtime → Zustand state bridge, Quest Log overlay, Daily Memo overlay | 3 |
+| 5 | Command center API routes (5 endpoints), audit log, offline queue | 2 |
+| 6 | Delight: mood indicators, hallway heat map, quest urgency timer, hover tooltips | 2 |
+| 7 (Phase 2) | Meeting scene, transcript panel, action item animations | 2 |
 
 ### Human-Driven vs Droid-Generated
 
@@ -466,10 +501,23 @@ Build Acceleration:
 | 3D hallway handoff animation | 1 | Briefcase-carrying walk through glass corridors |
 | Quest Log (HTML overlay) | 1 | Policy gate decisions as actionable quests |
 | Daily Memo (HTML overlay) | 1 | Per-department activity summary, date-navigable |
-| Inngest event-driven state (SSE) | 1 | Real-time agent state updates |
-| Supabase state tables | 1 | agent_office_state, quest_log, daily_memo |
+| Supabase Realtime state delivery | 1 | Real-time agent state + quest status updates |
+| Supabase state tables | 1 | agent_office_state, quest_log, daily_memo, command_audit_log |
+| Command center: task dispatch | 1 | Assign work to idle agents (operator+) |
+| Command center: handoff override | 1 | Redirect in-flight handoffs (admin) |
+| Command center: policy threshold | 1 | Adjust policy gate config (admin) |
+| Command audit log | 1 | All mutations logged for debugging and compliance |
+| 3-tier auth (viewer/operator/admin) | 1 | Role-based access to command center endpoints |
+| Offline action queue | 1 | Mutations queue when disconnected, drain on reconnect |
+| InngestEmitter with feature flag | 1 | Per-tenant `office_dashboard_enabled` toggle |
+| Hover tooltip (speech bubble) | 1 | Current task description on agent hover |
+| Agent mood indicators | 1 | 3-4 pose variants per state |
+| Hallway traffic heat map | 1 | Corridor glow scales with handoff frequency |
+| Quest urgency timer + pacing | 1 | Countdown, anxious pacing, director flash on expiry |
 | Structured agent meetings in lobby | 2 | Round-robin LangGraph subgraph, conference table scene |
 | Meeting transcript + action items | 2 | Floating sticky notes dispatched to agents |
+| Achievement toasts | 2 | Milestone notifications for agents/departments |
+| Ambient sound design | 2 | Audio layer tied to agent states, mutable |
 | Optional Electron desktop wrap | 2 | Always-on desktop window |
 
 ## Backend Prerequisites
@@ -498,6 +546,10 @@ The current Python LangGraph harness does not emit Inngest events on state trans
 - **Read path:** The dashboard frontend subscribes to Supabase Realtime channels on `agent_office_state` rather than SSE from Next.js. This eliminates the need for a custom SSE endpoint and leverages Supabase's existing real-time infrastructure.
 
 The Inngest event bus remains the canonical write path (harness → Inngest → Inngest function upserts `agent_office_state`). The read path uses Supabase Realtime directly.
+
+**Feature flag:** The `InngestEventEmitter` checks `tenant_config.office_dashboard_enabled` before emitting. This provides a per-tenant kill switch without redeploying the harness.
+
+**Backup channel:** The harness also subscribes to `quest_log` status changes via Supabase Realtime. If an Inngest event for quest resolution is lost, the harness picks up the resolution from the database change. This ensures zero silent failures on the most critical control path.
 
 ### Supervisor Graph Generalization
 
@@ -593,6 +645,40 @@ CREATE POLICY tenant_isolation ON daily_memo
   USING (tenant_id = public.current_tenant_id());
 ```
 
+## Command Audit Log
+
+Every mutation through the command center is logged for debugging, compliance, and accountability.
+
+```sql
+CREATE TABLE command_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  action_type TEXT NOT NULL,   -- 'quest_resolve' | 'agent_dispatch' | 'handoff_override' | 'policy_threshold'
+  target_agent TEXT,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE command_audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE command_audit_log FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON command_audit_log
+  USING (tenant_id = public.current_tenant_id());
+CREATE INDEX idx_audit_log_tenant_created ON command_audit_log (tenant_id, created_at DESC);
+```
+
+## Command Center API Routes
+
+| Route | Method | Auth Role | Description |
+|---|---|---|---|
+| `/api/quest/resolve` | POST | operator, admin | Resolve a policy gate quest |
+| `/api/agent/dispatch` | POST | operator, admin | Assign a task to an idle agent |
+| `/api/handoff/override` | POST | admin | Redirect an in-flight handoff to a different agent |
+| `/api/policy/threshold` | POST | admin | Adjust policy gate thresholds |
+| `/api/memo/generate` | POST | admin | Trigger daily memo generation |
+
+**Dual-path quest resolution:** Quest resolution writes to Supabase directly (dashboard sees it immediately via Realtime) AND fires an Inngest event (harness acts on it). If Inngest is down, the quest shows as resolved but the agent stays in policy-gate with a "pending harness pickup" indicator. The harness also subscribes to `quest_log` changes via Supabase Realtime as a backup channel.
+
 ## Error Handling & Degradation
 
 ### Connection Health
@@ -608,12 +694,30 @@ CREATE POLICY tenant_isolation ON daily_memo
 
 ### 3D Rendering Fallback
 - If WebGL context is lost, show a graceful fallback: 2D table view of agent states (HTML-only, no canvas)
-- `<Canvas>` component catches WebGL errors and swaps to fallback view
+- `<Canvas>` component wrapped in `<ErrorBoundary>` that triggers 2D fallback
+- Individual agent models that fail to load (GLTF CDN down) show as colored cubes with name labels via `useGLTF.preload()` error handling
+- Loading screen with progress bar during initial scene load (2-5 seconds for GLTF + WebGL context)
 
-### Authentication
+### Offline Action Queue
+- Mutations (quest resolve, dispatch, override) queue locally in Zustand when disconnected
+- Actions drain automatically on reconnect, in order
+- Queued actions show a "pending sync" indicator in the UI
+- Queue overflow (100+ actions) drops oldest non-critical actions with a warning
+
+### Auth Token Management
+- `supabase.auth.onAuthStateChange()` listener re-subscribes Realtime channels on token refresh
+- Prevents silent subscription death from expired tokens
+
+### Authentication & Authorization
 - Supabase Auth with internal SSO (Google Workspace or similar)
 - All API routes and Supabase queries require authenticated session
-- Quest resolution endpoint additionally checks user role (must be `operator` or `admin`)
+- 3-tier role hierarchy:
+  - `viewer` — read-only: see the office, read quests, read memos
+  - `operator` — viewer + resolve quests + dispatch tasks
+  - `admin` — operator + override handoffs + change policy thresholds
+- Roles stored in Supabase auth user metadata
+- Enforced server-side on every mutation endpoint
+- Task dispatch payloads validated and sanitized to prevent prompt injection into agent prompts
 
 ## Phase 1 Done Criteria
 
@@ -628,7 +732,17 @@ Phase 1 is complete when:
 7. Daily Memo overlay shows aggregated activity for the previous day
 8. Connection health indicator is visible and functional
 9. All tables have tenant isolation (RLS) enabled
-10. Authentication gates access to the dashboard
+10. Authentication gates access with 3-tier role enforcement (viewer/operator/admin)
+11. Command center: task dispatch to idle agents (operator+)
+12. Command center: handoff override (admin)
+13. Command audit log records all mutations
+14. Hover tooltip on any agent shows current task description (speech bubble)
+15. Agent mood indicators: 3-4 pose variants per state (relaxed, focused, stressed, error)
+16. Hallway traffic heat map: corridor glow intensity scales with handoff frequency
+17. Quest urgency timer: real-time countdown, agent paces anxiously at policy-gate, director's glass flashes on expiry
+18. InngestEmitter behind `office_dashboard_enabled` tenant-level feature flag
+19. Offline action queue: mutations queue when disconnected, drain on reconnect
+20. GLTF model fallback: failed models render as colored cubes with name labels
 
 ## Runtime Split ADR
 
