@@ -236,7 +236,7 @@ See **Tenant Isolation** section below for complete Phase 1 table definitions wi
 ```sql
 CREATE TABLE meeting (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   type TEXT NOT NULL,
   trigger_event TEXT,
   department TEXT,
@@ -249,11 +249,11 @@ CREATE TABLE meeting (
 ALTER TABLE meeting ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meeting FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON meeting
-  USING (tenant_id = current_setting('app.current_tenant', true));
+  USING (tenant_id = public.current_tenant_id());
 
 CREATE TABLE meeting_turn (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   meeting_id UUID NOT NULL REFERENCES meeting(id),
   agent_id TEXT NOT NULL,
   round INTEGER NOT NULL,
@@ -264,11 +264,11 @@ CREATE TABLE meeting_turn (
 ALTER TABLE meeting_turn ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meeting_turn FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON meeting_turn
-  USING (tenant_id = current_setting('app.current_tenant', true));
+  USING (tenant_id = public.current_tenant_id());
 
 CREATE TABLE meeting_action_item (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   meeting_id UUID NOT NULL REFERENCES meeting(id),
   assigned_to TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -280,7 +280,7 @@ CREATE TABLE meeting_action_item (
 ALTER TABLE meeting_action_item ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meeting_action_item FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON meeting_action_item
-  USING (tenant_id = current_setting('app.current_tenant', true));
+  USING (tenant_id = public.current_tenant_id());
 ```
 
 ## Quest Log
@@ -527,14 +527,14 @@ The spec's 7 states vs. actual LangGraph nodes:
 
 ## Tenant Isolation
 
-Although this is an internal tool, all new tables follow the existing tenant isolation convention.
+Although this is an internal tool, all new tables follow the existing tenant isolation convention. Existing tables use `UUID` for `tenant_id` and the `public.current_tenant_id()` helper function (defined in `005_rls_policies.sql`). New tables match this pattern exactly.
 
 Updated table definitions:
 
 ```sql
 CREATE TABLE agent_office_state (
   agent_id TEXT NOT NULL,
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   department TEXT NOT NULL,
   role TEXT NOT NULL,
   supervisor_id TEXT,
@@ -549,11 +549,11 @@ ALTER TABLE agent_office_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_office_state FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON agent_office_state
-  USING (tenant_id = current_setting('app.current_tenant', true));
+  USING (tenant_id = public.current_tenant_id());
 
 CREATE TABLE quest_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   agent_id TEXT NOT NULL,
   department TEXT NOT NULL,
   call_id TEXT,
@@ -572,14 +572,14 @@ ALTER TABLE quest_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quest_log FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON quest_log
-  USING (tenant_id = current_setting('app.current_tenant', true));
+  USING (tenant_id = public.current_tenant_id());
 
 CREATE INDEX idx_quest_log_pending ON quest_log (tenant_id, status) WHERE status = 'pending';
 CREATE INDEX idx_quest_log_created ON quest_log (tenant_id, created_at DESC);
 
 CREATE TABLE daily_memo (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  tenant_id UUID NOT NULL,
   memo_date DATE NOT NULL,
   content JSONB NOT NULL,
   generated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -590,7 +590,7 @@ ALTER TABLE daily_memo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_memo FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON daily_memo
-  USING (tenant_id = current_setting('app.current_tenant', true));
+  USING (tenant_id = public.current_tenant_id());
 ```
 
 ## Error Handling & Degradation
