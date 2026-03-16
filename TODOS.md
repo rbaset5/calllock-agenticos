@@ -355,6 +355,20 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** Office Dashboard Phase 1 complete + Electron desktop wrap.
 **Source:** CEO mega-review, Delight 5.
 
+### P2 — Deprecate MetricsEmitter after InngestEmitter stabilizes
+**What:** After InngestEmitter has been stable for ≥2 sprints, migrate remaining metric_events consumers to Inngest events and remove MetricsEmitter. Unify into a single observation pipeline.
+**Why:** Two parallel observation systems (MetricsEmitter → metric_events, InngestEmitter → Inngest → agent_office_state) will drift in schema, reliability guarantees, and maintenance burden. InngestEmitter is strictly more capable (Inngest retry, DLQ, fan-out).
+**Effort:** M
+**Depends on:** InngestEmitter stable in production for ≥2 sprints.
+**Source:** Office Dashboard CEO review, Issue 1A.
+
+### P3 — Backfill existing Inngest event names to calllock/ prefix
+**What:** Rename existing event types from unprefixed names (ProcessCallPayload, JobDispatchPayload, etc.) to `calllock/` prefixed convention (calllock/call.process, calllock/job.dispatch, etc.). Update all Inngest function triggers accordingly.
+**Why:** The `calllock/` prefix is now the standard per ADR. Existing events should follow the same convention to avoid a permanent naming split across the event catalog.
+**Effort:** M (6 event types + all function triggers + tests)
+**Depends on:** Event naming convention ADR.
+**Source:** Office Dashboard CEO review, Issue 5.
+
 ## Closed
 
 ### ~~P3 — Define Express V2 horizontal scaling story~~
