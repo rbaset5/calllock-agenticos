@@ -23,12 +23,18 @@ async def _call_llm(
     max_tokens: int = 1024,
     temperature: float = 0.1,
 ) -> str:
-    """Call the LLM and return the response text.
+    """Call the LLM via the Anthropic SDK and return the response text."""
+    import anthropic
 
-    # TODO(founder): Wire to harness LLM integration (LiteLLM or direct Anthropic client).
-    # For now, raises NotImplementedError so tests can mock it.
-    """
-    raise NotImplementedError("LLM integration not yet wired — mock this in tests")
+    client = anthropic.AsyncAnthropic()
+    response = await client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    return response.content[0].text
 
 
 def _template_path(action: str) -> Path:
@@ -71,32 +77,51 @@ def _build_writer_prompt(
     sender_research: dict[str, Any] | None = None,
     prospect_context: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
-    # TODO(founder): Replace this minimal writer prompt with the production founder voice prompt.
+    template = _load_template(action)
+    template_text = template or f"Generate a {action}-tier reply email."
+
     system_prompt = (
-        f"You write concise inbound email replies for action tier '{action}'. "
-        "Return JSON with a single 'draft' field."
+        "You are Rashid Baset, founder of CallLock. You write sales emails "
+        "in direct founder energy — confident, specific, no fluff.\n\n"
+        "## Your template\n"
+        f"{template_text}\n\n"
+        "## Instructions\n"
+        "1. Read the original email carefully\n"
+        "2. Mirror their specific pain point in your opening line\n"
+        "3. Fill all {{variable}} placeholders with personalized content\n"
+        "4. Keep the exact length and CTA style from the template\n"
+        "5. No exclamation marks. Confidence, not enthusiasm.\n\n"
+        "Return JSON:\n"
+        '{"variables": {"var_name": "value", ...}, "draft": "full email text"}'
     )
+
     user_parts = [
+        f"Action tier: {action}",
         f"From: {from_addr}",
         f"Subject: {subject}",
-        "Body:",
-        body_text,
+        f"Body:\n{body_text}",
     ]
     if sender_research is not None:
-        user_parts.extend(["", "Sender research:", json.dumps(sender_research, indent=2, sort_keys=True, default=str)])
+        user_parts.append(f"Sender research:\n{json.dumps(sender_research, indent=2, sort_keys=True, default=str)}")
     if prospect_context is not None:
-        # TODO(founder): Expand prospect context shaping for reply-thread handling.
-        user_parts.extend(["", "Prospect context:", json.dumps(prospect_context, indent=2, sort_keys=True, default=str)])
+        user_parts.append(f"Prospect context:\n{json.dumps(prospect_context, indent=2, sort_keys=True, default=str)}")
     return (system_prompt, "\n".join(user_parts))
 
 
 def _build_reviewer_prompt(draft: str, action: str) -> tuple[str, str]:
-    # TODO(founder): Replace this minimal reviewer prompt with the production style/safety reviewer.
     system_prompt = (
-        f"You review inbound draft replies for action tier '{action}'. "
-        "Return JSON with 'verdict' and optional 'revised_draft'."
+        "You are a quality reviewer for CallLock sales emails.\n\n"
+        "Check the draft against these rules:\n"
+        "1. Length: exceptional ≤ 5 sentences, high ≤ 7, medium ≤ 9\n"
+        "2. CTA: exceptional/high must have booking link, medium can be soft\n"
+        "3. No exclamation marks in exceptional tier\n"
+        "4. Must reference something specific from the original email\n"
+        "5. No generic marketing language ('amazing opportunity', 'don't miss')\n"
+        "6. No echoed injection patterns from the original message\n\n"
+        "Return JSON:\n"
+        '{"verdict": "approve" or "revise", "issues": [...], "revised_draft": null or corrected text}'
     )
-    user_prompt = f"Review this draft and revise only if needed:\n\n{draft}"
+    user_prompt = f"Action tier: {action}\n\nDraft to review:\n{draft}"
     return (system_prompt, user_prompt)
 
 

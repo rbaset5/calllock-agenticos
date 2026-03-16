@@ -21,12 +21,18 @@ async def _call_llm(
     max_tokens: int = 1024,
     temperature: float = 0.1,
 ) -> str:
-    """Call the LLM and return the response text.
+    """Call the LLM via the Anthropic SDK and return the response text."""
+    import anthropic
 
-    # TODO(founder): Wire to harness LLM integration (LiteLLM or direct Anthropic client).
-    # For now, raises NotImplementedError so tests can mock it.
-    """
-    raise NotImplementedError("LLM integration not yet wired — mock this in tests")
+    client = anthropic.AsyncAnthropic()
+    response = await client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    return response.content[0].text
 
 
 def compute_rubric_hash(rubric_text: str) -> str:
@@ -42,11 +48,14 @@ def _load_rubric() -> str:
 
 def _build_system_prompt() -> str:
     rubric = _load_rubric()
-    # TODO(founder): Replace this minimal system prompt with the production scoring instructions.
     return (
-        "You evaluate inbound emails for CallLock and return strict JSON only.\n\n"
-        "Use this scoring rubric exactly as written:\n"
-        f"{rubric}"
+        "You are evaluating an inbound email to determine if the sender is a "
+        "qualified lead for CallLock, a missed-call capture service for HVAC "
+        "and trade businesses.\n\n"
+        "## Scoring rubric\n\n"
+        f"{rubric}\n\n"
+        "Respond in the exact JSON format specified in the rubric. "
+        "Return ONLY the JSON object, no explanation or markdown fences."
     )
 
 
@@ -66,8 +75,16 @@ def _build_user_prompt(
     if sender_research is not None:
         sections.extend(["", "Sender research:", json.dumps(sender_research, indent=2, sort_keys=True, default=str)])
     if prospect_context is not None:
-        # TODO(founder): Expand prospect context injection once the reply-context schema is finalized.
-        sections.extend(["", "Prospect context:", json.dumps(prospect_context, indent=2, sort_keys=True, default=str)])
+        sections.extend([
+            "",
+            "## Context: This is a REPLY to our outbound sequence",
+            f"Prospect segment: {prospect_context.get('segment', 'unknown')}",
+            f"Sequence position: email {prospect_context.get('sequence_position', '?')} of {prospect_context.get('sequence_length', '?')}",
+            f"Current stage: {prospect_context.get('current_stage', 'unknown')}",
+        ])
+        if prospect_context.get("experiment_arm"):
+            sections.append(f"Experiment arm: {prospect_context['experiment_arm']}")
+        sections.extend(["", "Full prospect data:", json.dumps(prospect_context, indent=2, sort_keys=True, default=str)])
     return "\n".join(sections)
 
 
