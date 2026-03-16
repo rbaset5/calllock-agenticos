@@ -20,7 +20,7 @@ def test_compute_rubric_hash() -> None:
 def test_build_user_prompt_organic() -> None:
     prompt = _build_user_prompt("owner@example.com", "Need help", "Missed calls are hurting us", sender_research={"domain": "example.com"})
 
-    assert "Prospect context:" not in prompt
+    assert "REPLY to our outbound sequence" not in prompt
     assert "Sender research:" in prompt
     assert "owner@example.com" in prompt
 
@@ -33,7 +33,7 @@ def test_build_user_prompt_reply() -> None:
         prospect_context={"prospect_id": "prospect-1", "current_stage": "qualified"},
     )
 
-    assert "Prospect context:" in prompt
+    assert "REPLY to our outbound sequence" in prompt
     assert "prospect-1" in prompt
 
 

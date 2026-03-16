@@ -40,8 +40,7 @@ def build_system_alert_payload(tenant_id: str, alert_type: str, details: dict[st
         "tenant_id": tenant_id,
         "alert_type": alert_type,
         "details": details,
-        # TODO(founder): Route operational alerts to the final channel set once alerting policy is finalized.
-        "channel": "ops",
+        "channel": {"poll_failure": "log", "quarantine_rate": "log", "scoring_failure": "log"}.get(alert_type, "log"),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
