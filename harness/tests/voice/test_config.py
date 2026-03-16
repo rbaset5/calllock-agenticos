@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from unittest.mock import MagicMock
 
 import pytest
 
+from voice.crypto import encrypt_config
 from voice.config import VoiceConfigError, resolve_calcom_config, resolve_voice_config
 from voice.models import CalcomConfig, VoiceConfig
 
@@ -80,6 +82,14 @@ class TestResolveVoiceConfig:
 
         assert config.business_name == "ACE"
         assert "voice.config_cache.error" in caplog.text
+
+    def test_db_fetch_decrypts_encrypted_payload(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("VOICE_CREDENTIAL_KEY", os.urandom(32).hex())
+        encrypted = encrypt_config(_voice_config_dict())
+
+        config = resolve_voice_config("tenant-1", redis_client=None, db_fetch=lambda _tenant_id: encrypted)
+
+        assert config.twilio_account_sid == "AC123"
 
 
 class TestResolveCalcomConfig:

@@ -10,6 +10,7 @@ from typing import Any, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from cache.keys import tenant_key
+from voice.crypto import decrypt_config
 from voice.models import CalcomConfig, VoiceConfig
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ def _resolve_config(
         except Exception:
             logger.warning("voice.config_cache.error", extra={"tenant_id": tenant_id, "cache_key": cache_key})
 
-    raw_config = db_fetch(tenant_id)
+    raw_config = _prepare_db_config(db_fetch(tenant_id))
     model = _validate_model(model_cls, raw_config, tenant_id, config_name)
 
     if redis_client is not None:
@@ -110,6 +111,14 @@ def _load_cached_json(cached: Any) -> dict[str, Any]:
     if isinstance(cached, bytes):
         cached = cached.decode()
     return json.loads(cached)
+
+
+def _prepare_db_config(raw_config: Any) -> Any:
+    if isinstance(raw_config, bytes):
+        raw_config = raw_config.decode()
+    if isinstance(raw_config, str):
+        return decrypt_config(raw_config)
+    return raw_config
 
 
 def _fetch_voice_config_from_db(tenant_id: str) -> dict[str, Any]:
