@@ -736,3 +736,128 @@ The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/
 - `send-emergency-sms` — receives `calllock/call.ended` (filtered: only safety emergencies, checks `emergency_sms_sent_at` for dedup), sends Twilio SMS
 - `dashboard-sync-retry` — daily cron, retries unsynced `call_records` (1h–7d old)
 - `call-records-retention` — weekly cron, purges transcripts and deletes expired `call_records` per tenant retention policy
+
+## 16. CEO Review Findings
+
+### Review decisions (HOLD SCOPE mode)
+
+| # | Issue | Decision | Rationale |
+|---|---|---|---|
+| 1 | Post-call raw persist fails (Supabase down) | Return 500, Retell retries | Simplest — Retell holds data until DB recovers |
+| 2 | VoiceConfig resolution fails (Redis + Supabase down) | Graceful Retell error + alert | Caller hears polite message, not dead air |
+| 3 | Credential decryption fails | Graceful Retell error + alert | Same pattern as #2, operator must fix key |
+| 4 | Retell tool call input validation | Loose validation, log warnings, proceed | Trusted upstream, don't punish callers |
+| 5 | SMS content injection | Template-based SMS with sanitized interpolation | Fixed templates, truncate + strip reason |
+| 6 | Post-call webhook idempotency | UNIQUE(tenant_id, call_id) constraint | Catch duplicate INSERT, skip, return 200 |
+| 7 | Cal.com credential duplication | Accept duplication | Dashboard has its own, tenant_configs has per-tenant |
+| 8 | V2 test fixture migration | Exact parity | Every V2 test → pytest, results must be identical |
+| 9 | Structured logging for tool calls | Add structured logs at entry/exit + post-call summary | Grep-friendly, matches harness pattern |
+| 10 | Runbooks for top alerts | Add to spec | 3-5 steps each for top 3 alerts |
+| 11 | Cutover duplicate processing | Rely on idempotency guard | UNIQUE constraint handles it, no feature flag |
+
+### Runbooks
+
+**Alert: Tool call P95 latency > 1.5s (sustained 5 min)**
+1. Check Supabase dashboard for connection pool exhaustion or slow queries
+2. Check Redis for connectivity issues (VoiceConfig cache misses cause extra DB hits)
+3. Check Render service logs for error spikes
+4. If Supabase is the bottleneck: check `lookup_caller` query plan, verify indexes exist
+5. If unresolvable in 5 min: rollback — revert Retell tool URLs to Express backend
+
+**Alert: Twilio SMS error rate > 10% (over 15 min)**
+1. Check Twilio dashboard for account status, balance, rate limits
+2. Check structured logs for `voice.tool_call` events with `error_type: TwilioRestException`
+3. Verify `twilio_from_number` in tenant VoiceConfig is valid and active
+4. If Twilio is down: callbacks still work (Retell tool returns success), SMS delivery retried by Inngest post-call
+
+**Alert: Zero calls processed in 1 hour (business hours)**
+1. Verify Retell agent is active and phone number is bound to correct version
+2. Check Retell dashboard for recent call activity (calls may be happening but webhooks aren't firing)
+3. Verify FastAPI health endpoint is responding (`/health`)
+4. Check Render deployment status — recent deploy may have broken voice routes
+5. Test with a manual call to the Retell number
+
+### Error & Rescue Registry
+
+```
+  METHOD                        | EXCEPTION              | RESCUED | ACTION                    | USER SEES
+  ------------------------------|------------------------|---------|---------------------------|------------------
+  lookup_caller handler         | httpx.TimeoutException | Y       | Return {found: false}     | Treated as new caller
+  lookup_caller handler         | httpx.ConnectError     | Y       | Return {found: false}     | Treated as new caller
+  create_callback handler       | TwilioRestException    | Y       | Return success, retry     | Normal call ending
+  send_sales_lead_alert handler | TwilioRestException    | Y       | Return success, retry     | Normal call ending
+  send_sales_lead_alert handler | VoiceConfigError       | Y       | Graceful error + alert    | "Technical difficulty"
+  post-call: raw INSERT         | httpx.TimeoutException | Y       | Return 500 to Retell      | Retell retries webhook
+  post-call: extraction         | ExtractionError        | Y       | Partial extract, continue | Dashboard gets partial data
+  post-call: UPDATE extracted   | httpx.TimeoutException | Y       | Log, fire Inngest anyway  | Dashboard gets partial data
+  post-call: fire Inngest       | httpx.TimeoutException | Y       | Log, return 200           | Dashboard card delayed
+  post-call: duplicate INSERT   | UniqueViolation        | Y       | Skip processing, return 200| No visible effect
+  VoiceConfig resolution        | httpx.TimeoutException | Y       | Graceful error + alert    | "Technical difficulty"
+  VoiceConfig resolution        | ValidationError        | Y       | Graceful error + alert    | "Technical difficulty"
+  credential decryption         | DecryptionError        | Y       | Graceful error + alert    | "Technical difficulty"
+  HMAC verification             | HMACVerificationError  | Y       | Return 401                | Retell sees auth failure
+  taxonomy load                 | ImportError            | FATAL   | Process won't start       | N/A (startup)
+  RETELL_WEBHOOK_SECRET missing | ConfigurationError     | FATAL   | Process won't start       | N/A (startup)
+```
+
+### Failure Modes Registry
+
+```
+  CODEPATH              | FAILURE MODE              | RESCUED | TEST | USER SEES      | LOGGED
+  ----------------------|---------------------------|---------|------|----------------|--------
+  lookup_caller         | Supabase down             | Y       | Y    | New caller UX  | Y
+  create_callback       | Twilio down               | Y       | Y    | Normal ending  | Y
+  send_sales_lead_alert | Twilio down               | Y       | Y    | Normal ending  | Y
+  post-call persist     | Supabase down             | Y       | Y    | Retell retries | Y
+  post-call extraction  | Regex exception           | Y       | Y    | Partial data   | Y
+  post-call Inngest     | Inngest down              | Y       | Y    | Card delayed   | Y
+  post-call duplicate   | Retell retry              | Y       | Y    | No effect      | Y
+  VoiceConfig load      | Redis + Supabase down     | Y       | Y    | Polite message | Y
+  VoiceConfig decrypt   | Bad encryption key        | Y       | Y    | Polite message | Y (alert)
+  HMAC auth             | Invalid/missing signature | Y       | Y    | Auth failure   | Y
+  taxonomy startup      | YAML missing/malformed    | FATAL   | Y    | Deploy fails   | Y
+  sync-dashboard        | Dashboard 5xx             | Y       | Y    | Card delayed   | Y (Inngest retry)
+  booking mgmt API      | Cal.com down              | Y       | Y    | 503 response   | Y
+  booking mgmt API      | Invalid API key           | Y       | Y    | 401 response   | Y
+```
+
+**CRITICAL GAPS: 0.** All failure modes are rescued, tested, user-visible, and logged.
+
+### NOT in scope
+
+| Item | Rationale |
+|---|---|
+| Voice agent eval framework | Expansion scope — v10 config is ported as-is, not optimized |
+| Cross-channel attribution (call + email) | Growth system Phase 2 concern, not voice migration |
+| Automated agent config deployment (Retell API) | Nice-to-have, manual deploy via Retell dashboard is fine |
+| Dashboard UI changes | Dashboard receives same payloads, no UI changes needed |
+| `book_service` migration to FastAPI | Explicitly kept on dashboard — revisit only if dashboard is retired |
+| Voice agent prompt optimization | Out of scope — port v10 faithfully, optimize later |
+| Multi-language support | No current need, ACE Cooling is English-only |
+
+### What already exists
+
+| Sub-problem | Existing code | Reused? |
+|---|---|---|
+| Tenant isolation / RLS | `db/tenant_scope.py`, migration 005 | Yes |
+| DB CRUD | `db/repository.py`, `db/supabase_repository.py` | Yes |
+| Cache management | `cache/keys.py` | Yes |
+| PII redaction | `observability/pii_redactor.py` | Yes |
+| Process call pipeline | `harness/server.py` `/process-call` | Yes |
+| Alert evaluation | `evaluate-alerts` Inngest function | Yes |
+| Growth touchpoint | `growth-touchpoint` Inngest function | Yes |
+| Inngest event schemas | `inngest/src/events/schemas.ts` | Yes (extended) |
+
+### Dream state delta
+
+```
+  12-MONTH IDEAL                          THIS PLAN GETS US
+  ─────────────                           ──────────────────
+  Multi-tenant voice platform             ✅ Multi-tenant from day one
+  Per-industry-pack voice configs         ✅ Taxonomy YAML, agent config YAML
+  Automated agent tuning via evals        ❌ Not in scope (Expansion)
+  Voice-to-text enrichment → growth mem   ✅ calllock/call.ended → growth touchpoint
+  Cross-channel attribution               ❌ Not in scope (Growth Phase 2)
+  One runtime, one repo                   ✅ Express retired (except book_service on dashboard)
+  Retell agent version management         ⚠️  YAML in knowledge/ but no deployment automation
+```
