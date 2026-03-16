@@ -1,12 +1,15 @@
 # Inbound Pipeline Integration Design
 
 **Date:** March 16, 2026
-**Status:** Draft
+**Status:** Draft - v2 (post Sales Machine v3 reconciliation)
 **Owner:** Founder
+**Companion to:** `2026-03-16-sales-machine-operating-manual-design.md`
 
 ## Summary
 
-Port the atlas inbound email processing pipeline into AgentOS as shared Python infrastructure. Both organic inbound emails and outbound reply classification use the same pipeline with a `source` mode flag. The Instantly sending transport lives as a shared Python client in the harness, with an MCP server deferred but designed for.
+Port the atlas inbound email processing pipeline into AgentOS as shared Python infrastructure for **organic inbound email processing**. The Instantly sending transport lives as a shared Python client in the harness, with an MCP server deferred but designed for.
+
+**Scope boundary with Sales Machine spec:** The Sales Machine Operating Manual owns outbound reply classification via the Reply Classifier Agent (Section 2.5.6). This spec owns organic inbound processing only. The quarantine, content gate, and researcher modules are shared infrastructure that both specs can consume, but the processing pipelines are separate. Phase 2 integration may unify them under the single-pipeline mode flag design, but Phase 1 ships them independently.
 
 ## Decisions
 
@@ -14,9 +17,10 @@ Port the atlas inbound email processing pipeline into AgentOS as shared Python i
 |---|---|---|
 | Port strategy | Rewrite to Python | Follow AgentOS runtime split: Python harness owns orchestration, LLM calls, persistence |
 | IMAP polling | Inngest cron → harness endpoint | Consistent with existing event-driven architecture |
-| Pipeline structure | Single pipeline, mode flag | ~80% shared logic (quarantine, gate, research, draft, stage). Mode flag is clean branching |
+| Pipeline structure | Organic-only in Phase 1; shared layers available for Reply Classifier | Sales Machine Reply Classifier is purpose-built and already spec'd. Quarantine/researcher/content-gate are shared modules. Phase 2 may unify under single pipeline with mode flag. |
 | Persistence | Hybrid schema | New tables for inbound-specific data; shared Growth Memory for lifecycle and research |
 | Instantly | Shared client in harness, MCP deferred | One implementation, MCP wrapper added when voice agent needs it |
+| `enrichment_cache` schema | Sales Machine schema is authoritative; extended with `cache_type` | Avoids competing schemas for the same table |
 
 ## 1. Architecture Overview
 
@@ -37,9 +41,13 @@ Inngest cron (calllock/inbound.poll.requested)
 - **TypeScript (Inngest):** cron trigger, event emission, thin HTTP proxies to harness
 - **Python (harness):** all business logic — IMAP connection, quarantine, scoring, drafting, stage tracking, persistence
 
-### Single pipeline, mode flag
+### Phase 1: Organic inbound only
 
-`process_message(msg, source='organic'|'reply')` — quarantine is identical, scoring injects prospect context for replies, stage tracker checks existing stage for replies vs. assigns fresh for organic.
+`process_message(msg)` processes organic inbound emails through the full pipeline. The quarantine, researcher, and content-gate modules are designed as importable shared libraries so the Sales Machine Reply Classifier Agent can reuse them directly.
+
+### Phase 2 (future): Unified pipeline with mode flag
+
+`process_message(msg, source='organic'|'reply')` — quarantine is identical, scoring injects prospect context for replies, stage tracker checks existing stage for replies vs. assigns fresh for organic. This requires the Reply Classifier Agent to be refactored to emit into the inbound pipeline rather than handling classification independently. Deferred until both paths are proven in production.
 
 ## 2. Persistence — Hybrid Schema
 
@@ -116,7 +124,7 @@ harness/src/inbound/
 | Event | Trigger | Payload |
 |---|---|---|
 | `calllock/inbound.poll.requested` | Inngest cron (default hourly) | `{ tenant_id, account_ids?: string[] }` |
-| `calllock/inbound.message.received` | Poll handler per message | `{ tenant_id, account_id, message_id, from_addr, from_domain, subject, source: 'organic' \| 'reply' }` |
+| `calllock/inbound.message.received` | Poll handler per message | `{ tenant_id, account_id, rfc_message_id, from_addr, from_domain, subject }` |
 | `calllock/inbound.message.processed` | After pipeline completes | `{ tenant_id, message_id, action, total_score, stage, draft_generated: boolean }` |
 | `calllock/inbound.escalation.triggered` | When escalation fires | `{ tenant_id, message_id, priority, channel }` |
 
@@ -145,9 +153,11 @@ Thin HTTP proxies. No business logic in TypeScript.
 | `/inbound/process` | POST | Run full pipeline for one message |
 | `/inbound/retry-scoring` | POST | Re-process messages with `scoring_status='pending'` |
 
-### Reply integration
+### Relationship to Sales Machine Reply Classifier
 
-Reply Classifier Agent emits `calllock/inbound.message.received` with `source: 'reply'` — same event, same pipeline, mode flag routes appropriately.
+The Sales Machine Reply Classifier Agent (Section 2.5.6) handles outbound reply classification via `calllock/email.reply.received` → `calllock/reply.classified`. It is a separate pipeline with its own trigger, LLM call, classification categories, and eval fixtures.
+
+The inbound pipeline's shared modules (`quarantine.py`, `researcher.py`, `content_gate.py`) are available for the Reply Classifier to import. In Phase 2, the Reply Classifier may be refactored to emit into the inbound pipeline for unified processing.
 
 ## 5. Instantly Client and Safety
 
@@ -194,41 +204,36 @@ MCP server wraps this class later — zero duplication.
 
 No message reaches scoring without passing quarantine. No draft reaches persistence without passing the content gate.
 
-## 6. Data Flow — Organic vs Reply
+## 6. Data Flow
 
-### Organic inbound (`source='organic'`)
+### Phase 1: Organic inbound
 
 ```
 IMAP fetch → quarantine → research_sender(domain, cache_ttl)
   → score_message(text, research, rubric)
-    → assign_initial_stage(action)
-      → insert journey_assignment (fresh, step 1)
-        → generate_draft(action, template)
-          → escalate or auto_archive
-            → if score >= 'high': create prospect in Growth Memory
+    → assign_initial_stage(action) → write to inbound_stage_log
+      → generate_draft(action, template)
+        → escalate or auto_archive
+          → if score >= 'high': promote to prospect in Growth Memory
 ```
 
-### Outbound reply (`source='reply'`)
+### Shared modules (available to Sales Machine Reply Classifier)
 
-```
-Reply event → quarantine → lookup prospect via prospect_emails
-  → score_message(text, research + prospect_context, rubric)
-    → existing_stage = get from inbound_stage_log WHERE thread_id = X ORDER BY created_at DESC
-      → transition_stage(existing_stage, inferred_stage) → write to inbound_stage_log
-        → generate_draft(action, template, prospect_context)
-          → escalate or auto_archive
-            → write touchpoint_log with reply classification (prospect_id already exists)
-```
+The following modules are designed as importable Python libraries in `harness/src/inbound/`:
 
-If prospect not found via `prospect_emails`, falls back to organic path (see Section 11).
+- **`quarantine.py`** — `strip_html`, `neutralize_links`, `detect_injection`, `run_full_quarantine`. The Reply Classifier Agent (Sales Machine Section 2.5.6) can import and use these for its input sanitization step instead of reimplementing.
+- **`researcher.py`** — `research_sender` with SSRF protection. Writes to `enrichment_cache` with `cache_type='sender_research'`.
+- **`content_gate.py`** — `scan_draft` for draft safety. Can be used by any agent generating outbound text.
 
-### Branching points
+### Phase 2 (future): Unified reply processing
 
-1. **Research:** Organic calls `research_sender()` fresh. Reply pulls existing enrichment from `enrichment_cache` + Growth Memory.
-2. **Scoring context:** Both use `score_message()`. Reply injects `prospect_context` (segment, experiment arm, sequence position, prior touchpoints) to shift from "is this a good lead?" to "what kind of reply is this?"
-3. **Stage tracking:** Organic calls `assign_initial_stage()` → writes to `inbound_stage_log`. Reply calls `transition_stage()` → validates transition from current stage in `inbound_stage_log`.
+When both organic inbound and the Reply Classifier are proven in production, they can be unified under a single `process_message(msg, source='organic'|'reply')` entrypoint. The branching points would be:
 
-Everything else is shared: quarantine, content gate, draft generation, escalation, persistence, event emission.
+1. **Research:** Organic calls `research_sender()` fresh. Reply pulls existing enrichment from `enrichment_cache`.
+2. **Scoring context:** Reply injects `prospect_context` (segment, experiment arm, sequence position) to shift from "is this a good lead?" to "what kind of reply is this?"
+3. **Stage tracking:** Organic calls `assign_initial_stage()`. Reply calls `transition_stage()` on the existing stage.
+
+This unification is deferred to avoid conflicting with the Sales Machine Reply Classifier Agent, which is already fully spec'd with eval fixtures and belief signal mapping.
 
 ## 7. Source Material
 
@@ -286,7 +291,7 @@ CREATE TABLE public.inbound_messages (
     received_at         TIMESTAMPTZ NOT NULL,
     body_text           TEXT NOT NULL,           -- sanitized text after quarantine
     source              TEXT NOT NULL DEFAULT 'organic'
-                        CHECK (source IN ('organic', 'reply')),
+                        CHECK (source IN ('organic', 'reply')),  -- Phase 1: always 'organic'. 'reply' reserved for Phase 2 unified pipeline.
     quarantine_status   TEXT NOT NULL
                         CHECK (quarantine_status IN ('clean', 'blocked', 'pending_scoring')),
     quarantine_flags    JSONB DEFAULT '[]',
@@ -362,24 +367,31 @@ CREATE TABLE public.poll_checkpoints (
 
 ### `enrichment_cache`
 
+**The Sales Machine Operating Manual (Section 6) is authoritative for this table's schema.** The Sales Machine defines:
+
 ```sql
+-- Schema owned by Sales Machine spec. Reproduced here for reference only.
+-- See 2026-03-16-sales-machine-operating-manual-design.md Section 6.
 CREATE TABLE public.enrichment_cache (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id           UUID NOT NULL REFERENCES public.tenants(id),
-    cache_key           TEXT NOT NULL,            -- domain for sender research, company_domain for outbound enrichment
-    cache_type          TEXT NOT NULL             -- 'sender_research' or 'prospect_enrichment'
-                        CHECK (cache_type IN ('sender_research', 'prospect_enrichment')),
-    source              TEXT NOT NULL             -- 'inbound_pipeline' or 'enrichment_agent'
-                        CHECK (source IN ('inbound_pipeline', 'enrichment_agent')),
-    data                JSONB NOT NULL,           -- homepage text, resolved IPs, enrichment fields
-    fetched_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (tenant_id, cache_key, cache_type)
+    prospect_id         UUID,                     -- NULL for inbound sender research (no prospect yet)
+    business_domain     TEXT NOT NULL,
+    cache_type          TEXT NOT NULL DEFAULT 'prospect_enrichment'
+                        CHECK (cache_type IN ('prospect_enrichment', 'sender_research')),
+    enrichment_data     JSONB NOT NULL,           -- outbound: trade, pain, wedge fit, etc. inbound: homepage text, resolved IPs
+    enrichment_quality  TEXT DEFAULT 'full',
+    estimated_monthly_lost_revenue NUMERIC(10,2), -- NULL for sender research
+    enriched_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (tenant_id, business_domain, cache_type)
 );
 
-CREATE INDEX idx_enrichment_ttl ON public.enrichment_cache (tenant_id, cache_type, fetched_at);
+CREATE INDEX idx_enrichment_lookup ON public.enrichment_cache (tenant_id, business_domain, cache_type);
 ```
 
-TTL is application-level: queries filter `WHERE fetched_at > now() - interval '7 days'` (configurable). A daily Inngest cron (`calllock/enrichment.cleanup.requested`) triggers a harness endpoint that deletes rows older than 2x TTL (14 days default). This is specified in the fan-out cron alongside the poll cron.
+**Extension for inbound:** The `cache_type` column (added by this spec) discriminates between `prospect_enrichment` (written by the Enrichment Agent) and `sender_research` (written by the inbound pipeline). The `prospect_id` is nullable — inbound sender research has no prospect until promotion. The inbound pipeline stores homepage text and resolved IPs in `enrichment_data` JSONB.
+
+TTL is application-level: queries filter `WHERE enriched_at > now() - interval '7 days'` (configurable). A daily Inngest cron (`calllock/enrichment.cleanup.requested`) triggers a harness endpoint that deletes rows older than 2x TTL (14 days default).
 
 ### `prospect_emails` (email-to-prospect mapping)
 
@@ -474,9 +486,9 @@ This mapping is used only at promotion time. The Journey Orchestrator applies it
 
 **Per-message checkpoint.** The checkpoint is updated after each message is successfully emitted as an event. If the connection drops after message 50 of 200, the checkpoint is at message 50. The next poll re-fetches from 51. Combined with `UNIQUE (tenant_id, rfc_message_id)` dedup, at-least-once semantics are safe.
 
-### Reply arrives but prospect not in Growth Memory
+### (Phase 2) Reply arrives but prospect not in Growth Memory
 
-**Fallback to organic path.** If the reply path cannot find a `prospect_id` via `prospect_emails`, it re-routes to the organic path (`source` stays `'reply'` for audit trail, but processing follows the organic logic). A warning event `calllock/inbound.reply.orphaned` is emitted for reconciliation.
+**Fallback to organic path.** If the unified pipeline's reply path cannot find a `prospect_id` via `prospect_emails`, it re-routes to the organic path. A warning event `calllock/inbound.reply.orphaned` is emitted for reconciliation. This failure mode only applies in Phase 2 when replies are routed through the inbound pipeline.
 
 ### Content gate blocks a draft
 
@@ -494,7 +506,7 @@ The same email arriving via IMAP (organic) and Reply Classifier (reply) hits the
 | `calllock/inbound.quarantine.blocked` | Message blocked by quarantine | `{ tenant_id, rfc_message_id, flags, block_reason }` |
 | `calllock/inbound.draft.blocked` | Draft blocked by content gate | `{ tenant_id, message_id, flags }` |
 | `calllock/inbound.prospect.promoted` | Organic lead promoted to prospect | `{ tenant_id, prospect_id, message_id, inbound_stage, lifecycle_state }` |
-| `calllock/inbound.reply.orphaned` | Reply has no matching prospect | `{ tenant_id, from_addr, rfc_message_id }` |
+| `calllock/inbound.reply.orphaned` | (Phase 2) Reply has no matching prospect | `{ tenant_id, from_addr, rfc_message_id }` |
 
 ## 13. IMAP Credential Storage
 
@@ -540,8 +552,8 @@ The poll cron emits one `calllock/inbound.poll.requested` event per tenant, with
 | `inbound_stage_log` | Inbound Pipeline | Sole writer |
 | `poll_checkpoints` | Inbound Pipeline | Sole writer |
 | `email_accounts` | Admin / onboarding | Not written by pipeline |
-| `enrichment_cache` | Inbound Pipeline + Enrichment Agent | Multi-writer, discriminated by `source` column |
-| `prospect_emails` | Sender Agent + Inbound Pipeline | Multi-writer, discriminated by `source` column |
+| `enrichment_cache` | Enrichment Agent (primary, `prospect_enrichment`) + Inbound Pipeline (`sender_research`) | Multi-writer, discriminated by `cache_type` column. Sales Machine spec is authoritative for schema. |
+| `prospect_emails` | Sender Agent (primary, `outbound`) + Inbound Pipeline (`inbound`) | Multi-writer, discriminated by `source` column |
 | `touchpoint_log` | Inbound Pipeline (append) | Already multi-writer by design |
 | `journey_assignments` | Journey Orchestrator only | Inbound pipeline emits events; Journey Orchestrator writes |
 
