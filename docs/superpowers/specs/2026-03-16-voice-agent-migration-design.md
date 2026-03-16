@@ -234,7 +234,7 @@ If any extraction step throws an exception, the handler catches it, logs the err
 ```
 calllock/call.ended
   ├→ process-voice-call    (new)      — maps CallEndedEvent → ProcessCallRequest, calls harness /process-call
-  ├→ sync-app              (new)      — transform payload, POST to CallLock App webhook, set synced_to_dashboard
+  ├→ sync-app              (new)      — transform payload, POST to CallLock App webhook, set synced_to_app
   ├→ evaluate-alerts       (existing) — emergency alert evaluation
   ├→ growth-touchpoint     (existing) — log call as growth touchpoint
   └→ send-emergency-sms    (new, conditional) — only if safety emergency flagged AND not already sent during call
@@ -343,16 +343,27 @@ class VoiceConfig(BaseModel):
     business_phone: str
 ```
 
-Note: Cal.com credentials (`calcom_api_key`, `calcom_event_type_id`, etc.) are NOT in `VoiceConfig` because `book_service` stays on the CallLock App. The booking management REST API (Section 7) uses Cal.com for lookup/cancel/reschedule — those credentials are stored in a separate `calcom_config` field on `tenant_configs`, shared with the CallLock App.
+Note: Cal.com credentials are NOT in `VoiceConfig` because `book_service` stays on the CallLock App. The booking management REST API (Section 7) uses Cal.com for lookup/cancel/reschedule — those credentials are stored in a separate `calcom_config` field on `tenant_configs`, shared with the CallLock App:
+
+```python
+class CalcomConfig(BaseModel):
+    calcom_api_key: str
+    calcom_event_type_id: int
+    calcom_username: str
+    calcom_timezone: str                # e.g., "America/Chicago"
+```
+
+`CalcomConfig` is encrypted using the same AES-256-GCM pattern as `VoiceConfig` (same `VOICE_CREDENTIAL_KEY` env var). Both the booking management REST API and the CallLock App use Cal.com credentials — the CallLock App reads them from its own env vars, while the FastAPI booking API reads from `tenant_configs.calcom_config`.
 
 ### New migration: `048_voice_config.sql`
 
 The existing `tenant_configs` table (migration 002) has only named columns — no generic JSONB config field. A new migration adds:
 
 ```sql
--- Add voice config column to tenant_configs
+-- Add voice config and Cal.com config columns to tenant_configs
 ALTER TABLE public.tenant_configs
-  ADD COLUMN voice_config jsonb NOT NULL DEFAULT '{}'::jsonb;
+  ADD COLUMN voice_config jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN calcom_config jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 -- Call records table for voice call persistence
 CREATE TABLE public.call_records (
@@ -377,7 +388,7 @@ CREATE TABLE public.call_records (
   call_duration_seconds integer,
   end_call_reason text,
   call_recording_url text,
-  synced_to_dashboard boolean DEFAULT false,  -- "dashboard" here means CallLock App at app.calllock.co
+  synced_to_app boolean DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(tenant_id, call_id)
@@ -421,8 +432,8 @@ CREATE POLICY voice_api_keys_tenant ON public.voice_api_keys
 -- Index for phone number lookups (customer status tool)
 CREATE INDEX idx_call_records_phone ON public.call_records(tenant_id, phone_number);
 -- Index for CallLock App sync retry
-CREATE INDEX idx_call_records_unsynced ON public.call_records(tenant_id, synced_to_dashboard)
-  WHERE synced_to_dashboard = false;
+CREATE INDEX idx_call_records_unsynced ON public.call_records(tenant_id, synced_to_app)
+  WHERE synced_to_app = false;
 ```
 
 `VoiceConfig` is stored in `tenant_configs.voice_config` JSONB column. Sensitive credentials (`calcom_api_key`, `twilio_auth_token`, `app_webhook_secret`) are encrypted at the application layer using AES-256-GCM before writing to this column. The encryption key is sourced from `VOICE_CREDENTIAL_KEY` environment variable (same pattern as inbound pipeline's `IMAP_CREDENTIAL_KEY` in the inbound pipeline spec Section 13). Key rotation: re-encrypt on write with the current key; decryption attempts the current key first, then the previous key (`VOICE_CREDENTIAL_KEY_PREV`).
@@ -649,7 +660,7 @@ Transcripts contain customer names, addresses, and phone numbers. PII handling f
 
 ### CallLock App sync lifecycle
 
-The `sync-app` Inngest function sets `call_records.synced_to_dashboard = true` on successful delivery. If Inngest exhausts retries (default: 3 attempts with exponential backoff), the row remains `synced_to_dashboard = false`. A daily Inngest cron (`calllock/call.app-sync.retry`) queries `idx_call_records_unsynced` and re-attempts delivery for rows older than 1 hour but younger than 7 days. After 7 days, unsynced rows are flagged for manual review.
+The `sync-app` Inngest function sets `call_records.synced_to_app = true` on successful delivery. If Inngest exhausts retries (default: 3 attempts with exponential backoff), the row remains `synced_to_app = false`. A daily Inngest cron (`calllock/call.app-sync.retry`) queries `idx_call_records_unsynced` and re-attempts delivery for rows older than 1 hour but younger than 7 days. After 7 days, unsynced rows are flagged for manual review.
 
 ## 12. v10 State Machine Reference
 
@@ -751,8 +762,8 @@ The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/
 ### Inngest functions (additions)
 
 - `process-voice-call` — receives `calllock/call.ended`, maps `CallEndedEvent` → `ProcessCallRequest`, calls existing harness `/process-call` endpoint
-- `sync-app` — receives `calllock/call.ended`, transforms payload, POSTs to CallLock App webhook, sets `synced_to_dashboard = true`
-- `send-emergency-sms` — receives `calllock/call.ended` (filtered: only safety emergencies, checks `emergency_sms_sent_at` for dedup), sends Twilio SMS
+- `sync-app` — receives `calllock/call.ended`, transforms payload, POSTs to CallLock App webhook, sets `synced_to_app = true`
+- `send-emergency-sms` — receives `calllock/call.ended` (filtered: only safety emergencies), sends Twilio SMS. Idempotency via Inngest function-level key `{tenant_id}:{call_id}:emergency-sms`
 - `app-sync-retry` — daily cron, retries unsynced `call_records` (1h–7d old)
 - `call-records-retention` — weekly cron, purges transcripts and deletes expired `call_records` per tenant retention policy
 
