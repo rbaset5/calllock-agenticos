@@ -201,6 +201,22 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** Voice migration implementation landing.
 **Source:** CEO review, Section 1F (Single Points of Failure). Updated 2026-03-16 after voice migration CEO review.
 
+### Verify Retell webhook retry behavior
+**What:** Verify Retell's actual webhook retry policy (count, backoff, timeout window) against their docs and pin the values in the voice migration spec.
+**Why:** The voice migration spec (finding #1) decided "return 500, Retell retries" for Supabase outages. If Retell only retries once with a short window, this recovery strategy is weaker than assumed.
+**Effort:** S
+**Priority:** P2
+**Depends on:** Voice migration implementation landing.
+**Source:** Eng review of voice migration plan, 2026-03-16.
+
+### Add FastAPI Depends() auth integration tests
+**What:** Write tests that exercise `require_retell_hmac` and `require_api_key` as actual FastAPI dependencies via TestClient, not just standalone function calls.
+**Why:** The voice migration plan tests auth functions in isolation but doesn't verify they work as FastAPI middleware. A wiring bug (wrong header name, missing Depends declaration) would only surface in the integration test or production.
+**Effort:** S
+**Priority:** P2
+**Depends on:** Voice migration Tasks 3 and 16.
+**Source:** Eng review of voice migration plan, 2026-03-16.
+
 ### Define Inngest event validation schema
 **Status:** Resolved in code and ADR 004 for `harness/process-call` and `harness/job-complete`.
 **What:** Define the event schema for harness trigger events emitted by Express V2 after processing Retell webhooks. Include required fields (call_id, tenant_id, call metadata), validation rules, and rejection behavior for malformed events.
