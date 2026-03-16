@@ -508,7 +508,7 @@ Maps to the growth doc's Founder Dashboard (Section 10.16) levels:
 
 ### 6.1 Growth Memory tables (swarm-specific)
 
-These 8 tables are the swarm's storage layer. They follow the growth doc's RLS and tenant isolation patterns. All tables have `tenant_id` column with row-level security policies.
+These 9 tables are the swarm's storage layer. They follow the growth doc's RLS and tenant isolation patterns. All tables have `tenant_id` column with row-level security policies.
 
 | Table | Purpose | Write Owner | Key Fields |
 |-------|---------|------------|------------|
@@ -791,7 +791,10 @@ All events follow the `calllock/` namespace convention per ADR 015. All payloads
 | `calllock/swarm.sequence.stalled` | Sequence Health Monitor | Alerting | tenant_id, sequence_id, overdue_hours |
 | `calllock/swarm.health.check.requested` | Cron (daily 8am) | Sequence Health Monitor | tenant_id |
 | `calllock/swarm.doctrine.unavailable` | Handoff Agent | Logging | tenant_id, error_message |
+| `calllock/swarm.credential.expiring` | Credential monitor | P0 Alert | tenant_id, service, days_until_expiry |
 | `calllock/swarm.tenant.scope.failed` | Tenant context guard | Logging | attempted_tenant_id, error_message |
+
+Note: `calllock/swarm.webhook.rejected` and `calllock/swarm.tenant.scope.failed` may not carry a valid `tenant_id` since they fire when tenant context is absent or the request is unauthenticated. These are the only exceptions to the "all events include tenant_id" rule. The `reply_text` field in `calllock/email.reply.received` contains raw webhook payload; sanitization happens inside the Reply Classifier Agent, not at event ingestion.
 
 ## Appendix B: Authority and Deference Map
 
