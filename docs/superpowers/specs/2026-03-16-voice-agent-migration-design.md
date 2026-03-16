@@ -7,7 +7,9 @@
 
 ## Summary
 
-Port the Alexandria V2/V3 Express voice agent backend into rabat as a new `harness/src/voice/` Python package. Real-time Retell tool calls are handled by FastAPI endpoints on the same Render service. Post-call processing fires an Inngest event and fans out through existing harness infrastructure (growth memory, alerts, job dispatch). Multi-tenant from day one. Zero-downtime cutover by running both services in parallel during transition.
+Port the Valencia v10-simplified Express voice agent backend into rabat as a new `harness/src/voice/` Python package. Real-time Retell tool calls (`lookup_caller`, `create_callback_request`, `send_sales_lead_alert`) are handled by FastAPI endpoints on the same Render service. `book_service` remains on the Vercel dashboard (`app.calllock.co`) — it already works and the dashboard owns the Cal.com integration. Post-call processing fires an Inngest event and fans out through existing harness infrastructure (growth memory, alerts, job dispatch). Multi-tenant from day one. Zero-downtime cutover by running both services in parallel during transition.
+
+**Source correction:** The original spec referenced Alexandria (v9-triage, 15-state FSM, deployed Feb 12). The actual production agent is Valencia (v10-simplified, 10-state FSM, deployed Feb 14, Retell version 79). v10 was a structural redesign that cut 5 states based on the lesson: "Prompt-based guards: 0% success rate. Structural fixes (removing tools): 100% success rate."
 
 ## Decisions
 
@@ -16,15 +18,16 @@ Port the Alexandria V2/V3 Express voice agent backend into rabat as a new `harne
 | Migration target | Full port to Python | One runtime, one repo. Eliminates Node dependency. Rabat is the business OS. |
 | Package location | `harness/src/voice/` | Peer to `harness/`, `growth/`, `inbound/`. Clean boundary, shared infrastructure. |
 | Deployment | Same Render service | Voice routes mount on existing FastAPI app. No new infra to manage. |
-| Source material | V2 logic + V3 patterns | V2 is battle-tested (39 files, Vitest suite, 117-tag taxonomy). V3's traffic controller is a cleaner routing pattern. |
+| Source material | Valencia v10 logic + V2 extraction | v10-simplified is the production agent (10-state FSM, GPT-4o, Retell v79). V2's extraction/classification logic (117-tag taxonomy, scorecard, urgency) is battle-tested and ports as-is. |
 | Real-time vs post-call | Split | Real-time tool calls stay synchronous in FastAPI. Post-call fires Inngest event for async fan-out. |
 | Tenancy | Multi-tenant from day one | Rabat's repository layer enforces RLS. Fighting it for single-tenant would be more work. |
 | Cal.com + Twilio | Keep as-is | Working integrations, no reason to change. |
 | Dashboard | Same webhook contract | Dashboard stays on Vercel, receives same HMAC-signed payloads. |
 | Taxonomy storage | YAML knowledge node | `knowledge/industry-packs/hvac/taxonomy.yaml`. Reusable by other industry packs. |
-| Agent config storage | YAML knowledge node | `knowledge/industry-packs/hvac/voice/retell-agent-v9.yaml`. Versionable, no secrets. |
+| Agent config storage | YAML knowledge node | `knowledge/industry-packs/hvac/voice/retell-agent-v10.yaml`. Versionable, no secrets. Source: Valencia `retell-llm-v10-simplified.json`. |
+| book_service ownership | Stays on dashboard | `book_service` tool calls `app.calllock.co/api/retell/book-service` directly. Dashboard owns Cal.com booking integration. FastAPI does NOT handle bookings. |
 | Voice credential storage | New migration: `voice_config` JSONB column on `tenant_configs` | Existing `tenant_configs` (migration 002) has only named columns, no generic JSONB. New migration adds the column. |
-| Retell webhook routing | Single URL dispatcher | Retell sends all tool calls to one webhook URL with tool name in request body. Router dispatches internally. |
+| Retell webhook routing | Per-tool URLs | Retell v10 sends each tool call to a dedicated URL (e.g., `/webhook/retell/lookup_caller`). Each tool has its own endpoint — no dispatcher needed. |
 | Call records persistence | New `call_records` table | Post-call data needs a home. New migration alongside voice config column. |
 | HMAC secret | Global environment variable (`RETELL_WEBHOOK_SECRET`) | Retell uses a single API key for HMAC signing per account, not per-agent. |
 | Conversation state | Stateless tool handlers | Retell passes relevant context in each tool call payload. No server-side session state needed. |
@@ -33,30 +36,34 @@ Port the Alexandria V2/V3 Express voice agent backend into rabat as a new `harne
 
 ### Architectural boundary (updated)
 
-The original architecture spec drew the boundary as: harness orchestrates everything except real-time voice conversation. This migration moves the boundary — the harness now also handles real-time voice tool execution. Retell AI remains the voice *conversation* runtime (LLM, FSM transitions, speech). The harness handles all webhook-driven work: tool calls, post-call processing, booking management.
+The original architecture spec drew the boundary as: harness orchestrates everything except real-time voice conversation. This migration moves the boundary — the harness now also handles real-time voice tool execution. Retell AI remains the voice *conversation* runtime (LLM, FSM transitions, speech). The harness handles most webhook-driven work: tool calls, post-call processing, booking management API. The one exception is `book_service`, which stays on the dashboard.
 
 ```
-  ┌─────────────────────────────────────────────────────┐
-  │              AGENT HARNESS (LangGraph + FastAPI)      │
-  │  Workers, Jobs, Policy, Eval, Improvement Lab         │
-  │  Voice Tools, Post-Call Processing, Booking API        │
-  └──────────────────────┬──────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────┐
+  │              AGENT HARNESS (LangGraph + FastAPI)          │
+  │  Workers, Jobs, Policy, Eval, Improvement Lab             │
+  │  Voice Tools (lookup, callback, sales alert),             │
+  │  Post-Call Processing, Booking Management API             │
+  └──────────────────────┬────────────────────────────────────┘
                          │ orchestrates
-  ┌──────────────────────┼──────────────────────────────┐
-  │                      │                              │
-  │  PRODUCT CORE        │    VOICE RUNTIME             │
-  │  (Next.js Dashboard  │    (Retell AI v9-triage)     │
-  │   + Supabase         │                              │
-  │   + Cal.com          │    Handles: real-time calls,  │
-  │   + Twilio)          │    15-state FSM, Claude 3.5   │
-  │                      │    Haiku, speech synthesis     │
-  └──────────────────────┴──────────────────────────────┘
+  ┌──────────────────────┼──────────────────────────────────┐
+  │                      │                                  │
+  │  PRODUCT CORE        │    VOICE RUNTIME                 │
+  │  (Next.js Dashboard  │    (Retell AI v10-simplified)    │
+  │   + Supabase         │                                  │
+  │   + Cal.com          │    Handles: real-time calls,     │
+  │   + Twilio)          │    10-state FSM, GPT-4o,         │
+  │                      │    speech synthesis               │
+  │  book_service tool   │                                  │
+  │  (app.calllock.co)   │                                  │
+  └──────────────────────┴──────────────────────────────────┘
 ```
 
 ### Runtime split
 
-- **Retell AI:** Real-time voice conversation (LLM, state transitions, speech-to-text, text-to-speech)
-- **Python (FastAPI):** All webhook handlers — tool calls, post-call extraction, booking REST API
+- **Retell AI:** Real-time voice conversation (GPT-4o LLM, 10-state FSM, speech-to-text, text-to-speech)
+- **Python (FastAPI):** Tool call handlers (`lookup_caller`, `create_callback_request`, `send_sales_lead_alert`), post-call extraction, booking management REST API
+- **Next.js Dashboard (Vercel):** `book_service` tool handler (Cal.com integration), dashboard UI
 - **TypeScript (Inngest):** Thin event proxies — `calllock/call.ended` triggers fan-out to harness endpoints
 - **Supabase:** Persistence for call records, bookings, sessions, tenant configs
 
@@ -65,21 +72,20 @@ The original architecture spec drew the boundary as: harness orchestrates everyt
 ```
 harness/src/voice/
 ├── __init__.py              # Public API exports
-├── router.py                # FastAPI router: Retell webhook routes
-├── booking_router.py        # FastAPI router: booking REST API
-├── models.py                # Pydantic models (ConversationState, tool request/response)
-├── auth.py                  # Retell HMAC-SHA256 verification + API key auth
+├── router.py                # FastAPI router: Retell tool call endpoints (per-tool URLs)
+├── post_call_router.py      # FastAPI router: Retell call-ended webhook
+├── booking_router.py        # FastAPI router: booking management REST API (dashboard-facing)
+├── models.py                # Pydantic models (RetellToolCallRequest, ConversationState, etc.)
+├── auth.py                  # Retell HMAC-SHA256 verification + booking API key auth
 ├── tools/
 │   ├── __init__.py
-│   ├── service_area.py      # validate_service_area (ZIP lookup from tenant config)
-│   ├── calendar.py          # check_calendar_availability (Cal.com slots)
-│   ├── booking.py           # book_appointment (Cal.com create)
-│   ├── customer_status.py   # get_customer_status (prior bookings lookup)
-│   └── end_call.py          # end_call state finalization
+│   ├── lookup_caller.py     # lookup_caller — full caller history from Supabase
+│   ├── create_callback.py   # create_callback_request — callback + SMS notification
+│   └── sales_lead_alert.py  # send_sales_lead_alert — high-ticket lead SMS to owner
 ├── services/
 │   ├── __init__.py
-│   ├── calcom.py            # Cal.com API client (availability, book, cancel, reschedule)
-│   ├── twilio_sms.py        # Emergency SMS + sales lead alerts via Twilio
+│   ├── calcom.py            # Cal.com API client (lookup, cancel, reschedule — NOT booking)
+│   ├── twilio_sms.py        # SMS: callback alerts, sales lead alerts, emergency alerts
 │   └── dashboard.py         # Dashboard webhook sync (payload transform, HMAC signing)
 ├── extraction/
 │   ├── __init__.py
@@ -92,6 +98,12 @@ harness/src/voice/
     ├── call_type.py          # Urgency → urgencyTier + dashboard level mapping
     ├── revenue.py            # Revenue tier classification
     └── traffic.py            # Traffic controller: spam/vendor/legitimate routing
+
+NOTE: `book_service` is NOT in this package. It stays on the dashboard at
+`app.calllock.co/api/retell/book-service`. The dashboard owns Cal.com booking.
+`end_call` is Retell-internal (no webhook — Retell handles it natively).
+`validate_service_area` and `check_calendar_availability` do not exist as tools —
+ZIP validation is in-prompt logic, calendar availability is part of book_service.
 ```
 
 ### Router mounting
@@ -99,10 +111,12 @@ harness/src/voice/
 ```python
 # In harness/src/harness/server.py
 from voice.router import voice_router
+from voice.post_call_router import post_call_router
 from voice.booking_router import booking_router
 
-app.include_router(voice_router, prefix="/webhook/retell")    # HMAC auth
-app.include_router(booking_router, prefix="/api/bookings")    # API key auth
+app.include_router(voice_router, prefix="/webhook/retell")         # HMAC auth — tool calls
+app.include_router(post_call_router, prefix="/webhook/retell")     # HMAC auth — call-ended
+app.include_router(booking_router, prefix="/api/bookings")         # API key auth — dashboard
 ```
 
 ### Shared infrastructure (reused, not duplicated)
@@ -117,29 +131,35 @@ When Retell calls a tool mid-conversation, the request hits FastAPI directly. No
 
 ```
 Caller speaks → Retell LLM decides to call tool
-    → POST /webhook/retell/tool-call
+    → POST /webhook/retell/{tool_name}  (per-tool URL, configured in Retell agent)
     → auth.py verifies HMAC-SHA256 signature (global RETELL_WEBHOOK_SECRET env var)
-    → dispatcher reads tool name from request body, routes to handler
     → tenant_scope.py sets RLS context from call metadata.tenant_id
-    → tool handler executes (external API call or DB query)
+    → tool handler executes (DB query or Twilio SMS)
     → returns JSON response to Retell
     → Retell LLM continues conversation
 ```
 
 ### Webhook routing
 
-Retell sends all tool calls to a **single webhook URL** (`POST /webhook/retell/tool-call`) with the tool name and arguments in the request body. The router acts as a dispatcher:
+Retell v10 configures each tool with its own webhook URL. There is **no dispatcher** — each tool has a dedicated FastAPI endpoint:
 
 ```python
-@voice_router.post("/tool-call")
-async def handle_tool_call(request: RetellToolCallRequest):
-    handler = TOOL_HANDLERS.get(request.tool_name)
-    if not handler:
-        return RetellToolResponse(error=f"Unknown tool: {request.tool_name}")
-    return await handler(request)
+# Tools handled by FastAPI (rabat)
+@voice_router.post("/lookup_caller")
+async def handle_lookup_caller(request: RetellToolCallRequest): ...
+
+@voice_router.post("/create_callback")
+async def handle_create_callback(request: RetellToolCallRequest): ...
+
+@voice_router.post("/send_sales_lead_alert")
+async def handle_sales_lead_alert(request: RetellToolCallRequest): ...
+
+# Tools NOT handled by FastAPI:
+# - book_service → app.calllock.co/api/retell/book-service (dashboard)
+# - end_call → Retell-internal (no webhook)
 ```
 
-Retell also sends a separate `POST /webhook/retell/call-ended` for the post-call webhook — this is a different endpoint, not a tool call.
+Retell also sends a separate `POST /webhook/retell/call-ended` for the post-call webhook — this is a lifecycle event, not a tool call.
 
 ### Tool handler pattern
 
@@ -151,20 +171,39 @@ Every tool handler follows the same structure:
 4. **Execute** — call external API or query DB
 5. **Return** — JSON matching Retell's tool response schema
 
-### Tool inventory
+### Tool inventory (v10-simplified)
 
-| Tool | External dependency | Latency budget | Notes |
-|---|---|---|---|
-| `validate_service_area` | DB lookup (`tenant_configs.service_area_zips`) | <100ms | Pure config lookup |
-| `check_calendar_availability` | Cal.com `/slots/available` API | <1.5s | Respects urgency → date window |
-| `book_appointment` | Cal.com booking API | <2s | Returns `appointmentId` + confirmation |
-| `get_customer_status` | DB query (prior bookings by phone) | <200ms | Supabase query |
-| `end_call` | None | <100ms | Finalizes conversation state |
-| `send_emergency_sms` | Twilio SMS API | <1s | Fire-and-forget, life safety only |
+**Tools handled by FastAPI (this migration):**
+
+| Tool | Retell URL | External dependency | Latency budget | States |
+|---|---|---|---|---|
+| `lookup_caller` | `/webhook/retell/lookup_caller` | Supabase (jobs, calls, notes, bookings) | <500ms | lookup |
+| `create_callback_request` | `/webhook/retell/create_callback` | Twilio SMS (callback notification) | <1s | callback |
+| `send_sales_lead_alert` | `/webhook/retell/send_sales_lead_alert` | Twilio SMS (owner alert) | <1s | callback |
+
+**Tools NOT handled by FastAPI:**
+
+| Tool | Owner | Notes |
+|---|---|---|
+| `book_service` | Dashboard (`app.calllock.co/api/retell/book-service`) | Cal.com booking. Stays on dashboard. |
+| `end_call` | Retell-internal | No webhook — Retell handles natively. States: safety_exit, service_area, done, callback |
+
+**Not tools (in-prompt logic):**
+
+| Capability | How it works | States |
+|---|---|---|
+| ZIP validation | LLM checks ZIP prefix "787" per prompt rules | service_area |
+| Calendar availability | Part of `book_service` flow on dashboard | booking |
+| Safety screening | LLM asks question, routes via edges only | safety |
 
 ### Error handling
 
-If an external API fails (Cal.com down, Twilio timeout), the tool returns a graceful degradation response to Retell. Example: "I wasn't able to check the calendar right now. Let me take your number and have someone call you back." Tools never hang or throw — Retell would interpret silence as a tool failure and the caller hears dead air.
+If an external dependency fails (Supabase down for lookup, Twilio timeout for SMS), the tool returns a graceful degradation response to Retell. Examples:
+- `lookup_caller` failure: return `{found: false}` — agent proceeds as new caller (slightly worse UX, no data loss)
+- `create_callback_request` failure: return success to Retell (caller hears normal ending) but log failure and fire Inngest retry event
+- `send_sales_lead_alert` failure: return success to Retell, retry SMS via Inngest post-call
+
+Tools never hang or throw — Retell has a per-tool timeout (8s for lookup, default for others) and the caller hears dead air if the tool doesn't respond.
 
 ## 4. Post-Call Flow
 
@@ -291,24 +330,22 @@ Every webhook Retell fires includes this metadata. The voice module extracts `te
 
 ```python
 class VoiceConfig(BaseModel):
-    # Cal.com
-    calcom_api_key: str
-    calcom_event_type_id: int
-    calcom_username: str
-    calcom_timezone: str                # e.g., "America/Chicago"
-    # Twilio
+    # Twilio (for callback SMS and sales lead alerts)
     twilio_account_sid: str
     twilio_auth_token: str
     twilio_from_number: str
+    twilio_owner_phone: str             # Owner's phone for sales lead alerts
     # Dashboard
     dashboard_webhook_url: str
     dashboard_webhook_secret: str
-    # Service area
+    # Service area (used by post-call classification, not real-time — ZIP check is in-prompt)
     service_area_zips: list[str]
     # Business identity
     business_name: str
     business_phone: str
 ```
+
+Note: Cal.com credentials (`calcom_api_key`, `calcom_event_type_id`, etc.) are NOT in `VoiceConfig` because `book_service` stays on the dashboard. The booking management REST API (Section 7) uses Cal.com for lookup/cancel/reschedule — those credentials are stored in a separate `calcom_config` field on `tenant_configs`, shared with the dashboard.
 
 ### New migration: `048_voice_config.sql`
 
@@ -406,13 +443,22 @@ On the first tool call of a conversation, `VoiceConfig` is fetched from `tenant_
 
 ### Retell agent configs as knowledge nodes
 
-The v9-triage agent definition (15-state FSM, tool definitions, prompts) is stored as:
+The v10-simplified agent definition (10-state FSM, tool definitions, prompts) is stored as:
 
 ```
-knowledge/industry-packs/hvac/voice/retell-agent-v9.yaml
+knowledge/industry-packs/hvac/voice/retell-agent-v10.yaml
 ```
 
-Standard knowledge node frontmatter. Versionable, reviewable, loadable by the knowledge graph. Different tenants can reference different agent versions. **No secrets in knowledge files** — API keys and credentials live only in `tenant_configs` in Supabase.
+Source: Valencia `voice-agent/retell-llm-v10-simplified.json`. Standard knowledge node frontmatter. Versionable, reviewable, loadable by the knowledge graph. Different tenants can reference different agent versions. **No secrets in knowledge files** — API keys and credentials live only in `tenant_configs` in Supabase.
+
+### v10 design principles (preserve during port)
+
+The v10 state machine encodes hard-won lessons from 18 patches on v9:
+
+1. **States that make decisions have no tools. States that take actions have specific tools. Terminal states handle end_call.**
+2. **`general_tools` is empty** — no tool is available in all states. This prevents the LLM from calling `end_call` or `book_service` from wrong states.
+3. **All non-happy-path exits converge to ONE terminal: `callback`** — simplifies error handling and ensures callers always get a callback if anything goes wrong.
+4. **`booking` has NO `end_call`** — agent cannot hang up after a failed booking, must route to `callback` instead.
 
 ## 6. Extraction and Classification Logic
 
@@ -420,7 +466,7 @@ All extraction and classification modules are **pure functions** — no side eff
 
 ### 117-tag HVAC taxonomy (`extraction/tags.py`)
 
-Direct port from Alexandria V2 `classification/tags.ts`:
+Direct port from Valencia V2 backend `classification/tags.ts` (shared across Alexandria and Valencia — extraction logic is identical):
 
 - 9 categories: HAZARD (7), URGENCY (8), SERVICE_TYPE (23), REVENUE (9), RECOVERY (10), LOGISTICS (20), CUSTOMER (15), NON_CUSTOMER (12), CONTEXT (13)
 - Negation-aware: checks 40 chars before match for "no", "not", "never", "don't", "isn't"
@@ -512,8 +558,13 @@ Voice routes mount on the existing harness FastAPI app. `render.yaml` updated to
 ### Zero-downtime cutover
 
 1. **Deploy** updated harness with voice routes to Render. Old Express and new FastAPI run simultaneously.
-2. **Smoke test** each voice endpoint with test payloads. Verify Cal.com integration, dashboard webhook delivery, Inngest event firing.
-3. **Update Retell agent config** — point tool webhook URLs from Express service to FastAPI service. Single update in Retell dashboard per agent.
+2. **Smoke test** each voice endpoint with test payloads. Verify lookup_caller returns correct data, create_callback sends SMS, Inngest event fires on call-ended.
+3. **Update Retell agent tool URLs** — only 3 tool URLs change (per-tool, not a single webhook):
+   - `lookup_caller`: `calllock-server.onrender.com/webhook/retell/lookup_caller` → `{rabat-service}/webhook/retell/lookup_caller`
+   - `create_callback_request`: `calllock-server.onrender.com/webhook/retell/create_callback` → `{rabat-service}/webhook/retell/create_callback`
+   - `send_sales_lead_alert`: `calllock-server.onrender.com/webhook/retell/send_sales_lead_alert` → `{rabat-service}/webhook/retell/send_sales_lead_alert`
+   - `book_service`: **NO CHANGE** — stays at `app.calllock.co/api/retell/book-service`
+   - Also update the post-call webhook URL in Retell agent settings.
 4. **Monitor** first 10-20 live calls. Check tool call latency, dashboard card correctness, Inngest event processing.
 5. **Decommission** Express service on Render.
 
@@ -535,8 +586,10 @@ For Inngest event compatibility: during the cutover period, the Express service 
 | `touchpoint_log` | Growth system (via Inngest) | Call event as touchpoint |
 | Alert records | Alert evaluator (via Inngest) | Emergency assessment |
 | Job records | Job dispatcher (via Inngest) | Post-call job creation |
-| Cal.com bookings | Voice module (real-time) | Created during call |
-| Twilio SMS | Voice module (real-time + Inngest) | Emergency alerts |
+| Cal.com bookings | Dashboard (`book_service` tool) | Created during call via Retell → dashboard |
+| Twilio SMS (callbacks) | Voice module (real-time `create_callback_request`) | Callback notifications |
+| Twilio SMS (sales leads) | Voice module (real-time `send_sales_lead_alert`) | High-ticket owner alerts |
+| Twilio SMS (emergency, post-call) | Voice module (via Inngest, conditional) | Safety emergency alerts |
 
 ## 11. Observability
 
@@ -550,8 +603,8 @@ For Inngest event compatibility: during the cutover period, the Express service 
 | `voice.post_call.extraction_failures` | Counter | Extraction failures (partial extractions) |
 | `voice.dashboard_sync.duration_ms` | Histogram | Dashboard webhook delivery time |
 | `voice.dashboard_sync.failures` | Counter | Dashboard webhook delivery failures |
-| `voice.calcom.duration_ms` | Histogram | Cal.com API call latency |
-| `voice.calcom.errors` | Counter | Cal.com API failures |
+| `voice.twilio_sms.duration_ms` | Histogram | Twilio SMS send latency |
+| `voice.twilio_sms.errors` | Counter | Twilio SMS failures |
 | `voice.calls.total` | Counter | Total calls processed (labels: `route`, `urgency_tier`) |
 | `voice.quality_score` | Histogram | Call quality score distribution |
 
@@ -560,7 +613,7 @@ For Inngest event compatibility: during the cutover period, the Express service 
 | Alert | Threshold | Action |
 |---|---|---|
 | Tool call P95 latency > 1.5s | Sustained 5 min | Page — callers hearing dead air |
-| Cal.com error rate > 10% | Over 15 min window | Page — bookings failing |
+| Twilio SMS error rate > 10% | Over 15 min window | Warn — callback/sales alert SMS failing |
 | Extraction failure rate > 5% | Over 30 min window | Warn — partial data reaching dashboard |
 | Dashboard sync failure rate > 20% | Over 15 min window | Warn — dashboard cards missing |
 | Zero calls processed in 1 hour | During business hours | Warn — possible webhook misconfiguration |
@@ -579,26 +632,95 @@ Transcripts contain customer names, addresses, and phone numbers. PII handling f
 
 The `sync-dashboard` Inngest function sets `call_records.synced_to_dashboard = true` on successful delivery. If Inngest exhausts retries (default: 3 attempts with exponential backoff), the row remains `synced_to_dashboard = false`. A daily Inngest cron (`calllock/call.dashboard.retry`) queries `idx_call_records_unsynced` and re-attempts delivery for rows older than 1 hour but younger than 7 days. After 7 days, unsynced rows are flagged for manual review.
 
-## 12. Taxonomy startup validation
+## 12. v10 State Machine Reference
+
+The production Retell agent uses a 10-state FSM (v10-simplified, deployed Feb 14 2026). This is the definitive reference for the migration.
+
+```
+  ┌─────────┐
+  │ welcome │ (no tools, edges only)
+  └────┬────┘
+       │ service intent          │ non-service intent
+       ▼                         ▼
+  ┌─────────┐              ┌──────────┐
+  │ lookup  │              │ callback │ (create_callback_request,
+  │ (lookup_│              │          │  send_sales_lead_alert,
+  │  caller)│              │          │  end_call)
+  └────┬────┘              └──────────┘
+       │
+       ▼
+  ┌─────────┐
+  │ safety  │ (no tools, edges only)
+  └────┬────┘
+       │ clear               │ emergency
+       ▼                     ▼
+  ┌─────────────┐      ┌─────────────┐
+  │ service_area│      │ safety_exit │ (end_call)
+  │ (end_call   │      └─────────────┘
+  │  for OOA)   │
+  └──────┬──────┘
+         │ in-area
+         ▼
+  ┌───────────┐
+  │ discovery │ (no tools, edges only)
+  └─────┬─────┘
+        │
+        ▼
+  ┌─────────┐
+  │ confirm │ (no tools, edges only — merged urgency + pre_confirm)
+  └────┬────┘
+       │ approved              │ callback/sales lead
+       ▼                       ▼
+  ┌─────────┐            ┌──────────┐
+  │ booking │            │ callback │
+  │ (book_  │            └──────────┘
+  │ service)│ ← NO end_call!
+  └────┬────┘
+       │ success            │ failure
+       ▼                    ▼
+  ┌──────┐            ┌──────────┐
+  │ done │            │ callback │
+  │(end_ │            └──────────┘
+  │ call)│
+  └──────┘
+```
+
+### Tool-to-state mapping (v10)
+
+| State | Tools available | Webhook owner |
+|---|---|---|
+| welcome | (none) | — |
+| lookup | `lookup_caller` | FastAPI |
+| safety | (none) | — |
+| safety_exit | `end_call` | Retell-internal |
+| service_area | `end_call` (out-of-area only) | Retell-internal |
+| discovery | (none) | — |
+| confirm | (none) | — |
+| booking | `book_service` (NO end_call) | Dashboard |
+| done | `end_call` | Retell-internal |
+| callback | `create_callback_request`, `send_sales_lead_alert`, `end_call` | FastAPI (callback, alert), Retell-internal (end_call) |
+
+## 13. Taxonomy startup validation
 
 The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/taxonomy.yaml` at module import time. If the file is missing or malformed, the module raises an `ImportError` at startup — failing fast rather than silently returning zero tags on the first post-call webhook.
 
-## 13. What Gets Retired
+## 14. What Gets Retired
 
 | Component | Action |
 |---|---|
-| Alexandria Express V2 backend (Render) | Decommission after cutover |
-| Alexandria Express V3 experimental | Already unused, no action |
+| Valencia Express V2 backend on Render (`calllock-server.onrender.com`) | Decommission after cutover |
+| Alexandria workspace (`retellai-calllock/alexandria/`) | Already superseded by Valencia, no action |
+| Valencia workspace (`retellai-calllock/valencia/`) | Archive after migration complete — v10 config is source of truth |
 | 23 city git worktrees | Archive — deployment artifacts only |
 | `retellai-calllock/` workspace | Archive after migration complete |
-| Node.js/TypeScript runtime for voice | Eliminated entirely |
+| Node.js/TypeScript runtime for voice | Eliminated entirely (except `book_service` which stays on dashboard) |
 
-## 14. Dependencies
+## 15. Dependencies
 
 ### Python packages (additions to `harness/requirements.txt`)
 
 - `twilio` — Twilio SMS client
-- No new packages for Cal.com — uses `httpx` (already in requirements)
+- `httpx` (already in requirements) — used for Cal.com booking management REST API and dashboard webhook delivery
 - No new packages for taxonomy — uses `pyyaml` (already in requirements) + `re` (stdlib)
 
 ### Inngest events (additions to `inngest/src/events/schemas.ts`)
