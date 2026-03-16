@@ -174,7 +174,7 @@ When Retell fires the `call-ended` webhook, the voice module does minimal synchr
 
 1. Verify HMAC signature
 2. Extract `tenant_id` from call metadata
-3. **Persist raw Retell payload** to `call_records` table immediately (before extraction). This ensures call data is never lost even if extraction fails.
+3. **Generate `call_id`** (harness UUID via `uuid4()`) and **persist raw Retell payload** to `call_records` table immediately (before extraction). The `retell_call_id` field stores Retell's own call identifier from the webhook payload. The harness-generated `call_id` is the primary key used across all downstream systems (Inngest events, dashboard sync, growth touchpoints). This ensures call data is never lost even if extraction fails.
 4. Run extraction pipeline (pure functions, no external calls):
    - `post_call.py` — customer name, service address, safety flags from transcript
    - `urgency.py` — urgency inference from keywords
@@ -194,8 +194,8 @@ If any extraction step throws an exception, the handler catches it, logs the err
 
 ```
 calllock/call.ended
-  ├→ process-call          (existing) — harness orchestration, job dispatch
-  ├→ sync-dashboard        (new)      — transform payload, POST to dashboard webhook
+  ├→ process-voice-call    (new)      — maps CallEndedEvent → ProcessCallRequest, calls harness /process-call
+  ├→ sync-dashboard        (new)      — transform payload, POST to dashboard webhook, set synced_to_dashboard
   ├→ evaluate-alerts       (existing) — emergency alert evaluation
   ├→ growth-touchpoint     (existing) — log call as growth touchpoint
   └→ send-emergency-sms    (new, conditional) — only if safety emergency flagged AND not already sent during call
@@ -243,7 +243,25 @@ class CallEndedEvent(BaseModel):
     call_recording_url: str | None
 ```
 
-This extends rabat's existing `ProcessCallRequest` model shape with voice-specific fields.
+`CallEndedEvent` shares common fields with rabat's existing `ProcessCallRequest` (`tenant_id`, `call_id`, `call_source`, `transcript`) but is a **separate model** — not a subclass. `ProcessCallRequest` uses `StrictModel` with `extra="forbid"`, so it cannot accept voice-specific fields.
+
+### Integration with existing `process-call` Inngest function
+
+The existing `process-call` function expects a `ProcessCallRequest` payload. A new Inngest function `process-voice-call` subscribes to `calllock/call.ended` and maps `CallEndedEvent` to `ProcessCallRequest`:
+
+```python
+def voice_event_to_process_call(event: CallEndedEvent) -> ProcessCallRequest:
+    return ProcessCallRequest(
+        call_id=event.call_id,
+        tenant_id=event.tenant_id,
+        transcript=event.transcript,
+        problem_description=event.problem_description,
+        call_source="retell",
+        metadata={"voice_event": True, "route": event.route},
+    )
+```
+
+This replaces the `process-call (existing)` entry in the fan-out diagram above. The `process-voice-call` function calls the existing harness `/process-call` endpoint with the mapped payload.
 
 ### Why this split
 
@@ -324,11 +342,25 @@ CREATE TABLE public.call_records (
   call_duration_seconds integer,
   end_call_reason text,
   call_recording_url text,
+  emergency_sms_sent_at timestamptz,    -- dedup: set when SMS sent during live call
   synced_to_dashboard boolean DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(tenant_id, call_id)
 );
+
+-- Auto-update updated_at on row modification
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER call_records_updated_at
+  BEFORE UPDATE ON public.call_records
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- Booking API keys table
 CREATE TABLE public.voice_api_keys (
@@ -359,7 +391,11 @@ CREATE INDEX idx_call_records_unsynced ON public.call_records(tenant_id, synced_
   WHERE synced_to_dashboard = false;
 ```
 
-`VoiceConfig` is stored in `tenant_configs.voice_config` JSONB column. Credentials are encrypted at the application layer before writing to this column (same pattern as other sensitive tenant config).
+`VoiceConfig` is stored in `tenant_configs.voice_config` JSONB column. Sensitive credentials (`calcom_api_key`, `twilio_auth_token`, `dashboard_webhook_secret`) are encrypted at the application layer using AES-256-GCM before writing to this column. The encryption key is sourced from `VOICE_CREDENTIAL_KEY` environment variable (same pattern as inbound pipeline's `IMAP_CREDENTIAL_KEY` in the inbound pipeline spec Section 13). Key rotation: re-encrypt on write with the current key; decryption attempts the current key first, then the previous key (`VOICE_CREDENTIAL_KEY_PREV`).
+
+### Empty voice config handling
+
+Non-voice tenants will have `voice_config = '{}'` after migration 048. If a Retell webhook arrives with a `tenant_id` whose `voice_config` is empty or missing required fields, `VoiceConfig` Pydantic validation will fail. The tool handler catches this and returns a graceful error to Retell: "We're experiencing technical difficulties. Please call back or leave a message." This prevents dead air for misconfigured tenants.
 
 ### Credential caching
 
@@ -391,7 +427,7 @@ Direct port from Alexandria V2 `classification/tags.ts`:
 - Multi-word phrases use substring match; single words use word-boundary regex
 - Returns `list[str]` of matched tag names
 
-Tag definitions stored in `knowledge/industry-packs/hvac/taxonomy.yaml` as structured data. The Python module loads them at startup. Other industry packs can define their own taxonomies using the same engine.
+Tag definitions stored in `knowledge/industry-packs/hvac/taxonomy.yaml` as structured data. **This file must be created as a deliverable of this migration** — the 117 tags are ported from V2's `classification/tags.ts` into YAML format. The Python module loads them at startup. Other industry packs can define their own taxonomies using the same engine.
 
 ### Call scorecard (`extraction/call_scorecard.py`)
 
@@ -442,7 +478,16 @@ POST /api/bookings/reschedule                → Reschedule by booking_uid + new
 
 ### Auth
 
-API key via `X-API-Key` header, timing-safe comparison. Each API key maps to one tenant — tenant resolution happens at auth time. Separate from Retell HMAC auth.
+API key via `X-API-Key` header, timing-safe comparison against SHA-256 hash stored in `voice_api_keys` table. Each API key maps to one tenant — tenant resolution happens at auth time. Separate from Retell HMAC auth.
+
+### API key provisioning
+
+Keys are created during tenant onboarding (when `OnboardTenantRequest.configure_voice_agent = True`):
+1. Generate a random 32-byte API key, encode as base64
+2. Store SHA-256 hash in `voice_api_keys` with the `tenant_id`
+3. Return the plaintext key once to the caller (not stored)
+4. Rotation: create a new key, distribute to dashboard, then revoke the old key by setting `revoked_at`
+5. Auth middleware skips keys where `revoked_at IS NOT NULL`
 
 ### Validation
 
@@ -456,7 +501,7 @@ Pydantic equivalents of V2's Zod schemas:
 Extend existing harness health endpoint:
 
 - `GET /health` — simple 200 (Render load balancer)
-- `GET /health/detailed` — existing checks + Cal.com reachability + Twilio reachability
+- `GET /health/detailed` — existing checks + Cal.com connectivity (`HEAD https://api.cal.com`, not credential-specific) + Twilio connectivity (`HEAD https://api.twilio.com`). These are connectivity checks, not per-tenant credential checks — credential validity is verified on first use per call.
 
 ## 9. Deployment and Cutover
 
@@ -485,7 +530,7 @@ For Inngest event compatibility: during the cutover period, the Express service 
 | Table / Resource | Primary writer | Notes |
 |---|---|---|
 | `tenant_configs` (voice credentials) | Onboarding / admin | Voice module reads only |
-| Call session state | Voice module (real-time tools) | Upserted during call |
+| `call_records` | Voice module (post-call handler) | Insert raw payload, update with extracted fields |
 | Dashboard webhook | Voice module (via Inngest) | Post-call sync |
 | `touchpoint_log` | Growth system (via Inngest) | Call event as touchpoint |
 | Alert records | Alert evaluator (via Inngest) | Emergency assessment |
@@ -528,7 +573,11 @@ Transcripts contain customer names, addresses, and phone numbers. PII handling f
 - **Supabase `call_records`:** Raw transcript stored unredacted (needed for extraction retry and quality review). Access controlled by RLS — only the owning tenant's users can query.
 - **Inngest event payload:** Transcript included in `calllock/call.ended` event. Inngest event logs should be treated as PII-containing and retention-limited.
 - **Logs (Pino/structlog):** Phone numbers masked in structured logs (port V2's phone masking utility). Customer names not logged.
-- **Retention:** `call_records` rows retained for 90 days by default. Configurable per tenant via `tenant_configs`. Transcripts can be purged independently of extracted fields.
+- **Retention:** `call_records` rows retained for 90 days by default. Configurable per tenant via `tenant_configs`. Transcripts can be purged independently of extracted fields. A weekly Inngest cron (`calllock/call.retention.cleanup`) deletes expired rows based on tenant retention policy. Transcripts older than the retention window are nullified first; full row deletion happens 30 days after transcript purge.
+
+### Dashboard sync lifecycle
+
+The `sync-dashboard` Inngest function sets `call_records.synced_to_dashboard = true` on successful delivery. If Inngest exhausts retries (default: 3 attempts with exponential backoff), the row remains `synced_to_dashboard = false`. A daily Inngest cron (`calllock/call.dashboard.retry`) queries `idx_call_records_unsynced` and re-attempts delivery for rows older than 1 hour but younger than 7 days. After 7 days, unsynced rows are flagged for manual review.
 
 ## 12. Taxonomy startup validation
 
@@ -560,5 +609,8 @@ The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/
 
 ### Inngest functions (additions)
 
-- `sync-dashboard` — receives `calllock/call.ended`, transforms payload, POSTs to dashboard webhook
-- `send-emergency-sms` — receives `calllock/call.ended` (filtered: only safety emergencies), sends Twilio SMS
+- `process-voice-call` — receives `calllock/call.ended`, maps `CallEndedEvent` → `ProcessCallRequest`, calls existing harness `/process-call` endpoint
+- `sync-dashboard` — receives `calllock/call.ended`, transforms payload, POSTs to dashboard webhook, sets `synced_to_dashboard = true`
+- `send-emergency-sms` — receives `calllock/call.ended` (filtered: only safety emergencies, checks `emergency_sms_sent_at` for dedup), sends Twilio SMS
+- `dashboard-sync-retry` — daily cron, retries unsynced `call_records` (1h–7d old)
+- `call-records-retention` — weekly cron, purges transcripts and deletes expired `call_records` per tenant retention policy
