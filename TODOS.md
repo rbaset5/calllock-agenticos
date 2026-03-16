@@ -186,12 +186,20 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Source:** CEO mega-review v2, operator-surface recommendation.
 
 ### Define external service resilience patterns
-**Status:** Partially resolved in code and ADR 002 for Supabase, Inngest, and LangSmith. Remaining work is Retell AI, Cal.com, and Twilio once those integrations exist in this repo.
-**What:** Define fallback behavior when Retell AI, Supabase, Cal.com, or Twilio are unavailable.
-**Why:** All four are production SPOFs with no fallback story in the spec.
-**Effort:** M
-**Depends on:** Section 0 (Current State) establishing which services are critical.
-**Source:** CEO review, Section 1F (Single Points of Failure).
+**Status:** Partially resolved in code and ADR 002 for Supabase, Inngest, and LangSmith. Voice migration spec (2026-03-16) addresses Twilio and Retell resilience for the voice module. Remaining gaps below.
+**What:** Define fallback behavior when Retell AI, Cal.com, or Twilio are unavailable.
+**Why:** All are production SPOFs. The voice migration CEO review (HOLD SCOPE) resolved the voice-specific patterns but these need to be generalized.
+**Resilience status by service:**
+- **Supabase:** Resolved (ADR 002 — retry + local recovery journal).
+- **Inngest:** Resolved (ADR 002).
+- **LangSmith:** Resolved (ADR 002).
+- **Twilio (voice module):** Addressed in voice spec — graceful Retell error response on failure, Inngest retry for post-call SMS. Not yet generalized to other Twilio uses.
+- **Retell AI (webhook delivery):** Addressed in voice spec — return 500 triggers Retell webhook retry. Retell retry window needs verification against their docs.
+- **Cal.com (booking via dashboard):** NOT addressed — `book_service` stays on dashboard (`app.calllock.co`). If Cal.com is down during a live call, the dashboard's book-service endpoint must handle it. Rabat's booking management REST API (lookup/cancel/reschedule) needs its own Cal.com fallback.
+- **Cal.com (booking management on FastAPI):** NOT addressed — httpx calls to Cal.com for lookup/cancel/reschedule need timeout + retry + graceful 503 pattern.
+**Effort:** S (remaining work is Cal.com resilience on FastAPI side only)
+**Depends on:** Voice migration implementation landing.
+**Source:** CEO review, Section 1F (Single Points of Failure). Updated 2026-03-16 after voice migration CEO review.
 
 ### Define Inngest event validation schema
 **Status:** Resolved in code and ADR 004 for `harness/process-call` and `harness/job-complete`.
