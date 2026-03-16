@@ -11,49 +11,12 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
+from .post_call import extract_problem_duration
+
 NEGATION_PATTERN = re.compile(
     r"\b(no|not|don't|doesn't|didn't|isn't|aren't|wasn't|weren't|never|deny|denied|any)\b",
     re.IGNORECASE,
 )
-
-_DURATION_PATTERNS: tuple[tuple[re.Pattern[str], int, str], ...] = (
-    (re.compile(r"\b(this morning|this afternoon|this evening|tonight|today)\b", re.I), 1, "acute"),
-    (re.compile(r"\b(just started|just happened|just now|just began)\b", re.I), 1, "acute"),
-    (re.compile(r"\b(an? (?:few |couple )?hours?(?: ago)?)\b", re.I), 1, "acute"),
-    (re.compile(r"\b((?:about |like )?an? hour(?: ago)?)\b", re.I), 1, "acute"),
-    (re.compile(r"\b(yesterday|last night)\b", re.I), 1, "recent"),
-    (
-        re.compile(r"\b(since (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b", re.I),
-        1,
-        "recent",
-    ),
-    (
-        re.compile(r"\b((?:about |like )?(?:\d|a few|a couple|couple|several) days?(?: ago| now)?)\b", re.I),
-        1,
-        "recent",
-    ),
-    (re.compile(r"\b(this week|earlier this week)\b", re.I), 1, "recent"),
-    (re.compile(r"\b((?:a |the )?(?:day|night) before yesterday)\b", re.I), 1, "recent"),
-    (
-        re.compile(r"\b((?:about |like )?(?:\d|a few|a couple|couple|several) weeks?(?: ago| now)?)\b", re.I),
-        1,
-        "ongoing",
-    ),
-    (
-        re.compile(r"\b((?:about |like )?(?:\d|a few|a couple|couple|several) months?(?: ago| now)?)\b", re.I),
-        1,
-        "ongoing",
-    ),
-    (
-        re.compile(r"\b((?:about |like )?(?:\d|a few|a couple|couple|several) years?(?: ago| now)?)\b", re.I),
-        1,
-        "ongoing",
-    ),
-    (re.compile(r"\b((?:for )?(?:a while|some time|a long time|ages|years))\b", re.I), 1, "ongoing"),
-    (re.compile(r"\b((?:about |like )?a (?:month|year)(?: ago)?)\b", re.I), 1, "ongoing"),
-    (re.compile(r"\b(last (?:week|month|year))\b", re.I), 1, "ongoing"),
-)
-
 
 def _knowledge_root() -> Path:
     return Path(__file__).resolve().parents[4] / "knowledge" / "industry-packs" / "hvac"
@@ -122,26 +85,6 @@ def _contains_phrase(text: str, phrase: str) -> bool:
     prefix = text[max(0, match.start() - 40) : match.start()]
     return NEGATION_PATTERN.search(prefix) is None
 
-
-def _extract_problem_duration(transcript: str | None) -> dict[str, str] | None:
-    if not transcript:
-        return None
-
-    user_lines = " ".join(
-        line.removeprefix("User:").strip()
-        for line in transcript.splitlines()
-        if line.startswith("User:")
-    )
-    if not user_lines:
-        return None
-
-    for pattern, group_index, category in _DURATION_PATTERNS:
-        match = pattern.search(user_lines)
-        if match and match.group(group_index):
-            return {"raw": match.group(group_index).strip(), "category": category}
-    return None
-
-
 def _call_datetime(call_start_timestamp: int | None) -> datetime:
     tz = ZoneInfo("America/Chicago")
     if call_start_timestamp is None:
@@ -206,7 +149,7 @@ def classify_call(
 
     duration_category = _get_value(state, "problem_duration_category", "problemDurationCategory")
     if duration_category is None:
-        duration_result = _extract_problem_duration(transcript)
+        duration_result = extract_problem_duration(transcript)
         duration_category = duration_result["category"] if duration_result else None
     if duration_category == "acute":
         _append_unique(tags["CONTEXT"], "DURATION_ACUTE")
