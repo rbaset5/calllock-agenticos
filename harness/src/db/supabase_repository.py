@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import logging
 import os
 import re
 from typing import Any
@@ -22,6 +23,7 @@ from harness.resilience.retry import retry_call
 UUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
+logger = logging.getLogger(__name__)
 
 
 def is_configured() -> bool:
@@ -118,6 +120,13 @@ def _fetch_first(table: str, params: dict[str, str]) -> dict[str, Any]:
     data = _request("GET", table, params={**params, "limit": "1"})
     if not data:
         raise KeyError(f"No row found in {table} for params {params}")
+    return data[0]
+
+
+def _fetch_optional(table: str, params: dict[str, str]) -> dict[str, Any] | None:
+    data = _request("GET", table, params={**params, "limit": "1"})
+    if not data:
+        return None
     return data[0]
 
 
@@ -762,6 +771,322 @@ def claim_scheduler_backlog_entries(
         },
     )
     return data or []
+
+
+def insert_inbound_message(msg: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "inbound_messages",
+        params={"on_conflict": "tenant_id,rfc_message_id"},
+        json=msg,
+        prefer="resolution=ignore-duplicates,return=representation",
+    )
+    if data:
+        return data[0]
+    logger.info("dedup_hit", extra={"tenant_id": msg["tenant_id"], "rfc_message_id": msg["rfc_message_id"]})
+    existing = _fetch_optional(
+        "inbound_messages",
+        {"tenant_id": f"eq.{msg['tenant_id']}", "rfc_message_id": f"eq.{msg['rfc_message_id']}"},
+    )
+    if existing is None:
+        raise KeyError(f"Duplicate inbound message not found for rfc_message_id={msg['rfc_message_id']}")
+    return existing
+
+
+def get_inbound_message(tenant_id: str, message_id: str) -> dict[str, Any] | None:
+    return _fetch_optional("inbound_messages", {"tenant_id": f"eq.{tenant_id}", "id": f"eq.{message_id}"})
+
+
+def get_inbound_messages_by_thread(tenant_id: str, thread_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "inbound_messages",
+        params={"tenant_id": f"eq.{tenant_id}", "thread_id": f"eq.{thread_id}", "order": "received_at.asc"},
+    )
+
+
+def get_pending_scoring_messages(tenant_id: str, max_age_hours: int = 24) -> list[dict[str, Any]]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
+    return _request(
+        "GET",
+        "inbound_messages",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "scoring_status": "eq.pending",
+            "created_at": f"gte.{cutoff}",
+            "order": "created_at.asc",
+        },
+    )
+
+
+def update_inbound_message_scoring(tenant_id: str, message_id: str, scoring_data: dict[str, Any]) -> dict[str, Any]:
+    payload = {
+        key: value
+        for key, value in scoring_data.items()
+        if key in {"scoring_status", "action", "total_score", "score_dimensions", "score_reasoning", "rubric_hash"}
+    }
+    payload["updated_at"] = scoring_data.get("updated_at", datetime.now(timezone.utc).isoformat())
+    data = _request(
+        "PATCH",
+        "inbound_messages",
+        params={"tenant_id": f"eq.{tenant_id}", "id": f"eq.{message_id}"},
+        json=payload,
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown inbound message: {message_id}")
+    return data[0]
+
+
+def update_inbound_message_prospect(tenant_id: str, message_id: str, prospect_id: str) -> dict[str, Any]:
+    data = _request(
+        "PATCH",
+        "inbound_messages",
+        params={"tenant_id": f"eq.{tenant_id}", "id": f"eq.{message_id}"},
+        json={"prospect_id": prospect_id, "updated_at": datetime.now(timezone.utc).isoformat()},
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown inbound message: {message_id}")
+    return data[0]
+
+
+def update_inbound_message_stage(tenant_id: str, message_id: str, stage: str) -> dict[str, Any]:
+    data = _request(
+        "PATCH",
+        "inbound_messages",
+        params={"tenant_id": f"eq.{tenant_id}", "id": f"eq.{message_id}"},
+        json={"stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()},
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown inbound message: {message_id}")
+    return data[0]
+
+
+def insert_inbound_draft(draft: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "inbound_drafts",
+        params={"on_conflict": "tenant_id,message_id"},
+        json=draft,
+        prefer="resolution=ignore-duplicates,return=representation",
+    )
+    if data:
+        return data[0]
+    logger.info("dedup_hit", extra={"tenant_id": draft["tenant_id"], "message_id": draft["message_id"]})
+    existing = _fetch_optional(
+        "inbound_drafts",
+        {"tenant_id": f"eq.{draft['tenant_id']}", "message_id": f"eq.{draft['message_id']}"},
+    )
+    if existing is None:
+        raise KeyError(f"Duplicate inbound draft not found for message_id={draft['message_id']}")
+    return existing
+
+
+def get_inbound_draft(tenant_id: str, message_id: str) -> dict[str, Any] | None:
+    return _fetch_optional("inbound_drafts", {"tenant_id": f"eq.{tenant_id}", "message_id": f"eq.{message_id}"})
+
+
+def get_pending_review_drafts(tenant_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "inbound_drafts",
+        params={"tenant_id": f"eq.{tenant_id}", "send_status": "eq.pending_review", "order": "created_at.asc"},
+    )
+
+
+def update_inbound_draft_gate(tenant_id: str, draft_id: str, gate_data: dict[str, Any]) -> dict[str, Any]:
+    payload = {key: gate_data[key] for key in ("content_gate_status", "content_gate_flags") if key in gate_data}
+    data = _request(
+        "PATCH",
+        "inbound_drafts",
+        params={"tenant_id": f"eq.{tenant_id}", "id": f"eq.{draft_id}"},
+        json=payload,
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown inbound draft: {draft_id}")
+    return data[0]
+
+
+def update_inbound_draft_status(tenant_id: str, draft_id: str, send_status: str) -> dict[str, Any]:
+    data = _request(
+        "PATCH",
+        "inbound_drafts",
+        params={"tenant_id": f"eq.{tenant_id}", "id": f"eq.{draft_id}"},
+        json={"send_status": send_status},
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown inbound draft: {draft_id}")
+    return data[0]
+
+
+def insert_stage_transition(transition: dict[str, Any]) -> dict[str, Any]:
+    data = _request("POST", "inbound_stage_log", json=transition, prefer="return=representation")
+    return data[0] if data else transition
+
+
+def get_latest_stage(tenant_id: str, thread_id: str) -> dict[str, Any] | None:
+    return _fetch_optional(
+        "inbound_stage_log",
+        {"tenant_id": f"eq.{tenant_id}", "thread_id": f"eq.{thread_id}", "order": "created_at.desc"},
+    )
+
+
+def get_stage_history(tenant_id: str, thread_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "inbound_stage_log",
+        params={"tenant_id": f"eq.{tenant_id}", "thread_id": f"eq.{thread_id}", "order": "created_at.asc"},
+    )
+
+
+def upsert_poll_checkpoint(
+    tenant_id: str,
+    account_id: str,
+    folder: str,
+    last_uid: int,
+    status: str = "ok",
+    error: str | None = None,
+) -> dict[str, Any]:
+    payload = {
+        "tenant_id": tenant_id,
+        "account_id": account_id,
+        "folder": folder,
+        "last_uid": last_uid,
+        "last_polled_at": datetime.now(timezone.utc).isoformat(),
+        "poll_status": status,
+        "last_error": error,
+    }
+    data = _request(
+        "POST",
+        "poll_checkpoints",
+        params={"on_conflict": "tenant_id,account_id,folder"},
+        json=payload,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else payload
+
+
+def get_poll_checkpoint(tenant_id: str, account_id: str, folder: str) -> dict[str, Any] | None:
+    return _fetch_optional(
+        "poll_checkpoints",
+        {"tenant_id": f"eq.{tenant_id}", "account_id": f"eq.{account_id}", "folder": f"eq.{folder}"},
+    )
+
+
+def upsert_enrichment(tenant_id: str, cache_key: str, cache_type: str, source: str, data: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    enrichment_data = data.get("enrichment_data", data)
+    existing = _fetch_optional(
+        "enrichment_cache",
+        {
+            "tenant_id": f"eq.{tenant_id}",
+            "business_domain": f"eq.{cache_key}",
+            "cache_type": f"eq.{cache_type}",
+        },
+    )
+    payload = {
+        "tenant_id": tenant_id,
+        "prospect_id": data.get("prospect_id", existing.get("prospect_id") if existing else None),
+        "business_domain": cache_key,
+        "enrichment_data": enrichment_data,
+        "enrichment_quality": data.get("enrichment_quality", existing.get("enrichment_quality") if existing else None),
+        "estimated_monthly_lost_revenue": data.get(
+            "estimated_monthly_lost_revenue",
+            existing.get("estimated_monthly_lost_revenue") if existing else None,
+        ),
+        "enriched_at": data.get("enriched_at", data.get("fetched_at", now)),
+        "cache_type": cache_type,
+        "source": source,
+    }
+    data_rows = _request(
+        "POST",
+        "enrichment_cache",
+        params={"on_conflict": "tenant_id,business_domain,cache_type"},
+        json=payload,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data_rows[0] if data_rows else payload
+
+
+def get_enrichment(tenant_id: str, cache_key: str, cache_type: str, ttl_hours: int = 168) -> dict[str, Any] | None:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=ttl_hours)).isoformat()
+    return _fetch_optional(
+        "enrichment_cache",
+        {
+            "tenant_id": f"eq.{tenant_id}",
+            "business_domain": f"eq.{cache_key}",
+            "cache_type": f"eq.{cache_type}",
+            "enriched_at": f"gte.{cutoff}",
+            "order": "enriched_at.desc",
+        },
+    )
+
+
+def delete_expired_enrichment(tenant_id: str, max_age_hours: int = 336) -> int:
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
+    params = {"tenant_id": f"eq.{tenant_id}", "enriched_at": f"lt.{cutoff}"}
+    rows = _request("GET", "enrichment_cache", params=params)
+    if not rows:
+        return 0
+    _request("DELETE", "enrichment_cache", params=params)
+    return len(rows)
+
+
+def insert_prospect_email(tenant_id: str, prospect_id: str, email: str, source: str = "outbound") -> dict[str, Any]:
+    payload = {
+        "tenant_id": tenant_id,
+        "prospect_id": prospect_id,
+        "email": email,
+        "source": source,
+    }
+    data = _request(
+        "POST",
+        "prospect_emails",
+        params={"on_conflict": "tenant_id,email"},
+        json=payload,
+        prefer="resolution=ignore-duplicates,return=representation",
+    )
+    if data:
+        return data[0]
+    logger.info("dedup_hit", extra={"tenant_id": tenant_id, "email": email})
+    existing = _fetch_optional("prospect_emails", {"tenant_id": f"eq.{tenant_id}", "email": f"eq.{email}"})
+    if existing is None:
+        raise KeyError(f"Duplicate prospect email not found for email={email}")
+    return existing
+
+
+def get_prospect_by_email(tenant_id: str, email: str) -> dict[str, Any] | None:
+    return _fetch_optional("prospect_emails", {"tenant_id": f"eq.{tenant_id}", "email": f"eq.{email}"})
+
+
+def get_emails_for_prospect(tenant_id: str, prospect_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "prospect_emails",
+        params={"tenant_id": f"eq.{tenant_id}", "prospect_id": f"eq.{prospect_id}", "order": "created_at.asc"},
+    )
+
+
+def get_enabled_email_accounts(tenant_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "email_accounts",
+        params={"tenant_id": f"eq.{tenant_id}", "enabled": "eq.true", "order": "created_at.asc"},
+    )
+
+
+def get_email_account(tenant_id: str, account_id: str) -> dict[str, Any] | None:
+    return _fetch_optional("email_accounts", {"tenant_id": f"eq.{tenant_id}", "account_id": f"eq.{account_id}"})
+
+
+def get_tenants_with_email_accounts() -> list[str]:
+    rows = _request("GET", "email_accounts", params={"enabled": "eq.true", "select": "tenant_id"})
+    tenant_ids = {str(row["tenant_id"]) for row in rows if row.get("tenant_id")}
+    return sorted(tenant_ids)
 
 
 def insert_growth_touchpoint(payload: dict[str, Any]) -> dict[str, Any]:

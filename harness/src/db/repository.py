@@ -462,6 +462,183 @@ def claim_scheduler_backlog_entries(
     )
 
 
+def insert_inbound_message(msg: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.insert_inbound_message(msg)
+    return local_repository.insert_inbound_message(msg)
+
+
+def get_inbound_message(tenant_id: str, message_id: str) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_inbound_message(tenant_id, message_id)
+    return local_repository.get_inbound_message(tenant_id, message_id)
+
+
+def get_inbound_messages_by_thread(tenant_id: str, thread_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_inbound_messages_by_thread(tenant_id, thread_id)
+    return local_repository.get_inbound_messages_by_thread(tenant_id, thread_id)
+
+
+def get_pending_scoring_messages(tenant_id: str, max_age_hours: int = 24) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_pending_scoring_messages(tenant_id, max_age_hours=max_age_hours)
+    return local_repository.get_pending_scoring_messages(tenant_id, max_age_hours=max_age_hours)
+
+
+def update_inbound_message_scoring(tenant_id: str, message_id: str, scoring_data: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_inbound_message_scoring(tenant_id, message_id, scoring_data)
+    return local_repository.update_inbound_message_scoring(tenant_id, message_id, scoring_data)
+
+
+def update_inbound_message_prospect(tenant_id: str, message_id: str, prospect_id: str) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_inbound_message_prospect(tenant_id, message_id, prospect_id)
+    return local_repository.update_inbound_message_prospect(tenant_id, message_id, prospect_id)
+
+
+def update_inbound_message_stage(tenant_id: str, message_id: str, stage: str) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_inbound_message_stage(tenant_id, message_id, stage)
+    return local_repository.update_inbound_message_stage(tenant_id, message_id, stage)
+
+
+def insert_inbound_draft(draft: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.insert_inbound_draft(draft)
+    return local_repository.insert_inbound_draft(draft)
+
+
+def get_inbound_draft(tenant_id: str, message_id: str) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_inbound_draft(tenant_id, message_id)
+    return local_repository.get_inbound_draft(tenant_id, message_id)
+
+
+def get_pending_review_drafts(tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_pending_review_drafts(tenant_id)
+    return local_repository.get_pending_review_drafts(tenant_id)
+
+
+def update_inbound_draft_gate(tenant_id: str, draft_id: str, gate_data: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_inbound_draft_gate(tenant_id, draft_id, gate_data)
+    return local_repository.update_inbound_draft_gate(tenant_id, draft_id, gate_data)
+
+
+def update_inbound_draft_status(tenant_id: str, draft_id: str, send_status: str) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_inbound_draft_status(tenant_id, draft_id, send_status)
+    return local_repository.update_inbound_draft_status(tenant_id, draft_id, send_status)
+
+
+def insert_stage_transition(transition: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.insert_stage_transition(transition)
+    return local_repository.insert_stage_transition(transition)
+
+
+def get_latest_stage(tenant_id: str, thread_id: str) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_latest_stage(tenant_id, thread_id)
+    return local_repository.get_latest_stage(tenant_id, thread_id)
+
+
+def get_stage_history(tenant_id: str, thread_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_stage_history(tenant_id, thread_id)
+    return local_repository.get_stage_history(tenant_id, thread_id)
+
+
+def upsert_poll_checkpoint(
+    tenant_id: str,
+    account_id: str,
+    folder: str,
+    last_uid: int,
+    status: str = "ok",
+    error: str | None = None,
+) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_poll_checkpoint(
+            tenant_id,
+            account_id,
+            folder,
+            last_uid,
+            status=status,
+            error=error,
+        )
+    return local_repository.upsert_poll_checkpoint(
+        tenant_id,
+        account_id,
+        folder,
+        last_uid,
+        status=status,
+        error=error,
+    )
+
+
+def get_poll_checkpoint(tenant_id: str, account_id: str, folder: str) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_poll_checkpoint(tenant_id, account_id, folder)
+    return local_repository.get_poll_checkpoint(tenant_id, account_id, folder)
+
+
+def upsert_enrichment(tenant_id: str, cache_key: str, cache_type: str, source: str, data: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_enrichment(tenant_id, cache_key, cache_type, source, data)
+    return local_repository.upsert_enrichment(tenant_id, cache_key, cache_type, source, data)
+
+
+def get_enrichment(tenant_id: str, cache_key: str, cache_type: str, ttl_hours: int = 168) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_enrichment(tenant_id, cache_key, cache_type, ttl_hours=ttl_hours)
+    return local_repository.get_enrichment(tenant_id, cache_key, cache_type, ttl_hours=ttl_hours)
+
+
+def delete_expired_enrichment(tenant_id: str, max_age_hours: int = 336) -> int:
+    if using_supabase():
+        return supabase_repository.delete_expired_enrichment(tenant_id, max_age_hours=max_age_hours)
+    return local_repository.delete_expired_enrichment(tenant_id, max_age_hours=max_age_hours)
+
+
+def insert_prospect_email(tenant_id: str, prospect_id: str, email: str, source: str = "outbound") -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.insert_prospect_email(tenant_id, prospect_id, email, source=source)
+    return local_repository.insert_prospect_email(tenant_id, prospect_id, email, source=source)
+
+
+def get_prospect_by_email(tenant_id: str, email: str) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_prospect_by_email(tenant_id, email)
+    return local_repository.get_prospect_by_email(tenant_id, email)
+
+
+def get_emails_for_prospect(tenant_id: str, prospect_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_emails_for_prospect(tenant_id, prospect_id)
+    return local_repository.get_emails_for_prospect(tenant_id, prospect_id)
+
+
+def get_enabled_email_accounts(tenant_id: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_enabled_email_accounts(tenant_id)
+    return local_repository.get_enabled_email_accounts(tenant_id)
+
+
+def get_email_account(tenant_id: str, account_id: str) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.get_email_account(tenant_id, account_id)
+    return local_repository.get_email_account(tenant_id, account_id)
+
+
+def get_tenants_with_email_accounts() -> list[str]:
+    if using_supabase():
+        return supabase_repository.get_tenants_with_email_accounts()
+    return local_repository.get_tenants_with_email_accounts()
+
+
 def insert_growth_touchpoint(payload: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.insert_growth_touchpoint(payload)
