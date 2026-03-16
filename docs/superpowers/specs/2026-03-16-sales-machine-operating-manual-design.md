@@ -1,7 +1,7 @@
 # Sales Machine Operating Manual
 
 **Date:** March 16, 2026
-**Status:** Draft - v2 (post CEO mega-review)
+**Status:** Draft - v3 (post second-pass CEO review)
 **Owner:** Founder / GTM
 **Companion to:** `knowledge/growth-system/design-doc.md`
 **Runtime alignment:** ADR 010 (Growth System Runtime Placement)
@@ -105,7 +105,7 @@ All agents operate in a multi-tenant context from day 1:
 - Every event payload carries `tenant_id` as a required field
 - Every harness HTTP endpoint sets Supabase RLS context via `set_config('app.current_tenant', tenant_id, true)` before executing agent logic
 - A tenant context guard middleware on all `/growth/swarm/*` endpoints rejects requests with missing or invalid `tenant_id` with HTTP 403 and logs `calllock/swarm.tenant.scope.failed`
-- All 8 Growth Memory tables have `tenant_id` column with RLS policies
+- All 9 Growth Memory tables have `tenant_id` column with RLS policies
 
 ### 2.4 Pipeline overview
 
@@ -151,7 +151,8 @@ Additionally:
 | Job | Query for HVAC businesses matching ICP filters. Dedupe against prospects table in Supabase (idempotency key: business email domain). Write prospect record to prospects table BEFORE emitting event (write-then-emit pattern). Output raw prospect records. |
 | ICP filters | Trade: HVAC. Employees: 1-15. Revenue: inferred $300K-$3M. Has phone number. Has website or Google listing. No existing CallLock customer. Not in suppress list. |
 | Output event | `calllock/prospect.sourced` -- one per prospect, batch_id for traceability |
-| Output schema | `{ prospect_id, tenant_id, business_name, phone, email, website, google_listing_url, employee_count_est, revenue_est, source, batch_id, prospecting_cost_cents }` |
+| Output schema | `{ prospect_id, tenant_id, business_name, phone, contact_emails: [{ address, source, is_primary }], website, google_listing_url, employee_count_est, revenue_est, source, batch_id, prospecting_cost_cents }` |
+| Contact email selection | The Prospector Agent collects all discoverable emails for a prospect and selects primary using "most personal wins" heuristic: owner-name@ > first-name@ > generic role@ (sales@, info@) > catch-all. The is_primary flag is set on exactly one email. The Sender Agent always sends to the primary. If primary hard-bounces, the Sender Agent promotes the next most-personal email to primary and retries. |
 | Write ownership | Writes to `prospects` table (dedupe record), appends to `touchpoint_log` |
 | Failure mode | API rate limit: back off and resume. API auth failure: P0 alert, halt batch. Zero results: alert if 3 consecutive empty batches. Partial batch: emit what you have, log gap. |
 | Daily cap | 200 prospects per batch (tunable). During warmup phase: 50 per batch. |
@@ -193,6 +194,7 @@ Additionally:
 | Input | Segmented prospect with enrichment data and tenant_id |
 | Job | Build a multi-touch email sequence using the message router and template system. Select angle, template family, proof assets, and CTA for each touch. Respect experiment assignments from the Experiment Allocator, including pricing arm (sticky per prospect). Query proof_assets table for available assets matching segment and angle. |
 | Touch scheduling | Uses Inngest step.sleepUntil() to schedule each touch within a single long-running function. Each touch is a scheduled step. Function is cancellable via Inngest function cancellation. |
+| **Deploy safety: step ID stability** | Step IDs must be stable and versioned (e.g., `send-touch-1-v1`, `send-touch-2-v1`). Inngest preserves sleeping steps across deploys ONLY if step IDs don't change. Renaming or reordering step IDs silently breaks all in-flight sequences (hundreds of 2-week sequences could be active at any time). **Implementation constraint:** step IDs are treated as a public API surface. Any step ID change requires a migration plan for in-flight sequences. **CI lint rule:** add a lint check that flags step ID string changes in Sequence Agent files. |
 | Output event | `calllock/sequence.created` (after building sequence and scheduling all touches) |
 | Output schema | `{ prospect_id, tenant_id, sequence_id, experiment_arm_id, pricing_arm, touches: [{ touch_number, send_at, template_id, angle, proof_asset_id, cta, subject_line, body_slots }], sequence_cost_cents }` |
 | Write ownership | Writes to `journey_assignments` |
@@ -229,6 +231,7 @@ Additionally:
 | Output schema | `{ prospect_id, tenant_id, sequence_id, reply_category, confidence, extracted_objections[], extracted_questions[], conviction_signal, readiness_signal, raw_reply_hash, classification_cost_cents }` |
 | Write ownership | Appends to `touchpoint_log`. Objections feed Sales Insight Layer. Conviction and readiness signals feed dual-axis belief model. |
 | Failure mode | Low confidence classification (<0.5): route to `needs_human_review` bucket. LLM hallucinated category (not in enum): route to `needs_human_review`. LLM parse failure: retry once, then `needs_human_review`. |
+| Eval fixtures | 45 test cases + 5 edge cases in `docs/superpowers/specs/reply-classifier-eval-fixtures.yaml`. Run against all fixtures on every prompt change. **Minimum accuracy:** 95% on `unsubscribe` (CAN-SPAM), 90% on `positive_interest`, 85% on all other categories, 90% overall. |
 
 #### 2.5.7 Handoff and Escalation Agent
 
@@ -346,7 +349,78 @@ Prospects who completed a sequence without converting or who went DORMANT via "n
 
 Hard rule: a prospect receives a maximum of 2 full sequences (initial plus one re-engagement) per 12-month period.
 
-### 3.5 Experiment allocator controls
+### 3.5 Canonical lifecycle state machine
+
+Single source of truth for all prospect lifecycle states and transitions. Sections 3.3, 4.3, and Appendix A reference this diagram rather than defining their own partial versions.
+
+```
+                              ┌──────────┐
+                              │ UNKNOWN  │  (initial state, pre-outbound)
+                              └────┬─────┘
+                                   │ Segmentation Agent assigns segment
+                                   ▼
+                              ┌──────────┐
+              ┌──────────────>│ REACHED  │<──────────────────────────┐
+              │               └──┬─┬─┬───┘                          │
+              │                  │ │ │                               │
+              │    ┌─────────────┘ │ └──────────────┐               │
+              │    │ positive_interest  │ unsubscribe  │ not_now/     │
+              │    │ or question+ready  │              │ no_engage    │
+              │    ▼                    ▼              ▼              │
+              │ ┌────────────┐  ┌──────────┐  ┌──────────┐          │
+              │ │ EVALUATING │  │   LOST   │  │ DORMANT  │          │
+              │ └─────┬──────┘  │(terminal)│  └────┬─────┘          │
+              │       │         └──────────┘       │                │
+              │       │ meeting_set                 │ re-engagement  │
+              │       ▼                             │ timer fires    │
+              │ ┌─────────────┐                     └────────────────┘
+              │ │ IN_PIPELINE │
+              │ └──────┬──────┘
+              │        │ pilot_started
+              │        ▼
+              │ ┌───────────────┐
+              │ │ PILOT_STARTED │
+              │ └───┬───────┬───┘
+              │     │       │ pilot_churned or declined
+              │     │       ▼
+              │     │  ┌──────────┐
+              │     │  │   LOST   │
+              │     │  └──────────┘
+              │     │ converted_to_paying
+              │     ▼
+              │ ┌──────────┐
+              │ │ CUSTOMER │
+              │ └──────────┘
+              │
+              │ (DORMANT re-engagement returns prospect to REACHED)
+              └────────────────────────────────────────────────────
+```
+
+**Valid transitions:**
+
+| From | To | Trigger | Agent |
+|------|----|---------|-------|
+| UNKNOWN | REACHED | Segmentation assigns segment | Segmentation Agent |
+| REACHED | EVALUATING | Reply classified `positive_interest`, or `question` + high readiness | Handoff Agent |
+| REACHED | DORMANT | Reply classified `not_now_future`, or no engagement after T5, or sequence complete with no reply | Handoff Agent |
+| REACHED | LOST | Reply classified `unsubscribe`, or hard bounce | Handoff Agent |
+| EVALUATING | IN_PIPELINE | Founder sets meeting or proposes pilot | Founder (pipeline update) |
+| EVALUATING | LOST | Founder marks as lost | Founder (pipeline update) |
+| EVALUATING | DORMANT | Founder marks as "not now" | Founder (pipeline update) |
+| IN_PIPELINE | PILOT_STARTED | Prospect goes live on CallLock | Founder (pipeline update) |
+| IN_PIPELINE | LOST | Prospect declines | Founder (pipeline update) |
+| PILOT_STARTED | CUSTOMER | Converts to paying | Founder (pipeline update) |
+| PILOT_STARTED | LOST | Pilot churned or declined | Founder (pipeline update) |
+| DORMANT | REACHED | Re-engagement sequence starts | Sequence Agent (re-engagement timer) |
+
+**Invalid transitions (guards):**
+
+- LOST is terminal. No transition out of LOST. Re-contact requires manual suppress list removal.
+- CUSTOMER cannot transition backward. Post-customer states (EXPANDING, AT_RISK, CHURNED, ADVOCATE) are Phase 2 scope (see TODOS.md).
+- DORMANT can only transition to REACHED (via re-engagement) or LOST (via unsubscribe during dormancy).
+- All transitions use compare-and-set against current state. On CAS conflict: retry once, then log and reject.
+
+### 3.6 Experiment allocator controls
 
 The sequence structure (Section 3.1) is fixed. What the Experiment Allocator varies within the structure:
 
@@ -361,7 +435,7 @@ The sequence structure (Section 3.1) is fixed. What the Experiment Allocator var
 
 The Experiment Allocator assigns arms at sequence creation time (per growth doc Section 10.8). The entire sequence runs as one cohesive arm. No mid-sequence variant switching.
 
-### 3.6 Deliverability architecture
+### 3.7 Deliverability architecture
 
 | Component | Specification |
 |-----------|--------------|
@@ -375,7 +449,7 @@ The Experiment Allocator assigns arms at sequence creation time (per growth doc 
 | Complaint threshold | Pause mailbox if spam complaint rate exceeds 0.1%. |
 | SPF/DKIM/DMARC | Configured on all sending domains before first send. Non-negotiable. |
 
-### 3.7 CAN-SPAM compliance
+### 3.8 CAN-SPAM compliance
 
 Every outbound cold email must include:
 
@@ -398,6 +472,8 @@ A prospect enters the handoff pipeline when any of these fire:
 | Reply classified `positive_interest` | Reply Classifier Agent | P1 Hot | Founder contact within 4 hours |
 | Reply classified `question` plus high readiness signal | Reply Classifier Agent | P2 Warm | Founder contact within 24 hours |
 | Prospect books intro call via CTA link | Cal.com webhook (HMAC verified) via `calllock/meeting.booked` | P1 Hot | Auto-confirmed, founder prepares |
+
+**Cal.com booking link metadata:** The T4 CTA booking link includes `prospect_id` as a Cal.com metadata query parameter: `https://cal.com/calllock/intro?metadata[prospect_id]=xxx&metadata[tenant_id]=yyy`. Cal.com preserves metadata through the booking flow and includes it in the webhook payload. The webhook handler extracts `prospect_id` from `booking.metadata.prospect_id`. **Fallback:** If metadata is missing (e.g., prospect navigated to booking page directly), match the booking email address against the `prospects` table `contact_emails` array. If no match, create a manual pipeline entry for founder triage. |
 | Calculator completed plus high engagement dwell | Touchpoint log | P3 Interested | Add to next founder call block |
 
 ### 4.2 Handoff packet
@@ -508,11 +584,11 @@ Maps to the growth doc's Founder Dashboard (Section 10.16) levels:
 
 ### 6.1 Growth Memory tables (swarm-specific)
 
-These 9 tables are the swarm's storage layer. They follow the growth doc's RLS and tenant isolation patterns. All tables have `tenant_id` column with row-level security policies.
+These 9 tables are the swarm's storage layer (see Section 10.1 for migration dependency order). They follow the growth doc's RLS and tenant isolation patterns. All tables have `tenant_id` column with row-level security policies.
 
 | Table | Purpose | Write Owner | Key Fields |
 |-------|---------|------------|------------|
-| `prospects` | Dedupe registry and prospect master record | Prospector Agent | prospect_id, tenant_id, business_domain (unique per tenant), email, lifecycle_state, created_at |
+| `prospects` | Dedupe registry and prospect master record | Prospector Agent | prospect_id, tenant_id, business_domain (unique per tenant), contact_emails (JSONB array: [{address, source, is_primary}]), lifecycle_state, created_at |
 | `enrichment_cache` | Cached enrichment results, keyed by domain | Enrichment Agent | prospect_id, tenant_id, business_domain, enrichment_data (JSONB), enrichment_quality, estimated_monthly_lost_revenue, enriched_at |
 | `segment_assignments` | Current segment per prospect | Segmentation Agent | prospect_id, tenant_id, primary_segment, secondary_segment, confidence, assigned_at |
 | `journey_assignments` | Active sequences and touch schedules | Sequence Agent | sequence_id, prospect_id, tenant_id, experiment_arm_id, pricing_arm, status (active/paused/cancelled/completed), touches (JSONB), created_at |
@@ -521,6 +597,23 @@ These 9 tables are the swarm's storage layer. They follow the growth doc's RLS a
 | `proof_assets` | Proof asset registry | Founder (manual or asset pipeline) | asset_id, tenant_id, asset_type, target_trade, pain_angle, lifecycle_stage, url, status (active/draft/retired), version, created_at |
 | `pipeline` | Founder sales pipeline (Kanban) | Handoff Agent + Founder | prospect_id, tenant_id, stage, handoff_packet (JSONB), sequence_replay (JSONB), pricing_arm, created_at, updated_at |
 | `cost_per_acquisition` | Rolling cost aggregation | Cost Aggregation Job | tenant_id, period_start, period_end, total_cost_cents, customers_acquired, cac_cents, computed_at |
+
+**Required indexes:**
+
+| Table | Index | Type | Rationale |
+|-------|-------|------|-----------|
+| `prospects` | `(tenant_id, business_domain)` | UNIQUE | Dedupe key. Queried every prospecting batch. |
+| `prospects` | `(tenant_id, lifecycle_state)` | BTREE | Pipeline stage queries, dormant re-engagement scans. |
+| `enrichment_cache` | `(tenant_id, business_domain)` | UNIQUE | Enrichment lookup. Queried every enrichment. |
+| `journey_assignments` | `(tenant_id, prospect_id, status)` | BTREE | Pre-send status check runs before every email. |
+| `journey_assignments` | `(tenant_id, status, next_touch_at)` | BTREE | Sequence health monitor scans for overdue touches. |
+| `touchpoint_log` | `(tenant_id, prospect_id, sequence_id)` | BTREE | Sequence replay assembly, reply handling context. |
+| `touchpoint_log` | `(tenant_id, created_at)` | BTREE | Activity feed, time-range queries for scorecard. |
+| `suppress_list` | `(tenant_id, email)` | UNIQUE | Health gate check runs before every send. |
+| `suppress_list` | `(tenant_id, business_domain)` | BTREE | Domain-level suppression check. |
+| `proof_assets` | `(tenant_id, target_trade, pain_angle, status)` | BTREE | Sequence Agent proof asset lookup. |
+| `pipeline` | `(tenant_id, stage)` | BTREE | Founder dashboard Kanban queries. |
+| `cost_per_acquisition` | `(tenant_id, period_end)` | BTREE | Rolling CAC computation. |
 
 ### 6.2 Proof asset seed data (HVAC Phase 1)
 
@@ -563,7 +656,7 @@ Sourced from Inngest dashboard and structured logs:
 
 ### 7.2 Pipeline funnel metrics (Founder Dashboard v0)
 
-Displayed on `/dashboard/growth`:
+Displayed on `/dashboard/growth` (requires existing CallLock dashboard authentication — no unauthenticated access to prospect PII):
 
 ```
 Prospects sourced -> Enriched -> Segmented -> Sequenced -> Sent -> Opened -> Replied -> Escalated -> Meeting -> Pilot -> Won
@@ -597,9 +690,9 @@ When the Experiment Allocator declares a winner, surface it prominently on the F
 - Action: "Applied to all new sequences" (or "Awaiting your approval" if founder-gated)
 - Historical list of all winner declarations on the dashboard
 
-### 7.5 P0 alerts
+### 7.5 P0 alerts (infrastructure)
 
-4 alerts that fire immediately and notify the founder:
+4 infrastructure alerts that fire immediately and notify the founder:
 
 | Alert | Trigger | Channel |
 |-------|---------|---------|
@@ -607,6 +700,24 @@ When the Experiment Allocator declares a winner, surface it prominently on the F
 | Deliverability crisis | Deliverability rate drops below 90% for any mailbox | Email |
 | Pipeline halt | Zero prospects sourced for 2 consecutive days | Email |
 | Mass stall | Sequence health monitor finds more than 10 stalled sequences | Email |
+
+### 7.6 P1 alerts (performance degradation)
+
+4 performance alerts that detect silent degradation in the swarm. These fire via `calllock/swarm.alert.triggered` to a dedicated Inngest notification function that routes to founder Slack DM or email.
+
+| Alert | Trigger Condition | Threshold | Check Frequency | Notification |
+|-------|------------------|-----------|-----------------|-------------|
+| Bounce rate spike | Any mailbox bounce rate exceeds threshold | >3% over rolling 24h | Every send (Sender Agent checks post-send) | Slack DM + email. Auto-pauses affected mailbox. |
+| Pipeline stall (zero sends) | No emails sent across all mailboxes | 0 sends in 24 hours | Daily cron (8am, alongside health check) | Email. Includes last successful send timestamp. |
+| Reply classifier degradation | Confidence score below threshold on consecutive replies | <0.5 confidence on 5+ consecutive replies | Every classification (Reply Classifier checks rolling window) | Slack DM. Includes sample low-confidence replies for review. |
+| Prospect-to-sequence conversion drop | Ratio of segmented prospects that receive a sequence drops below threshold | <80% over rolling 7 days | Daily cron | Email. Includes breakdown: how many dropped at enrichment vs. segmentation vs. sequence creation. |
+
+**Notification function:** `calllock/swarm.alert.triggered` is consumed by an Inngest function at `inngest/src/functions/growth/handle-swarm-alert.ts`. The function:
+- Reads founder notification preferences from tenant config (Slack webhook URL or email)
+- Formats alert with context (which threshold, current value, trend)
+- Sends via Slack Incoming Webhook or email (Resend/SES)
+- Logs alert to `touchpoint_log` as `alert` touchpoint type for audit trail
+- De-duplicates: same alert type suppressed for 4 hours after first fire (prevents alert storms)
 
 ## 8. Security and Data
 
@@ -622,7 +733,7 @@ All agents that process untrusted external text (Enrichment Agent, Reply Classif
 
 ### 8.2 Webhook security
 
-All inbound webhooks (email reply, Cal.com meeting booked) require HMAC signature verification:
+All inbound webhooks (email reply, email open, email link click, Cal.com meeting booked) require HMAC signature verification:
 
 - Webhook secret stored in Render env var
 - HMAC computed over request body using SHA-256
@@ -692,11 +803,31 @@ Shadow mode ends when ALL of the following are met:
 
 ### 10.1 Deployment sequence
 
+**Migration dependency order:** Tables must be created in this order due to foreign key and logical dependencies:
+
+```
+  1. prospects              (no FK dependencies)
+  2. enrichment_cache       (references prospects by business_domain, logical dep)
+  3. suppress_list          (no FK dependencies)
+  4. proof_assets           (no FK dependencies)
+  5. segment_assignments    (references prospects.prospect_id)
+  6. journey_assignments    (references prospects.prospect_id)
+  7. touchpoint_log         (references prospects, journey_assignments)
+  8. pipeline               (references prospects.prospect_id)
+  9. cost_per_acquisition   (no FK dependencies)
+```
+
+**Seed data runs AFTER all migrations:** proof_assets seed (5 HVAC assets), objection_registry seed (if applicable). Revenue tiers loaded into Supabase reference table (not file-read).
+
+**Inngest functions deploy AFTER database is ready.** Functions that write to tables must not deploy before those tables exist.
+
+**Email domain warmup starts 14 days BEFORE first production send.** This is the critical path — all other infrastructure work happens in parallel during warmup.
+
 ```
 PHASE 0: INFRASTRUCTURE (week 1)
-  1. Supabase migrations: 8 swarm tables + proof_assets + pipeline + cost_per_acquisition
+  1. Supabase migrations: 9 swarm tables in dependency order above
   2. RLS policies on all new tables
-  3. Inngest event schemas: 14 new types in schemas.ts
+  3. Inngest event schemas: 23 event types in schemas.ts (see Appendix A for full catalog)
   4. Secondary email domains: purchase 3-5, configure SPF/DKIM/DMARC
   5. Email infrastructure account setup
   6. Apollo API key provisioned
@@ -767,6 +898,26 @@ This section maps swarm outputs to their downstream consumers in the growth doc,
 | Prospect lifecycle transitions | `prospects.lifecycle_state` | Journey Orchestrator (Section 11.2) | Must use canonical lifecycle states from growth doc Section 11.1. No custom states. |
 | Cost data | `cost_per_acquisition` | Cost Layer (Section 10.19) | `period_start`, `period_end`, `total_cost_cents`, `customers_acquired` — required for value-per-dollar optimization |
 
+## 12. Multi-Vertical Readiness
+
+This spec is HVAC-only by design (focus wins). But the CallLock platform has industry packs (`knowledge/industry-packs/`) designed for multi-vertical expansion. When the time comes to expand to Plumbing/Rooter (the next planned vertical), these are the 5 HVAC-coupled points that need parameterization:
+
+| # | Coupled Point | Current HVAC Value | Future Parameterization |
+|---|--------------|-------------------|------------------------|
+| 1 | **Enrichment Agent pain signals** | "leave a message", "no after-hours coverage", after-hours behavior analysis | Load pain signal patterns from industry pack config per vertical |
+| 2 | **Revenue estimation tiers** | HVAC-specific service tiers (diagnostic $99, minor $75-250, standard $200-800, major $800-3K, replacement $5K-15K+) | Revenue tier reference table keyed by vertical, loaded from industry pack |
+| 3 | **Sequence angles** | "summer rush" seasonal urgency, HVAC-specific pain framing | Angle library per vertical with seasonal triggers from industry pack |
+| 4 | **Proof assets** | HVAC-specific calculators, demos, comparisons, FAQ | Proof asset registry already has `target_trade` field — seed per-vertical assets |
+| 5 | **ICP filters** | Trade: HVAC. Employee/revenue ranges calibrated for HVAC shops. | ICP filter config per vertical in industry pack |
+
+**Do NOT abstract now.** The correct Phase 2 approach is:
+1. Extract a `vertical_config` object from the 5 points above
+2. Load vertical config from the industry pack for the target vertical
+3. All agents read config from the vertical_config rather than hardcoded values
+4. The Prospector Agent accepts `wedge` as a parameter (it already does) — just needs config behind it
+
+**Effort estimate:** M (2-3 days) once the second vertical is prioritized. The proof_assets table already supports `target_trade` filtering, so point 4 is already partially parameterized.
+
 ## Appendix A: Inngest Event Catalog
 
 All events follow the `calllock/` namespace convention per ADR 015. All payloads include `tenant_id` as a required field.
@@ -780,6 +931,8 @@ All events follow the `calllock/` namespace convention per ADR 015. All payloads
 | `calllock/sequence.created` | Sequence Agent | (internal: schedules touches) | tenant_id, prospect_id, sequence_id, experiment_arm_id, pricing_arm, touches[] |
 | `calllock/email.sent` | Sender Agent | Touchpoint log | tenant_id, prospect_id, sequence_id, touch_number, mailbox_id, send_cost_cents |
 | `calllock/email.blocked` | Sender Agent | Alerting | tenant_id, prospect_id, block_reason |
+| `calllock/email.opened` | Email infra webhook (tracking pixel) | Touchpoint log | tenant_id, prospect_id, sequence_id, touch_number, opened_at |
+| `calllock/email.link.clicked` | Email infra webhook (link redirect) | Touchpoint log | tenant_id, prospect_id, sequence_id, touch_number, clicked_url, clicked_at |
 | `calllock/email.reply.received` | Email infra webhook | Reply Classifier Agent | tenant_id, prospect_id, sequence_id, reply_text |
 | `calllock/reply.classified` | Reply Classifier Agent | Handoff Agent | tenant_id, prospect_id, reply_category, confidence, conviction_signal, readiness_signal, classification_cost_cents |
 | `calllock/prospect.escalated` | Handoff Agent | Founder pipeline | tenant_id, prospect_id, priority, handoff_packet |
@@ -791,6 +944,7 @@ All events follow the `calllock/` namespace convention per ADR 015. All payloads
 | `calllock/swarm.sequence.stalled` | Sequence Health Monitor | Alerting | tenant_id, sequence_id, overdue_hours |
 | `calllock/swarm.health.check.requested` | Cron (daily 8am) | Sequence Health Monitor | tenant_id |
 | `calllock/swarm.doctrine.unavailable` | Handoff Agent | Logging | tenant_id, error_message |
+| `calllock/swarm.alert.triggered` | Sender Agent, Reply Classifier, Daily cron | Notification function | tenant_id, alert_type, threshold, current_value, context |
 | `calllock/swarm.credential.expiring` | Credential monitor | P0 Alert | tenant_id, service, days_until_expiry |
 | `calllock/swarm.tenant.scope.failed` | Tenant context guard | Logging | attempted_tenant_id, error_message |
 

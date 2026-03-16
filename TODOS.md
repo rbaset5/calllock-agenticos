@@ -160,6 +160,22 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** error taxonomy, idempotency formulas, and Growth Memory write paths being implemented.
 **Source:** 2026-03-14 HOLD SCOPE audit follow-up.
 
+### Send queue priority ordering and ramp-up schedule
+**What:** Define a send_queue table, priority ordering logic (T1 new prospects > later touches from older sequences > re-engagement), and ramp-up schedule (Week 1=50 prospects/batch, Week 2=100, Week 3=150, Week 4=200). Deferred sends shift by 1 day, not skipped.
+**Why:** Without a send queue, Day 3 exceeds mailbox capacity when T1s from new batches collide with T2s from prior batches. At 200 prospects/day with 180-300 daily send capacity, overflow is mathematically guaranteed by week 2.
+**Effort:** S
+**Priority:** P1
+**Depends on:** Sender Agent spec (Section 2.5.5), deployment sequence (Section 10.1).
+**Source:** Sales Machine spec second-pass CEO review, Issue 9.
+
+### Enrichment Agent staleness heuristic and Google Places API integration
+**What:** Add staleness detection to the Enrichment Agent (check Google listing status, flag stale data, skip closed businesses). Switch to Google Places API as primary data source for Google listing data. Add concurrency (10 parallel enrichments) and per-prospect timeout (15 seconds).
+**Why:** Sending cold emails to closed businesses wastes sends and hurts deliverability. Sequential enrichment of 200 prospects takes 10-33 minutes (risks Inngest function timeout). Google Places API is more reliable than scraping.
+**Effort:** M
+**Priority:** P1
+**Depends on:** Enrichment Agent spec (Section 2.5.2), Google Places API key provisioned.
+**Source:** Sales Machine spec second-pass CEO review, Issues 5 and 12.
+
 ## P2 — Post-Contract-Lock Extensions
 
 ### Add founder weekly operating packet spec
