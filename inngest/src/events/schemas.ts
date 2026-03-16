@@ -68,6 +68,44 @@ export interface GrowthAdvisorWeeklyPayload {
   now_iso?: string;
 }
 
+export interface InboundPollRequestedPayload {
+  tenant_id: string;
+  account_ids?: string[];
+}
+
+export interface InboundMessageReceivedPayload {
+  tenant_id: string;
+  account_id: string;
+  message_id: string;
+  from_addr: string;
+  from_domain: string;
+  subject: string;
+  source: "organic" | "reply";
+}
+
+export interface InboundMessageProcessedPayload {
+  tenant_id: string;
+  message_id: string;
+  action: string;
+  total_score: number;
+  stage: string;
+  draft_generated: boolean;
+  escalated: boolean;
+}
+
+export interface InboundEscalationTriggeredPayload {
+  tenant_id: string;
+  message_id: string;
+  from_addr: string;
+  subject: string;
+  total_score: number;
+  reasoning: string;
+  action: string;
+  priority: "high" | "normal";
+  channel: string;
+  escalated_at: string;
+}
+
 export function validateProcessCallPayload(payload: ProcessCallPayload): string[] {
   const errors: string[] = [];
   if (!payload.call_id) errors.push("call_id is required");
@@ -126,5 +164,24 @@ export function validateGrowthAdvisorWeeklyPayload(payload: GrowthAdvisorWeeklyP
   const errors: string[] = [];
   if (!payload.tenant_id) errors.push("tenant_id is required");
   if (!payload.source_version) errors.push("source_version is required");
+  return errors;
+}
+
+export function validateInboundPollRequestedPayload(payload: InboundPollRequestedPayload): string[] {
+  const errors: string[] = [];
+  if (!payload.tenant_id) errors.push("tenant_id is required");
+  return errors;
+}
+
+export function validateInboundMessageReceivedPayload(payload: InboundMessageReceivedPayload): string[] {
+  const errors: string[] = [];
+  if (!payload.tenant_id) errors.push("tenant_id is required");
+  if (!payload.account_id) errors.push("account_id is required");
+  if (!payload.message_id) errors.push("message_id is required");
+  if (!payload.from_addr) errors.push("from_addr is required");
+  if (!payload.source) errors.push("source is required");
+  if (payload.source && !["organic", "reply"].includes(payload.source)) {
+    errors.push("source must be 'organic' or 'reply'");
+  }
   return errors;
 }

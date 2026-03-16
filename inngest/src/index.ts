@@ -1,5 +1,7 @@
 import { inngest } from "./inngest.js";
 import { evaluateAlerts } from "./functions/evaluate-alerts.js";
+import { processInboundMessage } from "./functions/inbound/process-inbound-message.js";
+import { pollInbound } from "./functions/inbound/poll-inbound.js";
 import { growthAdvisorWeekly } from "./functions/growth/growth-advisor-weekly.js";
 import { handleLifecycle } from "./functions/growth/handle-lifecycle.js";
 import { handleTouchpoint } from "./functions/growth/handle-touchpoint.js";
@@ -24,4 +26,6 @@ export const functions = [
   handleTouchpoint,
   handleLifecycle,
   growthAdvisorWeekly,
+  pollInbound,
+  processInboundMessage,
 ];
