@@ -4,6 +4,7 @@ from typing import Any, Literal, TypedDict
 
 
 PolicyVerdict = Literal["allow", "deny", "escalate"]
+VerificationVerdict = Literal["pass", "retry", "block", "escalate"]
 
 
 class HarnessMessage(TypedDict):
@@ -19,7 +20,9 @@ class PolicyDecision(TypedDict, total=False):
 
 class VerificationResult(TypedDict, total=False):
     passed: bool
+    verdict: VerificationVerdict
     reasons: list[str]
+    findings: list[dict[str, Any]]
 
 
 class HarnessState(TypedDict, total=False):
@@ -35,5 +38,8 @@ class HarnessState(TypedDict, total=False):
     tool_grants: list[str]
     policy_decision: PolicyDecision
     worker_output: dict[str, Any]
+    retry_count: int
+    job_requests: list[dict[str, Any]]
+    jobs: list[dict[str, Any]]
     verification: VerificationResult
     persistence: dict[str, Any]

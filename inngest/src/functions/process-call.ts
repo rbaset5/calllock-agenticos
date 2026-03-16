@@ -16,14 +16,14 @@ export async function processCallTask(payload: ProcessCallPayload) {
       baseUrl,
       eventSecret: process.env.HARNESS_EVENT_SECRET,
     },
-    buildHarnessEvent(payload),
+    buildHarnessEvent(payload as unknown as Record<string, unknown>),
   );
 }
 
 export const processCall = inngest.createFunction(
   { id: "process-call" },
   { event: "harness/process-call" },
-  async ({ event, step }) => {
+  async ({ event, step }: any) => {
     return step.run("dispatch-harness-event", async () => processCallTask(event.data as ProcessCallPayload));
   },
 );

@@ -5,6 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const knowledgeRoot = path.join(root, "knowledge");
+const todayIso = new Date().toISOString().slice(0, 10);
 const requiredFrontmatter = [
   "id",
   "title",
@@ -60,8 +61,13 @@ for (const file of markdownFiles) {
       errors.push(`${path.relative(root, file)} missing frontmatter key ${key}`);
     }
   }
-  if (metadata.last_reviewed && new Date(metadata.last_reviewed) > new Date("2026-03-12")) {
-    errors.push(`${path.relative(root, file)} has a future last_reviewed date`);
+  if (metadata.last_reviewed) {
+    const reviewedAt = new Date(metadata.last_reviewed);
+    if (Number.isNaN(reviewedAt.getTime())) {
+      errors.push(`${path.relative(root, file)} has an invalid last_reviewed date`);
+    } else if (metadata.last_reviewed > todayIso) {
+      errors.push(`${path.relative(root, file)} has a future last_reviewed date`);
+    }
   }
   for (const link of wikiLinks(body)) {
     const target = path.join(knowledgeRoot, `${link}.md`);

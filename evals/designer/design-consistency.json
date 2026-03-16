@@ -1,0 +1,12 @@
+[
+  {"input":"Alert severity labels","expected":"consistent taxonomy"},
+  {"input":"Worker naming","expected":"consistent taxonomy"},
+  {"input":"Lifecycle states","expected":"consistent progression"},
+  {"input":"Cockpit overview","expected":"operator-first framing"},
+  {"input":"Onboarding progress","expected":"status-first framing"},
+  {"input":"Experiment results","expected":"baseline vs candidate"},
+  {"input":"Content pipeline","expected":"raw sanitized structured"},
+  {"input":"Kill switches","expected":"scope labels"},
+  {"input":"Job statuses","expected":"consistent states"},
+  {"input":"Verification verdicts","expected":"consistent states"}
+]

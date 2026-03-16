@@ -1,0 +1,12 @@
+[
+  {"input":"Need tenant onboarding","expected":"scoped requirements"},
+  {"input":"Add alerts dashboard","expected":"measurable plan"},
+  {"input":"Improve call routing","expected":"rollout phases"},
+  {"input":"Support plumbing pack","expected":"dependency list"},
+  {"input":"Reduce operator clicks","expected":"workflow changes"},
+  {"input":"Add eval reports","expected":"success metrics"},
+  {"input":"Support experiments","expected":"guardrails"},
+  {"input":"Improve policy logs","expected":"acceptance criteria"},
+  {"input":"Add kill switches","expected":"control scope"},
+  {"input":"Automate onboarding","expected":"rollback steps"}
+]

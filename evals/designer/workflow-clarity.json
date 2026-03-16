@@ -1,0 +1,12 @@
+[
+  {"input":"Onboarding workflow","expected":"step clarity"},
+  {"input":"Kill switch control","expected":"clear operator action"},
+  {"input":"Alert review","expected":"clear escalation"},
+  {"input":"Experiment dashboard","expected":"visible outcomes"},
+  {"input":"Content pipeline status","expected":"clear stages"},
+  {"input":"Tenant isolation verification","expected":"clear progress"},
+  {"input":"Artifact lifecycle view","expected":"state clarity"},
+  {"input":"Job completion detail","expected":"clear status"},
+  {"input":"Policy block explanation","expected":"actionable copy"},
+  {"input":"Worker output review","expected":"approval handoff"}
+]

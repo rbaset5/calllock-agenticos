@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from harness.graphs.workers.base import run_worker
 
 
-def run_customer_analyst(task: dict[str, Any]) -> dict[str, Any]:
+def deterministic_customer_analyst(task: dict[str, Any]) -> dict[str, Any]:
     transcript = str(task.get("transcript", "")).lower()
     summary = task.get("problem_description") or "Customer inquiry received."
     sentiment = "negative" if any(word in transcript for word in ["angry", "upset", "frustrated"]) else "neutral"
@@ -15,3 +15,7 @@ def run_customer_analyst(task: dict[str, Any]) -> dict[str, Any]:
         "sentiment": sentiment,
         "churn_risk": churn_risk,
     }
+
+
+def run_customer_analyst(task: dict[str, Any]) -> dict[str, Any]:
+    return run_worker(task, worker_id="customer-analyst", deterministic_builder=deterministic_customer_analyst)

@@ -1,95 +1,94 @@
 # Phases 3-4: Operations and Improvement
 
-Status: Blocked on Phase 2 completion  
-Prerequisite: Phases 1-2 complete (Steps 1-16)  
-Timeline: Weeks 8-16+
+Supporting detail only. Canonical sequencing, readiness gates, and dependency order now live in `plans/whole-system-executable-master-plan.md`.
+
+Status: Backend foundation implemented in repo on `codex/phase34`; product UI still pending  
+Branch: `codex/phase34`  
+Timeline: Implemented on March 12, 2026 for the backend/control-plane surface
 
 Shared context:
 
 - Architecture spec: `docs/superpowers/specs/2026-03-12-calllock-agentos-architecture-design.md`
+- Persuasion platform spec: `knowledge/growth-system/design-doc.md`
+- HOLD SCOPE review: `knowledge/growth-system/hold-scope-review.md`
 - Open TODOs: `TODOS.md`
-- Key decision: Python harness (LangGraph Python SDK) as separate Render service
-- V2 codebase: `/Users/rashidbaset/conductor/workspaces/calllock-app/hong-kong-v`
+- Depends on all Phase 1-2 acceptance criteria completing first
 
-## Phase 3: Full Operations (Weeks 8-12)
+## Cross-Cutting Contract Dependency
 
-Goal: all workers active, tenant onboarding automated, async jobs running, full artifact governance in place, and Cockpit alerting plus kill switches operational.
+This plan preserves supporting detail for later operational surfaces on top of persuasion-platform foundations that should already exist from earlier stages. It does not redefine persuasion-specific contract semantics or override the master plan on execution order.
 
-### Step 17: V&V Pipeline Expansion
+The following objects must retain the semantics defined in `knowledge/growth-system/design-doc.md`:
 
-Extend verification and validation beyond Customer Analyst to cover every worker output type and every production-affecting action.
+- `review_object`
+- `operator_projections`
+- `decisioning_projections`
+- `control_plane_auth`
+- `lineage_chain`
 
-Implement:
+Phase 3-4 work should assume those contracts already exist and should extend them operationally rather than replacing them with ad hoc Cockpit approval or dashboard state.
 
-- Shared V&V contracts for structured outputs, factual checks, tone, and safety
-- Factual accuracy checks against the knowledge graph for each worker's domain
-- Tone compliance checks keyed by tenant config
-- Safety checks for forbidden claims, policy violations, and PII leakage in outputs
-- Deterministic outcomes for pass, retry, block, or escalate
+## Phase 3: Full Operations
+
+Goal: all planned workers are active, tenant onboarding is automated, async jobs are durable, artifacts are governed, and the Cockpit can monitor and interrupt the system safely.
+
+### Step 17: Full V&V Pipeline
+
+Expand the Phase 2 verification node into a reusable pipeline across all workers and external actions.
+
+Implemented:
+
+- Shared verification contracts for structured outputs, factual checks, policy conformance, tone, and safety
+- Retry and escalation paths for external action failures
+- Worker-specific verification profiles keyed by worker spec
+- Resilience tests for dependencies each worker uses
 
 Files:
 
 - `harness/src/harness/nodes/verification.py`
 - `harness/src/harness/verification/`
-- LangSmith eval suites for worker-specific and multi-worker runs
+- LangSmith eval suites for multi-worker runs
 
-Acceptance:
+Current state:
 
-- Every active worker has an explicit V&V profile
-- Each worker domain is checked against the relevant knowledge graph surface
-- Tone and safety checks are tenant-aware
-- Failures resolve through deterministic block, retry, or escalate paths
+- Every active worker has a verification profile
+- Each worker has at least one resilience test per external dependency
+- Failed validations produce deterministic block, retry, or escalate outcomes
 
-### Step 18: Delegation and Job Layer
+### Step 18: Delegation and Jobs
 
-Implement the full sync and async delegation model using LangGraph subgraphs for in-graph work and Inngest durable functions for externalized jobs.
+Implement durable async and scheduled execution via Inngest and LangGraph subgraphs.
 
-Implement:
+Implemented:
 
-- Sync delegation through LangGraph in-graph and subgraph execution
-- Async delegation through Inngest durable functions with task handles, status lookup, cancel, and replace
-- Scheduled jobs using `step.sleep()`, `step.sleepUntil()`, and `step.sendEvent()` executing against current state
-- Idempotency keys for all external side effects including bookings, SMS, email, and publish actions
-- Job metadata: `job_id`, `tenant_id`, `origin_worker_id`, `origin_run_id`, `job_type`, `status`, `supersedes_job_id`, `source_call_id`
-- Concurrency limits, budget limits, and retry policies
-- Permission model where the origin worker manages its own jobs and Cockpit or Ops holds admin override
+- Job orchestration for async, scheduled, cancel, replace, and retry flows
+- Idempotency enforcement using the `jobs` table
+- Supervisor-to-worker delegation patterns for sync and async work
+- Job status tracking and re-entry from persisted state
 
 Files:
 
-- Job dispatch logic in the harness
-- Inngest function definitions
+- `inngest/src/functions/`
 - `harness/src/harness/graphs/supervisor.py`
 - `harness/src/harness/jobs/`
 - `supabase/migrations/004_jobs.sql`
 
-Acceptance:
+Current state:
 
-- Async and scheduled jobs run durably through Inngest
-- Cancel and replace semantics work for long-running jobs
-- External actions are protected by idempotency keys
-- Job ownership and admin override rules are enforced at runtime
+- Async and scheduled jobs run through Inngest with idempotency keys
+- Cancel/replace semantics work for long-running jobs
+- Interrupted jobs can be resumed or failed cleanly
 
-### Step 19: Tenant Operations (Onboarding Workflow)
+### Step 19: Tenant Operations Onboarding
 
-Automate tenant onboarding as one governed workflow with rollback semantics and Cockpit approval for administrative actions.
+Automate tenant onboarding from config creation to operational readiness.
 
-Workflow:
+Implemented:
 
-1. Create tenant
-2. Assign industry pack
-3. Load tenant config
-4. Apply RLS
-5. Provision automations
-6. Configure voice agent
-7. Verify isolation
-8. Notify Cockpit
-
-Requirements:
-
-- Required inputs: `tenant_name`, `industry_pack_id`, `contact_email`, `service_area`
-- Atomic behavior: if any step fails, roll back all completed steps and mark the tenant as `onboarding_failed`
-- Same tool governance, policy gate, and tracing model as worker flows
-- Administrative actions require Cockpit approval and actor identity logging
+- An onboarding workflow that provisions tenant records, config, industry pack linkage, baseline feature flags, and compliance defaults
+- Validation gates for required config completeness
+- Audit logging for onboarding actions and operator approvals
+- Seed templates for at least HVAC tenants
 
 Files:
 
@@ -97,24 +96,23 @@ Files:
 - `supabase/seed.sql`
 - `knowledge/industry-packs/hvac/pack.yaml`
 
-Acceptance:
+Current state:
 
-- A tenant can be onboarded end-to-end from a single workflow run
-- Failure at any step triggers rollback and a terminal `onboarding_failed` state
-- Isolation verification is part of the workflow, not a manual follow-up
-- All administrative approvals are logged with actor identity
+- A new tenant can be provisioned end-to-end from a single onboarding run
+- Missing required inputs fail early with actionable errors
+- Onboarding is fully tenant-scoped and auditable
 
 ### Step 20: Artifact Governance and Persistence
 
-Define how artifacts are stored, versioned, retained, and accessed across workers, tenant operations, and Cockpit.
+Define where outputs live and how they are versioned, traced, and recovered.
 
-Implement:
+Implemented:
 
-- Tenant-scoped access control so artifacts are readable only by the originating tenant's workers, Tenant Ops, and Cockpit
-- Retention rules where tenant artifacts follow tenant policy and internal artifacts follow global policy
-- Registry split: git for version-controlled outputs, Supabase for structured data, and a TBD object store for binary or large files
-- Explicit lifecycle states: `Created`, `Active`, `Archived`, `Deleted`
-- Audit fields: `created_by`, `tenant_id`, `created_at`, `source_job_id`, `artifact_type`
+- Artifact metadata schema for job results, reports, eval outputs, and generated assets
+- Git-backed versioning for code, configs, knowledge, and plans
+- Supabase-backed persistence for structured operational artifacts
+- Retention and retrieval rules for artifacts referenced by the Cockpit
+- Persuasion-platform artifact linkage should attach to `lineage_chain` and `review_object` identifiers where applicable rather than inventing a parallel trace vocabulary
 
 Files:
 
@@ -122,31 +120,29 @@ Files:
 - `supabase/migrations/`
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
-- Artifact access is tenant-scoped and role-aware
-- Structured artifact lineage is queryable by tenant and job
-- Artifact retention and lifecycle state are explicit
-- No artifact is silently deleted
+- Each worker run produces traceable artifact records
+- Structured artifacts can be retrieved by tenant and job
+- Artifact lineage from input to persisted output is queryable
 
-### Step 21: Remaining Workers (PM, Engineer, Designer, Marketer)
+### Step 21: Remaining Worker Activation
 
-Activate the remaining four workers only after eval coverage exists and their missions remain clearly non-overlapping.
+Bring the remaining four workers online after Customer Analyst.
 
-Workers:
+Implemented:
 
-- Product Manager: prioritize roadmap, write specs, track metrics
-- Engineer: implement features, fix bugs, maintain infra
-- Designer: create UI and UX designs, maintain design system
-- Product Marketer: SEO content, landing pages, customer comms
+- Product Manager
+- Engineer
+- Designer
+- Product Marketer
 
-Activation requirements:
+Requirements:
 
-- No worker activates without eval coverage for each `success_metric`
-- Minimum eval coverage is 10 golden examples per `success_metric`
-- Activation order is based on business value and eval readiness
-- No worker is allowed without a non-overlapping mission
-- Tool grants and approval boundaries remain worker-specific
+- Load each worker from its YAML spec
+- Define worker-specific tool grants
+- Add minimum eval suites and resilience tests
+- Respect approval boundaries before any external or production-affecting action
 
 Files:
 
@@ -154,23 +150,22 @@ Files:
 - `knowledge/worker-specs/*.yaml`
 - LangSmith eval datasets
 
-Acceptance:
+Current state:
 
-- All 5 planned workers are active behind eval gates
-- Each worker has mission boundaries that do not collapse into another worker's scope
-- Worker activation order is documented and justified by value plus eval readiness
-- No worker can execute without its eval gate passing
+- All 5 initial workers can execute through the supervisor graph
+- Approval boundaries are enforced at runtime
+- Each worker passes its minimum eval gate before activation
 
 ### Step 22: Cockpit Alerting and Kill Switches
 
-Make Cockpit operational as the command layer for monitoring, approvals, and interruption.
+Make the Cockpit operational as the command layer for production oversight.
 
-Implement:
+Implemented:
 
-- Alerts for policy gate block rate, worker metric degradation, job failure spikes, and external service errors
-- Thresholds derived from baseline data gathered during Phase 2 and early Phase 3
-- Kill switches to pause an individual worker, all harness work, or a specific tenant
-- Delivery channel still TBD across dashboard notification, email, and SMS
+- Alert emission for policy gate block rate, worker metric degradation, job failure spikes, and external service errors
+- Kill switches to pause workers, disable jobs, or stop tenant-level execution
+- Operator approval flows for risky actions, with persuasion-platform decisions modeled through `review_object` rather than audit-log-only approval state
+- Admin override paths limited to Cockpit-level permissions
 
 Files:
 
@@ -178,85 +173,78 @@ Files:
 - `harness/src/harness/control_plane/`
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
-- Cockpit can monitor the four alert categories
-- Kill switches work at worker, tenant, and global scope
-- Alert thresholds are based on observed baselines rather than arbitrary defaults
-- Approval and pause actions are visible and auditable
+- Alerts fire for the four spec-defined categories
+- Kill switches can pause execution without redeploying
+- Risky actions require explicit approval when configured, and approved escalations can continue automatically from stored resumable state
+- Cockpit approval surfaces should read `operator_projections` and durable `review_object` state rather than deriving approval state only from logs
 
 ### Phase 3 Acceptance
 
-- All 5 workers are active with eval coverage
-- Tenant onboarding is automated end-to-end
-- Async and scheduled jobs run durably through Inngest
-- Artifacts persist with correct governance and auditability
-- Cockpit can monitor and kill-switch any worker or tenant
+- All workers are active behind eval and approval gates
+- Onboarding, jobs, and artifact persistence work end-to-end
+- Cockpit alerting and pause controls are functional
+- Tenant operations can run without manual database intervention
 
-## Phase 4: Improvement (Weeks 13-16+)
+## Phase 4: Improvement
 
-Goal: Improvement Lab running experiments, full eval coverage in all three tiers, customer content pipeline live, and Cockpit providing full operational visibility and control.
+Goal: the system can evaluate itself safely, run bounded experiments, ingest customer content into durable knowledge, and give the founder a complete control surface for portfolio management.
 
 ### Step 23: Improvement Lab
 
-Implement the bounded experimentation system with isolation, lock management, and promotion only through verified delivery rails.
+Implement the experiment layer with isolation and lock control.
 
-Implement:
+Implemented foundation:
 
-- One experiment per mutation surface at a time
-- Lock registry with TTL and heartbeat to prevent stale locks
-- Process: propose change -> mutate bounded surface -> run fixed-budget experiment -> score against baseline using the same LangSmith evaluators -> keep or discard -> log outcome
-- Good mutation targets: prompt files, workflow nodes, script variants, copy variants, threshold rules, industry pack logic
-- Cockpit force-release for stale locks
-- Promotion of successful changes only through the Safe Delivery Layer
+- Experiment registry with scope, budget, owner, and rollback metadata
+- Lock registry to prevent conflicting experiments
+- Sandboxed execution paths for candidate changes
+- Promotion rules that require eval evidence before rollout
 
 Files:
 
 - `harness/src/harness/improvement_lab/`
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
-- Concurrent experiments cannot touch the same mutation surface
-- Stale locks expire or can be force-released by Cockpit
-- Experiments are evaluated against the same baseline scoring system used elsewhere
-- No experiment reaches production outside Safe Delivery promotion
+- Concurrent experiments cannot mutate the same protected target without a lock decision
+- Experiments can be promoted, rejected, or rolled back with audit history
+- No experiment reaches production without passing its eval gate
 
-### Step 24: Full Eval Coverage (Three Tiers)
+### Step 24: Full Eval Coverage
 
-Expand evals from minimum viable worker coverage to complete core, industry, and tenant coverage.
+Expand evaluation from minimum viable coverage to all three tiers defined in the spec.
 
-Implement:
+Implemented foundation:
 
-- Core evals for shared product and harness behaviors
-- Industry evals for HVAC, Plumbing, Rooter, and future pack-specific behavior as packs come online
-- Tenant evals for client-specific configured behavior
-- Eval data sources from synthetic test cases, anonymized production data with PII redacted, and hand-curated golden examples
-- Coverage for every worker `success_metric`
-- Resilience tests for every blocking and degradable dependency
+- Core eval suites for shared harness behaviors
+- Industry eval suites for HVAC pack logic
+- Tenant eval suites for tenant-specific configurations and policies
+- Budgeted recurring eval runs with regression alerts
 
 Files:
 
 - LangSmith eval datasets
 - `harness/src/harness/evals/`
 
-Acceptance:
+Current state:
 
 - Core, industry, and tenant eval tiers all exist
-- Promotion decisions require current eval evidence
-- Every worker `success_metric` maps to dataset coverage
-- Dependency resilience is tested across blocking and degraded modes
+- Promotion decisions reference current eval results
+- Regressions trigger Cockpit-visible alerts
 
 ### Step 25: Customer Content Pipeline
 
-Build the Raw -> Sanitized -> Structured pipeline for customer-derived content.
+Build the Raw -> Sanitized -> Structured pipeline for customer-derived knowledge.
 
-Implement:
+Implemented foundation:
 
-- Intake for raw call transcripts and customer-derived signals
-- PII redaction before any data is reused in eval datasets or downstream knowledge
-- Consent-aware and retention-aware reuse rules per tenant
-- Structured insight extraction from call patterns, aligned with spec Section 8 customer-derived content
+- Intake for raw transcripts, notes, and feedback
+- Sanitization and PII handling before reuse
+- Structured extraction into customer insight graphs and operational records
+- Governance around what content is reusable by workers
 
 Files:
 
@@ -264,63 +252,61 @@ Files:
 - `harness/src/harness/content_pipeline/`
 - `harness/src/observability/pii_redactor.py`
 
-Acceptance:
+Current state:
 
-- Raw customer content never reaches downstream consumers without sanitization
-- Sanitized content can feed eval datasets and customer insight graphs
-- Structured insights remain tenant-scoped and policy-governed
-- Reuse respects tenant consent and retention settings
+- Raw customer content is never exposed to downstream workers without sanitization
+- Structured outputs can be linked back to their sanitized source
+- Customer insight knowledge stays tenant-scoped
 
-### Step 26: Founder Cockpit (Full)
+### Step 26: Founder Cockpit
 
-Complete the Cockpit as the founder control surface across portfolio, releases, experiments, and operations.
+Complete the portfolio control surface described in the spec.
 
-Implement:
+Implemented foundation:
 
-- Portfolio KPIs and industry-by-industry performance views
-- Client health monitoring
-- Approvals for risky actions such as publish, send, and billing changes
-- Budget and margin oversight
-- Improvement Lab oversight
-- Safe Delivery oversight
-- Eval result visibility with promotion decisions tied to eval data
-- Kill switches and pause controls from Step 22 with full UI support
+- Portfolio KPIs and tenant health views
+- Experiment oversight and promotion controls
+- Budget, margin, and risk monitoring
+- Release oversight across dashboard, backend, and voice deployments
+- Persuasion-platform surfaces should include the weekly packet, review queue, proof debt queue, and doctrine conflict queue backed by `operator_projections`
 
 Files:
 
-- Cockpit application surface in the appropriate product codebase
+- Cockpit application surface, implemented in the appropriate product codebase
 - `docs/decisions/`
 
-Acceptance:
+Current state:
 
-- Cockpit provides complete operational visibility and control
-- Approval, eval, experiment, release, and kill-switch actions are unified in one surface
-- Promotion and risky-action decisions are backed by auditable data
+- Founders can inspect tenant health, experiments, and release posture from one place
+- Approval and kill-switch actions are visible and auditable
+- Persuasion-specific queues and packet views should remain slices over the same `review_object` state, not separate UI-owned workflow state
+- Cockpit surfaces alert history and current system posture
 
 ### Phase 4 Acceptance
 
-- Improvement Lab runs bounded experiments with isolation
-- Full eval coverage exists at core, industry, and tenant tiers
-- Customer content pipeline produces anonymized eval-ready data
-- Cockpit provides complete operational visibility and control
+- Improvement Lab is operational with isolation and rollback
+- Full eval coverage gates promotions
+- Customer content pipeline is safe and durable
+- Founder Cockpit provides portfolio-level oversight and controls
 
 ## Phases 3-4 Execution Sequence
 
-- Week 8-9: Steps 17-18 (V&V expansion plus Delegation and Jobs)
-- Week 10: Step 19 (Tenant onboarding)
-- Week 11: Steps 20-21 (Artifact governance plus remaining workers)
-- Week 12: Step 22 (Cockpit alerting) plus Phase 3 end-to-end test
-- Week 13-14: Step 23 (Improvement Lab)
-- Week 15: Steps 24-25 (Full evals plus Customer content pipeline)
-- Week 16: Step 26 (Full Cockpit) plus Phase 4 acceptance
+- Sequence 1: Step 17 and Step 18 establish multi-worker execution safety and durable jobs
+- Sequence 2: Step 19 and Step 20 establish operational onboarding and artifact governance
+- Sequence 3: Step 21 and Step 22 bring the full worker set online behind Cockpit controls
+- Sequence 4: Step 23 through Step 26 add bounded experimentation, full evals, customer content ingestion, and founder controls
 
-## Phases 3-4 Cross-Cutting Concerns
+## Phases 3-4 Open Questions
 
-- External Service Resilience (P2 TODO): define fallback behavior for Retell AI, Supabase, Cal.com, and Twilio outages
-- Express V2 Scaling (P3 TODO): document the horizontal scaling story once tenant count requires it
-- Cockpit alerting thresholds (P3 TODO): establish thresholds from baseline data gathered during Phase 2 deployment
+- External service resilience patterns for Retell AI, Supabase, Cal.com, and Twilio remain a P2 TODO
+- Inngest event validation schema remains a P2 TODO and should land before broad async expansion
+- Harness -> Supabase write failure handling remains a P2 TODO and is critical before large artifact volumes
+- PII redaction implementation detail remains a P2 TODO and should be resolved before full LangSmith rollout
+- Express V2 horizontal scaling remains a P3 TODO
+- Cockpit alert thresholds and delivery channels remain a P3 TODO
 
 ## Phases 3-4 Verification
 
-- Phase 3: onboard a test tenant end-to-end and run a test call through all 5 workers
-- Phase 4: run one Improvement Lab experiment, verify baseline scoring, and confirm promotion only through Safe Delivery
+- Phase 3: verify onboarding, multi-worker execution, async jobs, and Cockpit controls in a staging environment with multiple seeded tenants
+- Phase 4: verify experiment isolation, tiered eval coverage, customer content sanitation, and Cockpit promotion flows
+- Continuous verification: retain CI from Phases 1-2 and add recurring eval runs plus dependency resilience tests

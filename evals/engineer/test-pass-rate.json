@@ -1,0 +1,12 @@
+[
+  {"input":"Add artifact lifecycle tests","expected":"tests included"},
+  {"input":"Implement job state machine","expected":"tests included"},
+  {"input":"Add alert evaluator","expected":"tests included"},
+  {"input":"Support onboarding flow","expected":"tests included"},
+  {"input":"Add worker registry","expected":"tests included"},
+  {"input":"Refactor verification","expected":"tests included"},
+  {"input":"Add content pipeline","expected":"tests included"},
+  {"input":"Add kill switches","expected":"tests included"},
+  {"input":"Add experiment locks","expected":"tests included"},
+  {"input":"Improve repository layer","expected":"tests included"}
+]

@@ -1,5 +1,7 @@
 # Phase 1: Foundation — Implementation Plan
 
+Historical planning snapshot only. Canonical sequencing, readiness gates, and dependency order now live in `plans/whole-system-executable-master-plan.md`.
+
 **Type:** Feature (Greenfield)
 **Branch:** `rbaset5/agent-arch-spec` → new branch `phase1/foundation`
 **Spec:** `docs/superpowers/specs/2026-03-12-calllock-agentos-architecture-design.md` (Section 24)
