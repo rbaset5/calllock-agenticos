@@ -329,3 +329,35 @@ class WedgeFitnessSnapshotResponse(StrictModel):
     launch_recommendation: Optional[str] = None
     source_version: str
     computed_at: str
+
+
+class InboundPollRequest(StrictModel):
+    tenant_id: str
+    account_ids: list[str] = Field(default_factory=list)
+
+
+class InboundPollResponse(StrictModel):
+    results: list[dict[str, Any]] = Field(default_factory=list)
+    fetched: int = 0
+    processed: int = 0
+    errors: int = 0
+
+
+class InboundProcessRequest(StrictModel):
+    tenant_id: str
+    account_id: str
+    message_id: str
+    from_addr: str
+    from_domain: str
+    subject: str
+    source: str = "organic"
+
+
+class InboundProcessResponse(StrictModel):
+    message_id: str
+    action: str | None
+    total_score: int = 0
+    stage: str = ""
+    draft_generated: bool = False
+    escalated: bool = False
+    auto_archived: bool = False

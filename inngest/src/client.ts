@@ -1,5 +1,11 @@
 export interface HarnessTriggerEvent {
-  name: "harness/process-call" | "harness/job-complete";
+  name:
+    | "harness/process-call"
+    | "harness/job-complete"
+    | "calllock/inbound.poll.requested"
+    | "calllock/inbound.message.received"
+    | "calllock/inbound.message.processed"
+    | "calllock/inbound.escalation.triggered";
   data: Record<string, unknown>;
 }
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -17,6 +16,7 @@ except Exception:  # pragma: no cover
     JSONResponse = None  # type: ignore[assignment]
 
 from cache.redis_client import build_cache_client
+from db import repository as db_repository
 from db.repository import (
     create_approval_request,
     get_compliance_rules,
@@ -85,6 +85,10 @@ from harness.models import (
     GrowthGateCheckResponse,
     GrowthLifecycleRequest,
     GrowthTouchpointRequest,
+    InboundPollRequest,
+    InboundPollResponse,
+    InboundProcessRequest,
+    InboundProcessResponse,
     HarnessJobCompleteEvent,
     HarnessProcessCallEvent,
     ImprovementExperimentRequest,
@@ -435,6 +439,67 @@ if FastAPI:
             wedges=request_model.wedges or None,
             context=request_model.context,
             now=now,
+        )
+
+    @app.post("/inbound/poll", response_model=InboundPollResponse)
+    async def inbound_poll(request_model: InboundPollRequest, request: Request) -> InboundPollResponse:
+        validate_event_auth(request)
+        from inbound.pipeline import run_poll
+
+        results = await run_poll(
+            tenant_id=request_model.tenant_id,
+            account_ids=request_model.account_ids,
+            repository=db_repository,
+        )
+        return InboundPollResponse(
+            results=results,
+            fetched=len(results),
+            processed=sum(1 for result in results if result.get("action") is not None),
+            errors=sum(1 for result in results if result.get("action") is None),
+        )
+
+    @app.post("/inbound/process", response_model=InboundProcessResponse)
+    async def inbound_process(request_model: InboundProcessRequest, request: Request) -> InboundProcessResponse:
+        validate_event_auth(request)
+        from inbound.pipeline import process_message
+        from inbound.types import ParsedMessage
+
+        msg_record = db_repository.get_inbound_message(request_model.tenant_id, request_model.message_id)
+        if not msg_record:
+            raise HTTPException(status_code=404, detail=f"Message {request_model.message_id} not found")
+
+        received_at = msg_record.get("received_at")
+        parsed_received_at = (
+            datetime.fromisoformat(str(received_at).replace("Z", "+00:00"))
+            if received_at
+            else datetime.now(timezone.utc)
+        )
+        msg = ParsedMessage(
+            rfc_message_id=msg_record["rfc_message_id"],
+            thread_id=msg_record.get("thread_id", ""),
+            imap_uid=int(msg_record.get("imap_uid", 0) or 0),
+            from_addr=msg_record.get("from_addr", request_model.from_addr),
+            from_domain=msg_record.get("from_domain", request_model.from_domain),
+            to_addr=msg_record.get("to_addr", ""),
+            subject=msg_record.get("subject", request_model.subject),
+            received_at=parsed_received_at,
+            body_html=msg_record.get("body_html", ""),
+            body_text=msg_record.get("body_text", ""),
+        )
+        result = await process_message(
+            msg=msg,
+            tenant_id=request_model.tenant_id,
+            repository=db_repository,
+            source=request_model.source,
+        )
+        return InboundProcessResponse(
+            message_id=result["message_id"],
+            action=result["action"],
+            total_score=result.get("total_score") or 0,
+            stage=result.get("stage", ""),
+            draft_generated=result.get("draft_generated", False),
+            escalated=result.get("escalated", False),
+            auto_archived=result.get("auto_archived", False),
         )
  
     @app.post("/onboard-tenant")
