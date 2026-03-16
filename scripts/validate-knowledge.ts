@@ -60,7 +60,7 @@ for (const file of markdownFiles) {
       errors.push(`${path.relative(root, file)} missing frontmatter key ${key}`);
     }
   }
-  if (metadata.last_reviewed && new Date(metadata.last_reviewed) > new Date("2026-03-12")) {
+  if (metadata.last_reviewed && new Date(metadata.last_reviewed) > new Date()) {
     errors.push(`${path.relative(root, file)} has a future last_reviewed date`);
   }
   for (const link of wikiLinks(body)) {
