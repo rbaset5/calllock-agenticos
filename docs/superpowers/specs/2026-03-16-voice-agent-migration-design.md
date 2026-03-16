@@ -23,6 +23,11 @@ Port the Alexandria V2/V3 Express voice agent backend into rabat as a new `harne
 | Dashboard | Same webhook contract | Dashboard stays on Vercel, receives same HMAC-signed payloads. |
 | Taxonomy storage | YAML knowledge node | `knowledge/industry-packs/hvac/taxonomy.yaml`. Reusable by other industry packs. |
 | Agent config storage | YAML knowledge node | `knowledge/industry-packs/hvac/voice/retell-agent-v9.yaml`. Versionable, no secrets. |
+| Voice credential storage | New migration: `voice_config` JSONB column on `tenant_configs` | Existing `tenant_configs` (migration 002) has only named columns, no generic JSONB. New migration adds the column. |
+| Retell webhook routing | Single URL dispatcher | Retell sends all tool calls to one webhook URL with tool name in request body. Router dispatches internally. |
+| Call records persistence | New `call_records` table | Post-call data needs a home. New migration alongside voice config column. |
+| HMAC secret | Global environment variable (`RETELL_WEBHOOK_SECRET`) | Retell uses a single API key for HMAC signing per account, not per-agent. |
+| Conversation state | Stateless tool handlers | Retell passes relevant context in each tool call payload. No server-side session state needed. |
 
 ## 1. Architecture Overview
 
@@ -112,13 +117,29 @@ When Retell calls a tool mid-conversation, the request hits FastAPI directly. No
 
 ```
 Caller speaks → Retell LLM decides to call tool
-    → POST /webhook/retell/{tool_name}
-    → auth.py verifies HMAC-SHA256 signature
+    → POST /webhook/retell/tool-call
+    → auth.py verifies HMAC-SHA256 signature (global RETELL_WEBHOOK_SECRET env var)
+    → dispatcher reads tool name from request body, routes to handler
     → tenant_scope.py sets RLS context from call metadata.tenant_id
     → tool handler executes (external API call or DB query)
     → returns JSON response to Retell
     → Retell LLM continues conversation
 ```
+
+### Webhook routing
+
+Retell sends all tool calls to a **single webhook URL** (`POST /webhook/retell/tool-call`) with the tool name and arguments in the request body. The router acts as a dispatcher:
+
+```python
+@voice_router.post("/tool-call")
+async def handle_tool_call(request: RetellToolCallRequest):
+    handler = TOOL_HANDLERS.get(request.tool_name)
+    if not handler:
+        return RetellToolResponse(error=f"Unknown tool: {request.tool_name}")
+    return await handler(request)
+```
+
+Retell also sends a separate `POST /webhook/retell/call-ended` for the post-call webhook — this is a different endpoint, not a tool call.
 
 ### Tool handler pattern
 
@@ -153,15 +174,21 @@ When Retell fires the `call-ended` webhook, the voice module does minimal synchr
 
 1. Verify HMAC signature
 2. Extract `tenant_id` from call metadata
-3. Run extraction pipeline (pure functions, no external calls):
+3. **Persist raw Retell payload** to `call_records` table immediately (before extraction). This ensures call data is never lost even if extraction fails.
+4. Run extraction pipeline (pure functions, no external calls):
    - `post_call.py` — customer name, service address, safety flags from transcript
    - `urgency.py` — urgency inference from keywords
    - `tags.py` — 117-tag HVAC taxonomy classification
    - `call_scorecard.py` — quality score (0-100)
    - `call_type.py` — urgency tier + dashboard level mapping
    - `traffic.py` — traffic controller routing decision
-4. Fire Inngest event `calllock/call.ended` with extracted payload
-5. Return 200 to Retell
+5. **Update `call_records`** with extracted fields
+6. Fire Inngest event `calllock/call.ended` with extracted payload
+7. Return 200 to Retell
+
+### Extraction failure handling
+
+If any extraction step throws an exception, the handler catches it, logs the error, and still fires the Inngest event with whatever fields were successfully extracted (others default to `None`). The raw Retell payload is already persisted (step 3), so no data is lost. A `extraction_status: 'partial' | 'complete'` field on the event signals downstream consumers. The `call_records` row retains the raw payload for manual review or retry.
 
 ### Asynchronous (Inngest fan-out)
 
@@ -171,8 +198,16 @@ calllock/call.ended
   ├→ sync-dashboard        (new)      — transform payload, POST to dashboard webhook
   ├→ evaluate-alerts       (existing) — emergency alert evaluation
   ├→ growth-touchpoint     (existing) — log call as growth touchpoint
-  └→ send-emergency-sms    (new, conditional) — only if safety emergency flagged
+  └→ send-emergency-sms    (new, conditional) — only if safety emergency flagged AND not already sent during call
 ```
+
+### Emergency SMS deduplication
+
+The `send_emergency_sms` tool can fire during the live call (real-time, via Retell tool call) AND the `send-emergency-sms` Inngest function can fire post-call (if safety flag is set). To prevent duplicate SMS:
+
+- The real-time tool writes a `call_records.emergency_sms_sent_at` timestamp when it sends.
+- The post-call Inngest function checks this field before sending. If already set, it skips.
+- Idempotency key: `{tenant_id}:{call_id}:emergency-sms`
 
 ### Event payload schema
 
@@ -196,10 +231,16 @@ class CallEndedEvent(BaseModel):
     scorecard_warnings: list[str]
     # Routing decision from traffic controller
     route: Literal["legitimate", "spam", "vendor", "recruiter"]
+    # Booking state (needed by scorecard and dashboard)
+    booking_id: str | None          # Cal.com booking UID if booked during call
+    callback_scheduled: bool        # Whether a callback was promised
+    # Extraction metadata
+    extraction_status: Literal["complete", "partial"]
     # Raw Retell data
     retell_call_id: str
     call_duration_seconds: int
     end_call_reason: str
+    call_recording_url: str | None
 ```
 
 This extends rabat's existing `ProcessCallRequest` model shape with voice-specific fields.
@@ -251,12 +292,79 @@ class VoiceConfig(BaseModel):
     business_phone: str
 ```
 
-Stored in the `tenant_configs.config` JSON column (migration 002). No new migration needed — the column is `jsonb` and already supports arbitrary config shapes.
+### New migration: `048_voice_config.sql`
+
+The existing `tenant_configs` table (migration 002) has only named columns — no generic JSONB config field. A new migration adds:
+
+```sql
+-- Add voice config column to tenant_configs
+ALTER TABLE public.tenant_configs
+  ADD COLUMN voice_config jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+-- Call records table for voice call persistence
+CREATE TABLE public.call_records (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  call_id text NOT NULL,
+  retell_call_id text NOT NULL,
+  phone_number text,
+  transcript text,
+  raw_retell_payload jsonb NOT NULL,       -- persisted before extraction
+  extracted_fields jsonb DEFAULT '{}'::jsonb,  -- populated after extraction
+  extraction_status text NOT NULL DEFAULT 'pending',  -- pending | complete | partial
+  quality_score numeric(5,2),
+  tags text[] DEFAULT '{}',
+  route text,                              -- legitimate | spam | vendor | recruiter
+  urgency_tier text,
+  caller_type text,
+  primary_intent text,
+  revenue_tier text,
+  booking_id text,                         -- Cal.com booking UID if booked
+  callback_scheduled boolean DEFAULT false,
+  call_duration_seconds integer,
+  end_call_reason text,
+  call_recording_url text,
+  synced_to_dashboard boolean DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id, call_id)
+);
+
+-- Booking API keys table
+CREATE TABLE public.voice_api_keys (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.tenants(id),
+  api_key_hash text NOT NULL,              -- SHA-256 hash, not plaintext
+  label text NOT NULL DEFAULT 'default',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz,
+  UNIQUE(api_key_hash)
+);
+
+-- RLS on both tables
+ALTER TABLE public.call_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.call_records FORCE ROW LEVEL SECURITY;
+CREATE POLICY call_records_tenant ON public.call_records
+  USING (tenant_id = public.current_tenant_id());
+
+ALTER TABLE public.voice_api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.voice_api_keys FORCE ROW LEVEL SECURITY;
+CREATE POLICY voice_api_keys_tenant ON public.voice_api_keys
+  USING (tenant_id = public.current_tenant_id());
+
+-- Index for phone number lookups (customer status tool)
+CREATE INDEX idx_call_records_phone ON public.call_records(tenant_id, phone_number);
+-- Index for dashboard sync retry
+CREATE INDEX idx_call_records_unsynced ON public.call_records(tenant_id, synced_to_dashboard)
+  WHERE synced_to_dashboard = false;
+```
+
+`VoiceConfig` is stored in `tenant_configs.voice_config` JSONB column. Credentials are encrypted at the application layer before writing to this column (same pattern as other sensitive tenant config).
 
 ### Credential caching
 
 On the first tool call of a conversation, `VoiceConfig` is fetched from `tenant_configs` via the repository layer and cached in Redis:
-- Key: `voice:config:{tenant_id}`
+- Key: `t:{tenant_id}:voice:config` (follows existing `cache/keys.py` pattern)
 - TTL: 5 minutes
 - Subsequent tool calls in the same conversation hit cache
 
@@ -368,6 +476,10 @@ Voice routes mount on the existing harness FastAPI app. `render.yaml` updated to
 
 Revert Retell webhook URLs to Express service. Both services coexist indefinitely — they share the same Supabase database. No data migration needed.
 
+During the cutover window, a call could start on Express (pre-switch) and subsequent tool calls could hit FastAPI (post-switch). This is safe because tool handlers are stateless — each tool call carries all context in the Retell request payload. There is no shared server-side session state between tool calls.
+
+For Inngest event compatibility: during the cutover period, the Express service continues to emit its own post-call events (if any). The new `calllock/call.ended` events are only fired by the FastAPI service. There is no overlap — whichever service receives the `call-ended` webhook processes it. Rollback simply means the Express service resumes receiving all webhooks.
+
 ## 10. Write Ownership
 
 | Table / Resource | Primary writer | Notes |
@@ -381,7 +493,48 @@ Revert Retell webhook URLs to Express service. Both services coexist indefinitel
 | Cal.com bookings | Voice module (real-time) | Created during call |
 | Twilio SMS | Voice module (real-time + Inngest) | Emergency alerts |
 
-## 11. What Gets Retired
+## 11. Observability
+
+### Metrics
+
+| Metric | Type | Description |
+|---|---|---|
+| `voice.tool_call.duration_ms` | Histogram | Per-tool latency (labels: `tool_name`, `tenant_id`) |
+| `voice.tool_call.errors` | Counter | Tool call failures (labels: `tool_name`, `error_type`) |
+| `voice.post_call.extraction_duration_ms` | Histogram | Time spent in synchronous extraction pipeline |
+| `voice.post_call.extraction_failures` | Counter | Extraction failures (partial extractions) |
+| `voice.dashboard_sync.duration_ms` | Histogram | Dashboard webhook delivery time |
+| `voice.dashboard_sync.failures` | Counter | Dashboard webhook delivery failures |
+| `voice.calcom.duration_ms` | Histogram | Cal.com API call latency |
+| `voice.calcom.errors` | Counter | Cal.com API failures |
+| `voice.calls.total` | Counter | Total calls processed (labels: `route`, `urgency_tier`) |
+| `voice.quality_score` | Histogram | Call quality score distribution |
+
+### Alerts
+
+| Alert | Threshold | Action |
+|---|---|---|
+| Tool call P95 latency > 1.5s | Sustained 5 min | Page — callers hearing dead air |
+| Cal.com error rate > 10% | Over 15 min window | Page — bookings failing |
+| Extraction failure rate > 5% | Over 30 min window | Warn — partial data reaching dashboard |
+| Dashboard sync failure rate > 20% | Over 15 min window | Warn — dashboard cards missing |
+| Zero calls processed in 1 hour | During business hours | Warn — possible webhook misconfiguration |
+
+### PII handling
+
+Transcripts contain customer names, addresses, and phone numbers. PII handling follows the existing `observability/pii_redactor.py` pattern:
+
+- **LangSmith traces:** PII redacted before sending to LangSmith. Transcript content is masked in trace metadata.
+- **Supabase `call_records`:** Raw transcript stored unredacted (needed for extraction retry and quality review). Access controlled by RLS — only the owning tenant's users can query.
+- **Inngest event payload:** Transcript included in `calllock/call.ended` event. Inngest event logs should be treated as PII-containing and retention-limited.
+- **Logs (Pino/structlog):** Phone numbers masked in structured logs (port V2's phone masking utility). Customer names not logged.
+- **Retention:** `call_records` rows retained for 90 days by default. Configurable per tenant via `tenant_configs`. Transcripts can be purged independently of extracted fields.
+
+## 12. Taxonomy startup validation
+
+The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/taxonomy.yaml` at module import time. If the file is missing or malformed, the module raises an `ImportError` at startup — failing fast rather than silently returning zero tags on the first post-call webhook.
+
+## 13. What Gets Retired
 
 | Component | Action |
 |---|---|
@@ -391,7 +544,7 @@ Revert Retell webhook URLs to Express service. Both services coexist indefinitel
 | `retellai-calllock/` workspace | Archive after migration complete |
 | Node.js/TypeScript runtime for voice | Eliminated entirely |
 
-## 12. Dependencies
+## 14. Dependencies
 
 ### Python packages (additions to `harness/requirements.txt`)
 
