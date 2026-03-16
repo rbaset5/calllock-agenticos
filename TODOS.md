@@ -27,12 +27,8 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** Proof coverage schema and Founder Weekly Operating Packet format being stable.
 **Source:** CEO mega-review v2, missing proof supply chain loop.
 
-### Assign runtime ownership for growth-system components
-**What:** Decide where the Prospect Enrichment Pipeline, Experiment Allocator, outbound send path, Growth Advisor batch jobs, and projection refresh jobs run in Phase 1-3: harness service, Inngest functions, product core, or a separate worker service.
-**Why:** The docs name these components and their write ownership, but not their runtime home. Without a concrete placement, implementers will invent execution boundaries, deployment units, and auth paths ad hoc.
-**Effort:** M
-**Depends on:** shared runtime split in the architecture spec remaining stable.
-**Source:** 2026-03-14 HOLD SCOPE audit follow-up.
+### ~~Assign runtime ownership for growth-system components~~
+**Resolved by:** ADR 010 (`docs/decisions/010-growth-system-runtime-placement.md`). All growth system code in `harness/src/growth/` as Python, Inngest functions as thin TypeScript handlers. Sales Machine Operating Manual spec aligns explicitly.
 
 ### Define attribution-token lifecycle and tenant-bound validation
 **What:** Specify the token payload, expiry window, tenant binding, validation steps, replay posture, and key-rotation strategy for signed attribution tokens and referral links.
