@@ -150,6 +150,20 @@ Updated 2026-03-14: resolved remaining 3 Droid-handoff blockers (attribution tok
 **Depends on:** Belief Layer v1 deployed and producing data for ≥8 weeks.
 **Source:** v3 depth pass, Bucket 3D.
 
+### P3 — Achievement Toasts (Office Dashboard Phase 2)
+**What:** Toast notifications on agent/department milestones (10th deal closed, 100th verification, zero-error week).
+**Why:** Gamification for internal team morale. Makes the office feel alive and celebratory.
+**Effort:** S
+**Depends on:** Office Dashboard Phase 1 complete + sufficient event data to calibrate thresholds.
+**Source:** CEO mega-review, Delight 4.
+
+### P3 — Ambient Sound Design (Office Dashboard Phase 2)
+**What:** Subtle audio layer tied to agent states — typing, murmurs, paper shuffling, alarm buzzer. Mutable. Volume scales with activity.
+**Why:** Peripheral awareness for always-on desktop window. Unique differentiator.
+**Effort:** M
+**Depends on:** Office Dashboard Phase 1 complete + Electron desktop wrap.
+**Source:** CEO mega-review, Delight 5.
+
 ## Closed
 
 ### ~~P3 — Define Express V2 horizontal scaling story~~

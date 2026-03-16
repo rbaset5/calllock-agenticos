@@ -5,7 +5,9 @@ graph: knowledge
 owner: founder
 last_reviewed: 2026-03-14
 trust_level: authoritative
-progressive_disclosure: full
+progressive_disclosure:
+  summary_tokens: 200
+  full_tokens: 3000
 ---
 
 # Growth System Design Doc v3 Editing Spec
