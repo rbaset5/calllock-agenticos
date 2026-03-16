@@ -4,6 +4,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import json
 from functools import lru_cache
+import logging
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -22,6 +23,7 @@ ARTIFACTS_DIR = REPO_ROOT / ".context" / "artifacts"
 
 
 _RUNTIME_STATE: dict[str, Any] | None = None
+logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -53,6 +55,13 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("founder_overrides", [])
     seed.setdefault("loss_records", [])
     seed.setdefault("wedge_fitness_snapshots", [])
+    seed.setdefault("inbound_messages", [])
+    seed.setdefault("inbound_drafts", [])
+    seed.setdefault("inbound_stage_log", [])
+    seed.setdefault("poll_checkpoints", [])
+    seed.setdefault("enrichment_cache", [])
+    seed.setdefault("prospect_emails", [])
+    seed.setdefault("email_accounts", [])
     return seed
 
 
@@ -100,6 +109,19 @@ def _tenant_matches(record_tenant_id: str, tenant_id: str) -> bool:
 
 def _sort_by_created_at(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(records, key=lambda record: record.get("created_at", ""))
+
+
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _sort_by_field(records: list[dict[str, Any]], field: str) -> list[dict[str, Any]]:
+    return sorted(records, key=lambda record: record.get(field, ""))
 
 
 def get_tenant(identifier: str) -> dict[str, Any]:
@@ -334,6 +356,13 @@ def delete_tenant(identifier: str) -> None:
         "founder_overrides",
         "loss_records",
         "wedge_fitness_snapshots",
+        "inbound_messages",
+        "inbound_drafts",
+        "inbound_stage_log",
+        "poll_checkpoints",
+        "enrichment_cache",
+        "prospect_emails",
+        "email_accounts",
     ):
         _state()[key] = [record for record in _state()[key] if record.get("tenant_id") != tenant_id and record.get("id") != tenant_id]
 
@@ -995,6 +1024,365 @@ def claim_scheduler_backlog_entries(
         entry["updated_at"] = claimed_before_iso
         claimed.append(entry)
     return claimed
+
+
+def insert_inbound_message(msg: dict[str, Any]) -> dict[str, Any]:
+    tenant_id = _normalize_growth_tenant_id(msg["tenant_id"])
+    rfc_message_id = msg["rfc_message_id"]
+    for row in _state()["inbound_messages"]:
+        if row["tenant_id"] == tenant_id and row["rfc_message_id"] == rfc_message_id:
+            logger.info("dedup_hit", extra={"tenant_id": tenant_id, "rfc_message_id": rfc_message_id})
+            return row
+    now = datetime.now(timezone.utc).isoformat()
+    created_at = msg.get("created_at", now)
+    record = {
+        "id": msg.get("id", str(uuid4())),
+        "tenant_id": tenant_id,
+        "account_id": msg["account_id"],
+        "rfc_message_id": rfc_message_id,
+        "thread_id": msg["thread_id"],
+        "imap_uid": msg["imap_uid"],
+        "from_addr": msg["from_addr"],
+        "from_domain": msg["from_domain"],
+        "to_addr": msg["to_addr"],
+        "subject": msg["subject"],
+        "received_at": msg["received_at"],
+        "body_text": msg["body_text"],
+        "source": msg.get("source", "organic"),
+        "quarantine_status": msg["quarantine_status"],
+        "quarantine_flags": deepcopy(msg.get("quarantine_flags", [])),
+        "quarantine_reason": msg.get("quarantine_reason"),
+        "prospect_id": msg.get("prospect_id"),
+        "scoring_status": msg.get("scoring_status", "pending"),
+        "action": msg.get("action"),
+        "total_score": msg.get("total_score"),
+        "score_dimensions": deepcopy(msg.get("score_dimensions", {})),
+        "score_reasoning": msg.get("score_reasoning"),
+        "rubric_hash": msg.get("rubric_hash"),
+        "stage": msg.get("stage", "new"),
+        "created_at": created_at,
+        "updated_at": msg.get("updated_at", created_at),
+    }
+    _state()["inbound_messages"].append(record)
+    return record
+
+
+def get_inbound_message(tenant_id: str, message_id: str) -> dict[str, Any] | None:
+    for row in _state()["inbound_messages"]:
+        if row["id"] == message_id and _tenant_matches(row["tenant_id"], tenant_id):
+            return row
+    return None
+
+
+def get_inbound_messages_by_thread(tenant_id: str, thread_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["inbound_messages"]
+        if _tenant_matches(row["tenant_id"], tenant_id) and row["thread_id"] == thread_id
+    ]
+    return _sort_by_field(rows, "received_at")
+
+
+def get_pending_scoring_messages(tenant_id: str, max_age_hours: int = 24) -> list[dict[str, Any]]:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    rows = []
+    for row in _state()["inbound_messages"]:
+        created_at = _parse_iso_datetime(row.get("created_at"))
+        if not _tenant_matches(row["tenant_id"], tenant_id):
+            continue
+        if row.get("scoring_status") != "pending" or created_at is None or created_at <= cutoff:
+            continue
+        rows.append(row)
+    return _sort_by_created_at(rows)
+
+
+def update_inbound_message_scoring(tenant_id: str, message_id: str, scoring_data: dict[str, Any]) -> dict[str, Any]:
+    row = get_inbound_message(tenant_id, message_id)
+    if row is None:
+        raise KeyError(f"Unknown inbound message: {message_id}")
+    for key in ("scoring_status", "action", "total_score", "score_dimensions", "score_reasoning", "rubric_hash"):
+        if key in scoring_data:
+            value = scoring_data[key]
+            row[key] = deepcopy(value) if isinstance(value, (dict, list)) else value
+    row["updated_at"] = scoring_data.get("updated_at", datetime.now(timezone.utc).isoformat())
+    return row
+
+
+def update_inbound_message_prospect(tenant_id: str, message_id: str, prospect_id: str) -> dict[str, Any]:
+    row = get_inbound_message(tenant_id, message_id)
+    if row is None:
+        raise KeyError(f"Unknown inbound message: {message_id}")
+    row["prospect_id"] = prospect_id
+    row["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return row
+
+
+def update_inbound_message_stage(tenant_id: str, message_id: str, stage: str) -> dict[str, Any]:
+    row = get_inbound_message(tenant_id, message_id)
+    if row is None:
+        raise KeyError(f"Unknown inbound message: {message_id}")
+    row["stage"] = stage
+    row["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return row
+
+
+def insert_inbound_draft(draft: dict[str, Any]) -> dict[str, Any]:
+    tenant_id = _normalize_growth_tenant_id(draft["tenant_id"])
+    message_id = draft["message_id"]
+    for row in _state()["inbound_drafts"]:
+        if row["tenant_id"] == tenant_id and row["message_id"] == message_id:
+            logger.info("dedup_hit", extra={"tenant_id": tenant_id, "message_id": message_id})
+            return row
+    record = {
+        "id": draft.get("id", str(uuid4())),
+        "tenant_id": tenant_id,
+        "message_id": message_id,
+        "thread_id": draft["thread_id"],
+        "action": draft["action"],
+        "template_used": draft["template_used"],
+        "draft_text": draft["draft_text"],
+        "source": draft["source"],
+        "reviewer_verdict": draft.get("reviewer_verdict"),
+        "content_gate_status": draft.get("content_gate_status", "pending"),
+        "content_gate_flags": deepcopy(draft.get("content_gate_flags", [])),
+        "send_status": draft.get("send_status", "pending_review"),
+        "created_at": draft.get("created_at", datetime.now(timezone.utc).isoformat()),
+    }
+    _state()["inbound_drafts"].append(record)
+    return record
+
+
+def get_inbound_draft(tenant_id: str, message_id: str) -> dict[str, Any] | None:
+    for row in _state()["inbound_drafts"]:
+        if row["message_id"] == message_id and _tenant_matches(row["tenant_id"], tenant_id):
+            return row
+    return None
+
+
+def get_pending_review_drafts(tenant_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["inbound_drafts"]
+        if _tenant_matches(row["tenant_id"], tenant_id) and row.get("send_status") == "pending_review"
+    ]
+    return _sort_by_created_at(rows)
+
+
+def update_inbound_draft_gate(tenant_id: str, draft_id: str, gate_data: dict[str, Any]) -> dict[str, Any]:
+    for row in _state()["inbound_drafts"]:
+        if row["id"] == draft_id and _tenant_matches(row["tenant_id"], tenant_id):
+            if "content_gate_status" in gate_data:
+                row["content_gate_status"] = gate_data["content_gate_status"]
+            if "content_gate_flags" in gate_data:
+                row["content_gate_flags"] = deepcopy(gate_data["content_gate_flags"])
+            return row
+    raise KeyError(f"Unknown inbound draft: {draft_id}")
+
+
+def update_inbound_draft_status(tenant_id: str, draft_id: str, send_status: str) -> dict[str, Any]:
+    for row in _state()["inbound_drafts"]:
+        if row["id"] == draft_id and _tenant_matches(row["tenant_id"], tenant_id):
+            row["send_status"] = send_status
+            return row
+    raise KeyError(f"Unknown inbound draft: {draft_id}")
+
+
+def insert_stage_transition(transition: dict[str, Any]) -> dict[str, Any]:
+    record = {
+        "id": transition.get("id", str(uuid4())),
+        "tenant_id": _normalize_growth_tenant_id(transition["tenant_id"]),
+        "message_id": transition["message_id"],
+        "thread_id": transition["thread_id"],
+        "from_stage": transition.get("from_stage"),
+        "to_stage": transition["to_stage"],
+        "changed_by": transition["changed_by"],
+        "reason": transition.get("reason", ""),
+        "created_at": transition.get("created_at", datetime.now(timezone.utc).isoformat()),
+    }
+    _state()["inbound_stage_log"].append(record)
+    return record
+
+
+def get_latest_stage(tenant_id: str, thread_id: str) -> dict[str, Any] | None:
+    rows = get_stage_history(tenant_id, thread_id)
+    if not rows:
+        return None
+    return rows[-1]
+
+
+def get_stage_history(tenant_id: str, thread_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["inbound_stage_log"]
+        if _tenant_matches(row["tenant_id"], tenant_id) and row["thread_id"] == thread_id
+    ]
+    return _sort_by_created_at(rows)
+
+
+def upsert_poll_checkpoint(
+    tenant_id: str,
+    account_id: str,
+    folder: str,
+    last_uid: int,
+    status: str = "ok",
+    error: str | None = None,
+) -> dict[str, Any]:
+    normalized_tenant_id = _normalize_growth_tenant_id(tenant_id)
+    now = datetime.now(timezone.utc).isoformat()
+    for row in _state()["poll_checkpoints"]:
+        if row["tenant_id"] == normalized_tenant_id and row["account_id"] == account_id and row["folder"] == folder:
+            row.update(
+                {
+                    "last_uid": last_uid,
+                    "last_polled_at": now,
+                    "poll_status": status,
+                    "last_error": error,
+                }
+            )
+            return row
+    record = {
+        "tenant_id": normalized_tenant_id,
+        "account_id": account_id,
+        "folder": folder,
+        "last_uid": last_uid,
+        "last_polled_at": now,
+        "poll_status": status,
+        "last_error": error,
+    }
+    _state()["poll_checkpoints"].append(record)
+    return record
+
+
+def get_poll_checkpoint(tenant_id: str, account_id: str, folder: str) -> dict[str, Any] | None:
+    for row in _state()["poll_checkpoints"]:
+        if _tenant_matches(row["tenant_id"], tenant_id) and row["account_id"] == account_id and row["folder"] == folder:
+            return row
+    return None
+
+
+def upsert_enrichment(tenant_id: str, cache_key: str, cache_type: str, source: str, data: dict[str, Any]) -> dict[str, Any]:
+    normalized_tenant_id = _normalize_growth_tenant_id(tenant_id)
+    now = datetime.now(timezone.utc).isoformat()
+    enrichment_data = deepcopy(data["enrichment_data"]) if "enrichment_data" in data else deepcopy(data)
+    for row in _state()["enrichment_cache"]:
+        if row["tenant_id"] == normalized_tenant_id and row["business_domain"] == cache_key and row["cache_type"] == cache_type:
+            row.update(
+                {
+                    "prospect_id": data.get("prospect_id", row.get("prospect_id")),
+                    "enrichment_data": enrichment_data,
+                    "enrichment_quality": data.get("enrichment_quality", row.get("enrichment_quality")),
+                    "estimated_monthly_lost_revenue": data.get(
+                        "estimated_monthly_lost_revenue",
+                        row.get("estimated_monthly_lost_revenue"),
+                    ),
+                    "enriched_at": data.get("enriched_at", data.get("fetched_at", now)),
+                    "source": source,
+                }
+            )
+            return row
+    record = {
+        "id": data.get("id", str(uuid4())),
+        "tenant_id": normalized_tenant_id,
+        "prospect_id": data.get("prospect_id"),
+        "business_domain": cache_key,
+        "enrichment_data": enrichment_data,
+        "enrichment_quality": data.get("enrichment_quality"),
+        "estimated_monthly_lost_revenue": data.get("estimated_monthly_lost_revenue"),
+        "enriched_at": data.get("enriched_at", data.get("fetched_at", now)),
+        "cache_type": cache_type,
+        "source": source,
+    }
+    _state()["enrichment_cache"].append(record)
+    return record
+
+
+def get_enrichment(tenant_id: str, cache_key: str, cache_type: str, ttl_hours: int = 168) -> dict[str, Any] | None:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=ttl_hours)
+    rows = [
+        row
+        for row in _state()["enrichment_cache"]
+        if _tenant_matches(row["tenant_id"], tenant_id)
+        and row["business_domain"] == cache_key
+        and row["cache_type"] == cache_type
+        and (_parse_iso_datetime(row.get("enriched_at")) or cutoff) > cutoff
+    ]
+    if not rows:
+        return None
+    rows = _sort_by_field(rows, "enriched_at")
+    return rows[-1]
+
+
+def delete_expired_enrichment(tenant_id: str, max_age_hours: int = 336) -> int:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    retained = []
+    deleted = 0
+    for row in _state()["enrichment_cache"]:
+        enriched_at = _parse_iso_datetime(row.get("enriched_at"))
+        if _tenant_matches(row["tenant_id"], tenant_id) and enriched_at is not None and enriched_at < cutoff:
+            deleted += 1
+            continue
+        retained.append(row)
+    _state()["enrichment_cache"] = retained
+    return deleted
+
+
+def insert_prospect_email(tenant_id: str, prospect_id: str, email: str, source: str = "outbound") -> dict[str, Any]:
+    normalized_tenant_id = _normalize_growth_tenant_id(tenant_id)
+    for row in _state()["prospect_emails"]:
+        if row["tenant_id"] == normalized_tenant_id and row["email"] == email:
+            logger.info("dedup_hit", extra={"tenant_id": normalized_tenant_id, "email": email})
+            return row
+    record = {
+        "id": str(uuid4()),
+        "tenant_id": normalized_tenant_id,
+        "prospect_id": prospect_id,
+        "email": email,
+        "source": source,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _state()["prospect_emails"].append(record)
+    return record
+
+
+def get_prospect_by_email(tenant_id: str, email: str) -> dict[str, Any] | None:
+    for row in _state()["prospect_emails"]:
+        if row["email"] == email and _tenant_matches(row["tenant_id"], tenant_id):
+            return row
+    return None
+
+
+def get_emails_for_prospect(tenant_id: str, prospect_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["prospect_emails"]
+        if row["prospect_id"] == prospect_id and _tenant_matches(row["tenant_id"], tenant_id)
+    ]
+    return _sort_by_created_at(rows)
+
+
+def get_enabled_email_accounts(tenant_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["email_accounts"]
+        if _tenant_matches(row["tenant_id"], tenant_id) and row.get("enabled", True)
+    ]
+    return _sort_by_created_at(rows)
+
+
+def get_email_account(tenant_id: str, account_id: str) -> dict[str, Any] | None:
+    for row in _state()["email_accounts"]:
+        if row["account_id"] == account_id and _tenant_matches(row["tenant_id"], tenant_id):
+            return row
+    return None
+
+
+def get_tenants_with_email_accounts() -> list[str]:
+    tenant_ids = {
+        row["tenant_id"]
+        for row in _state()["email_accounts"]
+        if row.get("enabled", True)
+    }
+    return sorted(tenant_ids)
 
 
 def insert_growth_touchpoint(payload: dict[str, Any]) -> dict[str, Any]:
