@@ -106,6 +106,69 @@ export interface InboundEscalationTriggeredPayload {
   escalated_at: string;
 }
 
+export const CALL_ENDED = "calllock/call.ended";
+export const CALL_APP_SYNC = "calllock/call.app.sync";
+export const CALL_EMERGENCY_SMS = "calllock/call.emergency.sms";
+
+export interface CallEndedPayload {
+  tenant_id: string;
+  call_id: string;
+  call_source?: "retell";
+  phone_number: string;
+  transcript: string;
+  customer_name?: string | null;
+  service_address?: string | null;
+  problem_description?: string | null;
+  urgency_tier: "emergency" | "urgent" | "routine" | "estimate";
+  caller_type:
+    | "residential"
+    | "commercial"
+    | "property_management"
+    | "vendor"
+    | "recruiter"
+    | "spam"
+    | "unknown";
+  primary_intent:
+    | "service"
+    | "maintenance"
+    | "estimate"
+    | "installation"
+    | "callback"
+    | "billing"
+    | "other"
+    | "unknown";
+  revenue_tier:
+    | "low_value"
+    | "standard_repair"
+    | "high_value"
+    | "membership"
+    | "replacement"
+    | "maintenance_plan"
+    | "unknown";
+  tags: string[];
+  quality_score: number;
+  scorecard_warnings: string[];
+  route: "legitimate" | "spam" | "vendor" | "recruiter";
+  booking_id?: string | null;
+  callback_scheduled?: boolean;
+  extraction_status: "complete" | "partial";
+  retell_call_id: string;
+  call_duration_seconds: number;
+  end_call_reason:
+    | "customer_hangup"
+    | "agent_hangup"
+    | "booking_confirmed"
+    | "callback_scheduled"
+    | "sales_lead"
+    | "out_of_area"
+    | "safety_exit"
+    | "wrong_number"
+    | "voicemail"
+    | "transfer"
+    | "error";
+  call_recording_url?: string | null;
+}
+
 export function validateProcessCallPayload(payload: ProcessCallPayload): string[] {
   const errors: string[] = [];
   if (!payload.call_id) errors.push("call_id is required");
@@ -134,6 +197,91 @@ export function validateJobCompletePayload(payload: JobCompletePayload): string[
   if (!payload.status) errors.push("status is required");
   if (payload.status && !["completed", "failed", "cancelled", "superseded"].includes(payload.status)) {
     errors.push("status is invalid");
+  }
+  return errors;
+}
+
+export function validateCallEndedPayload(payload: CallEndedPayload): string[] {
+  const errors: string[] = [];
+  if (!payload.tenant_id) errors.push("tenant_id is required");
+  if (!payload.call_id) errors.push("call_id is required");
+  if (!payload.phone_number) errors.push("phone_number is required");
+  if (payload.transcript === undefined) errors.push("transcript is required");
+  if (!payload.urgency_tier) errors.push("urgency_tier is required");
+  if (!payload.caller_type) errors.push("caller_type is required");
+  if (!payload.primary_intent) errors.push("primary_intent is required");
+  if (!payload.revenue_tier) errors.push("revenue_tier is required");
+  if (!Array.isArray(payload.tags)) errors.push("tags must be an array");
+  if (typeof payload.quality_score !== "number" || Number.isNaN(payload.quality_score)) {
+    errors.push("quality_score must be a number");
+  }
+  if (!Array.isArray(payload.scorecard_warnings)) {
+    errors.push("scorecard_warnings must be an array");
+  }
+  if (!payload.route) errors.push("route is required");
+  if (!payload.extraction_status) errors.push("extraction_status is required");
+  if (!payload.retell_call_id) errors.push("retell_call_id is required");
+  if (
+    typeof payload.call_duration_seconds !== "number" ||
+    Number.isNaN(payload.call_duration_seconds) ||
+    payload.call_duration_seconds < 0
+  ) {
+    errors.push("call_duration_seconds must be a non-negative number");
+  }
+  if (!payload.end_call_reason) errors.push("end_call_reason is required");
+  if (payload.call_source && payload.call_source !== "retell") {
+    errors.push("call_source must be 'retell'");
+  }
+  if (payload.urgency_tier && !["emergency", "urgent", "routine", "estimate"].includes(payload.urgency_tier)) {
+    errors.push("urgency_tier is invalid");
+  }
+  if (
+    payload.caller_type &&
+    !["residential", "commercial", "property_management", "vendor", "recruiter", "spam", "unknown"].includes(
+      payload.caller_type,
+    )
+  ) {
+    errors.push("caller_type is invalid");
+  }
+  if (
+    payload.primary_intent &&
+    !["service", "maintenance", "estimate", "installation", "callback", "billing", "other", "unknown"].includes(
+      payload.primary_intent,
+    )
+  ) {
+    errors.push("primary_intent is invalid");
+  }
+  if (
+    payload.revenue_tier &&
+    !["low_value", "standard_repair", "high_value", "membership", "replacement", "maintenance_plan", "unknown"].includes(
+      payload.revenue_tier,
+    )
+  ) {
+    errors.push("revenue_tier is invalid");
+  }
+  if (payload.route && !["legitimate", "spam", "vendor", "recruiter"].includes(payload.route)) {
+    errors.push("route is invalid");
+  }
+  if (payload.extraction_status && !["complete", "partial"].includes(payload.extraction_status)) {
+    errors.push("extraction_status is invalid");
+  }
+  if (
+    payload.end_call_reason &&
+    ![
+      "customer_hangup",
+      "agent_hangup",
+      "booking_confirmed",
+      "callback_scheduled",
+      "sales_lead",
+      "out_of_area",
+      "safety_exit",
+      "wrong_number",
+      "voicemail",
+      "transfer",
+      "error",
+    ].includes(payload.end_call_reason)
+  ) {
+    errors.push("end_call_reason is invalid");
   }
   return errors;
 }
