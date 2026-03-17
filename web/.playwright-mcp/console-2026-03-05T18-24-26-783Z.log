@@ -1,0 +1,320 @@
+[    4319ms] [WARNING] [GSI_LOGGER]: Your client application uses one of the Google One Tap prompt UI status methods that may stop functioning when FedCM becomes mandatory. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#display_moment and https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#skipped_moment @ https://accounts.google.com/gsi/client:80
+[    4627ms] [ERROR] Not signed in with the identity provider. @ https://www.reddit.com/:0
+[   22867ms] [ERROR] [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token. @ https://accounts.google.com/gsi/client:81
+[   36649ms] [ERROR] Cross-Origin-Opener-Policy policy would block the window.postMessage call. @ https://accounts.google.com/gsi/client:354
+[   36649ms] [ERROR] Cross-Origin-Opener-Policy policy would block the window.postMessage call. @ https://accounts.google.com/gsi/client:354
+[   48259ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   53588ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   55684ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   58514ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://styles.redditmedia.com/t5_2w58p/styles/communityIcon_lt2l9eu267561.JPG?width=96&height=96&frame=1&auto=webp&crop=96%3A96%2Csmart&s=453d9ab68672aa7352e13d99c75b23b62c2a1838:0
+[   58515ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://styles.redditmedia.com/t5_5zjkjy/styles/communityIcon_7t7ojeeeux291.jpg?width=96&height=96&frame=1&auto=webp&crop=96%3A96%2Csmart&s=098e1571961e082ea603f472203d40ee8caf655f:0
+[   58535ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://styles.redditmedia.com/t5_5ziajw/styles/image_widget_h84wpcp0ublg1.jpeg?format=pjpg&s=0566674827d6e0c310e9b58c9068713989687fc1:0
+[   59421ms] [WARNING] Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://community-home-5ziajw-1-0-6-webview.devvit.net') does not match the recipient window's origin ('null'). @ https://www.redditstatic.com/js/concat?prefix=en-US/&chunks=5d2Fs2pzgw,7BVZ2rg4aX,7ajphk-spr,9mu0omzWx3,BBE0pwSmX7,BG_FwfDT5S,BUPv3rKwm2,BWb-qSMuww,Bb5aziCQTA,Bgeqe3kwPt,BiGe_cdkw7,C8UwoIGQcl,CMD-_fVvbV,C_2udUSb7A,CeM0zAWB-V,CgHpS-h-Ju,CpiB8yvp7V,Cwiy3lqqmG,D-_oQ7tVzO,DFshhBh3Q0,DLvpJ86TzR,DRFJuOQBP_,Dl0WiZVitb,Dt2jccZWcd,DtqY-6pzYt,Dys5oZ6LO8,JOVIN1mjMm,KhXQqReaUK,PSx88-hvV0,UIOLWbkuQr,o5X6LPl42l,zUrJoV0rQt:30
+[   59421ms] [WARNING] Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://community-home-5ziajw-1-0-6-webview.devvit.net') does not match the recipient window's origin ('null'). @ https://www.redditstatic.com/js/concat?prefix=en-US/&chunks=5d2Fs2pzgw,7BVZ2rg4aX,7ajphk-spr,9mu0omzWx3,BBE0pwSmX7,BG_FwfDT5S,BUPv3rKwm2,BWb-qSMuww,Bb5aziCQTA,Bgeqe3kwPt,BiGe_cdkw7,C8UwoIGQcl,CMD-_fVvbV,C_2udUSb7A,CeM0zAWB-V,CgHpS-h-Ju,CpiB8yvp7V,Cwiy3lqqmG,D-_oQ7tVzO,DFshhBh3Q0,DLvpJ86TzR,DRFJuOQBP_,Dl0WiZVitb,Dt2jccZWcd,DtqY-6pzYt,Dys5oZ6LO8,JOVIN1mjMm,KhXQqReaUK,PSx88-hvV0,UIOLWbkuQr,o5X6LPl42l,zUrJoV0rQt:30
+[   59878ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   59893ms] [ERROR] Error saving last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:246
+[   60403ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   60413ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[   61417ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   62414ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   63414ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   63438ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   63455ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   64432ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   65415ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   66420ms] [ERROR] Error loading last tab: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at Id (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:165:138)
+    at Xb (https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:200:285)
+    at https://community-home-5ziajw-1-0-6-webview.devvit.net/react-dom.production.min.js:197:107
+    at S (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:47:26)
+    at MessagePort.U (https://community-home-5ziajw-1-0-6-webview.devvit.net/react.production.min.js:51:230) @ https://community-home-5ziajw-1-0-6-webview.devvit.net/components/Home.js:269
+[   67028ms] Error: Event removal-reason-input-changed already defined.
+    at Re.define (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:33251)
+    at h.connectedCallback (https://www.redditstatic.com/js/concat?prefix=en-US/&chunks=3B13bpMGyM,3iqukNzSQc,B4qsbN182S,BDR8NynPt9,BEoYWP0YvX,BYzJDYY0SD,BeMjARY59b,BhyCzQIMsD,BoW5lcpbiQ,C6MLu91BuY,C7YglY3cr3,C_v5gXzHgz,C_xKhoxtjg,CdEUAEHRAr,CsQFGPzkjO,CtdLWcfxXL,CwC-RX_lJs,D7xC2zSx0P,D8AC-AXqH7,D8krCRnMut,DE2pkWNyJl,DMLZyE7W4a,DMLs3ejS_J,DV4y3xzG-C,DVGRYoXreJ:29:2395)
+    at ea.replaceDOM (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:117189)
+    at ea.hybridNavigate (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:113081)
+    at NavigateEvent.handler (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:110672)
+[   69456ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   72075ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   72076ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   78015ms] Error: Event removal-reason-input-changed already defined.
+    at Re.define (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:33251)
+    at h.connectedCallback (https://www.redditstatic.com/js/concat?prefix=en-US/&chunks=3B13bpMGyM,3iqukNzSQc,B4qsbN182S,BDR8NynPt9,BEoYWP0YvX,BYzJDYY0SD,BeMjARY59b,BhyCzQIMsD,BoW5lcpbiQ,C6MLu91BuY,C7YglY3cr3,C_v5gXzHgz,C_xKhoxtjg,CdEUAEHRAr,CsQFGPzkjO,CtdLWcfxXL,CwC-RX_lJs,D7xC2zSx0P,D8AC-AXqH7,D8krCRnMut,DE2pkWNyJl,DMLZyE7W4a,DMLs3ejS_J,DV4y3xzG-C,DVGRYoXreJ:29:2395)
+    at ea.replaceDOM (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:117189)
+    at ea.hybridNavigate (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:113081)
+    at NavigateEvent.handler (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:110672)
+[   78716ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   78719ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   83056ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   88556ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   90447ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[   91409ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[   95024ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  122410ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  153412ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  184414ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  215409ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  246415ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  277411ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  308411ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  337309ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  337772ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  339415ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  353810ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  370473ms] Error: Event removal-reason-input-changed already defined.
+    at Re.define (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:33251)
+    at h.connectedCallback (https://www.redditstatic.com/js/concat?prefix=en-US/&chunks=3B13bpMGyM,3iqukNzSQc,B4qsbN182S,BDR8NynPt9,BEoYWP0YvX,BYzJDYY0SD,BeMjARY59b,BhyCzQIMsD,BoW5lcpbiQ,C6MLu91BuY,C7YglY3cr3,C_v5gXzHgz,C_xKhoxtjg,CdEUAEHRAr,CsQFGPzkjO,CtdLWcfxXL,CwC-RX_lJs,D7xC2zSx0P,D8AC-AXqH7,D8krCRnMut,DE2pkWNyJl,DMLZyE7W4a,DMLs3ejS_J,DV4y3xzG-C,DVGRYoXreJ:29:2395)
+    at ea.replaceDOM (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:117189)
+    at ea.hybridNavigate (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:113081)
+    at NavigateEvent.handler (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:110672)
+[  370509ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  375559ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  378656ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  382274ms] Error: Event removal-reason-input-changed already defined.
+    at Re.define (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:33251)
+    at h.connectedCallback (https://www.redditstatic.com/js/concat?prefix=en-US/&chunks=3B13bpMGyM,3iqukNzSQc,B4qsbN182S,BDR8NynPt9,BEoYWP0YvX,BYzJDYY0SD,BeMjARY59b,BhyCzQIMsD,BoW5lcpbiQ,C6MLu91BuY,C7YglY3cr3,C_v5gXzHgz,C_xKhoxtjg,CdEUAEHRAr,CsQFGPzkjO,CtdLWcfxXL,CwC-RX_lJs,D7xC2zSx0P,D8AC-AXqH7,D8krCRnMut,DE2pkWNyJl,DMLZyE7W4a,DMLs3ejS_J,DV4y3xzG-C,DVGRYoXreJ:29:2395)
+    at ea.replaceDOM (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:117189)
+    at ea.hybridNavigate (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:113081)
+    at NavigateEvent.handler (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:110672)
+[  387646ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  387647ms] Error: Connection has been terminated.
+    at closed (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:244022)
+    at Object.emit (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:238869)
+    at n.onclose (https://www.redditstatic.com/shreddit/en-US/BBnbGwj87b.js:1:239630)
+[  401409ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  432413ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  463417ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  494411ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  525415ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  556419ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  587412ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  618417ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  649414ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  680414ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  711415ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  742413ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  773411ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  804410ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  835412ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  866413ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  897414ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  928410ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  959412ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[  990409ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[ 1021411ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[ 1052409ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[ 1083408ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[ 1114404ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[ 1145404ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
+[ 1176407ms] [ERROR] [HomeApp] Operation error: {name: Error, message: ServerCallRequired, stack:     at <anonymous> (eval.js:18)
+    at <anonymous>…(eval.js:8052)
+    at <anonymous> (eval.js:8431)
+} @ https://www.reddit.com/shreddit/devvit-runtime/browser-lite.worker-BMWC4dko.js:0
