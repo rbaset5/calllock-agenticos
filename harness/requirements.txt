@@ -6,6 +6,7 @@ langsmith>=0.1
 litellm>=1.60
 pydantic>=2.10
 pytest>=8.4
+pytest-asyncio>=0.25
 pyyaml>=6.0
 redis>=5.2
 twilio>=9.0
