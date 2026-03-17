@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mail",
-  description: "A shadcn mail clone",
+  title: "CallLock",
+  description: "CallLock — AI-powered call management for contractors",
 };
 
 export default function RootLayout({
