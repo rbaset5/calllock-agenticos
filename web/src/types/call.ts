@@ -1,5 +1,5 @@
 // Types for CallLock support app
-// Maps to Supabase call_sessions table
+// Maps to Supabase call_records table
 
 export type UrgencyTier = "LifeSafety" | "Urgent" | "Routine" | "Estimate"
 
@@ -57,12 +57,47 @@ export interface Call {
 }
 
 // Raw Supabase row shape
-// conversation_state is Record<string, unknown> — we don't own this schema.
-// The V2 backend writes ConversationState JSONB; we extract defensively in transforms.ts.
-export interface CallSessionRow {
+export interface CallRecordRow {
+  id: string
+  tenant_id: string
   call_id: string
-  conversation_state: Record<string, unknown>
-  retell_data?: Record<string, unknown>
-  synced_to_dashboard: boolean
+  retell_call_id: string
+  phone_number: string | null
+  transcript: string | null
+  raw_retell_payload: Record<string, unknown>
+  extracted_fields: Record<string, unknown>
+  extraction_status: string
+  quality_score: number | null
+  tags: string[]
+  route: string | null
+  urgency_tier: string | null
+  caller_type: string | null
+  primary_intent: string | null
+  revenue_tier: string | null
+  booking_id: string | null
+  callback_scheduled: boolean
+  call_duration_seconds: number | null
+  end_call_reason: string | null
+  call_recording_url: string | null
+  synced_to_app: boolean
   created_at: string
+  updated_at: string
 }
+
+export type CallRecordListRow = Pick<
+  CallRecordRow,
+  | "id"
+  | "tenant_id"
+  | "call_id"
+  | "retell_call_id"
+  | "phone_number"
+  | "extracted_fields"
+  | "extraction_status"
+  | "urgency_tier"
+  | "end_call_reason"
+  | "callback_scheduled"
+  | "booking_id"
+  | "synced_to_app"
+  | "created_at"
+  | "updated_at"
+>
