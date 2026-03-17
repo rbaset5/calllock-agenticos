@@ -1658,6 +1658,12 @@ def update_call_record_extraction(
     tenant_id: str,
     call_id: str,
     extracted_fields: dict[str, Any],
+    *,
+    end_call_reason: str | None = None,
+    booking_id: str | None = None,
+    callback_scheduled: bool = False,
+    call_duration_seconds: int | None = None,
+    call_recording_url: str | None = None,
 ) -> dict[str, Any]:
     for row in _state()["call_records"]:
         if row["tenant_id"] == tenant_id and row["call_id"] == call_id:
@@ -1670,6 +1676,11 @@ def update_call_record_extraction(
             row["caller_type"] = extracted_fields.get("caller_type", row["caller_type"])
             row["primary_intent"] = extracted_fields.get("primary_intent", row["primary_intent"])
             row["revenue_tier"] = extracted_fields.get("revenue_tier", row["revenue_tier"])
+            row["end_call_reason"] = end_call_reason
+            row["booking_id"] = booking_id
+            row["callback_scheduled"] = callback_scheduled
+            row["call_duration_seconds"] = call_duration_seconds
+            row["call_recording_url"] = call_recording_url
             row["updated_at"] = datetime.now(timezone.utc).isoformat()
             return row
     raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")

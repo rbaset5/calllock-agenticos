@@ -101,24 +101,29 @@ async def handle_call_ended(request: Request) -> JSONResponse:
     # 4. Run extraction pipeline
     extraction = run_extraction(payload.transcript, raw_payload)
 
-    # 5. Update call_records with extracted fields
-    try:
-        db_repo.update_call_record_extraction(
-            tenant_id=tenant_id,
-            call_id=call_id,
-            extracted_fields=extraction,
-        )
-    except Exception:
-        logger.error("post_call.update_extraction_failed", extra={"call_id": call_id}, exc_info=True)
-
     # Parse booking_id from tool_call_results
     booking_id = _parse_booking_id(payload.tool_call_results)
 
     # Determine callback_scheduled
     callback_scheduled = extraction.get("end_call_reason") == "callback_scheduled"
 
-    # 6. Fire Inngest event
+    # 5. Update call_records with extracted fields + call metadata
     duration_ms = payload.duration_ms or 0
+    try:
+        db_repo.update_call_record_extraction(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            extracted_fields=extraction,
+            end_call_reason=extraction.get("end_call_reason") or "agent_hangup",
+            booking_id=booking_id,
+            callback_scheduled=callback_scheduled,
+            call_duration_seconds=duration_ms // 1000,
+            call_recording_url=payload.recording_url,
+        )
+    except Exception:
+        logger.error("post_call.update_extraction_failed", extra={"call_id": call_id}, exc_info=True)
+
+    # 6. Fire Inngest event
     event_payload = {
         "tenant_id": tenant_id,
         "call_id": call_id,

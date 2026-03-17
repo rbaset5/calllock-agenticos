@@ -765,10 +765,23 @@ def update_call_record_extraction(
     tenant_id: str,
     call_id: str,
     extracted_fields: dict[str, Any],
+    *,
+    end_call_reason: str | None = None,
+    booking_id: str | None = None,
+    callback_scheduled: bool = False,
+    call_duration_seconds: int | None = None,
+    call_recording_url: str | None = None,
 ) -> dict[str, Any]:
+    kwargs = dict(
+        end_call_reason=end_call_reason,
+        booking_id=booking_id,
+        callback_scheduled=callback_scheduled,
+        call_duration_seconds=call_duration_seconds,
+        call_recording_url=call_recording_url,
+    )
     if using_supabase():
-        return supabase_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields)
-    return local_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields)
+        return supabase_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields, **kwargs)
+    return local_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields, **kwargs)
 
 
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
