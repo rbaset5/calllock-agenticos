@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { getUrgencyVariant } from "@/lib/utils"
 import { createBrowserClient } from "@/lib/supabase"
+import { parseTranscript } from "@/lib/transforms"
 import type { Call, TranscriptEntry } from "@/types/call"
 import { cn } from "@/lib/utils"
 
@@ -33,7 +34,7 @@ export function MailDisplay({ call }: MailDisplayProps) {
       return
     }
 
-    // Otherwise fetch retell_data for this call
+    // Otherwise fetch the raw transcript for this call
     let cancelled = false
     setLoadingTranscript(true)
 
@@ -41,35 +42,20 @@ export function MailDisplay({ call }: MailDisplayProps) {
     const fetchTranscript = async () => {
       try {
         const { data } = await supabase
-          .from("call_sessions")
-          .select("retell_data")
+          .from("call_records")
+          .select("transcript")
           .eq("call_id", call.id)
           .single()
 
         if (cancelled) return
         setLoadingTranscript(false)
 
-        if (!data?.retell_data) {
+        if (typeof data?.transcript !== "string") {
           setTranscript([])
           return
         }
 
-        const retell = data.retell_data as Record<string, unknown>
-        const callData = retell.call as Record<string, unknown> | undefined
-        const transcriptObj = callData?.transcript_object
-        if (Array.isArray(transcriptObj)) {
-          setTranscript(
-            transcriptObj.filter(
-              (t): t is TranscriptEntry =>
-                typeof t === "object" &&
-                t !== null &&
-                (t.role === "agent" || t.role === "user") &&
-                typeof t.content === "string"
-            )
-          )
-        } else {
-          setTranscript([])
-        }
+        setTranscript(parseTranscript(data.transcript))
       } catch {
         if (!cancelled) {
           setLoadingTranscript(false)

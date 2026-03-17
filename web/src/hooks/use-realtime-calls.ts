@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { createBrowserClient } from "@/lib/supabase"
-import { transformCallSession } from "@/lib/transforms"
-import type { Call, CallSessionRow } from "@/types/call"
+import { transformCallRecord } from "@/lib/transforms"
+import type { Call, CallRecordRow } from "@/types/call"
 
 export function useRealtimeCalls(
   initialCalls: Call[],
@@ -18,22 +18,22 @@ export function useRealtimeCalls(
     setCalls(initialCalls)
   }, [initialCalls])
 
-  // Subscribe to new call_sessions inserts
+  // Subscribe to new call_records inserts
   useEffect(() => {
     const supabase = createBrowserClient()
 
     const channel = supabase
-      .channel("call_sessions_changes")
+      .channel("call_records_changes")
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
-          table: "call_sessions",
+          table: "call_records",
         },
         (payload) => {
-          const row = payload.new as CallSessionRow
-          const call = transformCallSession(row, readIdsRef.current)
+          const row = payload.new as CallRecordRow
+          const call = transformCallRecord(row, readIdsRef.current)
           setCalls((prev) => [call, ...prev])
         }
       )

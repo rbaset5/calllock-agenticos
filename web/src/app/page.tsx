@@ -1,7 +1,7 @@
 import { createServerClient } from "@/lib/supabase"
-import { transformCallSession } from "@/lib/transforms"
+import { transformCallRecord } from "@/lib/transforms"
 import { Mail } from "@/components/mail/mail"
-import type { Call, CallSessionRow } from "@/types/call"
+import type { Call, CallRecordListRow } from "@/types/call"
 
 export const dynamic = "force-dynamic"
 
@@ -11,17 +11,18 @@ export default async function CallsPage() {
   try {
     const supabase = createServerClient()
 
-    // Select only needed columns — retell_data is lazy-loaded on detail view
     const { data, error } = await supabase
-      .from("call_sessions")
-      .select("call_id, conversation_state, created_at, synced_to_dashboard")
+      .from("call_records")
+      .select(
+        "id, tenant_id, call_id, retell_call_id, phone_number, extracted_fields, extraction_status, urgency_tier, end_call_reason, callback_scheduled, booking_id, synced_to_app, created_at, updated_at"
+      )
       .order("created_at", { ascending: false })
       .limit(100)
 
     if (!error && data) {
-      const rows = data as CallSessionRow[]
+      const rows = data as CallRecordListRow[]
       const emptyReadIds = new Set<string>()
-      calls = rows.map((row) => transformCallSession(row, emptyReadIds))
+      calls = rows.map((row) => transformCallRecord(row, emptyReadIds))
     }
   } catch {
     // Supabase unreachable — render empty state
