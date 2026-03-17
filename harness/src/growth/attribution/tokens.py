@@ -9,7 +9,6 @@ import secrets
 import time
 from typing import Any
 
-from db.repository import get_tenant, get_tenant_config
 from growth.memory.models import AttributionTokenPayload, InvalidAttributionTokenError
 
 
@@ -34,12 +33,14 @@ def _normalize_keys(keys: dict[str, Any]) -> dict[str, Any]:
 
 
 def _tenant_keys(tenant_id: str) -> dict[str, Any]:
+    from db.repository import get_tenant_config
     config = get_tenant_config(tenant_id)
     raw = config.get("attribution_keys") or {}
     return _normalize_keys(raw)
 
 
 def _canonical_tenant_id(tenant_id: str) -> str:
+    from db.repository import get_tenant
     try:
         return str(get_tenant(tenant_id)["id"])
     except Exception:
