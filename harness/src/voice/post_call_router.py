@@ -141,7 +141,7 @@ async def handle_call_ended(request: Request) -> JSONResponse:
         "extraction_status": extraction.get("extraction_status", "complete"),
         "retell_call_id": retell_call_id,
         "call_duration_seconds": duration_ms // 1000,
-        "end_call_reason": extraction.get("end_call_reason", "agent_hangup"),
+        "end_call_reason": extraction.get("end_call_reason") or "agent_hangup",
         "call_recording_url": payload.recording_url,
     }
 
