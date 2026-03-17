@@ -18,3 +18,5 @@ progressive_disclosure:
 - [[customer-insights/_moc]]
 - [[worker-specs/_moc]]
 - [[growth-system/_moc]]
+- [[inbound/_moc]]
+- [[3d-agent-office-dashboard-v2]]

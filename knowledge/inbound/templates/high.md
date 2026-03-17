@@ -6,8 +6,8 @@ owner: founder
 last_reviewed: "2026-03-16"
 trust_level: curated
 progressive_disclosure:
-  summary: 100
-  full: 500
+  summary_tokens: 100
+  full_tokens: 500
 ---
 
 # High Tier Reply Template

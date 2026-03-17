@@ -1,18 +1,17 @@
 ---
-id: inbound-moc
-title: Inbound Pipeline Knowledge
+id: inbound-templates-moc
+title: Inbound Reply Templates
 graph: inbound-pipeline
 owner: founder
-last_reviewed: "2026-03-16"
+last_reviewed: "2026-03-17"
 trust_level: curated
 progressive_disclosure:
-  summary_tokens: 100
-  full_tokens: 500
+  summary_tokens: 80
+  full_tokens: 200
 ---
 
-# Inbound Pipeline Knowledge
+# Inbound Reply Templates
 
-- [[inbound/rubric]] — Scoring rubric for inbound lead qualification
 - [[inbound/templates/exceptional]] — Reply template for exceptional-tier leads
 - [[inbound/templates/high]] — Reply template for high-tier leads
 - [[inbound/templates/medium]] — Reply template for medium-tier leads
