@@ -1,0 +1,11 @@
+[   12052ms] [ERROR] Access to font at 'https://static-ah.xhcdn.com/xh-desktop/fonts/vda39a3ee5e.xh-icons.woff2' from origin 'https://xhamster.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://xhamster.com/:0
+[   12052ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://static-ah.xhcdn.com/xh-desktop/fonts/vda39a3ee5e.xh-icons.woff2:0
+[   12666ms] [WARNING] [GSI_LOGGER]: Your client application uses one of the Google One Tap prompt UI status methods that may stop functioning when FedCM becomes mandatory. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#display_moment and https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#skipped_moment @ https://accounts.google.com/gsi/client:80
+[   13037ms] [ERROR] Provider's accounts list is empty. @ https://xhamster.com/:0
+[  315714ms] [ERROR] Access to font at 'https://static-ah.xhcdn.com/xh-desktop/fonts/vda39a3ee5e.xh-icons.woff2' from origin 'https://xhamster.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://xhamster.com/:0
+[  315714ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://static-ah.xhcdn.com/xh-desktop/fonts/vda39a3ee5e.xh-icons.woff2:0
+[  553762ms] [ERROR] Access to font at 'https://static-ah.xhcdn.com/xh-desktop/fonts/vda39a3ee5e.xh-icons.woff2' from origin 'https://xhamster.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://xhamster.com/videos/girlfriend-sucks-huge-cock-4417801:0
+[  553762ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://static-ah.xhcdn.com/xh-desktop/fonts/vda39a3ee5e.xh-icons.woff2:0
+[  803704ms] [WARNING] expected 6, but got 13 models @ https://static-ah.xhcdn.com/xh-shared/js/va1c67d5bb6.xplayer.js:396
+[  853882ms] [WARNING] expected 6, but got 13 models @ https://static-ah.xhcdn.com/xh-shared/js/va1c67d5bb6.xplayer.js:396
+[ 1154348ms] [WARNING] expected 6, but got 13 models @ https://static-ah.xhcdn.com/xh-shared/js/va1c67d5bb6.xplayer.js:396
