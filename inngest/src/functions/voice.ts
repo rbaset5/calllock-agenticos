@@ -9,10 +9,7 @@ import {
 import { inngest } from "../inngest.js";
 
 export const VOICE_HARNESS_PATHS = {
-  syncApp: "/voice/sync-app",
-  markSynced: "/voice/call-records/mark-synced",
   emergencySms: "/voice/emergency-sms",
-  appSyncRetry: "/voice/app-sync/retry",
   callRecordsRetention: "/voice/call-records/retention",
 } as const;
 
@@ -75,38 +72,6 @@ export async function processVoiceCallTask(payload: CallEndedPayload, fetchImpl:
   );
 }
 
-export async function syncAppTask(payload: CallEndedPayload, fetchImpl: typeof fetch = fetch) {
-  assertValidCallEndedPayload(payload);
-  const config = getHarnessConfig();
-  const syncResult = await dispatchHarnessRequest(
-    {
-      ...config,
-      path: VOICE_HARNESS_PATHS.syncApp,
-    },
-    payload as unknown as Record<string, unknown>,
-    fetchImpl,
-  );
-
-  const markSyncedResult = await dispatchHarnessRequest(
-    {
-      ...config,
-      path: VOICE_HARNESS_PATHS.markSynced,
-    },
-    {
-      tenant_id: payload.tenant_id,
-      call_id: payload.call_id,
-      synced_to_app: true,
-    },
-    fetchImpl,
-  );
-
-  return {
-    synced_to_app: true,
-    sync_result: syncResult,
-    mark_synced_result: markSyncedResult,
-  };
-}
-
 export async function sendEmergencySmsTask(payload: CallEndedPayload, fetchImpl: typeof fetch = fetch) {
   assertValidCallEndedPayload(payload);
   if (!isSafetyEmergency(payload)) {
@@ -124,20 +89,6 @@ export async function sendEmergencySmsTask(payload: CallEndedPayload, fetchImpl:
     {
       ...(payload as unknown as Record<string, unknown>),
       idempotency_key: buildEmergencySmsIdempotencyKey(payload),
-    },
-    fetchImpl,
-  );
-}
-
-export async function appSyncRetryTask(fetchImpl: typeof fetch = fetch) {
-  return dispatchHarnessRequest(
-    {
-      ...getHarnessConfig(),
-      path: VOICE_HARNESS_PATHS.appSyncRetry,
-    },
-    {
-      min_age_hours: 1,
-      max_age_days: 7,
     },
     fetchImpl,
   );
@@ -165,27 +116,11 @@ export const processVoiceCall = inngest.createFunction(
   },
 );
 
-export const syncApp = inngest.createFunction(
-  { id: "sync-app", retries: 3 },
-  { event: CALL_ENDED },
-  async ({ event, step }: any) => {
-    return step.run("sync-calllock-app", async () => syncAppTask(event.data as CallEndedPayload));
-  },
-);
-
 export const sendEmergencySms = inngest.createFunction(
   { id: "send-emergency-sms", idempotency: SEND_EMERGENCY_SMS_IDEMPOTENCY, retries: 3 },
   { event: CALL_ENDED },
   async ({ event, step }: any) => {
     return step.run("send-emergency-sms", async () => sendEmergencySmsTask(event.data as CallEndedPayload));
-  },
-);
-
-export const appSyncRetry = inngest.createFunction(
-  { id: "app-sync-retry" },
-  { cron: "0 4 * * *" },
-  async ({ step }: any) => {
-    return step.run("retry-unsynced-app-sync", async () => appSyncRetryTask());
   },
 );
 

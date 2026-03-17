@@ -1,11 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { type CallEndedPayload, validateProcessCallPayload } from "../events/schemas.js";
 import {
   SEND_EMERGENCY_SMS_IDEMPOTENCY,
-  VOICE_HARNESS_PATHS,
   buildEmergencySmsIdempotencyKey,
-  syncAppTask,
   voiceEventToProcessCall,
 } from "../functions/voice.js";
 
@@ -36,14 +34,6 @@ function createCallEndedPayload(overrides: Partial<CallEndedPayload> = {}): Call
     call_recording_url: "https://retell.ai/recording/ret-789.mp3",
     ...overrides,
   };
-}
-
-function createFetchResponse(status: number, body: unknown): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  } as Response;
 }
 
 describe("voiceEventToProcessCall", () => {
@@ -82,54 +72,3 @@ describe("send-emergency-sms", () => {
   });
 });
 
-describe("syncAppTask", () => {
-  it("sets synced_to_app=true after a successful app sync", async () => {
-    process.env.HARNESS_BASE_URL = "https://harness.example.com";
-    process.env.HARNESS_EVENT_SECRET = "top-secret";
-
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(createFetchResponse(200, { delivered: true }))
-      .mockResolvedValueOnce(createFetchResponse(200, { updated: true }));
-
-    const result = await syncAppTask(createCallEndedPayload(), fetchMock as typeof fetch);
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      "https://harness.example.com/voice/sync-app",
-      expect.objectContaining({ method: "POST" }),
-    );
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "https://harness.example.com/voice/call-records/mark-synced",
-      expect.objectContaining({ method: "POST" }),
-    );
-
-    const secondCall = fetchMock.mock.calls[1];
-    const secondBody = JSON.parse((secondCall?.[1] as RequestInit).body as string);
-    expect(secondBody).toEqual({
-      tenant_id: "tenant-123",
-      call_id: "call-456",
-      synced_to_app: true,
-    });
-    expect(result.synced_to_app).toBe(true);
-  });
-
-  it("does not set synced_to_app when the app sync fails", async () => {
-    process.env.HARNESS_BASE_URL = "https://harness.example.com";
-    process.env.HARNESS_EVENT_SECRET = "top-secret";
-
-    const fetchMock = vi.fn().mockResolvedValueOnce(createFetchResponse(503, { error: "app unavailable" }));
-
-    await expect(syncAppTask(createCallEndedPayload(), fetchMock as typeof fetch)).rejects.toThrow(
-      "Harness request failed with status 503",
-    );
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://harness.example.com/voice/sync-app",
-      expect.objectContaining({ method: "POST" }),
-    );
-    expect(VOICE_HARNESS_PATHS.markSynced).toBe("/voice/call-records/mark-synced");
-  });
-});
