@@ -20,8 +20,6 @@ def voice_config() -> VoiceConfig:
         twilio_auth_token="test_auth_token",
         twilio_from_number="+15125551234",
         twilio_owner_phone="+15125555678",
-        app_webhook_url="https://app.calllock.co/api/webhook",
-        app_webhook_secret="test_webhook_secret",
         service_area_zips=["78701"],
         business_name="ACE Cooling & Heating",
         business_phone="+15125559999",

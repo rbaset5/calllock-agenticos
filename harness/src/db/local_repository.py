@@ -1646,7 +1646,6 @@ def insert_call_record(
         "call_duration_seconds": None,
         "end_call_reason": None,
         "call_recording_url": None,
-        "synced_to_app": False,
         "created_at": now,
         "updated_at": now,
     }
@@ -1712,26 +1711,6 @@ def query_calls_by_phone(phone: str) -> list[dict[str, Any]]:
 
 def query_bookings_by_phone(phone: str) -> list[dict[str, Any]]:
     return []
-
-
-def set_call_synced(tenant_id: str, call_id: str) -> dict[str, Any]:
-    for row in _state()["call_records"]:
-        if row["tenant_id"] == tenant_id and row["call_id"] == call_id:
-            row["synced_to_app"] = True
-            row["updated_at"] = datetime.now(timezone.utc).isoformat()
-            return row
-    raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
-
-
-def get_unsynced_calls(
-    tenant_id: str,
-    min_age_hours: int = 1,
-    max_age_days: int = 7,
-) -> list[dict[str, Any]]:
-    return [
-        row for row in _state()["call_records"]
-        if row["tenant_id"] == tenant_id and not row["synced_to_app"]
-    ]
 
 
 def get_voice_api_keys() -> list[dict[str, Any]]:

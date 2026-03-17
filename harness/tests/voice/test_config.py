@@ -18,8 +18,6 @@ def _voice_config_dict() -> dict[str, object]:
         "twilio_auth_token": "token",
         "twilio_from_number": "+15125551234",
         "twilio_owner_phone": "+15125555678",
-        "app_webhook_url": "https://app.calllock.co",
-        "app_webhook_secret": "secret",
         "service_area_zips": ["78701"],
         "business_name": "ACE",
         "business_phone": "+15125559999",

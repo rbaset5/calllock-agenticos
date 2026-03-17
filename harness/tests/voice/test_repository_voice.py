@@ -91,42 +91,6 @@ class TestGetCallerHistory:
         assert result["bookings"] == []
 
 
-class TestSetCallSynced:
-    def test_marks_synced(self) -> None:
-        repository.insert_call_record(
-            tenant_id="tenant-ace-001",
-            call_id="call-001",
-            retell_call_id="ret-001",
-            raw_payload={},
-        )
-
-        result = repository.set_call_synced(
-            tenant_id="tenant-ace-001",
-            call_id="call-001",
-        )
-
-        assert result["synced_to_app"] is True
-
-
-class TestGetUnsyncedCalls:
-    def test_returns_unsynced(self) -> None:
-        repository.insert_call_record(
-            tenant_id="tenant-ace-001",
-            call_id="call-001",
-            retell_call_id="ret-001",
-            raw_payload={},
-        )
-
-        result = repository.get_unsynced_calls(
-            tenant_id="tenant-ace-001",
-            min_age_hours=0,
-            max_age_days=7,
-        )
-
-        assert len(result) == 1
-        assert result[0]["call_id"] == "call-001"
-
-
 class TestGetVoiceApiKeys:
     def test_returns_empty_list(self) -> None:
         result = repository.get_voice_api_keys()

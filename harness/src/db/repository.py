@@ -808,18 +808,6 @@ def query_bookings_by_phone(phone: str) -> list[dict[str, Any]]:
     return local_repository.query_bookings_by_phone(phone)
 
 
-def set_call_synced(tenant_id: str, call_id: str) -> dict[str, Any]:
-    if using_supabase():
-        return supabase_repository.set_call_synced(tenant_id, call_id)
-    return local_repository.set_call_synced(tenant_id, call_id)
-
-
-def get_unsynced_calls(tenant_id: str, min_age_hours: int = 1, max_age_days: int = 7) -> list[dict[str, Any]]:
-    if using_supabase():
-        return supabase_repository.get_unsynced_calls(tenant_id, min_age_hours=min_age_hours, max_age_days=max_age_days)
-    return local_repository.get_unsynced_calls(tenant_id, min_age_hours=min_age_hours, max_age_days=max_age_days)
-
-
 def get_voice_api_keys() -> list[dict[str, Any]]:
     if using_supabase():
         return supabase_repository.get_voice_api_keys()
