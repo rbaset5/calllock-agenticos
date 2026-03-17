@@ -1244,8 +1244,14 @@ def update_call_record_extraction(
     tenant_id: str,
     call_id: str,
     extracted_fields: dict[str, Any],
+    *,
+    end_call_reason: str | None = None,
+    booking_id: str | None = None,
+    callback_scheduled: bool = False,
+    call_duration_seconds: int | None = None,
+    call_recording_url: str | None = None,
 ) -> dict[str, Any]:
-    patch = {
+    patch: dict[str, Any] = {
         "extracted_fields": extracted_fields,
         "extraction_status": extracted_fields.get("extraction_status", "complete"),
         "quality_score": extracted_fields.get("quality_score"),
@@ -1255,6 +1261,11 @@ def update_call_record_extraction(
         "caller_type": extracted_fields.get("caller_type"),
         "primary_intent": extracted_fields.get("primary_intent"),
         "revenue_tier": extracted_fields.get("revenue_tier"),
+        "end_call_reason": end_call_reason,
+        "booking_id": booking_id,
+        "callback_scheduled": callback_scheduled,
+        "call_duration_seconds": call_duration_seconds,
+        "call_recording_url": call_recording_url,
     }
     data = _request(
         "PATCH",

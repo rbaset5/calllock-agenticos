@@ -2,13 +2,28 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const packDir = path.join(process.cwd(), "knowledge", "industry-packs", "hvac");
-const manifest = JSON.parse(fs.readFileSync(path.join(packDir, "pack.yaml"), "utf8"));
-const taxonomy = JSON.parse(fs.readFileSync(path.join(packDir, "taxonomy.yaml"), "utf8"));
-const urgency = JSON.parse(fs.readFileSync(path.join(packDir, "urgency.yaml"), "utf8"));
 
-const errors = [];
+function loadYaml(filePath: string): any {
+  const json = execFileSync(
+    "python3",
+    ["-c", "import yaml,json,sys; docs=list(yaml.safe_load_all(sys.stdin)); print(json.dumps(docs[-1] if len(docs)>1 else docs[0]))"],
+    { input: fs.readFileSync(filePath, "utf8"), encoding: "utf8" },
+  );
+  return JSON.parse(json);
+}
+
+function loadJson(filePath: string): any {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+const manifest = loadJson(path.join(packDir, "pack.yaml"));
+const taxonomy = loadYaml(path.join(packDir, "taxonomy.yaml"));
+const urgency = loadJson(path.join(packDir, "urgency.yaml"));
+
+const errors: string[] = [];
 
 for (const required of ["pack_id", "version", "industry", "smart_tag_count", "files"]) {
   if (!(required in manifest)) errors.push(`pack.yaml missing ${required}`);
@@ -21,7 +36,7 @@ for (const file of manifest.files || []) {
 }
 
 const actualTagCount = Object.values(taxonomy.categories || {}).reduce(
-  (total, tags) => total + tags.length,
+  (total: number, tags: any) => total + (tags as any[]).length,
   0,
 );
 if (manifest.smart_tag_count !== actualTagCount) {
@@ -33,9 +48,9 @@ if (!Array.isArray(urgency.tiers) || urgency.tiers.length !== 4) {
 }
 
 for (const [category, tags] of Object.entries(taxonomy.categories || {})) {
-  for (const tag of tags) {
-    if (!tag.id || !Array.isArray(tag.aliases)) {
-      errors.push(`taxonomy category ${category} has invalid tag entry`);
+  for (const tag of tags as any[]) {
+    if (!tag.name || !Array.isArray(tag.patterns)) {
+      errors.push(`taxonomy category ${category} has invalid tag entry (missing name or patterns)`);
     }
   }
 }

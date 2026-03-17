@@ -176,7 +176,31 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** Enrichment Agent spec (Section 2.5.2), Google Places API key provisioned.
 **Source:** Sales Machine spec second-pass CEO review, Issues 5 and 12.
 
+### Remove temporary RLS bypass policy after auth ships
+**What:** `DROP POLICY call_records_anon_read ON call_records`. One-line SQL migration.
+**Why:** The temp bypass (migration 049) makes all calls visible to the anon key. Once contractor auth sets tenant context via JWT, this policy must be removed so RLS properly scopes data to the authenticated tenant.
+**Effort:** S
+**Priority:** P1
+**Depends on:** Contractor auth implementation.
+**Source:** CallLock App migration CEO review, 2026-03-17.
+
 ## P2 — Post-Contract-Lock Extensions
+
+### Wire search input to filter calls in CallLock App
+**What:** Connect the existing search input in the call list header to filter calls client-side by name, phone, or description.
+**Why:** The UI element already exists but does nothing. Contractors with many calls need to find specific ones quickly.
+**Effort:** S
+**Priority:** P2
+**Depends on:** CallLock App migration landing.
+**Source:** CallLock App migration CEO review, 2026-03-17.
+
+### Add call pagination to CallLock App
+**What:** Add cursor-based pagination (load more / infinite scroll) to the call list. Currently capped at 100 most recent calls.
+**Why:** A busy HVAC company might get 50+ calls/day. After 2 days, older calls fall off the 100-call limit.
+**Effort:** M
+**Priority:** P3 (becomes P1 at scale)
+**Depends on:** CallLock App migration landing.
+**Source:** CallLock App migration CEO review, 2026-03-17.
 
 ### Add founder weekly operating packet spec
 **What:** Define a 15-minute weekly founder packet with four sections: What Changed, What to Approve, What to Kill, and What Proof to Build Next.

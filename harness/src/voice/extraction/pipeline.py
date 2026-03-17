@@ -229,6 +229,13 @@ def run_extraction(transcript: str | None, raw_payload: Mapping[str, Any] | None
     if "problem_duration" not in result["extracted_fields"]:
         result["extracted_fields"]["problem_duration"] = None
 
+    # Promote state-only fields to result so they persist in extracted_fields
+    result["equipment_type"] = state.get("equipment_type")
+    result["equipment_brand"] = state.get("equipment_brand")
+    result["equipment_age"] = state.get("equipment_age")
+    result["appointment_booked"] = state.get("appointment_booked", False)
+    result["callback_type"] = state.get("callback_type")
+
     return result
 
 

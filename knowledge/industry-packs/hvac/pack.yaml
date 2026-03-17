@@ -2,7 +2,7 @@
   "pack_id": "hvac",
   "version": "0.1.0",
   "industry": "HVAC",
-  "smart_tag_count": 120,
+  "smart_tag_count": 117,
   "migrated_from": "express-v2-hardcoded",
   "source_root": "/Users/rashidbaset/conductor/workspaces/retellai-calllock/madrid/V2/src",
   "files": [

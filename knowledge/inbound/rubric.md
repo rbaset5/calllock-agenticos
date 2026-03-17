@@ -6,8 +6,8 @@ owner: founder
 last_reviewed: "2026-03-16"
 trust_level: curated
 progressive_disclosure:
-  summary: 200
-  full: 2000
+  summary_tokens: 200
+  full_tokens: 2000
 ---
 
 # Inbound Lead Scoring Rubric
