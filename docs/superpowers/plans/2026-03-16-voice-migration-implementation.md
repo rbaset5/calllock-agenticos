@@ -1,5 +1,7 @@
 # Voice Agent Migration Implementation Plan
 
+> **Deprecation note (2026-03-17):** The `app_sync` webhook service, `app_webhook_url`/`app_webhook_secret` config fields, and related Inngest functions described in this document have been removed. The CallLock App now reads directly from `call_records` via Supabase realtime subscriptions. References to webhook sync in this document are historical.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Port the Valencia v10-simplified Express voice agent backend into rabat as `harness/src/voice/`, enabling real-time Retell tool calls via FastAPI and post-call processing via Inngest fan-out.
