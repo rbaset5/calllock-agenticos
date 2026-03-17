@@ -27,6 +27,59 @@ _GRACEFUL_ERROR = "We're experiencing technical difficulties. Please call back o
 voice_router = APIRouter(tags=["voice"])
 
 
+@voice_router.post("/inbound")
+async def handle_inbound_webhook(request: Request) -> JSONResponse:
+    """Retell inbound webhook — called when a new call arrives, before the agent picks up.
+
+    Returns metadata (including tenant_id) that Retell attaches to the call.
+    All subsequent tool calls and the post-call webhook will include this metadata.
+    This is how multi-tenant routing works with Retell.
+    """
+    try:
+        body = await request.body()
+        signature = request.headers.get("x-retell-signature", "")
+        timestamp = request.headers.get("x-retell-timestamp", "")
+        verify_retell_hmac(body, signature, timestamp)
+    except HMACVerificationError:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+    import json
+    payload = json.loads(body) if body else {}
+    agent_id = payload.get("agent_id", "")
+    to_number = payload.get("to_number", "")
+
+    # Resolve tenant_id from the phone number → tenant mapping
+    tenant_id = _resolve_tenant_from_call(agent_id, to_number)
+
+    logger.info("voice.inbound", extra={
+        "agent_id": agent_id,
+        "to_number": to_number,
+        "tenant_id": tenant_id or "unknown",
+    })
+
+    if not tenant_id:
+        # Still accept the call — tools will degrade gracefully without tenant_id
+        return JSONResponse(content={})
+
+    return JSONResponse(content={
+        "metadata": {"tenant_id": tenant_id},
+    })
+
+
+def _resolve_tenant_from_call(agent_id: str, to_number: str) -> str | None:
+    """Map a Retell agent_id or phone number to a tenant_id.
+
+    Uses a simple DB lookup: phone numbers and agent IDs are registered
+    per-tenant during onboarding. Falls back to None if no match.
+    """
+    # For now: hardcoded mapping until we have a proper agent_id → tenant table.
+    # This is the single phone number registered in Retell.
+    _PHONE_TO_TENANT = {
+        "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+    }
+    return _PHONE_TO_TENANT.get(to_number)
+
+
 async def require_retell_hmac(request: Request) -> None:
     """FastAPI dependency that verifies Retell HMAC-SHA256 signatures."""
     body = await request.body()
