@@ -92,8 +92,6 @@ class VoiceConfig(BaseModel):
     twilio_auth_token: str
     twilio_from_number: str
     twilio_owner_phone: str
-    app_webhook_url: str
-    app_webhook_secret: str
     service_area_zips: list[str]
     business_name: str
     business_phone: str

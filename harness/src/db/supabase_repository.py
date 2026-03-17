@@ -1325,34 +1325,6 @@ def query_bookings_by_phone(phone: str) -> list[dict[str, Any]]:
     return _request("GET", "bookings", params={"customer_phone": f"eq.{phone}", "order": "created_at.desc", "limit": "5"}) or []
 
 
-def set_call_synced(tenant_id: str, call_id: str) -> dict[str, Any]:
-    data = _request(
-        "PATCH",
-        "call_records",
-        params={"tenant_id": f"eq.{tenant_id}", "call_id": f"eq.{call_id}"},
-        json={"synced_to_app": True},
-        prefer="return=representation",
-    )
-    if not data:
-        raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
-    return data[0]
-
-
-def get_unsynced_calls(tenant_id: str, min_age_hours: int = 1, max_age_days: int = 7) -> list[dict[str, Any]]:
-    max_cutoff = (datetime.now(timezone.utc) - timedelta(hours=min_age_hours)).isoformat()
-    min_cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
-    return _request(
-        "GET",
-        "call_records",
-        params={
-            "tenant_id": f"eq.{tenant_id}",
-            "synced_to_app": "eq.false",
-            "created_at": f"gte.{min_cutoff}",
-            "order": "created_at.asc",
-        },
-    ) or []
-
-
 def get_voice_api_keys() -> list[dict[str, Any]]:
     return _request(
         "GET",

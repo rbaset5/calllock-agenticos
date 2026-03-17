@@ -13,11 +13,9 @@ import { runRetention } from "./functions/run-retention.js";
 import { scheduledJob } from "./functions/scheduled-job.js";
 import { sweepSchedulerClaims } from "./functions/sweep-scheduler-claims.js";
 import {
-  appSyncRetry,
   callRecordsRetention,
   processVoiceCall,
   sendEmergencySms,
-  syncApp,
 } from "./functions/voice.js";
 
 export const client = inngest;
@@ -36,8 +34,6 @@ export const functions = [
   pollInbound,
   processInboundMessage,
   processVoiceCall,
-  syncApp,
   sendEmergencySms,
-  appSyncRetry,
   callRecordsRetention,
 ];

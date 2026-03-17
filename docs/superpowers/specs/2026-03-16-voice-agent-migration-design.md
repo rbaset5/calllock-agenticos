@@ -1,5 +1,7 @@
 # Voice Agent Migration Design
 
+> **Deprecation note (2026-03-17):** The `app_sync` webhook service and `app_webhook_url`/`app_webhook_secret` config fields described in this document have been removed. The CallLock App now reads directly from `call_records` via Supabase realtime subscriptions. References to webhook sync in this document are historical.
+
 **Date:** March 16, 2026
 **Status:** Draft
 **Owner:** Founder

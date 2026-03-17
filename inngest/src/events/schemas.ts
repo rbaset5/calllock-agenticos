@@ -107,7 +107,6 @@ export interface InboundEscalationTriggeredPayload {
 }
 
 export const CALL_ENDED = "calllock/call.ended";
-export const CALL_APP_SYNC = "calllock/call.app.sync";
 export const CALL_EMERGENCY_SMS = "calllock/call.emergency.sms";
 
 export interface CallEndedPayload {
