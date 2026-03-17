@@ -67,13 +67,18 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     payload = RetellToolCallRequest.model_validate_json(body)
+    tenant_id = _extract_tenant_id(payload)
     phone = payload.args.get("phone_number", payload.args.get("phone", ""))
 
     if not phone:
         return JSONResponse(content={"found": False, "message": "No caller ID available."})
 
+    if not tenant_id:
+        logger.error("voice.lookup_caller.no_tenant_id")
+        return JSONResponse(content={"found": False, "message": "Configuration error."})
+
     from db import repository as _db_repo
-    result = lookup_caller(phone_number=phone, db=_db_repo)
+    result = lookup_caller(phone_number=phone, tenant_id=tenant_id, db=_db_repo)
     return JSONResponse(content=result)
 
 

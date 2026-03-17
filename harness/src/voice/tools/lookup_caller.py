@@ -26,24 +26,34 @@ _BOOKINGS_LIMIT = 5
 def lookup_caller(
     *,
     phone_number: str,
+    tenant_id: str,
     db: Any,
 ) -> dict[str, Any]:
-    """Look up caller history by phone number.
+    """Look up caller history by phone number, scoped to tenant.
 
     Args:
         phone_number: Caller's phone (E.164 format).
-        db: Database client with query_jobs_by_phone, query_calls_by_phone,
-            query_bookings_by_phone methods.
+        tenant_id: Tenant UUID — required for data isolation.
+        db: Database client with get_caller_history(tenant_id, phone) method.
 
     Returns:
         Dict with found, jobs, calls, bookings keys. On DB failure,
         returns {found: false} with empty lists.
     """
-    logger.info("lookup_caller.start", extra={"phone": mask_phone(phone_number)})
+    logger.info("lookup_caller.start", extra={"phone": mask_phone(phone_number), "tenant_id": tenant_id})
 
-    jobs = _safe_query(db.query_jobs_by_phone, phone_number, _JOBS_LIMIT, "jobs")
-    calls = _safe_query(db.query_calls_by_phone, phone_number, _CALLS_LIMIT, "calls")
-    bookings = _safe_query(db.query_bookings_by_phone, phone_number, _BOOKINGS_LIMIT, "bookings")
+    try:
+        history = db.get_caller_history(tenant_id, phone_number)
+        jobs = history.get("jobs", [])[:_JOBS_LIMIT]
+        calls = history.get("calls", [])[:_CALLS_LIMIT]
+        bookings = history.get("bookings", [])[:_BOOKINGS_LIMIT]
+    except Exception:
+        logger.warning(
+            "lookup_caller.query_error",
+            extra={"phone": mask_phone(phone_number), "tenant_id": tenant_id},
+            exc_info=True,
+        )
+        jobs, calls, bookings = [], [], []
 
     found = bool(jobs or calls or bookings)
 
@@ -64,25 +74,6 @@ def lookup_caller(
         "calls": calls,
         "bookings": bookings,
     }
-
-
-def _safe_query(
-    query_fn: Any,
-    phone_number: str,
-    limit: int,
-    table_name: str,
-) -> list[dict[str, Any]]:
-    """Execute a DB query with error handling. Returns empty list on failure."""
-    try:
-        results = query_fn(phone_number)
-        return results[:limit]
-    except Exception:
-        logger.warning(
-            "lookup_caller.query_error",
-            extra={"table": table_name, "phone": mask_phone(phone_number)},
-            exc_info=True,
-        )
-        return []
 
 
 __all__ = ["lookup_caller"]
