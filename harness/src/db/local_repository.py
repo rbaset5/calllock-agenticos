@@ -62,6 +62,8 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("enrichment_cache", [])
     seed.setdefault("prospect_emails", [])
     seed.setdefault("email_accounts", [])
+    seed.setdefault("call_records", [])
+    seed.setdefault("voice_api_keys", [])
     return seed
 
 
@@ -1607,3 +1609,122 @@ def get_latest_growth_wedge_fitness_snapshot(*, tenant_id: str, wedge: str) -> d
         return None
     rows.sort(key=lambda row: (row.get("snapshot_week", ""), row.get("computed_at", "")), reverse=True)
     return rows[0]
+
+
+# --- Voice CRUD ---
+
+
+def insert_call_record(
+    tenant_id: str,
+    call_id: str,
+    retell_call_id: str,
+    raw_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    for row in _state()["call_records"]:
+        if row["tenant_id"] == tenant_id and row["call_id"] == call_id:
+            return None
+    now = datetime.now(timezone.utc).isoformat()
+    record = {
+        "id": str(uuid4()),
+        "tenant_id": tenant_id,
+        "call_id": call_id,
+        "retell_call_id": retell_call_id,
+        "phone_number": raw_payload.get("from_number"),
+        "transcript": raw_payload.get("transcript"),
+        "raw_retell_payload": deepcopy(raw_payload),
+        "extracted_fields": {},
+        "extraction_status": "pending",
+        "quality_score": None,
+        "tags": [],
+        "route": None,
+        "urgency_tier": None,
+        "caller_type": None,
+        "primary_intent": None,
+        "revenue_tier": None,
+        "booking_id": None,
+        "callback_scheduled": False,
+        "call_duration_seconds": None,
+        "end_call_reason": None,
+        "call_recording_url": None,
+        "synced_to_app": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+    _state()["call_records"].append(record)
+    return record
+
+
+def update_call_record_extraction(
+    tenant_id: str,
+    call_id: str,
+    extracted_fields: dict[str, Any],
+) -> dict[str, Any]:
+    for row in _state()["call_records"]:
+        if row["tenant_id"] == tenant_id and row["call_id"] == call_id:
+            row["extracted_fields"] = deepcopy(extracted_fields)
+            row["extraction_status"] = extracted_fields.get("extraction_status", "complete")
+            row["quality_score"] = extracted_fields.get("quality_score", row["quality_score"])
+            row["tags"] = extracted_fields.get("tags", row["tags"])
+            row["route"] = extracted_fields.get("route", row["route"])
+            row["urgency_tier"] = extracted_fields.get("urgency_tier", row["urgency_tier"])
+            row["caller_type"] = extracted_fields.get("caller_type", row["caller_type"])
+            row["primary_intent"] = extracted_fields.get("primary_intent", row["primary_intent"])
+            row["revenue_tier"] = extracted_fields.get("revenue_tier", row["revenue_tier"])
+            row["updated_at"] = datetime.now(timezone.utc).isoformat()
+            return row
+    raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
+
+
+def get_caller_history(
+    tenant_id: str,
+    phone: str,
+) -> dict[str, Any]:
+    jobs = [
+        row for row in _state()["jobs"]
+        if row.get("tenant_id") == tenant_id and row.get("customer_phone") == phone
+    ][:10]
+    calls = [
+        row for row in _state()["call_records"]
+        if row["tenant_id"] == tenant_id and row.get("phone_number") == phone
+    ][:5]
+    bookings = []
+    return {"jobs": jobs, "calls": calls, "bookings": bookings}
+
+
+def query_jobs_by_phone(phone: str) -> list[dict[str, Any]]:
+    return [row for row in _state()["jobs"] if row.get("customer_phone") == phone]
+
+
+def query_calls_by_phone(phone: str) -> list[dict[str, Any]]:
+    return [row for row in _state()["call_records"] if row.get("phone_number") == phone]
+
+
+def query_bookings_by_phone(phone: str) -> list[dict[str, Any]]:
+    return []
+
+
+def set_call_synced(tenant_id: str, call_id: str) -> dict[str, Any]:
+    for row in _state()["call_records"]:
+        if row["tenant_id"] == tenant_id and row["call_id"] == call_id:
+            row["synced_to_app"] = True
+            row["updated_at"] = datetime.now(timezone.utc).isoformat()
+            return row
+    raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
+
+
+def get_unsynced_calls(
+    tenant_id: str,
+    min_age_hours: int = 1,
+    max_age_days: int = 7,
+) -> list[dict[str, Any]]:
+    return [
+        row for row in _state()["call_records"]
+        if row["tenant_id"] == tenant_id and not row["synced_to_app"]
+    ]
+
+
+def get_voice_api_keys() -> list[dict[str, Any]]:
+    return [
+        row for row in _state()["voice_api_keys"]
+        if row.get("revoked_at") is None
+    ]

@@ -23,4 +23,5 @@ progressive_disclosure:
 - `compliance.yaml`
 - `booking-rules.yaml`
 - `reporting.yaml`
+- `voice/_moc.md`
 - `scripts/_moc.md`

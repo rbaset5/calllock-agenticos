@@ -159,16 +159,36 @@ def build_task_payload(request: ProcessCallRequest, tenant: dict[str, Any]) -> d
     }
 
 
+def _check_external_connectivity(url: str, timeout: float = 3.0) -> dict[str, Any]:
+    """HEAD-request connectivity check for an external service."""
+    try:
+        import httpx as _httpx
+        resp = _httpx.head(url, timeout=timeout, follow_redirects=True)
+        return {"reachable": True, "status": resp.status_code}
+    except Exception as exc:
+        return {"reachable": False, "error": str(exc)[:120]}
+
+
 def health_dependencies() -> dict[str, Any]:
     cache = build_cache_client()
     redis_ok = cache.ping()
+
+    calcom = _check_external_connectivity("https://api.cal.com")
+    twilio = _check_external_connectivity("https://api.twilio.com")
+
+    all_reachable = calcom.get("reachable", False) and twilio.get("reachable", False)
+    base_status = "ok" if redis_ok else "degraded"
+    status = base_status if all_reachable else "degraded"
+
     return {
-        "status": "ok" if redis_ok else "degraded",
+        "status": status,
         "redis": {"ok": redis_ok},
         "litellm": {"configured": bool(os.getenv("LITELLM_BASE_URL"))},
         "supabase": {"configured": using_supabase()},
         "langsmith": {"configured": bool(os.getenv("LANGSMITH_API_KEY"))},
         "event_secret": {"configured": bool(os.getenv("HARNESS_EVENT_SECRET"))},
+        "calcom": calcom,
+        "twilio": twilio,
     }
 
 
@@ -224,6 +244,14 @@ def _get_incident_or_404(incident_id: str) -> dict[str, Any]:
 
 if FastAPI:
     app = FastAPI(title="CallLock Harness")
+
+    from voice.router import voice_router
+    from voice.post_call_router import post_call_router
+    from voice.booking_router import booking_router
+
+    app.include_router(voice_router, prefix="/webhook/retell")
+    app.include_router(post_call_router, prefix="/webhook/retell")
+    app.include_router(booking_router, prefix="/api/bookings")
 
     @app.get("/health")
     def health() -> dict[str, Any]:

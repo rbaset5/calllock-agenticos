@@ -745,3 +745,69 @@ def get_latest_growth_wedge_fitness_snapshot(*, tenant_id: str, wedge: str) -> d
     if using_supabase():
         return supabase_repository.get_latest_growth_wedge_fitness_snapshot(tenant_id=tenant_id, wedge=wedge)
     return local_repository.get_latest_growth_wedge_fitness_snapshot(tenant_id=tenant_id, wedge=wedge)
+
+
+# --- Voice CRUD ---
+
+
+def insert_call_record(
+    tenant_id: str,
+    call_id: str,
+    retell_call_id: str,
+    raw_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    if using_supabase():
+        return supabase_repository.insert_call_record(tenant_id, call_id, retell_call_id, raw_payload)
+    return local_repository.insert_call_record(tenant_id, call_id, retell_call_id, raw_payload)
+
+
+def update_call_record_extraction(
+    tenant_id: str,
+    call_id: str,
+    extracted_fields: dict[str, Any],
+) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields)
+    return local_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields)
+
+
+def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.get_caller_history(tenant_id, phone)
+    return local_repository.get_caller_history(tenant_id, phone)
+
+
+def query_jobs_by_phone(phone: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.query_jobs_by_phone(phone)
+    return local_repository.query_jobs_by_phone(phone)
+
+
+def query_calls_by_phone(phone: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.query_calls_by_phone(phone)
+    return local_repository.query_calls_by_phone(phone)
+
+
+def query_bookings_by_phone(phone: str) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.query_bookings_by_phone(phone)
+    return local_repository.query_bookings_by_phone(phone)
+
+
+def set_call_synced(tenant_id: str, call_id: str) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.set_call_synced(tenant_id, call_id)
+    return local_repository.set_call_synced(tenant_id, call_id)
+
+
+def get_unsynced_calls(tenant_id: str, min_age_hours: int = 1, max_age_days: int = 7) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_unsynced_calls(tenant_id, min_age_hours=min_age_hours, max_age_days=max_age_days)
+    return local_repository.get_unsynced_calls(tenant_id, min_age_hours=min_age_hours, max_age_days=max_age_days)
+
+
+def get_voice_api_keys() -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.get_voice_api_keys()
+    return local_repository.get_voice_api_keys()

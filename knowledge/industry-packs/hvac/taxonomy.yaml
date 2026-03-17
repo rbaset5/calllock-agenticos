@@ -1,1000 +1,764 @@
-{
-  "categories": {
-    "HAZARD": [
-      {
-        "id": "GAS_LEAK",
-        "aliases": [
-          "rotten egg smell",
-          "hissing sound",
-          "sulfur",
-          "gas smell",
-          "dead grass near unit",
-          "smell gas",
-          "smells like gas"
-        ]
-      },
-      {
-        "id": "CO_EVENT",
-        "aliases": [
-          "co alarm",
-          "carbon monoxide",
-          "detector going off",
-          "co detector",
-          "carbon monoxide alarm",
-          "carbon monoxide detector"
-        ]
-      },
-      {
-        "id": "ELECTRICAL_FIRE",
-        "aliases": [
-          "burning smell from unit",
-          "smoke from furnace",
-          "sparking from",
-          "sparks from",
-          "breaker keeps tripping",
-          "smell like burning plastic",
-          "burning wire",
-          "electrical smell",
-          "electrical fire"
-        ]
-      },
-      {
-        "id": "ACTIVE_FLOODING",
-        "aliases": [
-          "water pouring",
-          "ceiling sagging",
-          "burst pipe",
-          "flooding",
-          "water everywhere",
-          "gallons of water"
-        ]
-      },
-      {
-        "id": "CONDENSATE_CLOG",
-        "aliases": [
-          "drain pan full",
-          "small puddle",
-          "condensate",
-          "water under unit",
-          "condensate line",
-          "condensate drain"
-        ]
-      },
-      {
-        "id": "HEALTH_RISK",
-        "aliases": [
-          "no heat",
-          "freezing",
-          "no ac",
-          "heat wave",
-          "extreme cold",
-          "extreme heat"
-        ]
-      },
-      {
-        "id": "REFRIGERANT_LEAK",
-        "aliases": [
-          "chemical smell",
-          "sweet smell",
-          "hissing outdoor",
-          "icing up",
-          "frozen coil",
-          "refrigerant"
-        ]
-      }
-    ],
-    "URGENCY": [
-      {
-        "id": "CRITICAL_EVACUATE",
-        "aliases": [
-          "evacuation",
-          "need to leave",
-          "call 911",
-          "gas company"
-        ]
-      },
-      {
-        "id": "CRITICAL_DISPATCH",
-        "aliases": [
-          "complete failure",
-          "extreme temp",
-          "vulnerable",
-          "infant",
-          "elderly"
-        ]
-      },
-      {
-        "id": "EMERGENCY_SAMEDAY",
-        "aliases": [
-          "not working at all",
-          "completely dead",
-          "no air coming out",
-          "froze up",
-          "completely stopped"
-        ]
-      },
-      {
-        "id": "URGENT_24HR",
-        "aliases": [
-          "barely working",
-          "running constantly",
-          "won't shut off",
-          "strange noise"
-        ]
-      },
-      {
-        "id": "PRIORITY_48HR",
-        "aliases": [
-          "repeat customer",
-          "concerning symptoms",
-          "getting worse",
-          "been a few days"
-        ]
-      },
-      {
-        "id": "STANDARD",
-        "aliases": [
-          "would like to schedule",
-          "routine",
-          "normal maintenance"
-        ]
-      },
-      {
-        "id": "FLEXIBLE",
-        "aliases": [
-          "no rush",
-          "planning ahead",
-          "whenever convenient"
-        ]
-      },
-      {
-        "id": "SEASONAL_RUSH",
-        "aliases": [
-          "first hot day",
-          "first cold day",
-          "peak season"
-        ]
-      }
-    ],
-    "SERVICE_TYPE": [
-      {
-        "id": "REPAIR_AC",
-        "aliases": [
-          "ac not cooling",
-          "warm air",
-          "air conditioner broken",
-          "ac issue",
-          "hvac issue",
-          "hvac unit",
-          "ac unit",
-          "ac problem"
-        ]
-      },
-      {
-        "id": "REPAIR_HEATING",
-        "aliases": [
-          "furnace not working",
-          "no heat",
-          "heater broken",
-          "heat not working"
-        ]
-      },
-      {
-        "id": "REPAIR_HEATPUMP",
-        "aliases": [
-          "heat pump",
-          "mode switching",
-          "reversing valve"
-        ]
-      },
-      {
-        "id": "REPAIR_THERMOSTAT",
-        "aliases": [
-          "thermostat",
-          "blank display",
-          "won't change temp"
-        ]
-      },
-      {
-        "id": "REPAIR_IAQ",
-        "aliases": [
-          "humidifier",
-          "air purifier",
-          "uv light",
-          "air quality"
-        ]
-      },
-      {
-        "id": "REPAIR_DUCTWORK",
-        "aliases": [
-          "duct disconnected",
-          "air not reaching room",
-          "ductwork"
-        ]
-      },
-      {
-        "id": "TUNEUP_AC",
-        "aliases": [
-          "ac tune-up",
-          "ac tuneup",
-          "summer maintenance",
-          "ac checkup"
-        ]
-      },
-      {
-        "id": "TUNEUP_HEATING",
-        "aliases": [
-          "furnace tune-up",
-          "furnace tuneup",
-          "fall checkup",
-          "heating maintenance"
-        ]
-      },
-      {
-        "id": "DUCT_CLEANING",
-        "aliases": [
-          "duct cleaning",
-          "dusty vents",
-          "clean ducts"
-        ]
-      },
-      {
-        "id": "FILTER_SERVICE",
-        "aliases": [
-          "filter replacement",
-          "need new filter",
-          "change filter"
-        ]
-      },
-      {
-        "id": "INSTALL_REPLACEMENT",
-        "aliases": [
-          "need new system",
-          "replacing unit",
-          "new hvac",
-          "replace furnace"
-        ]
-      },
-      {
-        "id": "INSTALL_NEWCONSTRUCTION",
-        "aliases": [
-          "new build",
-          "building a house",
-          "new construction"
-        ]
-      },
-      {
-        "id": "INSTALL_UPGRADE",
-        "aliases": [
-          "more efficient",
-          "higher seer",
-          "upgrade system"
-        ]
-      },
-      {
-        "id": "INSTALL_ADDON",
-        "aliases": [
-          "add humidifier",
-          "add zone",
-          "install thermostat"
-        ]
-      },
-      {
-        "id": "DIAGNOSTIC_INTERMITTENT",
-        "aliases": [
-          "works sometimes",
-          "comes and goes",
-          "intermittent"
-        ]
-      },
-      {
-        "id": "DIAGNOSTIC_PERFORMANCE",
-        "aliases": [
-          "not cooling well",
-          "takes long time",
-          "running all day"
-        ]
-      },
-      {
-        "id": "DIAGNOSTIC_NOISE",
-        "aliases": [
-          "loud noise",
-          "grinding",
-          "squealing",
-          "banging"
-        ]
-      },
-      {
-        "id": "DIAGNOSTIC_CYCLE",
-        "aliases": [
-          "short cycling",
-          "won't stay on",
-          "keeps turning off"
-        ]
-      },
-      {
-        "id": "DIAGNOSTIC_AIRFLOW",
-        "aliases": [
-          "weak airflow",
-          "barely any air",
-          "not much coming out"
-        ]
-      },
-      {
-        "id": "DIAGNOSTIC_SMELL",
-        "aliases": [
-          "musty smell",
-          "odd odor",
-          "smells weird"
-        ]
-      },
-      {
-        "id": "DIAGNOSTIC_ENERGY",
-        "aliases": [
-          "high bill",
-          "electric bill doubled",
-          "using too much energy"
-        ]
-      },
-      {
-        "id": "SECONDOPINION",
-        "aliases": [
-          "second opinion",
-          "got a quote",
-          "someone else said"
-        ]
-      },
-      {
-        "id": "WARRANTY_CLAIM",
-        "aliases": [
-          "under warranty",
-          "warranty claim",
-          "covered by warranty"
-        ]
-      }
-    ],
-    "REVENUE": [
-      {
-        "id": "HOT_LEAD",
-        "aliases": [
-          "need new system",
-          "replace",
-          "quote",
-          "estimate"
-        ]
-      },
-      {
-        "id": "R22_RETROFIT",
-        "aliases": [
-          "r-22",
-          "r22",
-          "freon",
-          "old refrigerant"
-        ]
-      },
-      {
-        "id": "REPLACE_OPP",
-        "aliases": [
-          "old system",
-          "keeps breaking",
-          "tired of repairs"
-        ]
-      },
-      {
-        "id": "COMMERCIAL_LEAD",
-        "aliases": [
-          "commercial",
-          "office",
-          "business",
-          "building"
-        ]
-      },
-      {
-        "id": "FINANCING_REQ",
-        "aliases": [
-          "financing",
-          "payment plan",
-          "monthly payments"
-        ]
-      },
-      {
-        "id": "MULTI_PROPERTY",
-        "aliases": [
-          "multiple properties",
-          "rental properties",
-          "landlord"
-        ]
-      },
-      {
-        "id": "SERVICE_PLAN",
-        "aliases": [
-          "service plan",
-          "maintenance plan",
-          "membership"
-        ]
-      },
-      {
-        "id": "IAQ_UPSELL",
-        "aliases": [
-          "air quality",
-          "allergies",
-          "dust"
-        ]
-      },
-      {
-        "id": "ZONING_INTEREST",
-        "aliases": [
-          "zone control",
-          "different temps",
-          "upstairs hot"
-        ]
-      }
-    ],
-    "RECOVERY": [
-      {
-        "id": "CALLBACK_RISK",
-        "aliases": [
-          "couldn't reach me",
-          "never called back",
-          "waiting for call"
-        ]
-      },
-      {
-        "id": "COMPLAINT_PRICE",
-        "aliases": [
-          "too expensive",
-          "overcharged",
-          "price too high"
-        ]
-      },
-      {
-        "id": "COMPLAINT_SERVICE",
-        "aliases": [
-          "poor service",
-          "rude technician",
-          "didn't show up"
-        ]
-      },
-      {
-        "id": "COMPLAINT_NOFIX",
-        "aliases": [
-          "still broken",
-          "didn't fix",
-          "same problem"
-        ]
-      },
-      {
-        "id": "ESCALATION_REQ",
-        "aliases": [
-          "speak to manager",
-          "need supervisor",
-          "not satisfied"
-        ]
-      },
-      {
-        "id": "REVIEW_THREAT",
-        "aliases": [
-          "leave review",
-          "tell everyone",
-          "report you"
-        ]
-      },
-      {
-        "id": "LEGAL_MENTION",
-        "aliases": [
-          "lawyer",
-          "sue you",
-          "suing",
-          "attorney",
-          "legal action",
-          "take legal"
-        ]
-      },
-      {
-        "id": "REFUND_REQ",
-        "aliases": [
-          "want refund",
-          "money back",
-          "charge back"
-        ]
-      },
-      {
-        "id": "COMPETITOR_MENTION",
-        "aliases": [
-          "other company",
-          "someone else said",
-          "got cheaper quote"
-        ]
-      },
-      {
-        "id": "LOST_CUSTOMER",
-        "aliases": [
-          "switching companies",
-          "going elsewhere",
-          "done with you"
-        ]
-      }
-    ],
-    "LOGISTICS": [
-      {
-        "id": "GATE_CODE",
-        "aliases": [
-          "gate code",
-          "gated community",
-          "keypad"
-        ]
-      },
-      {
-        "id": "ALARM_CODE",
-        "aliases": [
-          "alarm code",
-          "security system",
-          "disarm"
-        ]
-      },
-      {
-        "id": "PET_SECURE",
-        "aliases": [
-          "dog",
-          "cat",
-          "pet",
-          "secure the dog"
-        ]
-      },
-      {
-        "id": "PARKING_ISSUE",
-        "aliases": [
-          "no parking",
-          "parking difficult",
-          "street parking"
-        ]
-      },
-      {
-        "id": "ACCESS_RESTRICT",
-        "aliases": [
-          "access restricted",
-          "need escort",
-          "limited hours"
-        ]
-      },
-      {
-        "id": "LADDER_ATTIC",
-        "aliases": [
-          "attic access",
-          "need ladder",
-          "crawlspace"
-        ]
-      },
-      {
-        "id": "ROOF_EQUIP",
-        "aliases": [
-          "roof access",
-          "equipment on roof",
-          "rooftop"
-        ]
-      },
-      {
-        "id": "LOCKBOX",
-        "aliases": [
-          "lockbox",
-          "key box",
-          "combination"
-        ]
-      },
-      {
-        "id": "TENANT_COORD",
-        "aliases": [
-          "tenant occupied",
-          "renter",
-          "coordinate with tenant"
-        ]
-      },
-      {
-        "id": "LANDLORD_AUTH",
-        "aliases": [
-          "landlord approval",
-          "owner permission",
-          "not my property"
-        ]
-      },
-      {
-        "id": "UTILITY_SHUTOFF",
-        "aliases": [
-          "shut off gas",
-          "turn off power",
-          "utility shutoff"
-        ]
-      },
-      {
-        "id": "SCOPE_LIMITED",
-        "aliases": [
-          "only look at",
-          "just check",
-          "specific issue only"
-        ]
-      },
-      {
-        "id": "VENDOR_ACCESS",
-        "aliases": [
-          "vendor entrance",
-          "loading dock",
-          "service entrance"
-        ]
-      },
-      {
-        "id": "SNOW_ICE",
-        "aliases": [
-          "snow",
-          "ice storm",
-          "iced over",
-          "ice on",
-          "icy",
-          "winter weather"
-        ]
-      },
-      {
-        "id": "SEASONAL_PREP",
-        "aliases": [
-          "winterize",
-          "summer prep",
-          "seasonal"
-        ]
-      },
-      {
-        "id": "MULTIUNIT_COORD",
-        "aliases": [
-          "multiple units",
-          "condo",
-          "apartment complex"
-        ]
-      },
-      {
-        "id": "HOA_APPROVAL",
-        "aliases": [
-          "hoa approval",
-          "homeowners association",
-          "need hoa ok"
-        ]
-      },
-      {
-        "id": "PERMIT_REQ",
-        "aliases": [
-          "permit required",
-          "need permit",
-          "permitting"
-        ]
-      },
-      {
-        "id": "SCOPE_CREEP",
-        "aliases": [
-          "while you're here",
-          "also look at",
-          "can you check"
-        ]
-      },
-      {
-        "id": "PARTS_DELAY",
-        "aliases": [
-          "parts on order",
-          "waiting for parts",
-          "backorder"
-        ]
-      }
-    ],
-    "CUSTOMER": [
-      {
-        "id": "NEW_CUSTOMER",
-        "aliases": [
-          "first time",
-          "never used",
-          "heard about you"
-        ]
-      },
-      {
-        "id": "EXISTING_CUSTOMER",
-        "aliases": [
-          "used before",
-          "customer",
-          "been with you"
-        ]
-      },
-      {
-        "id": "REFERRAL",
-        "aliases": [
-          "friend referred",
-          "recommended",
-          "someone told me"
-        ]
-      },
-      {
-        "id": "OWNER_OCCUPIED",
-        "aliases": [
-          "my house",
-          "live here",
-          "homeowner"
-        ]
-      },
-      {
-        "id": "RENTAL_PROPERTY",
-        "aliases": [
-          "rental",
-          "investment property",
-          "don't live there"
-        ]
-      },
-      {
-        "id": "COMMERCIAL_ACCT",
-        "aliases": [
-          "business",
-          "commercial",
-          "office"
-        ]
-      },
-      {
-        "id": "PROPERTY_MANAGER",
-        "aliases": [
-          "property manager",
-          "manage properties"
-        ]
-      },
-      {
-        "id": "DECISION_MAKER",
-        "aliases": [
-          "i'm the owner",
-          "my decision",
-          "i can decide"
-        ]
-      },
-      {
-        "id": "NEEDS_APPROVAL",
-        "aliases": [
-          "ask my spouse",
-          "need to check with",
-          "not my decision"
-        ]
-      },
-      {
-        "id": "AGENT_PROXY",
-        "aliases": [
-          "calling for",
-          "on behalf of",
-          "helping my"
-        ]
-      },
-      {
-        "id": "VIP_ACCOUNT",
-        "aliases": [
-          "premium",
-          "service plan member",
-          "maintenance contract"
-        ]
-      },
-      {
-        "id": "WARRANTY_CUSTOMER",
-        "aliases": [
-          "warranty",
-          "under warranty"
-        ]
-      },
-      {
-        "id": "REPEAT_CALLER",
-        "aliases": [
-          "called before",
-          "talked earlier",
-          "follow up"
-        ]
-      },
-      {
-        "id": "SEASONAL_CUSTOMER",
-        "aliases": [
-          "every year",
-          "annual",
-          "seasonal service"
-        ]
-      },
-      {
-        "id": "COMMERCIAL_NEW",
-        "aliases": [
-          "new business",
-          "first time commercial",
-          "opening soon"
-        ]
-      }
-    ],
-    "NON_CUSTOMER": [
-      {
-        "id": "JOB_APPLICANT",
-        "aliases": [
-          "applying for job",
-          "hiring",
-          "employment"
-        ]
-      },
-      {
-        "id": "VENDOR_SALES",
-        "aliases": [
-          "selling",
-          "offer",
-          "products"
-        ]
-      },
-      {
-        "id": "SPAM_TELEMARKETING",
-        "aliases": [
-          "telemarketing",
-          "spam"
-        ]
-      },
-      {
-        "id": "WRONG_NUMBER",
-        "aliases": [
-          "wrong number",
-          "didn't mean to call"
-        ]
-      },
-      {
-        "id": "PARTS_SUPPLIER",
-        "aliases": [
-          "parts supplier",
-          "supply house"
-        ]
-      },
-      {
-        "id": "COMPETITOR_INTEL",
-        "aliases": [
-          "competitor",
-          "research",
-          "market"
-        ]
-      },
-      {
-        "id": "INSPECTOR_CALL",
-        "aliases": [
-          "inspection",
-          "inspector",
-          "code compliance"
-        ]
-      },
-      {
-        "id": "UTILITY_COMPANY",
-        "aliases": [
-          "gas company",
-          "electric company",
-          "utility"
-        ]
-      },
-      {
-        "id": "MANUFACTURER_REP",
-        "aliases": [
-          "manufacturer",
-          "warranty rep"
-        ]
-      },
-      {
-        "id": "INSURANCE_CLAIM",
-        "aliases": [
-          "insurance claim",
-          "adjuster"
-        ]
-      },
-      {
-        "id": "REALTOR_INQUIRY",
-        "aliases": [
-          "realtor",
-          "real estate",
-          "home sale"
-        ]
-      },
-      {
-        "id": "MEDIA_PRESS",
-        "aliases": [
-          "media",
-          "press",
-          "interview",
-          "news"
-        ]
-      }
-    ],
-    "CONTEXT": [
-      {
-        "id": "DURATION_ACUTE",
-        "aliases": []
-      },
-      {
-        "id": "DURATION_RECENT",
-        "aliases": []
-      },
-      {
-        "id": "DURATION_ONGOING",
-        "aliases": []
-      },
-      {
-        "id": "PEAK_SUMMER",
-        "aliases": []
-      },
-      {
-        "id": "PEAK_WINTER",
-        "aliases": []
-      },
-      {
-        "id": "HOLIDAY_WEEK",
-        "aliases": []
-      },
-      {
-        "id": "AFTER_HOURS",
-        "aliases": []
-      },
-      {
-        "id": "WEEKEND",
-        "aliases": []
-      },
-      {
-        "id": "ELDERLY_OCCUPANT",
-        "aliases": [
-          "elderly",
-          "senior",
-          "old person",
-          "grandma",
-          "grandpa"
-        ]
-      },
-      {
-        "id": "INFANT_NEWBORN",
-        "aliases": [
-          "baby",
-          "infant",
-          "newborn"
-        ]
-      },
-      {
-        "id": "MEDICAL_NEED",
-        "aliases": [
-          "medical",
-          "oxygen",
-          "health condition"
-        ]
-      },
-      {
-        "id": "VULNERABLE_POP",
-        "aliases": [
-          "vulnerable",
-          "disabled",
-          "special needs"
-        ]
-      },
-      {
-        "id": "EXTREME_WEATHER",
-        "aliases": [
-          "heat wave",
-          "cold snap",
-          "storm",
-          "extreme weather"
-        ]
-      },
-      {
-        "id": "POST_STORM",
-        "aliases": [
-          "after storm",
-          "since storm",
-          "storm damage"
-        ]
-      },
-      {
-        "id": "POWER_OUTAGE",
-        "aliases": [
-          "power outage",
-          "electricity out",
-          "power came back"
-        ]
-      },
-      {
-        "id": "RECENT_INSTALL",
-        "aliases": [
-          "just installed",
-          "new system",
-          "recently replaced"
-        ]
-      }
-    ]
-  }
-}
+---
+id: hvac-taxonomy
+title: HVAC Taxonomy
+graph: industry-pack
+owner: platform
+last_reviewed: '2026-03-16'
+trust_level: curated
+progressive_disclosure:
+  summary_tokens: 140
+  full_tokens: 600
+---
+
+source_file: /Users/rashidbaset/conductor/workspaces/retellai-calllock/valencia/V2/src/classification/tags.ts
+notes:
+- Ported from Valencia V2 tags.ts.
+- The three DURATION_* tags remain runtime-derived in code so the taxonomy stays at
+  117 matcher-backed tags.
+categories:
+  HAZARD:
+  - name: GAS_LEAK
+    patterns:
+    - rotten egg smell
+    - hissing sound
+    - sulfur
+    - gas smell
+    - dead grass near unit
+    - smell gas
+    - smells like gas
+    match_type: substring
+  - name: CO_EVENT
+    patterns:
+    - co alarm
+    - carbon monoxide
+    - detector going off
+    - co detector
+    - carbon monoxide alarm
+    - carbon monoxide detector
+    match_type: substring
+  - name: ELECTRICAL_FIRE
+    patterns:
+    - burning smell from unit
+    - smoke from furnace
+    - sparking from
+    - sparks from
+    - breaker keeps tripping
+    - smell like burning plastic
+    - burning wire
+    - electrical smell
+    - electrical fire
+    match_type: substring
+  - name: ACTIVE_FLOODING
+    patterns:
+    - water pouring
+    - ceiling sagging
+    - burst pipe
+    - flooding
+    - water everywhere
+    - gallons of water
+    match_type: substring
+  - name: CONDENSATE_CLOG
+    patterns:
+    - drain pan full
+    - small puddle
+    - condensate
+    - water under unit
+    - condensate line
+    - condensate drain
+    match_type: substring
+  - name: HEALTH_RISK
+    patterns:
+    - no heat
+    - freezing
+    - no ac
+    - heat wave
+    - extreme cold
+    - extreme heat
+    match_type: substring
+  - name: REFRIGERANT_LEAK
+    patterns:
+    - chemical smell
+    - sweet smell
+    - hissing outdoor
+    - icing up
+    - frozen coil
+    - refrigerant
+    match_type: substring
+  URGENCY:
+  - name: CRITICAL_EVACUATE
+    patterns:
+    - evacuation
+    - need to leave
+    - call 911
+    - gas company
+    match_type: substring
+  - name: CRITICAL_DISPATCH
+    patterns:
+    - complete failure
+    - extreme temp
+    - vulnerable
+    - infant
+    - elderly
+    match_type: substring
+  - name: EMERGENCY_SAMEDAY
+    patterns:
+    - not working at all
+    - completely dead
+    - no air coming out
+    - froze up
+    - completely stopped
+    match_type: substring
+  - name: URGENT_24HR
+    patterns:
+    - barely working
+    - running constantly
+    - won't shut off
+    - strange noise
+    match_type: substring
+  - name: PRIORITY_48HR
+    patterns:
+    - repeat customer
+    - concerning symptoms
+    - getting worse
+    - been a few days
+    match_type: substring
+  - name: STANDARD
+    patterns:
+    - would like to schedule
+    - routine
+    - normal maintenance
+    match_type: substring
+  - name: FLEXIBLE
+    patterns:
+    - no rush
+    - planning ahead
+    - whenever convenient
+    match_type: substring
+  - name: SEASONAL_RUSH
+    patterns:
+    - first hot day
+    - first cold day
+    - peak season
+    match_type: substring
+  SERVICE_TYPE:
+  - name: REPAIR_AC
+    patterns:
+    - ac not cooling
+    - warm air
+    - air conditioner broken
+    - ac issue
+    - hvac issue
+    - hvac unit
+    - ac unit
+    - ac problem
+    match_type: substring
+  - name: REPAIR_HEATING
+    patterns:
+    - furnace not working
+    - no heat
+    - heater broken
+    - heat not working
+    match_type: substring
+  - name: REPAIR_HEATPUMP
+    patterns:
+    - heat pump
+    - mode switching
+    - reversing valve
+    match_type: substring
+  - name: REPAIR_THERMOSTAT
+    patterns:
+    - thermostat
+    - blank display
+    - won't change temp
+    match_type: substring
+  - name: REPAIR_IAQ
+    patterns:
+    - humidifier
+    - air purifier
+    - uv light
+    - air quality
+    match_type: substring
+  - name: REPAIR_DUCTWORK
+    patterns:
+    - duct disconnected
+    - air not reaching room
+    - ductwork
+    match_type: substring
+  - name: TUNEUP_AC
+    patterns:
+    - ac tune-up
+    - ac tuneup
+    - summer maintenance
+    - ac checkup
+    match_type: substring
+  - name: TUNEUP_HEATING
+    patterns:
+    - furnace tune-up
+    - furnace tuneup
+    - fall checkup
+    - heating maintenance
+    match_type: substring
+  - name: DUCT_CLEANING
+    patterns:
+    - duct cleaning
+    - dusty vents
+    - clean ducts
+    match_type: substring
+  - name: FILTER_SERVICE
+    patterns:
+    - filter replacement
+    - need new filter
+    - change filter
+    match_type: substring
+  - name: INSTALL_REPLACEMENT
+    patterns:
+    - need new system
+    - replacing unit
+    - new hvac
+    - replace furnace
+    match_type: substring
+  - name: INSTALL_NEWCONSTRUCTION
+    patterns:
+    - new build
+    - building a house
+    - new construction
+    match_type: substring
+  - name: INSTALL_UPGRADE
+    patterns:
+    - more efficient
+    - higher seer
+    - upgrade system
+    match_type: substring
+  - name: INSTALL_ADDON
+    patterns:
+    - add humidifier
+    - add zone
+    - install thermostat
+    match_type: substring
+  - name: DIAGNOSTIC_INTERMITTENT
+    patterns:
+    - works sometimes
+    - comes and goes
+    - intermittent
+    match_type: substring
+  - name: DIAGNOSTIC_PERFORMANCE
+    patterns:
+    - not cooling well
+    - takes long time
+    - running all day
+    match_type: substring
+  - name: DIAGNOSTIC_NOISE
+    patterns:
+    - loud noise
+    - grinding
+    - squealing
+    - banging
+    match_type: substring
+  - name: DIAGNOSTIC_CYCLE
+    patterns:
+    - short cycling
+    - won't stay on
+    - keeps turning off
+    match_type: substring
+  - name: DIAGNOSTIC_AIRFLOW
+    patterns:
+    - weak airflow
+    - barely any air
+    - not much coming out
+    match_type: substring
+  - name: DIAGNOSTIC_SMELL
+    patterns:
+    - musty smell
+    - odd odor
+    - smells weird
+    match_type: substring
+  - name: DIAGNOSTIC_ENERGY
+    patterns:
+    - high bill
+    - electric bill doubled
+    - using too much energy
+    match_type: substring
+  - name: SECONDOPINION
+    patterns:
+    - second opinion
+    - got a quote
+    - someone else said
+    match_type: substring
+  - name: WARRANTY_CLAIM
+    patterns:
+    - under warranty
+    - warranty claim
+    - covered by warranty
+    match_type: substring
+  REVENUE:
+  - name: HOT_LEAD
+    patterns:
+    - need new system
+    - replace
+    - quote
+    - estimate
+    match_type: substring
+  - name: R22_RETROFIT
+    patterns:
+    - r-22
+    - r22
+    - freon
+    - old refrigerant
+    match_type: substring
+  - name: REPLACE_OPP
+    patterns:
+    - old system
+    - keeps breaking
+    - tired of repairs
+    match_type: substring
+  - name: COMMERCIAL_LEAD
+    patterns:
+    - commercial
+    - office
+    - business
+    - building
+    match_type: substring
+  - name: FINANCING_REQ
+    patterns:
+    - financing
+    - payment plan
+    - monthly payments
+    match_type: substring
+  - name: MULTI_PROPERTY
+    patterns:
+    - multiple properties
+    - rental properties
+    - landlord
+    match_type: substring
+  - name: SERVICE_PLAN
+    patterns:
+    - service plan
+    - maintenance plan
+    - membership
+    match_type: substring
+  - name: IAQ_UPSELL
+    patterns:
+    - air quality
+    - allergies
+    - dust
+    match_type: substring
+  - name: ZONING_INTEREST
+    patterns:
+    - zone control
+    - different temps
+    - upstairs hot
+    match_type: substring
+  RECOVERY:
+  - name: CALLBACK_RISK
+    patterns:
+    - couldn't reach me
+    - never called back
+    - waiting for call
+    match_type: substring
+  - name: COMPLAINT_PRICE
+    patterns:
+    - too expensive
+    - overcharged
+    - price too high
+    match_type: substring
+  - name: COMPLAINT_SERVICE
+    patterns:
+    - poor service
+    - rude technician
+    - didn't show up
+    match_type: substring
+  - name: COMPLAINT_NOFIX
+    patterns:
+    - still broken
+    - didn't fix
+    - same problem
+    match_type: substring
+  - name: ESCALATION_REQ
+    patterns:
+    - speak to manager
+    - need supervisor
+    - not satisfied
+    match_type: substring
+  - name: REVIEW_THREAT
+    patterns:
+    - leave review
+    - tell everyone
+    - report you
+    match_type: substring
+  - name: LEGAL_MENTION
+    patterns:
+    - lawyer
+    - sue you
+    - suing
+    - attorney
+    - legal action
+    - take legal
+    match_type: substring
+  - name: REFUND_REQ
+    patterns:
+    - want refund
+    - money back
+    - charge back
+    match_type: substring
+  - name: COMPETITOR_MENTION
+    patterns:
+    - other company
+    - someone else said
+    - got cheaper quote
+    match_type: substring
+  - name: LOST_CUSTOMER
+    patterns:
+    - switching companies
+    - going elsewhere
+    - done with you
+    match_type: substring
+  LOGISTICS:
+  - name: GATE_CODE
+    patterns:
+    - gate code
+    - gated community
+    - keypad
+    match_type: substring
+  - name: ALARM_CODE
+    patterns:
+    - alarm code
+    - security system
+    - disarm
+    match_type: substring
+  - name: PET_SECURE
+    patterns:
+    - dog
+    - cat
+    - pet
+    - secure the dog
+    match_type: substring
+  - name: PARKING_ISSUE
+    patterns:
+    - no parking
+    - parking difficult
+    - street parking
+    match_type: substring
+  - name: ACCESS_RESTRICT
+    patterns:
+    - access restricted
+    - need escort
+    - limited hours
+    match_type: substring
+  - name: LADDER_ATTIC
+    patterns:
+    - attic access
+    - need ladder
+    - crawlspace
+    match_type: substring
+  - name: ROOF_EQUIP
+    patterns:
+    - roof access
+    - equipment on roof
+    - rooftop
+    match_type: substring
+  - name: LOCKBOX
+    patterns:
+    - lockbox
+    - key box
+    - combination
+    match_type: substring
+  - name: TENANT_COORD
+    patterns:
+    - tenant occupied
+    - renter
+    - coordinate with tenant
+    match_type: substring
+  - name: LANDLORD_AUTH
+    patterns:
+    - landlord approval
+    - owner permission
+    - not my property
+    match_type: substring
+  - name: UTILITY_SHUTOFF
+    patterns:
+    - shut off gas
+    - turn off power
+    - utility shutoff
+    match_type: substring
+  - name: SCOPE_LIMITED
+    patterns:
+    - only look at
+    - just check
+    - specific issue only
+    match_type: substring
+  - name: VENDOR_ACCESS
+    patterns:
+    - vendor entrance
+    - loading dock
+    - service entrance
+    match_type: substring
+  - name: SNOW_ICE
+    patterns:
+    - snow
+    - ice storm
+    - iced over
+    - ice on
+    - icy
+    - winter weather
+    match_type: substring
+  - name: SEASONAL_PREP
+    patterns:
+    - winterize
+    - summer prep
+    - seasonal
+    match_type: substring
+  - name: MULTIUNIT_COORD
+    patterns:
+    - multiple units
+    - condo
+    - apartment complex
+    match_type: substring
+  - name: HOA_APPROVAL
+    patterns:
+    - hoa approval
+    - homeowners association
+    - need hoa ok
+    match_type: substring
+  - name: PERMIT_REQ
+    patterns:
+    - permit required
+    - need permit
+    - permitting
+    match_type: substring
+  - name: SCOPE_CREEP
+    patterns:
+    - while you're here
+    - also look at
+    - can you check
+    match_type: substring
+  - name: PARTS_DELAY
+    patterns:
+    - parts on order
+    - waiting for parts
+    - backorder
+    match_type: substring
+  CUSTOMER:
+  - name: NEW_CUSTOMER
+    patterns:
+    - first time
+    - never used
+    - heard about you
+    match_type: substring
+  - name: EXISTING_CUSTOMER
+    patterns:
+    - used before
+    - customer
+    - been with you
+    match_type: substring
+  - name: REFERRAL
+    patterns:
+    - friend referred
+    - recommended
+    - someone told me
+    match_type: substring
+  - name: OWNER_OCCUPIED
+    patterns:
+    - my house
+    - live here
+    - homeowner
+    match_type: substring
+  - name: RENTAL_PROPERTY
+    patterns:
+    - rental
+    - investment property
+    - don't live there
+    match_type: substring
+  - name: COMMERCIAL_ACCT
+    patterns:
+    - business
+    - commercial
+    - office
+    match_type: substring
+  - name: PROPERTY_MANAGER
+    patterns:
+    - property manager
+    - manage properties
+    match_type: substring
+  - name: DECISION_MAKER
+    patterns:
+    - i'm the owner
+    - my decision
+    - i can decide
+    match_type: substring
+  - name: NEEDS_APPROVAL
+    patterns:
+    - ask my spouse
+    - need to check with
+    - not my decision
+    match_type: substring
+  - name: AGENT_PROXY
+    patterns:
+    - calling for
+    - on behalf of
+    - helping my
+    match_type: substring
+  - name: VIP_ACCOUNT
+    patterns:
+    - premium
+    - service plan member
+    - maintenance contract
+    match_type: substring
+  - name: WARRANTY_CUSTOMER
+    patterns:
+    - warranty
+    - under warranty
+    match_type: substring
+  - name: REPEAT_CALLER
+    patterns:
+    - called before
+    - talked earlier
+    - follow up
+    match_type: substring
+  - name: SEASONAL_CUSTOMER
+    patterns:
+    - every year
+    - annual
+    - seasonal service
+    match_type: substring
+  - name: COMMERCIAL_NEW
+    patterns:
+    - new business
+    - first time commercial
+    - opening soon
+    match_type: substring
+  NON_CUSTOMER:
+  - name: JOB_APPLICANT
+    patterns:
+    - applying for job
+    - hiring
+    - employment
+    match_type: substring
+  - name: VENDOR_SALES
+    patterns:
+    - selling
+    - offer
+    - products
+    match_type: substring
+  - name: SPAM_TELEMARKETING
+    patterns:
+    - telemarketing
+    - spam
+    match_type: substring
+  - name: WRONG_NUMBER
+    patterns:
+    - wrong number
+    - didn't mean to call
+    match_type: substring
+  - name: PARTS_SUPPLIER
+    patterns:
+    - parts supplier
+    - supply house
+    match_type: substring
+  - name: COMPETITOR_INTEL
+    patterns:
+    - competitor
+    - research
+    - market
+    match_type: substring
+  - name: INSPECTOR_CALL
+    patterns:
+    - inspection
+    - inspector
+    - code compliance
+    match_type: substring
+  - name: UTILITY_COMPANY
+    patterns:
+    - gas company
+    - electric company
+    - utility
+    match_type: substring
+  - name: MANUFACTURER_REP
+    patterns:
+    - manufacturer
+    - warranty rep
+    match_type: substring
+  - name: INSURANCE_CLAIM
+    patterns:
+    - insurance claim
+    - adjuster
+    match_type: substring
+  - name: REALTOR_INQUIRY
+    patterns:
+    - realtor
+    - real estate
+    - home sale
+    match_type: substring
+  - name: MEDIA_PRESS
+    patterns:
+    - media
+    - press
+    - interview
+    - news
+    match_type: substring
+  CONTEXT:
+  - name: PEAK_SUMMER
+    patterns: []
+    match_type: substring
+  - name: PEAK_WINTER
+    patterns: []
+    match_type: substring
+  - name: HOLIDAY_WEEK
+    patterns: []
+    match_type: substring
+  - name: AFTER_HOURS
+    patterns: []
+    match_type: substring
+  - name: WEEKEND
+    patterns: []
+    match_type: substring
+  - name: ELDERLY_OCCUPANT
+    patterns:
+    - elderly
+    - senior
+    - old person
+    - grandma
+    - grandpa
+    match_type: substring
+  - name: INFANT_NEWBORN
+    patterns:
+    - baby
+    - infant
+    - newborn
+    match_type: substring
+  - name: MEDICAL_NEED
+    patterns:
+    - medical
+    - oxygen
+    - health condition
+    match_type: substring
+  - name: VULNERABLE_POP
+    patterns:
+    - vulnerable
+    - disabled
+    - special needs
+    match_type: substring
+  - name: EXTREME_WEATHER
+    patterns:
+    - heat wave
+    - cold snap
+    - storm
+    - extreme weather
+    match_type: substring
+  - name: POST_STORM
+    patterns:
+    - after storm
+    - since storm
+    - storm damage
+    match_type: substring
+  - name: POWER_OUTAGE
+    patterns:
+    - power outage
+    - electricity out
+    - power came back
+    match_type: substring
+  - name: RECENT_INSTALL
+    patterns:
+    - just installed
+    - new system
+    - recently replaced
+    match_type: substring

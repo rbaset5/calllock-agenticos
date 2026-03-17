@@ -1203,3 +1203,148 @@ def get_latest_growth_wedge_fitness_snapshot(*, tenant_id: str, wedge: str) -> d
     if not data:
         return None
     return data[0]
+
+
+# --- Voice CRUD ---
+
+
+def insert_call_record(
+    tenant_id: str,
+    call_id: str,
+    retell_call_id: str,
+    raw_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    payload = {
+        "tenant_id": tenant_id,
+        "call_id": call_id,
+        "retell_call_id": retell_call_id,
+        "phone_number": raw_payload.get("from_number"),
+        "transcript": raw_payload.get("transcript"),
+        "raw_retell_payload": raw_payload,
+        "extraction_status": "pending",
+    }
+    try:
+        data = _request(
+            "POST",
+            "call_records",
+            params={"on_conflict": "tenant_id,call_id"},
+            json=payload,
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+    except Exception as exc:
+        if _is_duplicate_status_error(exc):
+            return None
+        raise
+    if not data:
+        return None
+    return data[0]
+
+
+def update_call_record_extraction(
+    tenant_id: str,
+    call_id: str,
+    extracted_fields: dict[str, Any],
+) -> dict[str, Any]:
+    patch = {
+        "extracted_fields": extracted_fields,
+        "extraction_status": extracted_fields.get("extraction_status", "complete"),
+        "quality_score": extracted_fields.get("quality_score"),
+        "tags": extracted_fields.get("tags"),
+        "route": extracted_fields.get("route"),
+        "urgency_tier": extracted_fields.get("urgency_tier"),
+        "caller_type": extracted_fields.get("caller_type"),
+        "primary_intent": extracted_fields.get("primary_intent"),
+        "revenue_tier": extracted_fields.get("revenue_tier"),
+    }
+    data = _request(
+        "PATCH",
+        "call_records",
+        params={"tenant_id": f"eq.{tenant_id}", "call_id": f"eq.{call_id}"},
+        json=patch,
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
+    return data[0]
+
+
+def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
+    jobs = _request(
+        "GET",
+        "jobs",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "customer_phone": f"eq.{phone}",
+            "order": "created_at.desc",
+            "limit": "10",
+        },
+    ) or []
+    calls = _request(
+        "GET",
+        "call_records",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "phone_number": f"eq.{phone}",
+            "order": "created_at.desc",
+            "limit": "5",
+        },
+    ) or []
+    bookings = _request(
+        "GET",
+        "bookings",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "customer_phone": f"eq.{phone}",
+            "order": "created_at.desc",
+            "limit": "5",
+        },
+    ) or []
+    return {"jobs": jobs, "calls": calls, "bookings": bookings}
+
+
+def query_jobs_by_phone(phone: str) -> list[dict[str, Any]]:
+    return _request("GET", "jobs", params={"customer_phone": f"eq.{phone}", "order": "created_at.desc", "limit": "10"}) or []
+
+
+def query_calls_by_phone(phone: str) -> list[dict[str, Any]]:
+    return _request("GET", "call_records", params={"phone_number": f"eq.{phone}", "order": "created_at.desc", "limit": "5"}) or []
+
+
+def query_bookings_by_phone(phone: str) -> list[dict[str, Any]]:
+    return _request("GET", "bookings", params={"customer_phone": f"eq.{phone}", "order": "created_at.desc", "limit": "5"}) or []
+
+
+def set_call_synced(tenant_id: str, call_id: str) -> dict[str, Any]:
+    data = _request(
+        "PATCH",
+        "call_records",
+        params={"tenant_id": f"eq.{tenant_id}", "call_id": f"eq.{call_id}"},
+        json={"synced_to_app": True},
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
+    return data[0]
+
+
+def get_unsynced_calls(tenant_id: str, min_age_hours: int = 1, max_age_days: int = 7) -> list[dict[str, Any]]:
+    max_cutoff = (datetime.now(timezone.utc) - timedelta(hours=min_age_hours)).isoformat()
+    min_cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+    return _request(
+        "GET",
+        "call_records",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "synced_to_app": "eq.false",
+            "created_at": f"gte.{min_cutoff}",
+            "order": "created_at.asc",
+        },
+    ) or []
+
+
+def get_voice_api_keys() -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "voice_api_keys",
+        params={"revoked_at": "is.null"},
+    ) or []
