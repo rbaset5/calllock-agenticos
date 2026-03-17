@@ -225,6 +225,14 @@ def _get_incident_or_404(incident_id: str) -> dict[str, Any]:
 if FastAPI:
     app = FastAPI(title="CallLock Harness")
 
+    from voice.router import voice_router
+    from voice.post_call_router import post_call_router
+    from voice.booking_router import booking_router
+
+    app.include_router(voice_router, prefix="/webhook/retell")
+    app.include_router(post_call_router, prefix="/webhook/retell")
+    app.include_router(booking_router, prefix="/api/bookings")
+
     @app.get("/health")
     def health() -> dict[str, Any]:
         return health_dependencies()
