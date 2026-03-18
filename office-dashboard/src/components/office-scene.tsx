@@ -3,6 +3,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 
+import AgentManager from "@/components/agents/AgentManager";
 import OfficeLayout from "@/components/rooms/OfficeLayout";
 
 export default function OfficeScene() {
@@ -22,6 +23,7 @@ export default function OfficeScene() {
       </mesh>
       <gridHelper args={[64, 32, "#1e293b", "#0f172a"]} position={[0, -0.12, 0]} />
       <OfficeLayout />
+      <AgentManager />
       <OrbitControls enablePan enableZoom maxPolarAngle={Math.PI / 2.05} minDistance={12} maxDistance={42} target={[0, 2, 0]} />
     </Canvas>
   );

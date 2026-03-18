@@ -2,7 +2,31 @@
 
 import { Outlines, Text } from "@react-three/drei";
 
-type Vec3 = [number, number, number];
+export type Vec3 = [number, number, number];
+export type DepartmentKey =
+  | "executive"
+  | "product_mgmt"
+  | "engineering"
+  | "growth_marketing"
+  | "sales"
+  | "customer_success"
+  | "finance_legal";
+export type RoomKey =
+  | "executive_suite"
+  | "product_room"
+  | "engineering_room"
+  | "growth_marketing_room"
+  | "customer_success_room"
+  | "finance_legal_room"
+  | "central_lobby";
+export type AgentZoneKey =
+  | "idle"
+  | "context_assembly"
+  | "policy_gate"
+  | "execution"
+  | "verification"
+  | "persistence"
+  | "error";
 
 export type RoomComponentProps = {
   position?: Vec3;
@@ -28,6 +52,56 @@ const WALL_THICKNESS = 0.28;
 const GLASS_HEIGHT = 2.5;
 const GRID_COLOR = "#cbd5e1";
 const OUTLINE_COLOR = "#111827";
+
+export const DEPARTMENT_ACCENT_COLORS: Record<DepartmentKey, string> = {
+  executive: "#D4A43A",
+  product_mgmt: "#3B82F6",
+  engineering: "#10B981",
+  growth_marketing: "#8B5CF6",
+  sales: "#EC4899",
+  customer_success: "#F59E0B",
+  finance_legal: "#6B7280",
+};
+
+export const ROOM_POSITIONS: Record<RoomKey, Vec3> = {
+  executive_suite: [0, 0.4, 14],
+  product_room: [-15, 0, 10],
+  finance_legal_room: [15, 0, 10],
+  central_lobby: [0, 0, 0],
+  engineering_room: [-15, 0, -10.5],
+  growth_marketing_room: [0, 0, -14],
+  customer_success_room: [15, 0, -10.5],
+};
+
+function createDepartmentZonePositions(roomWidth: number, roomDepth: number) {
+  return {
+    idle: [-roomWidth * 0.28, 0.52, roomDepth * 0.2] as Vec3,
+    context_assembly: [-roomWidth * 0.28, 0.52, -roomDepth * 0.14] as Vec3,
+    policy_gate: [0, 0.52, roomDepth * 0.26] as Vec3,
+    execution: [0, 0.52, -0.1] as Vec3,
+    verification: [roomWidth * 0.24, 0.52, -0.08] as Vec3,
+    persistence: [roomWidth * 0.28, 0.52, -roomDepth * 0.24] as Vec3,
+    error: [roomWidth * 0.28, 0.52, roomDepth * 0.22] as Vec3,
+  } satisfies Record<AgentZoneKey, Vec3>;
+}
+
+export const ROOM_ZONE_POSITIONS: Record<RoomKey, Record<AgentZoneKey, Vec3>> = {
+  executive_suite: createDepartmentZonePositions(14, 10),
+  product_room: createDepartmentZonePositions(11.5, 8.5),
+  engineering_room: createDepartmentZonePositions(10.5, 8),
+  growth_marketing_room: createDepartmentZonePositions(12.5, 8.5),
+  customer_success_room: createDepartmentZonePositions(11.5, 8.2),
+  finance_legal_room: createDepartmentZonePositions(9.8, 7.5),
+  central_lobby: {
+    idle: [-4.2, 0.52, 2.5],
+    context_assembly: [4.3, 0.52, 2.5],
+    policy_gate: [0, 0.52, 3.2],
+    execution: [0, 0.52, -0.3],
+    verification: [-2.8, 0.52, -0.6],
+    persistence: [2.8, 0.52, -0.6],
+    error: [0, 0.52, -3.1],
+  },
+};
 
 function ToonBox({
   position = [0, 0, 0],
