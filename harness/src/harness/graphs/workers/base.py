@@ -94,7 +94,19 @@ def run_worker(
     worker_spec = task.get("worker_spec") or load_worker_spec(worker_id)
     output_fields = expected_output_fields(worker_spec)
     deterministic_mode = task.get("tenant_config", {}).get("deterministic_mode", False)
-    if llm_enabled and not deterministic_mode and task.get("feature_flags", {}).get("llm_workers_enabled", True):
+    feature_flags = task.get("feature_flags", {})
+
+    # Hermes path: multi-turn agent loop (per-worker opt-in)
+    if (llm_enabled and not deterministic_mode
+            and feature_flags.get(f"hermes_worker_{worker_id}", False)):
+        try:
+            from harness.hermes_adapter import run_hermes_worker
+            generated = run_hermes_worker(task, worker_id=worker_id, worker_spec=worker_spec)
+            return ensure_output_shape(generated, output_fields)
+        except Exception:
+            pass  # fall through to existing LLM path
+
+    if llm_enabled and not deterministic_mode and feature_flags.get("llm_workers_enabled", True):
         try:
             generated = call_llm(build_prompt(task, worker_spec, output_fields), output_fields)
             return ensure_output_shape(generated, output_fields)
