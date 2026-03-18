@@ -9,7 +9,7 @@ except Exception:  # pragma: no cover
     StateGraph = None  # type: ignore[assignment]
 
 from harness.nodes.context_assembly import assemble_context, context_assembly_node
-from harness.jobs.dispatch import dispatch_job_requests
+from harness.dispatch import RunTaskRequest, dispatch_job_requests
 from harness.nodes.persist import build_persist_record, persist_node
 from harness.nodes.policy_gate import evaluate_policy, policy_gate_node
 from harness.nodes.verification import verify_output, verification_node
@@ -57,9 +57,10 @@ def _instrument_node(node_name: str, node_fn: Any) -> Any:
 def _worker_node(state: HarnessState) -> dict[str, Any]:
     worker = get_worker(state["worker_id"])
     output = worker(state["task"])
+    worker_role = state["task"].get("worker_spec", {}).get("role")
     return {
         "worker_output": output,
-        "job_requests": state["task"].get("job_requests", []) + output.get("job_requests", []),
+        "job_requests": output.get("job_requests", []) if worker_role == "director" else [],
     }
 
 
@@ -77,13 +78,34 @@ def _policy_route(state: HarnessState) -> str:
 def _job_dispatch_node(state: HarnessState) -> dict[str, Any]:
     if state.get("verification", {}).get("verdict") != "pass":
         return {"jobs": []}
+    worker_role = state["task"].get("worker_spec", {}).get("role")
+    if worker_role != "director":
+        return {"jobs": []}
+    raw_requests = state.get("worker_output", {}).get("job_requests", [])
+    if not raw_requests:
+        return {"jobs": []}
+    dispatch_result = dispatch_job_requests(
+        [RunTaskRequest.from_mapping(request) for request in raw_requests],
+        tenant_id=state["tenant_id"],
+        origin_worker_id=state["worker_id"],
+        inngest_client=state["task"].get("inngest_client"),
+        supabase_client=state["task"].get("supabase_client"),
+    )
     return {
-        "jobs": dispatch_job_requests(
-            state.get("job_requests", []),
-            tenant_id=state["tenant_id"],
-            origin_worker_id=state["worker_id"],
-            origin_run_id=state["run_id"],
-        )
+        "jobs": [
+            *[
+                {"worker_id": worker_id, "status": "dispatched"}
+                for worker_id in dispatch_result.dispatched
+            ],
+            *[
+                {"worker_id": worker_id, "status": "queued"}
+                for worker_id in dispatch_result.queued
+            ],
+            *[
+                {"worker_id": worker_id, "status": "blocked"}
+                for worker_id in dispatch_result.blocked
+            ],
+        ]
     }
 
 
@@ -169,7 +191,10 @@ def run_supervisor(state: HarnessState) -> HarnessState:
     _emit_node_entry(state, "worker")
     state["current_state"] = "worker"
     state["worker_output"] = get_worker(state["worker_id"])(state["task"])
-    state["job_requests"] = state["task"].get("job_requests", []) + state["worker_output"].get("job_requests", [])
+    if worker_spec.get("role") == "director":
+        state["job_requests"] = state["worker_output"].get("job_requests", [])
+    else:
+        state["job_requests"] = []
     _emit_node_entry(state, "verification")
     state["current_state"] = "verification"
     state["verification"] = verify_output(
@@ -183,12 +208,30 @@ def run_supervisor(state: HarnessState) -> HarnessState:
     if state["verification"]["verdict"] == "pass":
         _emit_node_entry(state, "job_dispatch")
         state["current_state"] = "job_dispatch"
-        state["jobs"] = dispatch_job_requests(
-            state.get("job_requests", []),
-            tenant_id=state["tenant_id"],
-            origin_worker_id=state["worker_id"],
-            origin_run_id=state["run_id"],
-        )
+        if worker_spec.get("role") == "director" and state.get("worker_output", {}).get("job_requests"):
+            dispatch_result = dispatch_job_requests(
+                [RunTaskRequest.from_mapping(request) for request in state["worker_output"]["job_requests"]],
+                tenant_id=state["tenant_id"],
+                origin_worker_id=state["worker_id"],
+                inngest_client=state["task"].get("inngest_client"),
+                supabase_client=state["task"].get("supabase_client"),
+            )
+            state["jobs"] = [
+                *[
+                    {"worker_id": worker_id, "status": "dispatched"}
+                    for worker_id in dispatch_result.dispatched
+                ],
+                *[
+                    {"worker_id": worker_id, "status": "queued"}
+                    for worker_id in dispatch_result.queued
+                ],
+                *[
+                    {"worker_id": worker_id, "status": "blocked"}
+                    for worker_id in dispatch_result.blocked
+                ],
+            ]
+        else:
+            state["jobs"] = []
     else:
         state["jobs"] = []
     _emit_node_entry(state, "persist")

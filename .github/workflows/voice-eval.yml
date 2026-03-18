@@ -1,0 +1,67 @@
+name: Voice Eval
+
+on:
+  pull_request:
+    paths:
+      - "knowledge/industry-packs/hvac/voice/**"
+      - "harness/src/voice/extraction/**"
+      - "knowledge/voice-pipeline/eval/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  voice-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - run: pip install -e harness
+
+      - id: voice_eval
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set +e
+          output="$(python scripts/run-voice-eval.py 2>&1)"
+          exit_code=$?
+          set -e
+
+          {
+            echo "exit_code=$exit_code"
+            echo "report<<EOF"
+            printf '%s\n' "$output"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$exit_code" -gt 1 ]; then
+            printf '%s\n' "$output"
+            exit "$exit_code"
+          fi
+
+      - uses: actions/github-script@v7
+        if: steps.voice_eval.outputs.exit_code == '1'
+        env:
+          EVAL_REPORT: ${{ steps.voice_eval.outputs.report }}
+        with:
+          script: |
+            const body = [
+              "Voice golden-set evaluation fell below the required 95% accuracy threshold.",
+              "",
+              "```json",
+              process.env.EVAL_REPORT || "",
+              "```",
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
