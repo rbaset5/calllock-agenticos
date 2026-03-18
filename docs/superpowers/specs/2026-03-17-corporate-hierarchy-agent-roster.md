@@ -61,11 +61,11 @@ Turns PRDs into reality. Heavy focus on latency, reliability, and zero dropped c
 | VP of Engineering (Director) | `eng-vp` | Sprint planning, capacity estimation, engineering delivery | CTO |
 | AI/Voice Engineer | `eng-ai-voice` | LLMs, prompt engineering, extraction pipeline, voice agent config, latency optimization | VP Eng |
 | Full-Stack Developer | `eng-fullstack` | Web apps, databases, customer-facing app (hong-kong-v1), APIs | VP Eng |
-| QA/Automation Engineer | `eng-qa` | Test scenarios (happy path + edge cases), zero hallucinations, seam validation, E2E product testing | VP Eng |
+| Product QA Engineer | `eng-product-qa` | Test scenarios (happy path + edge cases), zero hallucinations, seam validation, E2E product testing | VP Eng |
 
-**Product Guardian:** eng-ai-voice and eng-qa form the Product Guardian system (see `2026-03-17-product-guardian-design.md`). eng-ai-voice guards the voice pipeline; eng-qa guards the seam between voice pipeline and customer app.
+**Product Guardian:** eng-ai-voice and eng-product-qa form the Product Guardian system (see `2026-03-17-product-guardian-design.md`). eng-ai-voice guards the voice pipeline; eng-product-qa guards the seam between voice pipeline and customer app.
 
-**3D Office:** Engineering room. VP Eng has corner office. Room shows high activity during sprint execution. eng-ai-voice and eng-qa desks have health indicator lights tied to voice pipeline and seam contract status.
+**3D Office:** Engineering room. VP Eng has corner office. Room shows high activity during sprint execution. eng-ai-voice and eng-product-qa desks have health indicator lights tied to voice pipeline and seam contract status.
 
 ### Growth Marketing (6 agents)
 
@@ -146,7 +146,7 @@ CEO (exec-ceo)
 │   └── VP of Engineering (eng-vp)
 │       ├── AI/Voice Engineer (eng-ai-voice)
 │       ├── Full-Stack Developer (eng-fullstack)
-│       └── QA/Automation Engineer (eng-qa)
+│       └── Product QA Engineer (eng-product-qa)
 │
 ├── COO (exec-coo)
 │   ├── Head of CS (cs-head)
@@ -241,7 +241,7 @@ Sales and Marketing log **problems** in the Deal Breaker Ledger: "We lost 20% of
 | `eng-vp` | Needs creation | Planned |
 | `eng-ai-voice` | Designed in Product Guardian spec | Ready to build |
 | `eng-fullstack` | Needs creation (maps to existing `engineer.yaml`) | Planned |
-| `eng-qa` | Designed in Product Guardian spec | Ready to build |
+| `eng-product-qa` | Designed in Product Guardian spec | Ready to build |
 | `growth-head` | Needs creation | Planned |
 | `growth-cro` | Needs creation | Planned |
 | `growth-content` | Needs creation | Planned |
