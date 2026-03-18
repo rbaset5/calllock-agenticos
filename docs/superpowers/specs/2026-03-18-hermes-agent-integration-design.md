@@ -75,67 +75,126 @@ Three nested layers with one invariant: governance wraps execution, never the re
 
 ### Worker Node Changes
 
-`run_worker()` gains a feature-flag branch. When `hermes_workers_enabled` is true for a worker, it instantiates a Hermes AIAgent instead of calling `call_llm()`. The existing `call_llm()` path is preserved as fallback.
+The integration point is `base.py:run_worker()`, which currently calls `call_llm(build_prompt(...), output_fields)` on line 99. The Hermes branch inserts before the existing LLM path, using the same feature flag pattern (`task.get("feature_flags", {})`).
 
 ```python
-# harness/src/harness/graphs/workers/__init__.py
+# harness/src/harness/graphs/workers/base.py
 
-def run_worker(task, worker_id, deterministic_builder, llm_enabled=True):
-    spec = load_worker_spec(worker_id)
-    output_fields = spec["outputs"]
+def run_worker(
+    task: dict[str, Any],
+    *,
+    worker_id: str,
+    deterministic_builder: Callable[[dict[str, Any]], dict[str, Any]],
+    llm_enabled: bool = True,
+) -> dict[str, Any]:
+    worker_spec = task.get("worker_spec") or load_worker_spec(worker_id)
+    output_fields = expected_output_fields(worker_spec)
+    deterministic_mode = task.get("tenant_config", {}).get("deterministic_mode", False)
+    feature_flags = task.get("feature_flags", {})
 
-    if llm_enabled and feature_flag(f"hermes_worker_{worker_id}"):
-        result = run_hermes_worker(task, worker_id, spec)
-    elif llm_enabled and feature_flag("harness_enabled"):
-        result = call_llm(task, spec)
-    else:
-        result = deterministic_builder(task)
+    # Hermes path: multi-turn agent loop (per-worker opt-in)
+    if (llm_enabled and not deterministic_mode
+            and feature_flags.get(f"hermes_worker_{worker_id}", False)):
+        try:
+            generated = run_hermes_worker(task, worker_id=worker_id, worker_spec=worker_spec)
+            return ensure_output_shape(generated, output_fields)
+        except Exception:
+            pass  # fall through to existing paths
 
-    return ensure_output_shape(result, output_fields)
+    # Existing LLM path: single-shot call_llm
+    if llm_enabled and not deterministic_mode and feature_flags.get("llm_workers_enabled", True):
+        try:
+            generated = call_llm(build_prompt(task, worker_spec, output_fields), output_fields)
+            return ensure_output_shape(generated, output_fields)
+        except Exception:
+            pass
+
+    return ensure_output_shape(deterministic_builder(task), output_fields)
 ```
 
-Feature flags are per-worker (`hermes_worker_eng-ai-voice`, `hermes_worker_eng-app`, etc.) to enable incremental rollout.
+Feature flags are per-worker (`hermes_worker_eng-ai-voice`, `hermes_worker_eng-qa`, etc.) to enable incremental rollout. Flags come from `task["feature_flags"]`, consistent with the existing pattern.
 
 ### Hermes Adapter
 
 New file: `harness/src/harness/hermes_adapter.py`
 
 Responsibilities:
-1. Map supervisor state (context, model, tool grants) to Hermes AIAgent config.
+1. Accept the `task` dict and extract relevant fields (context_items, tool_grants, tenant_id).
 2. Build a system prompt from context_assembly output + worker skills.
-3. Map tool_grants to Hermes toolset enables/disables.
-4. Run the Hermes agent loop headless.
+3. Map domain-specific tool_grants to Hermes toolset enables.
+4. Run the Hermes agent loop headless with a wall-clock timeout.
 5. Extract structured output from Hermes's free-form response.
 
+**Hermes dependency:** `hermes-agent` pinned in `harness/pyproject.toml`. The import path must be verified against the installed package (likely `from hermes_agent import AIAgent` or `from run_agent import AIAgent` depending on package structure). This must be confirmed during Week 1 implementation by inspecting the installed package.
+
 ```python
-from run_agent import AIAgent
+# hermes-agent import — exact path TBD, verified at implementation time
+# Candidate: from hermes_agent import AIAgent
+# Fallback:  from run_agent import AIAgent
+import signal
+from typing import Any
 
 BLOCKED_TOOLSETS = frozenset([
     "delegation",       # dispatch goes through supervisor
     "memory",           # no persistent state between runs
-    "code_execution",   # sandboxed by policy, not Hermes
     "clarify",          # no user interaction mid-run
 ])
+# Note: Hermes's "code_execution" toolset (execute_code sandbox) is
+# separate from "terminal" (shell access). terminal is the primary
+# tool workers use. code_execution is a sandboxed Python runner used
+# for script generation — not blocked by default, but can be blocked
+# per-worker via tool grant mapping if needed.
 
-def run_hermes_worker(task: str, worker_id: str, spec: dict) -> dict:
-    model = resolve_model(worker_id, spec, context_flags)
+WALL_CLOCK_TIMEOUT_SECONDS = 120  # hard cap on any single worker run
+
+def run_hermes_worker(
+    task: dict[str, Any],
+    *,
+    worker_id: str,
+    worker_spec: dict[str, Any],
+) -> dict[str, Any]:
+    """Run a Hermes AIAgent as the worker execution engine.
+
+    Accepts the full task dict from the supervisor (same shape as
+    base.run_worker receives). Extracts context_items, tool_grants,
+    and tenant_id from the task to configure the Hermes agent.
+    """
+    from hermes_agent import AIAgent  # deferred import, only when feature flag is on
+
+    # Extract supervisor state from task dict
+    context_items = task.get("context_items", [])
+    tool_grants = task.get("tool_grants", [])
+    tenant_id = task.get("tenant_id", "")
+    output_fields = expected_output_fields(worker_spec)
+
+    # Model resolution — uses the resolve_model function from
+    # the LLM Tool Assignments spec (2026-03-18-llm-tool-assignments.md)
+    model_alias, override_fired, override_reason = resolve_model(
+        worker_spec=worker_spec,
+        context=task.get("task_context", {}),
+    )
 
     system_prompt = build_hermes_system_prompt(
-        spec=spec,
-        assembled_context=state["context_items"],
-        worker_skills=load_worker_skills(worker_id, state["tenant_id"]),
-        output_fields=spec["outputs"],
+        spec=worker_spec,
+        assembled_context=context_items,
+        worker_skills=load_worker_skills(worker_id, tenant_id),
+        output_fields=output_fields,
     )
 
-    toolsets = map_tool_grants_to_toolsets(
-        state["tool_grants"],
-        blocked=BLOCKED_TOOLSETS
-    )
+    # Map domain-specific tool_grants to Hermes toolset categories
+    toolsets = map_tool_grants_to_toolsets(tool_grants, blocked=BLOCKED_TOOLSETS)
 
-    max_iterations = spec.get("max_iterations", 15)
+    max_iterations = worker_spec.get("max_iterations", 15)
+
+    # Build user message from task (same fields as build_prompt uses)
+    user_message = (
+        f"Problem: {task.get('problem_description', '')}\n"
+        f"Transcript: {task.get('transcript', '')}\n"
+        f"Task context: {json.dumps(task.get('task_context', {}), indent=2)}"
+    )
 
     agent = AIAgent(
-        model=model,
+        model=model_alias,
         max_iterations=max_iterations,
         enabled_toolsets=list(toolsets),
         skip_memory=True,
@@ -143,13 +202,31 @@ def run_hermes_worker(task: str, worker_id: str, spec: dict) -> dict:
         quiet_mode=True,
     )
 
-    raw = agent.run_conversation(
-        user_message=task,
-        system_message=system_prompt,
-    )
+    # Wall-clock timeout to prevent hangs on external tool calls
+    def _timeout_handler(signum, frame):
+        raise TimeoutError(f"Hermes worker {worker_id} exceeded {WALL_CLOCK_TIMEOUT_SECONDS}s")
 
-    return extract_structured_output(raw["final_response"], spec["outputs"])
+    old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+    signal.alarm(WALL_CLOCK_TIMEOUT_SECONDS)
+    try:
+        raw = agent.run_conversation(
+            user_message=user_message,
+            system_message=system_prompt,
+        )
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
+
+    # Normalize return — run_conversation may return dict or string
+    if isinstance(raw, dict):
+        response_text = raw.get("final_response", str(raw))
+    else:
+        response_text = str(raw)
+
+    return extract_structured_output(response_text, output_fields)
 ```
+
+**Note on state threading:** The `task` dict must include `context_items` and `tool_grants` by the time it reaches `run_worker()`. These are populated by the `context_assembly` and `policy_gate` nodes respectively, and must be threaded through the supervisor state into the task dict. If they are not already present in `task`, the supervisor graph's worker node must be modified to copy them from `HarnessState` into `task` before calling `run_worker()`.
 
 ### System Prompt Bridge
 
@@ -162,17 +239,21 @@ def run_hermes_worker(task: str, worker_id: str, spec: dict) -> dict:
 
 ### Tool Grant Mapping
 
-| Supervisor tool_grant | Hermes toolset | Notes |
+Worker specs define domain-specific `tools_allowed` (e.g., `supabase_read`, `extraction_rerun`, `scorecard_evaluate`). These don't map 1:1 to Hermes's toolset categories. The mapping works in two layers:
+
+**Layer 1: Hermes toolset enables** — which categories of Hermes tools are active:
+
+| Worker spec `tools_allowed` contains | Hermes toolset enabled | Notes |
 |---|---|---|
-| `terminal` | `terminal` | Shell access |
-| `file_read`, `file_write` | `file` | File operations |
+| Any `*_read`, `read_*` tool | `file` | File read access |
+| Any `write_*`, `*_write` tool | `file` + `terminal` | File write + shell for git |
 | `web_search`, `web_fetch` | `web` | Web access |
-| `browser` | `browser` | Browser automation |
-| `vision` | `vision` | Image analysis |
-| *(not mapped)* | `delegation` | Always blocked |
-| *(not mapped)* | `memory` | Always blocked |
-| *(not mapped)* | `code_execution` | Always blocked |
-| *(not mapped)* | `clarify` | Always blocked |
+| `browser`, `headless_browser` | `browser` | Browser automation |
+| *(never)* | `delegation` | Always blocked |
+| *(never)* | `memory` | Always blocked |
+| *(never)* | `clarify` | Always blocked |
+
+**Layer 2: Domain-specific tools as MCP** — tools like `supabase_read`, `extraction_rerun`, `retell_config_diff` become MCP tools available to the Hermes agent. These are implemented as a lightweight MCP server that wraps the existing harness tool implementations, scoped to the current tenant. This is a Week 7+ deliverable — initial rollout uses only Hermes built-in toolsets.
 
 ### Output Extraction
 
@@ -236,17 +317,26 @@ knowledge/worker-skills/
   eng-ai-voice/
     carrier-emergency-extraction.md
     multi-unit-commercial-parsing.md
-  eng-app/
-    card-render-validation-sequence.md
+  eng-qa/
+    seam-contract-validation-sequence.md
   customer-analyst/
     churn-signal-from-callback-pattern.md
 ```
 
-Each skill file has frontmatter:
+Each skill file has frontmatter (extends standard knowledge node schema from CLAUDE.md):
 
 ```yaml
 ---
 id: skill-{worker_id}-{slug}
+title: "Carrier Emergency Dispatch Extraction"
+graph: worker-skills
+owner: eng-ai-voice
+last_reviewed: 2026-03-20
+trust_level: curated
+progressive_disclosure:
+  summary_tokens: 40
+  full_tokens: 200
+# Skill-specific fields (extend base schema):
 worker_id: eng-ai-voice
 created_from_run: run_abc123
 created_at: 2026-03-20
@@ -257,6 +347,8 @@ universal: true                   # founder judged universally applicable
 ```
 
 Body contains: description of the pattern, step-by-step procedure, expected output impact.
+
+**Note:** Skill files follow the standard knowledge node frontmatter conventions (id, title, graph, owner, last_reviewed, trust_level, progressive_disclosure) plus skill-specific extensions. The `worker-skills/` directory must be added to CLAUDE.md's monorepo layout section when implemented.
 
 ### Tenant Contamination Handling
 
@@ -361,7 +453,7 @@ CallLock AgentOS (Discord Server)
 
 ### Event Projection
 
-New component: `telegram_discord_projector.py` (Inngest function)
+New component: `discord_event_projector.py` (Inngest function)
 
 Subscribes to existing Inngest events and writes to Discord via webhooks:
 
@@ -426,13 +518,15 @@ When the founder hires:
 
 **New files:**
 - `harness/src/harness/hermes_adapter.py` — adapter, output extraction, system prompt bridge, tool grant mapping
-- `harness/pyproject.toml` — add `hermes-agent` dependency
 
 **Modified files:**
-- `harness/src/harness/graphs/workers/__init__.py` — feature flag branch in `run_worker()`
+- `harness/pyproject.toml` — add `hermes-agent` dependency (pinned version)
+- `harness/src/harness/graphs/workers/base.py` — feature flag branch in `run_worker()` (line 97)
 - `harness/src/harness/nodes/verification.py` — skill candidate detection stub (returns None)
 
-**Tests:** Adapter produces valid output shapes, blocked toolsets enforced, model routing respected, output extractor finds JSON blocks, LLM fallback works.
+**Prerequisite:** Verify Hermes AIAgent import path from installed package. Test `from hermes_agent import AIAgent` vs `from run_agent import AIAgent`. Document the correct path.
+
+**Tests:** Adapter produces valid output shapes, blocked toolsets enforced, model routing from LLM Tool Assignments spec is respected, output extractor finds JSON blocks, LLM fallback works, wall-clock timeout fires correctly.
 
 ### Week 3-4: Shadow Mode on eng-ai-voice
 
@@ -460,6 +554,34 @@ Shadow mode runs both paths, logs field-by-field comparison, but always returns 
 
 **Skill pipeline:** `check_skill_candidate()` active in verification node. Candidates surface in Discord #skills and Telegram morning briefing.
 
+**New Supabase migration:** `skill_candidates` table:
+
+```sql
+-- supabase/migrations/052_skill_candidates.sql
+create table skill_candidates (
+    id uuid primary key default gen_random_uuid(),
+    tenant_id uuid not null references tenants(id),
+    worker_id text not null,
+    task_type text not null,
+    run_id uuid not null,
+    signals text[] not null,
+    summary text,
+    status text not null default 'pending' check (status in ('pending', 'promoted', 'dismissed')),
+    promoted_by text,
+    dismiss_reason text,
+    created_at timestamptz not null default now(),
+    reviewed_at timestamptz
+);
+
+alter table skill_candidates enable row level security;
+create policy "tenant_isolation" on skill_candidates
+    using (tenant_id = current_setting('app.current_tenant')::uuid);
+```
+
+**Modified files:**
+- `harness/src/harness/nodes/context_assembly.py` — add `worker-skills/` as priority 2 source
+- `harness/src/harness/nodes/verification.py` — activate `check_skill_candidate()`
+
 ### Week 7+: Expansion
 
 Roll Hermes to additional workers based on shadow mode data. Priority order:
@@ -467,11 +589,13 @@ Roll Hermes to additional workers based on shadow mode data. Priority order:
 | Priority | Worker | Rationale |
 |---|---|---|
 | 1 | eng-ai-voice | Done in Week 3-4 |
-| 2 | eng-app | Headless browser validation benefits from multi-turn |
-| 3 | eng-product-qa | Seam contract validation needs file reads + comparisons |
+| 2 | engineer | Code generation and migration planning benefits from multi-turn |
+| 3 | eng-qa | Seam contract validation needs file reads + comparisons |
 | 4 | product-manager | Feature analysis benefits from web research |
 | 5 | customer-analyst | Churn detection needs data exploration |
 | 6+ | Evaluate per-worker | Not every worker needs Hermes — single-shot is fine for simple tasks |
+
+**Note:** Worker IDs must match existing specs in `knowledge/worker-specs/`. Currently implemented: `eng-ai-voice`, `eng-qa`, `engineer`, `customer-analyst`, `product-manager`, `designer`, `product-marketer`. Additional worker specs (e.g., for headless browser validation) should be created before enabling Hermes for those workers.
 
 Per-worker iteration budgets tuned from shadow mode data.
 
@@ -481,7 +605,8 @@ Per-worker iteration budgets tuned from shadow mode data.
 |---|---|
 | Hermes dependency breaks harness | Feature flag off → falls back to `call_llm()`. Zero coupling when disabled |
 | Worker output shape drift | `extract_structured_output()` with LLM fallback. Verification catches drift |
-| Cost explosion | `max_iterations` per worker spec. Shadow mode tracks cost before switching |
+| Cost explosion | `max_iterations` per worker spec. Shadow mode tracks cost via LiteLLM token counting summed across all Hermes iterations |
+| Worker hangs on external tool call | `WALL_CLOCK_TIMEOUT_SECONDS = 120` via `signal.alarm()` in adapter. Raises `TimeoutError`, falls through to `call_llm()` |
 | CEO agent sends wrong dispatch | All dispatches go through existing policy gate + concurrency limits |
 | Hermes upstream breaking change | Pin version in `pyproject.toml`. Upgrade deliberately |
 | CEO agent Telegram compromise | Hermes DM pairing — only founder's account can talk to it. MCP tools use service role keys |
