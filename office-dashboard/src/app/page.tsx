@@ -41,10 +41,11 @@ export default function Home() {
             Office Dashboard
           </p>
           <h1 className="mt-2 text-2xl font-semibold text-white">
-            Agent Office Prototype
+            Agent Office Command Center
           </h1>
           <p className="mt-2 text-sm text-slate-300">
-            Placeholder Three Fiber scene with Supabase Realtime wiring for
+            Low-poly 3D office layout with department rooms, lobby corridors,
+            and Supabase Realtime wiring for
             <code className="mx-1 rounded bg-white/10 px-1 py-0.5 text-xs">
               agent_office_state
             </code>

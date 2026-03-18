@@ -3,23 +3,26 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 
-function PlaceholderCube() {
-  return (
-    <mesh castShadow receiveShadow rotation={[0.4, 0.8, 0]}>
-      <boxGeometry args={[1.4, 1.4, 1.4]} />
-      <meshStandardMaterial color="#f97316" metalness={0.25} roughness={0.35} />
-    </mesh>
-  );
-}
+import OfficeLayout from "@/components/rooms/OfficeLayout";
 
 export default function OfficeScene() {
   return (
-    <Canvas camera={{ position: [3.5, 3, 4.5], fov: 50 }}>
-      <ambientLight intensity={0.75} />
-      <directionalLight castShadow intensity={1.4} position={[5, 7, 4]} />
-      <gridHelper args={[12, 12, "#334155", "#1e293b"]} position={[0, -1.4, 0]} />
-      <PlaceholderCube />
-      <OrbitControls enablePan enableZoom maxPolarAngle={Math.PI / 2.1} minDistance={2.5} maxDistance={10} />
+    <Canvas
+      shadows
+      camera={{ position: [0, 18, 28], fov: 42 }}
+    >
+      <color attach="background" args={["#020617"]} />
+      <fog attach="fog" args={["#020617", 28, 60]} />
+      <ambientLight intensity={1.1} />
+      <directionalLight castShadow intensity={1.5} position={[18, 24, 14]} shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
+      <directionalLight intensity={0.45} position={[-14, 12, -10]} color="#93c5fd" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.14, 0]} receiveShadow>
+        <planeGeometry args={[64, 64]} />
+        <meshStandardMaterial color="#0f172a" />
+      </mesh>
+      <gridHelper args={[64, 32, "#1e293b", "#0f172a"]} position={[0, -0.12, 0]} />
+      <OfficeLayout />
+      <OrbitControls enablePan enableZoom maxPolarAngle={Math.PI / 2.05} minDistance={12} maxDistance={42} target={[0, 2, 0]} />
     </Canvas>
   );
 }
