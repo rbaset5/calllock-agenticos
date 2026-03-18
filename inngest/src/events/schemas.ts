@@ -110,6 +110,7 @@ export const CALL_ENDED = "calllock/call.ended";
 export const CALL_EMERGENCY_SMS = "calllock/call.emergency.sms";
 export const AGENT_STATE_CHANGED = "calllock/agent.state.changed";
 export const AGENT_HANDOFF = "calllock/agent.handoff";
+export const AGENT_DISPATCH = "calllock/agent.dispatch";
 
 export interface AgentStateChangedPayload {
   agent_id: string;
@@ -131,6 +132,20 @@ export interface AgentHandoffPayload {
   lead_id?: string;
   context_summary?: string;
   timestamp?: string;
+}
+
+export interface AgentDispatchPayload {
+  worker_id: string;
+  tenant_id: string;
+  origin_worker_id: string;
+  department: string;
+  role: string;
+  task_type: string;
+  task_context: Record<string, unknown>;
+  idempotency_key: string;
+  priority?: "low" | "medium" | "high";
+  requires_approval?: boolean;
+  description?: string | null;
 }
 
 export interface CallEndedPayload {
@@ -328,6 +343,24 @@ export function validateAgentStateChangedPayload(
   if (!payload.role) errors.push("role is required");
   if (payload.from_state === undefined) errors.push("from_state is required");
   if (!payload.to_state) errors.push("to_state is required");
+  return errors;
+}
+
+export function validateAgentDispatchPayload(payload: AgentDispatchPayload): string[] {
+  const errors: string[] = [];
+  if (!payload.worker_id) errors.push("worker_id is required");
+  if (!payload.tenant_id) errors.push("tenant_id is required");
+  if (!payload.origin_worker_id) errors.push("origin_worker_id is required");
+  if (!payload.department) errors.push("department is required");
+  if (!payload.role) errors.push("role is required");
+  if (!payload.task_type) errors.push("task_type is required");
+  if (!payload.idempotency_key) errors.push("idempotency_key is required");
+  if (!payload.task_context || typeof payload.task_context !== "object" || Array.isArray(payload.task_context)) {
+    errors.push("task_context must be an object");
+  }
+  if (payload.priority && !["low", "medium", "high"].includes(payload.priority)) {
+    errors.push("priority is invalid");
+  }
   return errors;
 }
 

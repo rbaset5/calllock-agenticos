@@ -1,0 +1,493 @@
+version: "1.0"
+description: "Golden evaluation set for HVAC voice pipeline"
+calls:
+  - id: "eval-001"
+    description: "Standard AC repair, residential, urgent"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: My name is John Smith.
+      Agent: What address do you need service at?
+      User: 123 Oak Street, Austin, TX 78701.
+      User: My AC is not cooling and it's been blowing warm air since this morning.
+      Agent: Is the outdoor unit running?
+      User: Yes, but it's making a strange noise and the house is 95 degrees.
+      Agent: Any smoke or gas smell?
+      User: No, just really hot.
+      Agent: We'll have a technician call you back as soon as possible.
+    raw_payload:
+      call_summary: "Customer reports AC not cooling."
+      start_timestamp: 1718452800000
+      retell_llm_dynamic_variables:
+        problem_description: "AC not cooling"
+        urgency_tier: "urgent"
+        booking_confirmed: "false"
+    expected_fields:
+      customer_name: "John Smith"
+      service_address: "123 Oak Street, Austin, TX 78701"
+      urgency_tier: "urgent"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: "No Cool"
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "URGENT_24HR"
+        - "REPAIR_AC"
+        - "DURATION_ACUTE"
+    expected_revenue_tier: "major_repair"
+
+  - id: "eval-002"
+    description: "Gas leak emergency, safety critical"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: This is Maria Lopez.
+      User: I smell gas in my basement near the furnace.
+      Agent: Please leave the house immediately if you think there is a leak.
+      User: We are outside now.
+      Agent: What address are you calling from?
+      User: 88 Pine Avenue, Dallas, TX 75001.
+      Agent: I am marking this as an emergency and advising you to call the gas company.
+      User: Thank you.
+      Agent: Do not go back inside until it is safe.
+    raw_payload:
+      call_summary: "Caller reports gas smell by furnace."
+      start_timestamp: 1735776000000
+      retell_llm_dynamic_variables:
+        problem_description: "gas smell near furnace"
+        urgency_tier: "emergency"
+    expected_fields:
+      customer_name: "Maria Lopez"
+      service_address: "88 Pine Avenue, Dallas, TX 75001"
+      urgency_tier: "emergency"
+      caller_type: "residential"
+      primary_intent: "solicitation"
+      hvac_issue_type: "Odor"
+      safety_emergency: true
+      appointment_booked: false
+      route: "vendor"
+      tags:
+        - "GAS_LEAK"
+        - "CRITICAL_EVACUATE"
+        - "UTILITY_COMPANY"
+    expected_revenue_tier: "standard_repair"
+
+  - id: "eval-003"
+    description: "Spam telemarketing call"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: Hi, I'm Chris from Metro Telemarketing.
+      User: I'm selling advertising products and telemarketing services for HVAC companies.
+      Agent: Are you calling about service at a property?
+      User: No, this is a sales offer for your business.
+      Agent: This line is for customer service requests only.
+      User: Can I speak with the owner anyway?
+      Agent: No. Goodbye.
+      User: Thanks.
+      Agent: Goodbye.
+    raw_payload:
+      start_timestamp: 1718128800000
+    expected_fields:
+      customer_name: "Chris from"
+      service_address: null
+      urgency_tier: "routine"
+      caller_type: "spam"
+      primary_intent: "solicitation"
+      hvac_issue_type: null
+      safety_emergency: false
+      appointment_booked: false
+      route: "spam"
+      tags:
+        - "VENDOR_SALES"
+        - "SPAM_TELEMARKETING"
+    expected_revenue_tier: "standard_repair"
+
+  - id: "eval-004"
+    description: "No heat in winter for family at home"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: My name is Peter Young.
+      User: My furnace is not working and we have no heat tonight.
+      Agent: What address do you need service at?
+      User: 401 Snow Road, Dallas, TX 75008.
+      User: We have two little kids here and it's freezing.
+      Agent: Are you getting any warm air at all?
+      User: No, just cold air.
+      Agent: We will mark this urgent.
+      User: Thank you.
+    raw_payload:
+      call_summary: "No heat tonight for family with kids."
+      start_timestamp: 1736035200000
+      retell_llm_dynamic_variables:
+        problem_description: "furnace not working no heat"
+        urgency_tier: "urgent"
+    expected_fields:
+      customer_name: "Peter Young"
+      service_address: "401 Snow Road, Dallas, TX 75008"
+      urgency_tier: "urgent"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: "No Cool"
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "HEALTH_RISK"
+        - "REPAIR_HEATING"
+        - "DURATION_ACUTE"
+    expected_revenue_tier: "diagnostic"
+
+  - id: "eval-005"
+    description: "Heat pump intermittent performance issue"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: This is Emily Stone.
+      User: My heat pump works sometimes and then stops heating.
+      Agent: What address is the system at?
+      User: 55 River Lane, Dallas, TX 75009.
+      User: It has been doing this for a few days.
+      Agent: Any burning smell or smoke?
+      User: No, just intermittent heating.
+      Agent: We can schedule a diagnostic.
+      User: Okay.
+    raw_payload:
+      call_summary: "Heat pump intermittent issue."
+      start_timestamp: 1735948800000
+      retell_llm_dynamic_variables:
+        problem_description: "heat pump intermittent heating"
+    expected_fields:
+      customer_name: "Emily Stone"
+      service_address: "55 River Lane, Dallas, TX 75009"
+      urgency_tier: "emergency"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: "Odor"
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "REPAIR_HEATPUMP"
+        - "DIAGNOSTIC_INTERMITTENT"
+        - "DURATION_RECENT"
+    expected_revenue_tier: "major_repair"
+
+  - id: "eval-006"
+    description: "Commercial rooftop unit not cooling"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: This is Mark Davis from the Oak Plaza office building.
+      User: We have three rooftop units and one AC unit is blowing warm air in suite 200.
+      Agent: What is the service address?
+      User: 500 Commerce Boulevard, Dallas, TX 75002.
+      User: Our tenants are complaining and we need someone today.
+      Agent: Is the unit completely down?
+      User: It's barely working.
+      Agent: Understood, I'll note this for service.
+      User: Thanks.
+    raw_payload:
+      call_summary: "Commercial rooftop unit warm air."
+      start_timestamp: 1718190000000
+      retell_llm_dynamic_variables:
+        problem_description: "commercial rooftop AC blowing warm air"
+        property_type: "commercial"
+        urgency_tier: "urgent"
+    expected_fields:
+      customer_name: "Mark Davis"
+      service_address: "500 Commerce Boulevard, Dallas, TX 75002"
+      urgency_tier: "urgent"
+      caller_type: "commercial"
+      primary_intent: "service"
+      hvac_issue_type: "No Cool"
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "REPAIR_AC"
+        - "ROOF_EQUIP"
+        - "COMMERCIAL_ACCT"
+    expected_revenue_tier: "diagnostic"
+
+  - id: "eval-007"
+    description: "Existing customer follow-up after prior visit"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: This is Sarah Green.
+      User: You were at my house yesterday and the upstairs is still not cooling.
+      Agent: What address should we use?
+      User: 44 Willow Road, Dallas, TX 75004.
+      User: I used your company before and I need someone to call me back.
+      Agent: Any changes since yesterday?
+      User: No, it's the same issue.
+      Agent: I'll add this as a follow-up.
+      User: Thank you.
+    raw_payload:
+      call_summary: "Follow-up after prior visit, upstairs not cooling."
+      start_timestamp: 1718362800000
+    expected_fields:
+      customer_name: "Sarah Green"
+      service_address: "44 Willow Road, Dallas, TX 75004"
+      urgency_tier: "routine"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: "No Cool"
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "OWNER_OCCUPIED"
+        - "DURATION_RECENT"
+    expected_revenue_tier: "diagnostic"
+
+  - id: "eval-008"
+    description: "Booking successful for noisy furnace"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: My name is Amy Carter.
+      User: My furnace is making a loud banging noise tonight.
+      Agent: What address do you need service at?
+      User: 77 Cedar Avenue, Dallas, TX 75001.
+      Agent: I have an opening tomorrow at 9 AM. Would you like to book it?
+      User: Yes, please book that appointment.
+      Agent: Great, you are confirmed for tomorrow morning.
+      User: Perfect.
+      Agent: We'll see you then.
+    raw_payload:
+      call_summary: "Noisy furnace, booked appointment."
+      start_timestamp: 1736121600000
+      retell_llm_dynamic_variables:
+        booking_confirmed: "true"
+        problem_description: "furnace making loud banging noise"
+    expected_fields:
+      customer_name: "Amy Carter"
+      service_address: "77 Cedar Avenue, Dallas, TX 75001"
+      urgency_tier: "routine"
+      caller_type: "residential"
+      primary_intent: "booking_request"
+      hvac_issue_type: "Noisy System"
+      safety_emergency: false
+      appointment_booked: true
+      route: "legitimate"
+      tags:
+        - "DIAGNOSTIC_NOISE"
+        - "DURATION_ACUTE"
+    expected_revenue_tier: "diagnostic"
+
+  - id: "eval-009"
+    description: "Booking attempted but no slot available"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: My name is Jenna Fox.
+      User: My heater is not working and it's very cold in the house tonight.
+      Agent: What address do you need service at?
+      User: 208 Elm Street, Dallas, TX 75006.
+      Agent: I do not have any technicians available tonight.
+      User: Okay, please have someone call me first thing tomorrow.
+      Agent: I will note that.
+      User: Thank you.
+      Agent: You're welcome.
+    raw_payload:
+      call_summary: "Heater not working, no same-day slot."
+      start_timestamp: 1736208000000
+    expected_fields:
+      customer_name: "Jenna Fox"
+      service_address: "208 Elm Street, Dallas, TX 75006"
+      urgency_tier: "routine"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: null
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "DURATION_ACUTE"
+    expected_revenue_tier: "diagnostic"
+
+  - id: "eval-010"
+    description: "Replacement estimate for old AC system"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: My name is Lisa Brown.
+      User: I want an estimate for replacing my 18 year old air conditioner.
+      Agent: What address is the property at?
+      User: 12 Maple Drive, Dallas, TX 75003.
+      User: It still runs but I think it's time for a new system.
+      Agent: Are you looking for a quote only?
+      User: Yes, I want pricing options.
+      Agent: Great, we'll note this as an estimate.
+      User: Thanks.
+    raw_payload:
+      call_summary: "Estimate request for replacing old AC."
+      start_timestamp: 1718276400000
+      retell_llm_dynamic_variables:
+        problem_description: "replace 18 year old air conditioner"
+        urgency_tier: "estimate"
+    expected_fields:
+      customer_name: "Lisa Brown"
+      service_address: "12 Maple Drive, Dallas, TX 75003"
+      urgency_tier: "estimate"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: null
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "HOT_LEAD"
+        - "RECENT_INSTALL"
+    expected_revenue_tier: "replacement"
+
+  - id: "eval-011"
+    description: "New construction heat pump inquiry"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: This is Kevin Moore.
+      User: We are building a house and need a new construction HVAC system installed.
+      Agent: What is the property address?
+      User: 901 New Build Lane, Plano, TX 75024.
+      User: I would like a quote for a heat pump setup.
+      Agent: Is this for immediate service or planning?
+      User: Planning ahead for the build schedule.
+      Agent: Understood, I'll mark this as an estimate.
+      User: Thank you.
+    raw_payload:
+      call_summary: "New construction HVAC quote."
+      start_timestamp: 1718712000000
+      retell_llm_dynamic_variables:
+        problem_description: "new construction heat pump quote"
+        urgency_tier: "estimate"
+    expected_fields:
+      customer_name: "Kevin Moore"
+      service_address: "901 New Build Lane, Plano, TX 75024"
+      urgency_tier: "estimate"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: null
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "INSTALL_NEWCONSTRUCTION"
+        - "HOT_LEAD"
+    expected_revenue_tier: "replacement"
+
+  - id: "eval-012"
+    description: "Vendor sales solicitation"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: Hi, this is Brenda from SupplyMax.
+      User: I'm selling products to HVAC contractors and offering new dispatch software.
+      Agent: This line is for customers needing HVAC service.
+      User: Can I send over product information anyway?
+      Agent: No thank you.
+      User: Okay.
+      Agent: Goodbye.
+      User: Goodbye.
+      Agent: End of call.
+    raw_payload:
+      start_timestamp: 1718802000000
+    expected_fields:
+      customer_name: "Brenda from"
+      service_address: null
+      urgency_tier: "routine"
+      caller_type: "vendor"
+      primary_intent: "solicitation"
+      hvac_issue_type: null
+      safety_emergency: false
+      appointment_booked: false
+      route: "vendor"
+      tags:
+        - "VENDOR_SALES"
+    expected_revenue_tier: "standard_repair"
+
+  - id: "eval-013"
+    description: "Job applicant asking about technician role"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: Hi, I'm Alex Turner and I'm applying for job with your HVAC company.
+      Agent: Are you calling about a service issue?
+      User: No, I wanted to ask if you're hiring for the technician role.
+      Agent: This line is for service calls only.
+      User: Understood.
+      Agent: You can email your resume instead.
+      User: Thank you.
+      Agent: Goodbye.
+      User: Goodbye.
+    raw_payload:
+      start_timestamp: 1718888400000
+    expected_fields:
+      customer_name: "Alex Turner"
+      service_address: null
+      urgency_tier: "routine"
+      caller_type: "job_applicant"
+      primary_intent: "solicitation"
+      hvac_issue_type: null
+      safety_emergency: false
+      appointment_booked: false
+      route: "vendor"
+      tags:
+        - "JOB_APPLICANT"
+    expected_revenue_tier: "diagnostic"
+
+  - id: "eval-014"
+    description: "Routine AC maintenance tune-up request"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: My name is Daniel Price.
+      User: I want to schedule summer maintenance for my air conditioner.
+      Agent: What is the address for the tune-up?
+      User: 610 Garden Street, Dallas, TX 75007.
+      User: The system is working fine, I just want an AC tune-up before it gets hotter.
+      Agent: No problem.
+      User: There is no rush, whenever convenient.
+      Agent: We'll note that.
+      User: Thanks.
+    raw_payload:
+      call_summary: "Routine AC tune-up request."
+      start_timestamp: 1718974800000
+      retell_llm_dynamic_variables:
+        problem_description: "summer maintenance for air conditioner"
+    expected_fields:
+      customer_name: "Daniel Price"
+      service_address: "610 Garden Street, Dallas, TX 75007"
+      urgency_tier: "estimate"
+      caller_type: "residential"
+      primary_intent: "service"
+      hvac_issue_type: "Maintenance"
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "TUNEUP_AC"
+    expected_revenue_tier: "minor"
+
+  - id: "eval-015"
+    description: "Billing callback from existing customer"
+    transcript: |
+      Agent: Thank you for calling ABC Heating and Cooling.
+      User: This is Robert Hall.
+      User: I'm calling about a billing question on my last invoice.
+      Agent: Can I get the service address?
+      User: 300 Birch Court, Dallas, TX 75005.
+      User: I used your company before and I just need someone from the office to call me.
+      Agent: Understood, I'll route this to the office.
+      User: Thank you.
+      Agent: You're welcome.
+      User: Goodbye.
+    raw_payload:
+      call_summary: "Billing callback request."
+      start_timestamp: 1719061200000
+      retell_llm_dynamic_variables:
+        callback_type: "billing"
+    expected_fields:
+      customer_name: "Robert Hall"
+      service_address: "300 Birch Court, Dallas, TX 75005"
+      urgency_tier: "routine"
+      caller_type: "commercial"
+      primary_intent: "admin_billing"
+      hvac_issue_type: null
+      safety_emergency: false
+      appointment_booked: false
+      route: "legitimate"
+      tags:
+        - "COMMERCIAL_ACCT"
+    expected_revenue_tier: "diagnostic"
