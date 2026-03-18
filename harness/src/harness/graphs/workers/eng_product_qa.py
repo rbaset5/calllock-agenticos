@@ -7,9 +7,11 @@ from harness.graphs.workers.base import run_worker
 
 VOICE_PATHS = [
     "knowledge/voice-pipeline/voice-contract.yaml",
-    "knowledge/voice-pipeline/",
+    "knowledge/voice-pipeline/eval/",
+    "knowledge/voice-pipeline/test-tenant.yaml",
     "harness/src/voice/",
     "scripts/deploy-retell-agent.py",
+    "scripts/run-voice-eval.py",
     "knowledge/industry-packs/",
 ]
 
