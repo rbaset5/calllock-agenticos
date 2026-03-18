@@ -6,6 +6,7 @@ export default function ExecutiveSuite(props: RoomComponentProps) {
   return (
     <DepartmentRoom
       {...props}
+      roomId="executive_suite"
       name="Executive Suite"
       accentColor="#d4a43a"
       wallColor="#5b4624"

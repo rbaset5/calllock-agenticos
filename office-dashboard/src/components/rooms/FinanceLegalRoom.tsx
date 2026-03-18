@@ -6,6 +6,7 @@ export default function FinanceLegalRoom(props: RoomComponentProps) {
   return (
     <DepartmentRoom
       {...props}
+      roomId="finance_legal_room"
       name="Finance / Legal"
       accentColor="#6B7280"
       wallColor="#374151"

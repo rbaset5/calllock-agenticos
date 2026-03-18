@@ -8,6 +8,7 @@ import {
 
 import {
   type AgentOfficeStateRow,
+  type AgentHandoffEntry,
   type QuestLogEntry,
   useAgentStore,
 } from "@/store/agent-store";
@@ -88,6 +89,26 @@ function handleQuestLogChange(payload: {
   }
 }
 
+function handleAgentHandoffChange(payload: {
+  eventType: "INSERT" | "UPDATE" | "DELETE";
+  new: AgentHandoffEntry | null;
+  old: Partial<AgentHandoffEntry> | null;
+}) {
+  const { addHandoff, removeHandoff } = useAgentStore.getState();
+
+  if (payload.eventType === "DELETE") {
+    const handoffId = payload.old?.id;
+    if (handoffId) {
+      removeHandoff(handoffId);
+    }
+    return;
+  }
+
+  if (payload.new) {
+    addHandoff(payload.new);
+  }
+}
+
 export function subscribeToOfficeRealtime() {
   const client = getSupabaseBrowserClient();
   const { setConnectionStatus } = useAgentStore.getState();
@@ -127,6 +148,20 @@ export function subscribeToOfficeRealtime() {
           eventType: payload.eventType,
           new: payload.new as QuestLogEntry | null,
           old: payload.old as Partial<QuestLogEntry> | null,
+        })
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "agent_handoff_log",
+      },
+      (payload) =>
+        handleAgentHandoffChange({
+          eventType: payload.eventType,
+          new: payload.new as AgentHandoffEntry | null,
+          old: payload.old as Partial<AgentHandoffEntry> | null,
         })
     );
 

@@ -33,6 +33,7 @@ export type RoomComponentProps = {
 };
 
 type DepartmentRoomProps = RoomComponentProps & {
+  roomId: RoomKey;
   name: string;
   accentColor: string;
   wallColor: string;
@@ -73,6 +74,15 @@ export const ROOM_POSITIONS: Record<RoomKey, Vec3> = {
   customer_success_room: [15, 0, -10.5],
 };
 
+export const ROOM_DIMENSIONS: Record<Exclude<RoomKey, "central_lobby">, [number, number]> = {
+  executive_suite: [14, 10],
+  product_room: [11.5, 8.5],
+  engineering_room: [10.5, 8],
+  growth_marketing_room: [12.5, 8.5],
+  customer_success_room: [11.5, 8.2],
+  finance_legal_room: [9.8, 7.5],
+};
+
 function createDepartmentZonePositions(roomWidth: number, roomDepth: number) {
   return {
     idle: [-roomWidth * 0.28, 0.52, roomDepth * 0.2] as Vec3,
@@ -100,6 +110,38 @@ export const ROOM_ZONE_POSITIONS: Record<RoomKey, Record<AgentZoneKey, Vec3>> = 
     verification: [-2.8, 0.52, -0.6],
     persistence: [2.8, 0.52, -0.6],
     error: [0, 0.52, -3.1],
+  },
+};
+
+function createRoomCameraView(roomId: Exclude<RoomKey, "central_lobby">) {
+  const [roomWidth, roomDepth] = ROOM_DIMENSIONS[roomId];
+  const [roomX, roomY, roomZ] = ROOM_POSITIONS[roomId];
+
+  return {
+    position: [
+      roomX,
+      roomY + 4.2,
+      roomZ + roomDepth / 2 - 1.2,
+    ] as Vec3,
+    target: [roomX, roomY + 1.2, roomZ - roomDepth * 0.02] as Vec3,
+  };
+}
+
+export const ORBITAL_CAMERA_VIEW = {
+  position: [26, 22, 26] as Vec3,
+  target: [0, 2, 0] as Vec3,
+};
+
+export const ROOM_CAMERA_VIEWS: Record<RoomKey, { position: Vec3; target: Vec3 }> = {
+  executive_suite: createRoomCameraView("executive_suite"),
+  product_room: createRoomCameraView("product_room"),
+  engineering_room: createRoomCameraView("engineering_room"),
+  growth_marketing_room: createRoomCameraView("growth_marketing_room"),
+  customer_success_room: createRoomCameraView("customer_success_room"),
+  finance_legal_room: createRoomCameraView("finance_legal_room"),
+  central_lobby: {
+    position: [0, 5.2, 5.6],
+    target: [0, 1.4, 0.4],
   },
 };
 
@@ -352,6 +394,7 @@ function WorkerDesks({
 
 export function DepartmentRoom({
   position = [0, 0, 0],
+  roomId,
   name,
   accentColor,
   wallColor,
@@ -366,7 +409,10 @@ export function DepartmentRoom({
   const glassY = floorY + GLASS_HEIGHT / 2;
 
   return (
-    <group position={position}>
+    <group
+      position={position}
+      userData={{ roomId }}
+    >
       <ToonBox
         position={[0, floorY - 0.12, 0]}
         size={[roomWidth + 0.6, 0.24, roomDepth + 0.6]}
@@ -466,7 +512,10 @@ export function CentralLobbyRoom({ position = [0, 0, 0] }: RoomComponentProps) {
   const floorY = 0;
 
   return (
-    <group position={position}>
+    <group
+      position={position}
+      userData={{ roomId: "central_lobby" satisfies RoomKey }}
+    >
       <ToonBox position={[0, -0.12, 0]} size={[width + 0.8, 0.24, depth + 0.8]} color="#0f172a" />
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, floorY, 0]}>
         <planeGeometry args={[width, depth]} />
