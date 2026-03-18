@@ -112,7 +112,7 @@ def run_worker(
     return ensure_output_shape(deterministic_builder(task), output_fields)
 ```
 
-Feature flags are per-worker (`hermes_worker_eng-ai-voice`, `hermes_worker_eng-qa`, etc.) to enable incremental rollout. Flags come from `task["feature_flags"]`, consistent with the existing pattern.
+Feature flags are per-worker (`hermes_worker_eng-ai-voice`, `hermes_worker_eng-product-qa`, etc.) to enable incremental rollout. Flags come from `task["feature_flags"]`, consistent with the existing pattern.
 
 ### Hermes Adapter
 
@@ -317,7 +317,7 @@ knowledge/worker-skills/
   eng-ai-voice/
     carrier-emergency-extraction.md
     multi-unit-commercial-parsing.md
-  eng-qa/
+  eng-product-qa/
     seam-contract-validation-sequence.md
   customer-analyst/
     churn-signal-from-callback-pattern.md
@@ -512,6 +512,8 @@ When the founder hires:
 
 ## Rollout Strategy
 
+**Sequencing dependency:** Product Guardian implementation plan (`docs/superpowers/plans/2026-03-18-product-guardian-implementation.md`) must land first. It claims Supabase migrations 052-053, renames eng-qa → eng-product-qa, and creates the eng-app worker spec. Hermes rollout begins after Product Guardian merges.
+
 ### Week 1-2: Foundation
 
 **Goal:** Hermes runs as a library inside the harness. No workers use it yet.
@@ -557,7 +559,7 @@ Shadow mode runs both paths, logs field-by-field comparison, but always returns 
 **New Supabase migration:** `skill_candidates` table:
 
 ```sql
--- supabase/migrations/052_skill_candidates.sql
+-- supabase/migrations/054_skill_candidates.sql
 create table skill_candidates (
     id uuid primary key default gen_random_uuid(),
     tenant_id uuid not null references tenants(id),
@@ -590,12 +592,12 @@ Roll Hermes to additional workers based on shadow mode data. Priority order:
 |---|---|---|
 | 1 | eng-ai-voice | Done in Week 3-4 |
 | 2 | engineer | Code generation and migration planning benefits from multi-turn |
-| 3 | eng-qa | Seam contract validation needs file reads + comparisons |
+| 3 | eng-product-qa | Seam contract validation needs file reads + comparisons |
 | 4 | product-manager | Feature analysis benefits from web research |
 | 5 | customer-analyst | Churn detection needs data exploration |
 | 6+ | Evaluate per-worker | Not every worker needs Hermes — single-shot is fine for simple tasks |
 
-**Note:** Worker IDs must match existing specs in `knowledge/worker-specs/`. Currently implemented: `eng-ai-voice`, `eng-qa`, `engineer`, `customer-analyst`, `product-manager`, `designer`, `product-marketer`. Additional worker specs (e.g., for headless browser validation) should be created before enabling Hermes for those workers.
+**Note:** Worker IDs must match existing specs in `knowledge/worker-specs/`. Currently implemented: `eng-ai-voice`, `eng-product-qa`, `eng-app`, `engineer`, `customer-analyst`, `product-manager`, `designer`, `product-marketer`. Additional worker specs (e.g., for headless browser validation) should be created before enabling Hermes for those workers.
 
 Per-worker iteration budgets tuned from shadow mode data.
 
