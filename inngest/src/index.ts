@@ -1,5 +1,6 @@
 import { inngest } from "./inngest.js";
 import { evaluateAlerts } from "./functions/evaluate-alerts.js";
+import { syncAgentOfficeState } from "./functions/office.js";
 import { processInboundMessage } from "./functions/inbound/process-inbound-message.js";
 import { pollInbound } from "./functions/inbound/poll-inbound.js";
 import { growthAdvisorWeekly } from "./functions/growth/growth-advisor-weekly.js";
@@ -33,6 +34,7 @@ export const functions = [
   growthAdvisorWeekly,
   pollInbound,
   processInboundMessage,
+  syncAgentOfficeState,
   processVoiceCall,
   sendEmergencySms,
   callRecordsRetention,

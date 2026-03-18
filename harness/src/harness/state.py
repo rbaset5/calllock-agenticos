@@ -29,6 +29,7 @@ class HarnessState(TypedDict, total=False):
     tenant_id: str
     run_id: str
     worker_id: str
+    current_state: str
     task: dict[str, Any]
     messages: list[HarnessMessage]
     context_items: list[dict[str, Any]]
