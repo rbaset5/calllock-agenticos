@@ -34,8 +34,34 @@ def check_skill_candidate(
     run_id: str,
 ) -> dict[str, Any] | None:
     """Check if this run should be flagged as a skill candidate.
-    Stub — returns None until Hermes workers are active."""
-    return None
+
+    Uses heuristics from run data — no extra LLM call needed.
+    """
+    signals = []
+    confidence = float(verification.get("confidence", 1.0 if verification.get("passed") else 0.0))
+    outcome = verification.get("outcome", verification.get("verdict", ""))
+
+    if confidence >= 0.9 and outcome == "pass":
+        signals.append("high_confidence_pass")
+
+    iterations = worker_output.get("_hermes_iterations", 0)
+    if isinstance(iterations, int) and iterations > 5:
+        signals.append("exploratory_solve")
+
+    non_null_fields = sum(1 for value in worker_output.values() if value is not None and value != "")
+    if non_null_fields >= 5 and confidence >= 0.8:
+        signals.append("thorough_output")
+
+    if not signals:
+        return None
+
+    return {
+        "worker_id": worker_id,
+        "task_type": task_type,
+        "run_id": run_id,
+        "signals": signals,
+        "summary": f"Skill candidate: {', '.join(signals)} (confidence={confidence:.2f})",
+    }
 
 
 def verification_node(state: dict[str, Any]) -> dict[str, Any]:
@@ -53,9 +79,26 @@ def verification_node(state: dict[str, Any]) -> dict[str, Any]:
         worker_output=state.get("worker_output", {}),
         verification=verification,
         worker_id=state.get("worker_id", ""),
-        task_type=task.get("task_context", {}).get("task_type", ""),
+        task_type=task.get("task_context", {}).get("task_type", task.get("task_type", "")),
         run_id=state.get("run_id", ""),
     )
+
+    if skill_candidate:
+        try:
+            from db import repository
+
+            repository.create_skill_candidate(
+                {
+                    "tenant_id": task.get("tenant_id", state.get("tenant_id", "")),
+                    "worker_id": skill_candidate["worker_id"],
+                    "task_type": skill_candidate["task_type"],
+                    "run_id": skill_candidate["run_id"],
+                    "signals": skill_candidate["signals"],
+                    "summary": skill_candidate["summary"],
+                }
+            )
+        except Exception:
+            pass
 
     result = {"verification": verification}
     if skill_candidate:
