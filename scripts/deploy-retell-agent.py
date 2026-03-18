@@ -115,7 +115,7 @@ def load_yaml_config(path: str) -> dict[str, Any]:
     with open(path) as f:
         doc = yaml.safe_load(f)
 
-    if "config" not in doc:
+    if not isinstance(doc, dict) or "config" not in doc:
         print(f"Error: YAML file {path} has no 'config' key.", file=sys.stderr)
         sys.exit(1)
 
