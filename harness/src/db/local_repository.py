@@ -44,6 +44,7 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("audit_logs", [])
     seed.setdefault("approval_requests", [])
     seed.setdefault("agent_reports", [])
+    seed.setdefault("shadow_comparisons", [])
     seed.setdefault("scheduler_backlog", [])
     seed.setdefault("incidents", [])
     seed.setdefault("touchpoint_log", [])
@@ -214,6 +215,14 @@ def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
             return existing
     stored = deepcopy(report)
     agent_reports.append(stored)
+    return stored
+
+
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    stored = deepcopy(record)
+    stored.setdefault("id", str(uuid4()))
+    stored.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+    _state()["shadow_comparisons"].append(stored)
     return stored
 
 

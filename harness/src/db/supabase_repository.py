@@ -184,6 +184,11 @@ def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
     return data[0] if data else report
 
 
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    data = _request("POST", "shadow_comparisons", json=record, prefer="return=representation")
+    return data[0] if data else record
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     data = _request("POST", "artifacts", json=record, prefer="return=representation")
     return data[0] if data else record

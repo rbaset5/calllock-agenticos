@@ -45,6 +45,12 @@ def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
     return local_repository.upsert_agent_report(report)
 
 
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.create_shadow_comparison(record)
+    return local_repository.create_shadow_comparison(record)
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.create_artifact(record)
