@@ -23,7 +23,9 @@ This spec renames `eng-qa` → `eng-product-qa` and restructures the seam contra
 | `knowledge/worker-specs/eng-ai-voice.yaml` | Update `git_workflow.validated_by` from `eng-qa` to `eng-product-qa` |
 | `docs/superpowers/specs/2026-03-17-corporate-hierarchy-agent-roster.md` | Replace `eng-qa` with `eng-product-qa` in roster, hierarchy tree, and status table |
 | `docs/superpowers/specs/2026-03-18-llm-tool-assignments.md` | Replace `eng-qa` with `eng-product-qa` in Engineering table row |
-| `knowledge/voice-pipeline/seam-contract.yaml` | Restructure into three contracts (see Contract Migration below) |
+| `knowledge/voice-pipeline/seam-contract.yaml` | Update header comment (`eng-qa` → `eng-product-qa`), restructure into three contracts (see Contract Migration below) |
+
+**Note:** These migration changes are applied during implementation, not at spec-approval time. The on-disk files (`eng-qa.yaml`, `eng-ai-voice.yaml`, `seam-contract.yaml`) currently still reference `eng-qa`. The implementation plan will include a migration step as the first task.
 
 ### Contract Migration
 
@@ -647,9 +649,15 @@ Added to the 7am cross-surface health check:
 ```yaml
 data_integrity_checks:
   - name: required-fields-not-null
-    query: >
-      SELECT id, field_name FROM call_sessions
-      WHERE {field} IS NULL
+    description: >
+      For each required column in call_records (urgency_tier, caller_type,
+      primary_intent, route, end_call_reason, revenue_tier, quality_score, tags)
+      and each required JSONB key in extracted_fields (customer_name,
+      problem_description, safety_emergency, appointment_booked, etc.),
+      check for null values in recent records.
+    query_template: >
+      SELECT id FROM call_records
+      WHERE {column} IS NULL
       AND created_at > now() - interval '24 hours'
     for_each_field: seam-contract.field_mappings where required_chain includes 'extraction'
     threshold: 0
@@ -693,6 +701,11 @@ CREATE TABLE agent_reports (
   created_at timestamptz DEFAULT now(),
   tenant_id uuid REFERENCES tenants(id)
 );
+
+ALTER TABLE agent_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_reports FORCE ROW LEVEL SECURITY;
+CREATE POLICY agent_reports_tenant ON agent_reports
+  USING (tenant_id = current_tenant_id());
 
 CREATE INDEX idx_agent_reports_lookup ON agent_reports(agent_id, report_date);
 ```
