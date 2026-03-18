@@ -44,7 +44,6 @@ function buildCallRecordRow(
     call_duration_seconds: 245,
     end_call_reason: "completed",
     call_recording_url: "https://example.com/recording.mp3",
-    synced_to_app: true,
     created_at: "2026-03-05T10:00:00Z",
     updated_at: "2026-03-05T10:05:00Z",
     ...overrides,
@@ -94,7 +93,6 @@ describe("transformCallRecord", () => {
       end_call_reason: null,
       callback_scheduled: false,
       booking_id: null,
-      synced_to_app: false,
       created_at: "2026-03-05T10:00:00Z",
       updated_at: "2026-03-05T10:05:00Z",
     }

@@ -130,3 +130,13 @@ create index idx_audit_log_tenant_created
 -- Filter by action type (e.g., show all quest resolutions)
 create index idx_audit_log_action_type
   on public.command_audit_log (tenant_id, action_type);
+
+-- ============================================================================
+-- REALTIME SUBSCRIPTIONS
+-- ============================================================================
+-- The 3D office dashboard subscribes to these tables via Supabase Realtime.
+-- agent_office_state: live agent position/state updates
+-- quest_log: policy gate quest creation and resolution
+
+alter publication supabase_realtime add table public.agent_office_state;
+alter publication supabase_realtime add table public.quest_log;

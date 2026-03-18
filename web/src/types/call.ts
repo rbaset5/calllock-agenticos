@@ -79,7 +79,6 @@ export interface CallRecordRow {
   call_duration_seconds: number | null
   end_call_reason: string | null
   call_recording_url: string | null
-  synced_to_app: boolean
   created_at: string
   updated_at: string
 }
@@ -97,7 +96,6 @@ export type CallRecordListRow = Pick<
   | "end_call_reason"
   | "callback_scheduled"
   | "booking_id"
-  | "synced_to_app"
   | "created_at"
   | "updated_at"
 >
