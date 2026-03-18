@@ -112,7 +112,7 @@
     }
   ],
   "context_sources": [
-    "knowledge/voice-pipeline/",
+    "knowledge/voice-pipeline/voice-contract.yaml",
     "knowledge/voice-pipeline/seam-contract.yaml",
     "knowledge/industry-packs/hvac/",
     "scripts/deploy-retell-agent.py"
