@@ -5,6 +5,7 @@ from typing import Any
 
 PRIORITY_ORDER = [
     "worker_spec",
+    "worker_skills",
     "task_context",
     "tenant_config",
     "industry_pack",
@@ -25,6 +26,7 @@ def _approx_tokens(text: str) -> int:
 def assemble_context(
     *,
     worker_spec: dict[str, Any],
+    worker_skills: list[dict[str, Any]],
     task_context: dict[str, Any],
     tenant_config: dict[str, Any],
     industry_pack: dict[str, Any],
@@ -35,10 +37,11 @@ def assemble_context(
 ) -> dict[str, Any]:
     items = [
         {"source": "worker_spec", "content": worker_spec.get("mission", "")},
-        {"source": "task_context", "content": task_context.get("problem_description", "")},
-        {"source": "tenant_config", "content": str(tenant_config)},
-        {"source": "industry_pack", "content": str(industry_pack.get("summary", industry_pack))},
     ]
+    items.extend({"source": "worker_skills", "content": skill.get("content", "")} for skill in worker_skills)
+    items.append({"source": "task_context", "content": task_context.get("problem_description", "")})
+    items.append({"source": "tenant_config", "content": str(tenant_config)})
+    items.append({"source": "industry_pack", "content": str(industry_pack.get("summary", industry_pack))})
     items.extend({"source": "knowledge_graph", "content": node.get("summary", "")} for node in knowledge_nodes)
     items.extend({"source": "memory", "content": item.get("content", "")} for item in memory)
     items.extend({"source": "history", "content": item.get("content", "")} for item in history)
@@ -58,6 +61,7 @@ def context_assembly_node(state: dict[str, Any]) -> dict[str, Any]:
     task = state["task"]
     assembled = assemble_context(
         worker_spec=task["worker_spec"],
+        worker_skills=task.get("worker_skills", []),
         task_context=task,
         tenant_config=task.get("tenant_config", {}),
         industry_pack=task.get("industry_pack", {}),
