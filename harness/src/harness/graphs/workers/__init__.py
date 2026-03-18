@@ -6,6 +6,7 @@ from typing import Callable
 from harness.graphs.workers.base import load_worker_spec, run_worker
 from harness.graphs.workers.customer_analyst import run_customer_analyst
 from harness.graphs.workers.designer import run_designer
+from harness.graphs.workers.eng_product_qa import run_eng_product_qa
 from harness.graphs.workers.engineer import run_engineer
 from harness.graphs.workers.product_manager import run_product_manager
 from harness.graphs.workers.product_marketer import run_product_marketer
@@ -17,6 +18,7 @@ WORKER_REGISTRY: dict[str, Callable[[dict], dict]] = {
     "engineer": run_engineer,
     "designer": run_designer,
     "product-marketer": run_product_marketer,
+    "eng-product-qa": run_eng_product_qa,
 }
 
 
