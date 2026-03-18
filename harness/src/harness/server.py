@@ -61,6 +61,7 @@ from harness.improvement.experiments import run_experiment
 from harness.incident_notifications import notify_incident
 from harness.incident_reminders import send_incident_reminders
 from harness.incident_routing import resolve_assignee
+from harness.jobs.dispatch import dispatch_job_requests as dispatch_async_job_requests
 from harness.incident_runbooks import (
     get_runbook_step,
     pending_runbook_steps,
@@ -269,6 +270,16 @@ if FastAPI:
                 "task": build_task_payload(request, tenant),
             }
         )
+        async_jobs = (
+            dispatch_async_job_requests(
+                request.job_requests,
+                tenant_id=tenant["id"],
+                origin_worker_id=request.worker_id,
+                origin_run_id=run_id,
+            )
+            if request.job_requests
+            else []
+        )
         submit_trace(
             name="process-call",
             payload={
@@ -293,7 +304,17 @@ if FastAPI:
             verification_passed=result["verification"]["passed"],
             verification_verdict=result["verification"]["verdict"],
             output=result["worker_output"],
-            jobs=result.get("jobs", []),
+            jobs=[
+                *result.get("jobs", []),
+                *[
+                    {
+                        "job_id": job["id"],
+                        "job_type": job["job_type"],
+                        "status": job["status"],
+                    }
+                    for job in async_jobs
+                ],
+            ],
         )
 
     @app.post("/events/process-call", response_model=ProcessCallResponse)

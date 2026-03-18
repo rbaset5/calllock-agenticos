@@ -1,3 +1,15 @@
+---
+id: voice-pipeline-app-baselines
+title: App Visual Regression Baselines
+graph: voice-pipeline
+owner: eng-app
+last_reviewed: 2026-03-18
+trust_level: curated
+progressive_disclosure:
+  summary_tokens: 80
+  full_tokens: 220
+---
+
 # App Visual Regression Baselines
 
 PNG screenshots of each page or element defined in `app-contract.yaml`.

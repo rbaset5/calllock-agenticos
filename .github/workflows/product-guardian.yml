@@ -14,8 +14,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Skip When Guardian Secrets Are Unset
+        id: secret-check
+        env:
+          INNGEST_EVENT_URL: ${{ secrets.INNGEST_EVENT_URL }}
+          INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$INNGEST_EVENT_URL" ] || [ -z "$INNGEST_EVENT_KEY" ] || [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Product Guardian secrets are unset; skipping gate."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Get Changed Files
         id: changed
+        if: steps.secret-check.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -23,6 +39,7 @@ jobs:
           echo "files=${FILES}" >> "$GITHUB_OUTPUT"
 
       - name: Trigger Product Guardian
+        if: steps.secret-check.outputs.configured == 'true'
         env:
           INNGEST_EVENT_URL: ${{ secrets.INNGEST_EVENT_URL }}
           INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY }}
@@ -41,6 +58,7 @@ jobs:
             }'
 
       - name: Wait for Guardian Result
+        if: steps.secret-check.outputs.configured == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
