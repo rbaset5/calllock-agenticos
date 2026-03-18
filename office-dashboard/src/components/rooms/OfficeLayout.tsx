@@ -1,0 +1,35 @@
+"use client";
+
+import CentralLobby from "./CentralLobby";
+import CustomerSuccessRoom from "./CustomerSuccessRoom";
+import EngineeringRoom from "./EngineeringRoom";
+import ExecutiveSuite from "./ExecutiveSuite";
+import FinanceLegalRoom from "./FinanceLegalRoom";
+import GrowthMarketingRoom from "./GrowthMarketingRoom";
+import ProductRoom from "./ProductRoom";
+import { GlassCorridor } from "./shared";
+
+export default function OfficeLayout() {
+  return (
+    <group>
+      <ExecutiveSuite position={[0, 0.4, 14]} />
+      <ProductRoom position={[-15, 0, 10]} />
+      <FinanceLegalRoom position={[15, 0, 10]} />
+      <CentralLobby position={[0, 0, 0]} />
+      <EngineeringRoom position={[-15, 0, -10.5]} />
+      <GrowthMarketingRoom position={[0, 0, -14]} />
+      <CustomerSuccessRoom position={[15, 0, -10.5]} />
+
+      <GlassCorridor position={[0, 1.15, 7.2]} size={[3.2, 2.3, 6]} />
+      <GlassCorridor position={[-8.4, 1.15, 7.2]} size={[10.2, 2.3, 3]} />
+      <GlassCorridor position={[8.4, 1.15, 7.2]} size={[10.2, 2.3, 3]} />
+
+      <GlassCorridor position={[0, 1.15, -7.2]} size={[3.2, 2.3, 6.3]} />
+      <GlassCorridor position={[-8.6, 1.15, -7.2]} size={[10.8, 2.3, 3]} />
+      <GlassCorridor position={[8.6, 1.15, -7.2]} size={[10.8, 2.3, 3]} />
+
+      <GlassCorridor position={[0, 1.15, 0]} size={[3.2, 2.3, 12]} />
+      <GlassCorridor position={[0, 1.15, -11]} size={[3.2, 2.3, 3]} />
+    </group>
+  );
+}
