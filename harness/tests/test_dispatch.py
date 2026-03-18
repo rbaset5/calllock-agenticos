@@ -99,7 +99,7 @@ def test_dispatch_valid_requests() -> None:
                 idempotency_key="dispatch-1",
             ),
             RunTaskRequest(
-                worker_id="eng-qa",
+                worker_id="eng-product-qa",
                 task_type="seam-audit",
                 task_context={"field": "caller_type"},
                 idempotency_key="dispatch-2",
@@ -111,7 +111,7 @@ def test_dispatch_valid_requests() -> None:
         supabase_client=supabase,
     )
 
-    assert result.dispatched == ["eng-ai-voice", "eng-qa"]
+    assert result.dispatched == ["eng-ai-voice", "eng-product-qa"]
     assert result.queued == []
     assert result.blocked == []
     assert [name for name, _data in inngest.events] == [AGENT_DISPATCH_EVENT, AGENT_DISPATCH_EVENT]
@@ -211,7 +211,7 @@ def test_dispatch_department_cap() -> None:
     result = dispatch_job_requests(
         [
             RunTaskRequest(
-                worker_id="eng-qa",
+                worker_id="eng-product-qa",
                 task_type="validate-pr",
                 task_context={"pr_number": 17},
                 idempotency_key="dispatch-cap",
@@ -224,7 +224,7 @@ def test_dispatch_department_cap() -> None:
     )
 
     assert result.dispatched == []
-    assert result.queued == ["eng-qa"]
+    assert result.queued == ["eng-product-qa"]
     assert result.blocked == []
     assert inngest.events == []
 
