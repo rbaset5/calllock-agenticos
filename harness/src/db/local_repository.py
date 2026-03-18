@@ -956,6 +956,18 @@ def list_approval_requests(*, tenant_id: str | None = None, status: str | None =
     return requests
 
 
+def create_skill_candidate(payload: dict[str, Any]) -> dict[str, Any]:
+    return {"id": "local-skill-candidate", **payload}
+
+
+def list_skill_candidates(*, tenant_id: str | None = None, status: str | None = None, worker_id: str | None = None) -> list[dict[str, Any]]:
+    return []
+
+
+def update_skill_candidate(candidate_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    return {"id": candidate_id, **updates}
+
+
 def upsert_scheduler_backlog_entry(payload: dict[str, Any]) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat()
     for entry in _state()["scheduler_backlog"]:

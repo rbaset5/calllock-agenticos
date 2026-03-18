@@ -426,6 +426,24 @@ def list_approval_requests(*, tenant_id: str | None = None, status: str | None =
     return local_repository.list_approval_requests(tenant_id=tenant_id, status=status)
 
 
+def create_skill_candidate(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.create_skill_candidate(payload)
+    return local_repository.create_skill_candidate(payload)
+
+
+def list_skill_candidates(*, tenant_id: str | None = None, status: str | None = None, worker_id: str | None = None) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_skill_candidates(tenant_id=tenant_id, status=status, worker_id=worker_id)
+    return local_repository.list_skill_candidates(tenant_id=tenant_id, status=status, worker_id=worker_id)
+
+
+def update_skill_candidate(candidate_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_skill_candidate(candidate_id, updates)
+    return local_repository.update_skill_candidate(candidate_id, updates)
+
+
 def upsert_scheduler_backlog_entry(payload: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.upsert_scheduler_backlog_entry(payload)
