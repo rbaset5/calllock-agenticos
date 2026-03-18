@@ -13,6 +13,28 @@ It expands the original two-agent design (eng-ai-voice + eng-qa) to cover the fu
 
 The Product Guardian lives in the **learning plane** of the system architecture. It reads from the data plane (call records, extraction results, app state) and writes to the control plane (issues, PRs, quest log entries, health reports). It does not store or display product-domain records — those remain authoritative in Supabase.
 
+## Migration from v1 Spec
+
+This spec renames `eng-qa` → `eng-product-qa` and restructures the seam contract. The following changes must be applied to existing files:
+
+| File | Change |
+|---|---|
+| `knowledge/worker-specs/eng-qa.yaml` | Rename to `eng-product-qa.yaml`, update `worker_id` to `eng-product-qa` |
+| `knowledge/worker-specs/eng-ai-voice.yaml` | Update `git_workflow.validated_by` from `eng-qa` to `eng-product-qa` |
+| `docs/superpowers/specs/2026-03-17-corporate-hierarchy-agent-roster.md` | Replace `eng-qa` with `eng-product-qa` in roster, hierarchy tree, and status table |
+| `docs/superpowers/specs/2026-03-18-llm-tool-assignments.md` | Replace `eng-qa` with `eng-product-qa` in Engineering table row |
+| `knowledge/voice-pipeline/seam-contract.yaml` | Restructure into three contracts (see Contract Migration below) |
+
+### Contract Migration
+
+The existing `seam-contract.yaml` (v1.0, 31 active fields) is split into three contracts:
+
+1. **voice-contract.yaml** — derived from fields where `extraction != not_applicable` in the current seam contract. Field names are preserved exactly as-is (e.g., `customer_name`, `urgency_tier`, `caller_type`).
+2. **app-contract.yaml** — derived from fields where `app_display != not_shown`. Defines pages and must_render elements based on the current card/detail display rules.
+3. **seam-contract.yaml v2.0** — retains the same file path but is restructured from a flat `fields` list to a `field_mappings` list that cross-references voice-contract and app-contract. The existing `validation_rules` section moves into the `invariants` section.
+
+The current `reserved_fields` section stays in the voice contract only.
+
 ## Architecture
 
 ### Three-Agent Model
@@ -70,29 +92,52 @@ Owned by eng-ai-voice. Defines what the voice pipeline **produces**.
 # knowledge/voice-pipeline/voice-contract.yaml
 version: "1.0"
 owner: eng-ai-voice
+industry_pack: hvac
 
 fields:
-  - name: call_type
+  # Field names match the existing seam-contract.yaml exactly.
+  # Only extraction-side fields are shown here (extraction != not_applicable).
+
+  - name: customer_name
     extraction: required
     type: string
-    enum: [new_business, existing_customer, spam, personal, emergency]
+    fallback: "Unknown"
+
+  - name: customer_phone
+    extraction: required
+    type: string
+
+  - name: urgency_tier
+    extraction: required
+    type: string
+    enum: [emergency, urgent, routine, estimate]
     accuracy_threshold: 0.97
 
-  - name: caller_name
+  - name: caller_type
+    extraction: required
+    type: string
+    enum: [residential, commercial, unknown, vendor, job_applicant, spam]
+
+  - name: problem_description
     extraction: required
     type: string
 
-  - name: urgency_score
+  - name: safety_emergency
     extraction: required
-    type: integer
-    range: [1, 10]
-    accuracy_threshold: 0.90
+    type: boolean
+    default: false
 
-  - name: job_type
-    extraction: optional
-    type: string
+  - name: appointment_booked
+    extraction: required
+    type: boolean
+    default: false
 
-  # ... all extraction-produced fields
+  # ... remaining 24 extraction-produced fields from seam-contract.yaml v1.0
+  # Full list: service_address, dashboard_urgency, primary_intent, route,
+  # end_call_reason, hvac_issue_type, equipment_type, equipment_brand,
+  # equipment_age, appointment_date_time, callback_type, problem_duration,
+  # revenue_tier, revenue_estimate, tag_categories, tags, quality_score,
+  # scorecard_warnings, sales_lead_notes, call_summary
 
 retell_config:
   model_constraints: [temperature, max_tokens]
@@ -112,13 +157,13 @@ pages:
   - path: /calls
     must_render:
       - element: call-card
-        fields: [caller_name, call_type, urgency_score, timestamp]
+        fields: [customer_name, customer_phone, problem_description, urgency_tier, safety_emergency, appointment_booked, callback_type, created_at]
         realtime: true  # must appear without refresh
       - element: call-detail
-        fields: [transcript, tags, job_type, callback_status]
+        fields: [transcript, service_address, hvac_issue_type, equipment_type, equipment_brand, equipment_age, appointment_date_time, end_call_reason]
         realtime: false  # detail view loads on click
 
-  - path: /dashboard
+  - path: /overview
     must_render:
       - element: stats-summary
         fields: [total_calls, hot_leads, callback_rate]
@@ -143,19 +188,33 @@ version: "2.0"
 owner: eng-product-qa
 
 field_mappings:
-  - voice_field: call_type
-    supabase_column: call_sessions.call_type
+  # Field names match seam-contract.yaml v1.0 exactly.
+  - voice_field: customer_name
+    supabase: jsonb  # extracted_fields.customer_name
     app_element: call-card
     app_display: card
     required_chain: [extraction, app_sync, render]
 
-  - voice_field: job_type
-    supabase_column: call_sessions.metadata->>'job_type'
-    app_element: call-detail
-    app_display: detail
+  - voice_field: urgency_tier
+    supabase: column  # call_records.urgency_tier
+    app_element: call-card
+    app_display: card
     required_chain: [extraction, app_sync, render]
 
-  # ... every field mapped end-to-end
+  - voice_field: problem_description
+    supabase: jsonb  # extracted_fields.problem_description
+    app_element: call-card
+    app_display: card
+    required_chain: [extraction, app_sync, render]
+
+  - voice_field: transcript
+    supabase: column  # call_records.transcript
+    app_element: call-detail
+    app_display: detail
+    required_chain: [app_sync, render]  # not from extraction — from Retell directly
+
+  # ... remaining 27 active fields mapped end-to-end
+  # Full field list derived from seam-contract.yaml v1.0 fields section
 
 invariants:
   - name: no-orphan-extraction
@@ -249,6 +308,8 @@ context_sources:
 
 ### eng-app (new)
 
+**Note:** The YAML blocks in this spec are abbreviated for readability. The full worker spec files must follow the `schema_version: 1.1` JSON format established in `eng-qa.yaml` and `eng-ai-voice.yaml`, including `mission`, `scope.can_do`, `scope.cannot_do`, `inputs`, `outputs`, `success_metrics`, `approval_boundaries`, `validation_checks`, `dependencies`, and `interaction_with` fields.
+
 ```yaml
 id: eng-app
 title: App Guardian Engineer
@@ -276,8 +337,11 @@ scheduled_tasks:
     task_type: app-deep-sweep
 
 reactive_triggers:
-  - event: "calllock/pr.created"
-    filter: { paths: ["web/**"] }
+  # eng-app only fires on dispatch from eng-product-qa for PR validation.
+  # It does NOT independently listen for calllock/pr.created — eng-product-qa
+  # is the sole entry point for all PR gating to avoid duplicate/conflicting reviews.
+  - event: "calllock/guardian.dispatch"
+    filter: { target: "eng-app" }
     task_type: app-pr-validation
   - event: "calllock/app.error"
     task_type: app-investigate
@@ -286,7 +350,10 @@ reactive_triggers:
 
 context_sources:
   - knowledge/voice-pipeline/app-contract.yaml
-  - web/
+  - web/src/lib/transforms.ts
+  - web/src/types/call.ts
+  - web/src/components/mail/mail-display.tsx
+  - web/src/components/mail/mail-list.tsx
 ```
 
 ### Headless Browser Check Flow
@@ -322,8 +389,8 @@ description: >
   Guards product quality across all surfaces. Owns the seam contract
   that maps voice pipeline fields to app rendering. Gates all PRs
   that touch voice or app code. Dispatches surface agents for
-  validation. Ensures contract-first discipline. Monitors data
-  integrity including tenant isolation.
+  validation via Inngest events. Ensures contract-first discipline.
+  Monitors data integrity including tenant isolation.
 
 tools:
   - supabase-read
@@ -332,7 +399,7 @@ tools:
   - app-sync-simulate
   - git-pr-review
   - issue-create
-  - agent-dispatch
+  - inngest-emit            # emits calllock/guardian.dispatch events
 
 scheduled_tasks:
   - cron: "0 7 * * *"         # daily 7am
@@ -341,6 +408,9 @@ scheduled_tasks:
     task_type: seam-audit
 
 reactive_triggers:
+  # eng-product-qa is the SOLE entry point for PR-based change gating.
+  # eng-app and eng-ai-voice do NOT independently listen for calllock/pr.created.
+  # eng-product-qa dispatches them via calllock/guardian.dispatch events.
   - event: "calllock/pr.created"
     filter:
       paths:
@@ -356,7 +426,29 @@ context_sources:
   - knowledge/voice-pipeline/seam-contract.yaml
   - knowledge/voice-pipeline/voice-contract.yaml
   - knowledge/voice-pipeline/app-contract.yaml
+
+llm_model: codex  # expanded responsibility warrants stronger model than qwen
+llm_escalation:
+  - condition: "manipulates_production_data"
+    model: nanoclaw
+  - condition: "multi_client_context"
+    model: claude-sonnet
 ```
+
+### Dispatch Mechanism
+
+eng-product-qa has `role: worker` (not `role: director`). The supervisor graph's `_job_dispatch_node` only processes dispatch requests for directors. Instead, eng-product-qa dispatches surface agents via **Inngest events**:
+
+```
+eng-product-qa emits calllock/guardian.dispatch event:
+  { "target": "eng-app", "task_type": "app-pr-validation", "pr_id": 123 }
+
+Inngest function receives event → calls run_supervisor(worker_id="eng-app", ...)
+eng-app runs headless checks → persists report to agent_reports table
+eng-product-qa reads report at next step (or polls agent_reports)
+```
+
+This keeps eng-product-qa as a worker (no director privileges) while allowing cross-agent coordination through the existing Inngest event infrastructure.
 
 ## Change Gate
 
@@ -520,9 +612,9 @@ eng-ai-voice weekly sweep finds prompt improvement
 ```
 calllock/app.error fires (card not rendering)
     → eng-app investigates: what's broken?
-    → Finds: urgency_score coming as string, app expects integer
+    → Finds: urgency_tier coming as null, app expects string enum
     → Creates issue with evidence (screenshot + Supabase query)
-    → eng-product-qa sees type mismatch in seam contract
+    → eng-product-qa sees required-field-null in seam contract
     → Escalates: assigns to eng-ai-voice if extraction changed,
       eng-fullstack if app_sync changed
 ```
@@ -586,6 +678,34 @@ data_integrity_checks:
 
 ## Health Reports & Daily Memo Integration
 
+### Report Storage
+
+All agent health reports are persisted to the `agent_reports` Supabase table:
+
+```sql
+CREATE TABLE agent_reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id text NOT NULL,        -- 'eng-ai-voice', 'eng-app', 'eng-product-qa'
+  report_type text NOT NULL,     -- 'voice-health-check', 'app-health-check', etc.
+  report_date date NOT NULL,
+  status text NOT NULL,          -- 'green', 'yellow', 'red'
+  payload jsonb NOT NULL,        -- full report JSON
+  created_at timestamptz DEFAULT now(),
+  tenant_id uuid REFERENCES tenants(id)
+);
+
+CREATE INDEX idx_agent_reports_lookup ON agent_reports(agent_id, report_date);
+```
+
+eng-product-qa queries this table at 7am to read the day's voice and app reports:
+```sql
+SELECT * FROM agent_reports
+WHERE agent_id IN ('eng-ai-voice', 'eng-app')
+AND report_date = current_date;
+```
+
+The daily memo aggregation endpoint (`/api/memo/generate`) also reads from this table.
+
 ### Voice Health Report (daily, from eng-ai-voice)
 
 ```json
@@ -619,7 +739,7 @@ data_integrity_checks:
   "fields_failing": 0,
   "realtime_tests": 1,
   "realtime_passing": 1,
-  "screenshots": ["calls-card.png", "calls-detail.png", "dashboard.png"],
+  "screenshots": ["calls-card.png", "calls-detail.png", "overview.png"],
   "issues_created": 0
 }
 ```
@@ -738,6 +858,26 @@ Validated-by: eng-product-qa
 | `MetricsEmitter` | Health reports use existing metric emission pattern |
 | `InngestEventEmitter` | Scheduled tasks and reactive triggers use Inngest cron/events |
 | `web/` (CallLock App) | eng-app loads and validates in headless browser |
+
+## Implementation Prerequisites
+
+The following new tools and infrastructure are required before these agents can execute:
+
+| Tool | Agent | Requires | Notes |
+|---|---|---|---|
+| `headless-browser` | eng-app | Playwright runner, auth token for app, test tenant with known data | Blocked by Open Question 1 (test tenant) |
+| `app-contract-validate` | eng-app | Contract YAML parser, DOM element matcher | Derives expected elements from app-contract.yaml, checks against Playwright DOM |
+| `seam-contract-validate` | eng-product-qa | Cross-contract YAML parser, invariant checker | Reads all three contracts, evaluates invariant rules |
+| `app-sync-simulate` | eng-product-qa | Extraction result → webhook payload generator | Exists conceptually in eng-qa.yaml but has no implementation reference |
+| `inngest-emit` | eng-product-qa | Inngest SDK client for emitting `calllock/guardian.dispatch` events | Uses existing InngestEventEmitter pattern |
+| `agent_reports` table | all three | Supabase migration | See Report Storage section for schema |
+
+Existing tools that already have implementation references:
+- `supabase-read` → Supabase client (existing)
+- `extraction-rerun` → `harness/src/voice/extraction/pipeline.py` (existing)
+- `retell-config-diff` → `scripts/deploy-retell-agent.py --diff-only` (existing)
+- `scorecard-evaluate` → `harness/src/voice/models.py` (existing)
+- `git-branch-write`, `git-pr-review`, `issue-create` → GitHub API (existing pattern)
 
 ## Open Questions
 
