@@ -60,7 +60,7 @@ Turns PRDs into reality. Heavy focus on latency, reliability, and zero dropped c
 |---|---|---|---|
 | VP of Engineering (Director) | `eng-vp` | Sprint planning, capacity estimation, engineering delivery | CTO |
 | AI/Voice Engineer | `eng-ai-voice` | LLMs, prompt engineering, extraction pipeline, voice agent config, latency optimization | VP Eng |
-| Full-Stack Developer | `eng-fullstack` | Web apps, databases, customer-facing app (hong-kong-v1), APIs | VP Eng |
+| Fullstack Engineer | `eng-fullstack` | Triage and fix issues from Product Guardian. Read issues, examine code, propose fixes. | VP Eng |
 | Product QA Engineer | `eng-product-qa` | Test scenarios (happy path + edge cases), zero hallucinations, seam validation, E2E product testing | VP Eng |
 
 **Product Guardian:** eng-ai-voice and eng-product-qa form the Product Guardian system (see `2026-03-17-product-guardian-design.md`). eng-ai-voice guards the voice pipeline; eng-product-qa guards the seam between voice pipeline and customer app.
@@ -145,7 +145,7 @@ CEO (exec-ceo)
 ├── CTO (exec-cto)
 │   └── VP of Engineering (eng-vp)
 │       ├── AI/Voice Engineer (eng-ai-voice)
-│       ├── Full-Stack Developer (eng-fullstack)
+│       ├── Fullstack Engineer (eng-fullstack)
 │       └── Product QA Engineer (eng-product-qa)
 │
 ├── COO (exec-coo)
