@@ -43,6 +43,7 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("eval_runs", [])
     seed.setdefault("audit_logs", [])
     seed.setdefault("approval_requests", [])
+    seed.setdefault("agent_reports", [])
     seed.setdefault("scheduler_backlog", [])
     seed.setdefault("incidents", [])
     seed.setdefault("touchpoint_log", [])
@@ -198,6 +199,21 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     )
     stored = deepcopy(record)
     stored["job"] = job
+    return stored
+
+
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    agent_reports = _state()["agent_reports"]
+    for existing in agent_reports:
+        if (
+            existing.get("agent_id") == report.get("agent_id")
+            and existing.get("report_date") == report.get("report_date")
+            and existing.get("tenant_id") == report.get("tenant_id")
+        ):
+            existing.update(deepcopy(report))
+            return existing
+    stored = deepcopy(report)
+    agent_reports.append(stored)
     return stored
 
 

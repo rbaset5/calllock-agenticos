@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import datetime
 from copy import deepcopy
+import logging
 from typing import Any
 
 from harness.approvals import maybe_create_approval_request
-from db.repository import create_artifact, persist_run_record
+from db.repository import create_artifact, persist_run_record, upsert_agent_report
 from harness.resilience.recovery_journal import write_recovery_entry
+
+GUARDIAN_AGENTS = {"eng-ai-voice", "eng-app", "eng-product-qa"}
+logger = logging.getLogger(__name__)
 
 
 def build_persist_record(state: dict[str, Any]) -> dict[str, Any]:
@@ -27,6 +32,27 @@ def persist_node(state: dict[str, Any]) -> dict[str, Any]:
     approval_request = maybe_create_approval_request(state)
     try:
         persisted = persist_run_record(record)
+        if state.get("worker_id") in GUARDIAN_AGENTS:
+            worker_output = state.get("worker_output", {})
+            report_status = "green"
+            if worker_output.get("violations") or worker_output.get("failures"):
+                report_status = "red"
+            elif worker_output.get("warnings"):
+                report_status = "yellow"
+
+            try:
+                upsert_agent_report(
+                    {
+                        "agent_id": state["worker_id"],
+                        "report_type": state.get("task", {}).get("task_context", {}).get("task_type", "health-check"),
+                        "report_date": datetime.date.today().isoformat(),
+                        "status": report_status,
+                        "payload": worker_output,
+                        "tenant_id": state["tenant_id"],
+                    }
+                )
+            except Exception:
+                logger.exception("Failed to persist guardian agent report", extra={"worker_id": state.get("worker_id")})
         artifact = create_artifact(
             {
                 "tenant_id": state.get("tenant_id"),

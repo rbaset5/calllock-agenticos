@@ -173,6 +173,17 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "agent_reports",
+        params={"on_conflict": "agent_id,report_date,tenant_id"},
+        json=report,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else report
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     data = _request("POST", "artifacts", json=record, prefer="return=representation")
     return data[0] if data else record
