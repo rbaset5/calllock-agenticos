@@ -16,6 +16,42 @@ from harness.nodes.verification import verify_output, verification_node
 from harness.tool_registry import resolve_granted_tools
 from harness.graphs.workers import get_worker
 from harness.state import HarnessState
+from observability.inngest_emitter import InngestEventEmitter
+
+
+AGENT_STATE_EMITTER = InngestEventEmitter()
+
+
+def _agent_description(state: HarnessState) -> str:
+    worker_spec = state["task"].get("worker_spec", {})
+    return (
+        worker_spec.get("title")
+        or worker_spec.get("mission")
+        or f"{state.get('worker_id', 'agent')} worker"
+    )
+
+
+def _emit_node_entry(state: HarnessState, to_state: str) -> None:
+    worker_spec = state["task"].get("worker_spec", {})
+    AGENT_STATE_EMITTER.emit_node_entry(
+        agent_id=state.get("worker_id"),
+        tenant_id=state.get("tenant_id"),
+        department=worker_spec.get("department") or "unknown",
+        role=worker_spec.get("role") or "worker",
+        from_state=state.get("current_state"),
+        to_state=to_state,
+        description=_agent_description(state),
+        tenant_config=state["task"].get("tenant_config", {}),
+    )
+
+
+def _instrument_node(node_name: str, node_fn: Any) -> Any:
+    def _wrapped(state: HarnessState) -> dict[str, Any]:
+        _emit_node_entry(state, node_name)
+        result = node_fn(state)
+        return {"current_state": node_name, **result}
+
+    return _wrapped
 
 
 def _worker_node(state: HarnessState) -> dict[str, Any]:
@@ -59,13 +95,13 @@ def compile_supervisor_graph() -> Any:
     if StateGraph is None:
         return "context_assembly -> policy_gate -> worker -> verification -> persist"
     graph = StateGraph(HarnessState)
-    graph.add_node("context_assembly", context_assembly_node)
-    graph.add_node("policy_gate", policy_gate_node)
-    graph.add_node("worker", _worker_node)
-    graph.add_node("blocked", _blocked_node)
-    graph.add_node("verification", verification_node)
-    graph.add_node("job_dispatch", _job_dispatch_node)
-    graph.add_node("persist", persist_node)
+    graph.add_node("context_assembly", _instrument_node("context_assembly", context_assembly_node))
+    graph.add_node("policy_gate", _instrument_node("policy_gate", policy_gate_node))
+    graph.add_node("worker", _instrument_node("worker", _worker_node))
+    graph.add_node("blocked", _instrument_node("blocked", _blocked_node))
+    graph.add_node("verification", _instrument_node("verification", verification_node))
+    graph.add_node("job_dispatch", _instrument_node("job_dispatch", _job_dispatch_node))
+    graph.add_node("persist", _instrument_node("persist", persist_node))
     graph.set_entry_point("context_assembly")
     graph.add_edge("context_assembly", "policy_gate")
     graph.add_conditional_edges("policy_gate", _policy_route, {"worker": "worker", "blocked": "blocked"})
@@ -104,8 +140,12 @@ def run_supervisor(state: HarnessState) -> HarnessState:
         history=state["task"].get("history", []),
         budget_tokens=state["task"].get("context_budget", 1200),
     )
+    _emit_node_entry(state, "context_assembly")
+    state["current_state"] = "context_assembly"
     state["context_items"] = assembled["items"]
     state["context_budget_remaining"] = assembled["budget_remaining"]
+    _emit_node_entry(state, "policy_gate")
+    state["current_state"] = "policy_gate"
     state["policy_decision"] = evaluate_policy(
         tool_name=state.get("tool_name"),
         worker_id=state.get("worker_id"),
@@ -117,13 +157,21 @@ def run_supervisor(state: HarnessState) -> HarnessState:
         granted_tools=state["tool_grants"],
     )
     if state["policy_decision"]["verdict"] != "allow":
+        _emit_node_entry(state, "blocked")
+        state["current_state"] = "blocked"
         state["worker_output"] = {"status": "blocked"}
         state["verification"] = {"passed": False, "verdict": "block", "reasons": state["policy_decision"]["reasons"], "findings": []}
+        _emit_node_entry(state, "persist")
+        state["current_state"] = "persist"
         state.update(persist_node(state))
         return state
 
+    _emit_node_entry(state, "worker")
+    state["current_state"] = "worker"
     state["worker_output"] = get_worker(state["worker_id"])(state["task"])
     state["job_requests"] = state["task"].get("job_requests", []) + state["worker_output"].get("job_requests", [])
+    _emit_node_entry(state, "verification")
+    state["current_state"] = "verification"
     state["verification"] = verify_output(
         state["worker_output"],
         worker_id=state["worker_id"],
@@ -132,15 +180,18 @@ def run_supervisor(state: HarnessState) -> HarnessState:
         context_items=state["context_items"],
         retry_count=state.get("retry_count", 0),
     )
-    state["jobs"] = (
-        dispatch_job_requests(
+    if state["verification"]["verdict"] == "pass":
+        _emit_node_entry(state, "job_dispatch")
+        state["current_state"] = "job_dispatch"
+        state["jobs"] = dispatch_job_requests(
             state.get("job_requests", []),
             tenant_id=state["tenant_id"],
             origin_worker_id=state["worker_id"],
             origin_run_id=state["run_id"],
         )
-        if state["verification"]["verdict"] == "pass"
-        else []
-    )
+    else:
+        state["jobs"] = []
+    _emit_node_entry(state, "persist")
+    state["current_state"] = "persist"
     state.update(persist_node(state))
     return state

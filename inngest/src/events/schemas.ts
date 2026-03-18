@@ -108,6 +108,17 @@ export interface InboundEscalationTriggeredPayload {
 
 export const CALL_ENDED = "calllock/call.ended";
 export const CALL_EMERGENCY_SMS = "calllock/call.emergency.sms";
+export const AGENT_STATE_CHANGED = "calllock/agent.state.changed";
+
+export interface AgentStateChangedPayload {
+  agent_id: string;
+  tenant_id: string;
+  department: string;
+  role: string;
+  from_state: string;
+  to_state: string;
+  description?: string | null;
+}
 
 export interface CallEndedPayload {
   tenant_id: string;
@@ -282,6 +293,19 @@ export function validateCallEndedPayload(payload: CallEndedPayload): string[] {
   ) {
     errors.push("end_call_reason is invalid");
   }
+  return errors;
+}
+
+export function validateAgentStateChangedPayload(
+  payload: AgentStateChangedPayload,
+): string[] {
+  const errors: string[] = [];
+  if (!payload.agent_id) errors.push("agent_id is required");
+  if (!payload.tenant_id) errors.push("tenant_id is required");
+  if (!payload.department) errors.push("department is required");
+  if (!payload.role) errors.push("role is required");
+  if (payload.from_state === undefined) errors.push("from_state is required");
+  if (!payload.to_state) errors.push("to_state is required");
   return errors;
 }
 
