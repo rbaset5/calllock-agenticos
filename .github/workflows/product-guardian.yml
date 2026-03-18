@@ -29,14 +29,12 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Get Changed Files
-        id: changed
+      - name: Get changed files
+        id: changed-files
         if: steps.secret-check.outputs.configured == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path' | tr '\n' ',')
-          echo "files=${FILES}" >> "$GITHUB_OUTPUT"
+        uses: tj-actions/changed-files@v45
+        with:
+          separator: ","
 
       - name: Trigger Product Guardian
         if: steps.secret-check.outputs.configured == 'true'
@@ -53,7 +51,8 @@ jobs:
                 "pr_number": ${{ github.event.pull_request.number }},
                 "pr_url": "${{ github.event.pull_request.html_url }}",
                 "branch": "${{ github.head_ref }}",
-                "changed_file_paths": "${{ steps.changed.outputs.files }}"
+                "changed_file_paths": "${{ steps.changed-files.outputs.all_changed_files }}",
+                "changed_files": "${{ steps.changed-files.outputs.all_changed_files }}"
               }
             }'
 

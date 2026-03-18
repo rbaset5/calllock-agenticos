@@ -13,8 +13,29 @@ function getHarnessConfig() {
   };
 }
 
+function normalizeChangedFiles(taskContext: Record<string, unknown>): string[] | undefined {
+  const changedFiles = taskContext.changed_files;
+  if (Array.isArray(changedFiles)) {
+    return changedFiles.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+  }
+  if (typeof changedFiles === "string" && changedFiles.length > 0) {
+    return changedFiles.split(",").map((entry) => entry.trim()).filter(Boolean);
+  }
+
+  const legacyChangedFiles = taskContext.changed_file_paths;
+  if (Array.isArray(legacyChangedFiles)) {
+    return legacyChangedFiles.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+  }
+  if (typeof legacyChangedFiles === "string" && legacyChangedFiles.length > 0) {
+    return legacyChangedFiles.split(",").map((entry) => entry.trim()).filter(Boolean);
+  }
+
+  return undefined;
+}
+
 function buildGuardianRequest(payload: GuardianDispatchPayload) {
   const { target, task_type, pr_id, pr_url, task_context, origin, tenant_id } = payload;
+  const normalizedChangedFiles = normalizeChangedFiles(task_context);
   const callId =
     typeof task_context.call_id === "string" && task_context.call_id.length > 0
       ? task_context.call_id
@@ -37,6 +58,7 @@ function buildGuardianRequest(payload: GuardianDispatchPayload) {
     problem_description: problemDescription,
     task_context: {
       ...task_context,
+      ...(normalizedChangedFiles ? { changed_files: normalizedChangedFiles } : {}),
       task_type,
       pr_id,
       pr_url,

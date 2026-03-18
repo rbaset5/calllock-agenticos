@@ -917,4 +917,4 @@ Existing tools that already have implementation references:
    Discord integration planned (see Hermes integration design spec).
    SMS for critical alerts TBD.
 
-4. **eng-fullstack dependency** — eng-app and eng-product-qa create issues for eng-fullstack when app code needs fixing. eng-fullstack doesn't exist as an active agent yet. Who picks up those issues in the meantime? (Likely the founder.)
+4. ~~**eng-fullstack dependency**~~ — Resolved. eng-fullstack worker spec added. Functions as a triage agent: reads guardian issues, examines code, suggests fixes. With Hermes integration, will be able to create fix PRs autonomously.

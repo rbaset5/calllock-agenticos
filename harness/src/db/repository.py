@@ -39,6 +39,12 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     return local_repository.persist_run_record(record)
 
 
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_agent_report(report)
+    return local_repository.upsert_agent_report(report)
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.create_artifact(record)

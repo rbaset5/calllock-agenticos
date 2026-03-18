@@ -324,7 +324,6 @@ export function validateCallEndedPayload(payload: CallEndedPayload): string[] {
   return errors;
 }
 
-<<<<<<< HEAD
 export function validateAgentHandoffPayload(payload: AgentHandoffPayload): string[] {
   const errors: string[] = [];
   if (!payload.from_agent) errors.push("from_agent is required");
@@ -333,9 +332,8 @@ export function validateAgentHandoffPayload(payload: AgentHandoffPayload): strin
   if (!payload.to_department) errors.push("to_department is required");
   return errors;
 }
-=======
+
 export { type GuardianDispatchPayload, type GuardianWatchdogPayload } from "./guardian-schemas.js";
->>>>>>> f542157 (feat: add guardian dispatch Inngest event and function)
 
 export function validateAgentStateChangedPayload(
   payload: AgentStateChangedPayload,
@@ -416,4 +414,3 @@ export function validateInboundMessageReceivedPayload(payload: InboundMessageRec
   return errors;
 }
 
-export { type GuardianDispatchPayload, type GuardianWatchdogPayload } from "./guardian-schemas.js";

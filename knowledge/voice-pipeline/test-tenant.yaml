@@ -1,0 +1,13 @@
+# Guardian test tenant configuration.
+# Used by eng-app headless browser checks and harness tests.
+# The tenant and seed data are created by migration 055.
+tenant_id: "a0000000-0000-0000-0000-000000000001"
+tenant_name: "Guardian Test Tenant"
+tenant_slug: "guardian-test"
+seed_call_count: 5
+seed_call_ids:
+  - "b0000000-0000-0000-0000-000000000001"  # Alice - urgent cooling
+  - "b0000000-0000-0000-0000-000000000002"  # Bob - emergency gas leak
+  - "b0000000-0000-0000-0000-000000000003"  # Carol - routine maintenance
+  - "b0000000-0000-0000-0000-000000000004"  # Dave - estimate request
+  - "b0000000-0000-0000-0000-000000000005"  # Eve - wrong number
