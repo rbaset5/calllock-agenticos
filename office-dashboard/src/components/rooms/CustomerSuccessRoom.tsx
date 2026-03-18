@@ -6,6 +6,7 @@ export default function CustomerSuccessRoom(props: RoomComponentProps) {
   return (
     <DepartmentRoom
       {...props}
+      roomId="customer_success_room"
       name="Customer Success"
       accentColor="#F59E0B"
       wallColor="#b45309"

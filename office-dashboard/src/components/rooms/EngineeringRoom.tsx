@@ -6,6 +6,7 @@ export default function EngineeringRoom(props: RoomComponentProps) {
   return (
     <DepartmentRoom
       {...props}
+      roomId="engineering_room"
       name="Engineering Room"
       accentColor="#10B981"
       wallColor="#047857"

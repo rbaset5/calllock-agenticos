@@ -1,16 +1,74 @@
 "use client";
 
-import { OrbitControls } from "@react-three/drei";
+import { CameraControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import { useEffect, useRef } from "react";
 
 import AgentManager from "@/components/agents/AgentManager";
+import HandoffAnimation from "@/components/agents/HandoffAnimation";
+import DailyMemo from "@/components/overlays/DailyMemo";
+import QuestLog from "@/components/overlays/QuestLog";
+import {
+  ORBITAL_CAMERA_VIEW,
+  type Vec3,
+} from "@/components/rooms/shared";
 import OfficeLayout from "@/components/rooms/OfficeLayout";
+import { useCameraStore } from "@/store/camera-store";
 
-export default function OfficeScene() {
+type OfficeSceneProps = {
+  showQuestLog?: boolean;
+  showDailyMemo?: boolean;
+};
+
+export default function OfficeScene({
+  showQuestLog = false,
+  showDailyMemo = false,
+}: OfficeSceneProps) {
+  const controlsRef = useRef<React.ElementRef<typeof CameraControls>>(null);
+  const currentView = useCameraStore((state) => state.currentView);
+  const flyToOrbital = useCameraStore((state) => state.flyToOrbital);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) {
+      return;
+    }
+
+    const nextPosition: Vec3 =
+      currentView === "orbital"
+        ? ORBITAL_CAMERA_VIEW.position
+        : currentView.position;
+    const nextTarget: Vec3 =
+      currentView === "orbital"
+        ? ORBITAL_CAMERA_VIEW.target
+        : currentView.target;
+
+    void controls.setLookAt(
+      nextPosition[0],
+      nextPosition[1],
+      nextPosition[2],
+      nextTarget[0],
+      nextTarget[1],
+      nextTarget[2],
+      true
+    );
+  }, [currentView]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        flyToOrbital();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [flyToOrbital]);
+
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 18, 28], fov: 42 }}
+      camera={{ position: ORBITAL_CAMERA_VIEW.position, fov: 42 }}
     >
       <color attach="background" args={["#020617"]} />
       <fog attach="fog" args={["#020617", 28, 60]} />
@@ -24,7 +82,17 @@ export default function OfficeScene() {
       <gridHelper args={[64, 32, "#1e293b", "#0f172a"]} position={[0, -0.12, 0]} />
       <OfficeLayout />
       <AgentManager />
-      <OrbitControls enablePan enableZoom maxPolarAngle={Math.PI / 2.05} minDistance={12} maxDistance={42} target={[0, 2, 0]} />
+      <HandoffAnimation />
+      <QuestLog visible={showQuestLog} />
+      <DailyMemo visible={showDailyMemo} />
+      <CameraControls
+        ref={controlsRef}
+        makeDefault
+        smoothTime={1}
+        minDistance={5}
+        maxDistance={42}
+        maxPolarAngle={Math.PI / 2.02}
+      />
     </Canvas>
   );
 }

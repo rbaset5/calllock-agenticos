@@ -6,6 +6,7 @@ export default function GrowthMarketingRoom(props: RoomComponentProps) {
   return (
     <DepartmentRoom
       {...props}
+      roomId="growth_marketing_room"
       name="Growth Marketing"
       accentColor="#8B5CF6"
       wallColor="#6d28d9"
