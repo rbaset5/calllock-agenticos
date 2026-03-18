@@ -332,7 +332,7 @@ The existing `call_llm` block should also check feature flags:
 ### Verification
 
 ```bash
-cd harness && PYTHONPATH=src python -m pytest tests/ -x -q --timeout=30 2>&1 | tail -10
+cd harness && PYTHONPATH=src python -m pytest tests/ -x -q  2>&1 | tail -10
 ```
 
 All existing tests must pass — the Hermes path is behind a feature flag
@@ -370,7 +370,7 @@ Update `context_assembly_node` to pass `worker_skills=task.get("worker_skills", 
 ### Verification
 
 ```bash
-cd harness && PYTHONPATH=src python -m pytest tests/ -x -q --timeout=30 2>&1 | tail -10
+cd harness && PYTHONPATH=src python -m pytest tests/ -x -q  2>&1 | tail -10
 ```
 
 ---
@@ -415,7 +415,7 @@ In `verification_node`, after the `verify_output` call, add:
 ### Verification
 
 ```bash
-cd harness && PYTHONPATH=src python -m pytest tests/ -x -q --timeout=30 2>&1 | tail -10
+cd harness && PYTHONPATH=src python -m pytest tests/ -x -q  2>&1 | tail -10
 ```
 
 ---
@@ -611,7 +611,7 @@ cd harness && PYTHONPATH=src python -m pytest tests/test_hermes_adapter.py -x -q
 ### Verification
 
 ```bash
-cd harness && PYTHONPATH=src python -m pytest tests/ -x -q --timeout=60 2>&1 | tail -20
+cd harness && PYTHONPATH=src python -m pytest tests/ -x -q  2>&1 | tail -20
 ```
 
 Also verify worker spec validation:
