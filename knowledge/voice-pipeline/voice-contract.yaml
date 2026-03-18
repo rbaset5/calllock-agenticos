@@ -1,0 +1,305 @@
+version: "1.0"
+owner: eng-ai-voice
+last_validated: "2026-03-17"
+industry_pack: hvac
+fields:
+  - name: customer_name
+    description: Name of the caller extracted from transcript
+    extraction: required
+    supabase: jsonb
+    app_display: card
+    type: string
+    fallback: "Unknown"
+  - name: customer_phone
+    description: Caller phone number from Retell from_number
+    extraction: required
+    supabase: column
+    app_display: card
+    type: string
+  - name: service_address
+    description: Service location extracted from transcript
+    extraction: optional
+    supabase: jsonb
+    app_display: detail
+    type: string
+  - name: urgency_tier
+    description: Urgency classification for routing and prioritization
+    extraction: required
+    supabase: column
+    app_display: card
+    type: string
+    enum:
+      - emergency
+      - urgent
+      - routine
+      - estimate
+  - name: dashboard_urgency
+    description: UI-friendly urgency mapping for display
+    extraction: required
+    supabase: jsonb
+    app_display: not_shown
+    type: string
+    enum:
+      - emergency
+      - high
+      - medium
+      - low
+  - name: caller_type
+    description: Type of caller for routing decisions
+    extraction: required
+    supabase: column
+    app_display: not_shown
+    type: string
+    enum:
+      - residential
+      - commercial
+      - unknown
+      - vendor
+      - job_applicant
+      - spam
+  - name: primary_intent
+    description: What the caller wants
+    extraction: required
+    supabase: column
+    app_display: not_shown
+    type: string
+    enum:
+      - service
+      - maintenance
+      - unknown
+      - estimate
+      - installation
+      - booking_request
+      - active_job_issue
+      - solicitation
+      - admin_billing
+      - new_lead
+  - name: route
+    description: High-level routing decision
+    extraction: required
+    supabase: column
+    app_display: not_shown
+    type: string
+    enum:
+      - legitimate
+      - spam
+      - vendor
+  - name: end_call_reason
+    description: Why the call ended (mapped from Retell disconnection_reason)
+    extraction: required
+    supabase: column
+    app_display: detail
+    type: string
+  - name: problem_description
+    description: Natural language description of the customer's issue
+    extraction: required
+    supabase: jsonb
+    app_display: card
+    type: string
+  - name: hvac_issue_type
+    description: HVAC-specific issue classification
+    extraction: optional
+    supabase: jsonb
+    app_display: detail
+    type: string
+  - name: safety_emergency
+    description: Whether the call involves a safety hazard (gas leak, CO, etc.)
+    extraction: required
+    supabase: jsonb
+    app_display: card
+    type: boolean
+    default: false
+  - name: equipment_type
+    description: Type of equipment (furnace, AC unit, heat pump, etc.)
+    extraction: optional
+    supabase: jsonb
+    app_display: detail
+    type: string
+  - name: equipment_brand
+    description: Brand/manufacturer of equipment
+    extraction: optional
+    supabase: jsonb
+    app_display: detail
+    type: string
+  - name: equipment_age
+    description: Age of equipment from caller/dynamic variables
+    extraction: optional
+    supabase: jsonb
+    app_display: detail
+    type: string
+  - name: appointment_booked
+    description: Whether an appointment was successfully booked during the call
+    extraction: required
+    supabase: jsonb
+    app_display: card
+    type: boolean
+    default: false
+  - name: appointment_date_time
+    description: When the booked appointment is scheduled
+    extraction: optional
+    supabase: jsonb
+    app_display: detail
+    type: string
+  - name: callback_type
+    description: Type of callback requested (if any)
+    extraction: optional
+    supabase: jsonb
+    app_display: card
+    type: string
+  - name: problem_duration
+    description: How long the problem has been occurring
+    extraction: optional
+    supabase: jsonb
+    app_display: not_shown
+    type: object
+    properties:
+      raw:
+        type: string
+        description: Raw duration text from transcript
+      category:
+        type: string
+        description: Duration category
+      onset:
+        type: string
+        description: When the problem started
+      pattern:
+        type: string
+        description: Intermittent, constant, etc.
+      attempted_fixes:
+        type: string
+        description: What customer tried
+  - name: revenue_tier
+    description: Estimated revenue tier for lead scoring
+    extraction: required
+    supabase: column
+    app_display: not_shown
+    type: string
+    enum:
+      - replacement
+      - major_repair
+      - standard_repair
+      - minor
+      - diagnostic
+  - name: revenue_estimate
+    description: Detailed revenue estimation with confidence and signals
+    extraction: required
+    supabase: jsonb
+    app_display: not_shown
+    type: object
+    properties:
+      tier:
+        type: string
+      tier_label:
+        type: string
+      tier_description:
+        type: string
+      estimated_range:
+        type: string
+      confidence:
+        type: string
+      signals:
+        type: array
+      potential_replacement:
+        type: boolean
+  - name: tag_categories
+    description: Categorized tags from extraction taxonomy
+    extraction: required
+    supabase: jsonb
+    app_display: not_shown
+    type: object
+    properties:
+      CUSTOMER:
+        type: array
+      SERVICE_TYPE:
+        type: array
+      EQUIPMENT:
+        type: array
+      CONDITION:
+        type: array
+      RECOVERY:
+        type: array
+      NON_CUSTOMER:
+        type: array
+  - name: tags
+    description: Flattened tag list from tag_categories
+    extraction: required
+    supabase: column
+    app_display: not_shown
+    type: array
+    items: string
+  - name: quality_score
+    description: Call quality score (0-100)
+    extraction: required
+    supabase: column
+    app_display: not_shown
+    type: number
+    range:
+      - 0
+      - 100
+  - name: scorecard_warnings
+    description: Warnings from call scorecard evaluation
+    extraction: required
+    supabase: jsonb
+    app_display: not_shown
+    type: array
+    items: string
+  - name: sales_lead_notes
+    description: Notes for sales follow-up from dynamic variables
+    extraction: optional
+    supabase: jsonb
+    app_display: not_shown
+    type: string
+retell_config:
+  model_constraints:
+    - temperature
+    - max_tokens
+  prompt_hash: "sha256:pending"
+reserved_fields:
+  - name: priority_color
+    description: "Future: color-coded priority for dashboard"
+  - name: priority_reason
+    description: "Future: human-readable priority explanation"
+  - name: property_type
+    description: "Future: residential vs commercial property classification"
+  - name: system_status
+    description: "Future: HVAC system operational status"
+  - name: equipment_age_bracket
+    description: "Future: categorized equipment age range"
+  - name: is_decision_maker
+    description: "Future: whether caller is the property owner/decision maker"
+  - name: decision_maker_contact
+    description: "Future: contact info for decision maker if different from caller"
+  - name: site_contact_name
+    description: "Future: on-site contact name"
+  - name: site_contact_phone
+    description: "Future: on-site contact phone"
+  - name: is_third_party
+    description: "Future: whether caller is a third party (property manager, tenant)"
+  - name: third_party_type
+    description: "Future: type of third party"
+  - name: call_type
+    description: "Future: high-level call classification"
+  - name: call_subtype
+    description: "Future: detailed call sub-classification"
+  - name: call_type_confidence
+    description: "Future: confidence score for call type classification"
+  - name: is_commercial
+    description: "Future: boolean commercial flag"
+  - name: sentiment_score
+    description: "Future: caller sentiment analysis score"
+  - name: work_type
+    description: "Future: type of work requested"
+  - name: card_headline
+    description: "Future: pre-computed headline for dashboard card"
+  - name: card_summary
+    description: "Future: pre-computed summary for dashboard card"
+  - name: slot_changed
+    description: "Future: whether booking slot was changed during call"
+  - name: urgency_mismatch
+    description: "Future: flag if urgency changed during booking"
+  - name: booking_requested_time
+    description: "Future: time customer originally requested"
+  - name: booking_booked_slot
+    description: "Future: actual slot booked"
+  - name: booking_urgency_transition
+    description: "Future: urgency level change during booking flow"
