@@ -892,6 +892,107 @@ Existing tools that already have implementation references:
 - `scorecard-evaluate` → `harness/src/voice/models.py` (existing)
 - `git-branch-write`, `git-pr-review`, `issue-create` → GitHub API (existing pattern)
 
+## CEO Review Expansions (2026-03-18)
+
+The following capabilities were accepted during SELECTIVE EXPANSION CEO review and are in-scope for implementation.
+
+### 1. Visual Regression Testing
+
+eng-app takes baseline screenshots of each page/element defined in the app contract. On subsequent checks and PR validations, it compares current screenshots against baselines using pixel-diff comparison.
+
+- Baselines stored in `knowledge/voice-pipeline/app-baselines/` (PNG files, git-tracked)
+- Diff threshold: configurable per element (default 1% pixel difference)
+- On visual regression detected: include side-by-side diff image in PR review comment
+- Baseline update: when an app contract change is approved, eng-app regenerates baselines
+
+### 2. Self-Healing Auto-Fix PRs
+
+For common failure patterns with known fix templates, the guardian can create fix PRs instead of just filing issues.
+
+**Auto-fixable patterns:**
+
+| Pattern | Agent | Fix |
+|---|---|---|
+| Missing extraction field (in contract but not extracted) | eng-ai-voice | Add extraction rule from known template |
+| Type mismatch (string where integer expected) | eng-ai-voice | Add type coercion to extraction output |
+| Field in voice-contract but missing from seam-contract | eng-product-qa | Add field_mapping entry |
+| New field extracted but app-contract not updated | eng-product-qa | Add to app-contract must_render (detail, not card) |
+
+**Safety rules:**
+- Auto-fix PRs are always `agent-review` tier minimum (never auto-merge)
+- eng-product-qa validates any auto-fix PR before it can merge
+- Auto-fix PRs include a `[auto-fix]` label and link to the triggering violation
+- Maximum 3 auto-fix PRs per day to prevent runaway behavior
+
+### 3. Contract-as-Code CI Validation
+
+A GitHub Actions workflow (`.github/workflows/contract-validate.yml`) that runs on every commit:
+
+```yaml
+# Validates contract consistency statically — no agents needed
+triggers: [push, pull_request]
+steps:
+  - Parse voice-contract.yaml, app-contract.yaml, seam-contract.yaml
+  - Check invariants:
+    - no-orphan-extraction: every required voice field has a seam mapping
+    - no-orphan-display: every app must_render field has a seam source
+    - no-broken-chain: every seam mapping references valid voice + app fields
+    - type-consistency: field types match across all three contracts
+  - Output: pass/fail with specific violations listed
+```
+
+This catches contract inconsistencies instantly, before the agents run their more thorough runtime checks.
+
+### 4. Founder Override Audit Trail
+
+When the founder overrides eng-product-qa's PR block:
+
+```sql
+CREATE TABLE guardian_overrides (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  pr_number integer NOT NULL,
+  pr_url text NOT NULL,
+  override_by text NOT NULL,        -- 'founder' or GitHub username
+  override_reason text,             -- optional free-text reason
+  original_block_reason text NOT NULL,
+  agent_id text NOT NULL,           -- which agent blocked
+  created_at timestamptz DEFAULT now(),
+  tenant_id uuid REFERENCES tenants(id)
+);
+
+ALTER TABLE guardian_overrides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE guardian_overrides FORCE ROW LEVEL SECURITY;
+CREATE POLICY guardian_overrides_tenant ON guardian_overrides
+  USING (tenant_id = current_tenant_id());
+```
+
+eng-product-qa can later query this table to learn which blocks were false positives and adjust its sensitivity.
+
+### 5. Guardian Self-Monitoring Watchdog
+
+A daily cron (7:30 AM, after all three agents should have reported):
+
+```
+Check agent_reports for today:
+  - eng-ai-voice report exists? (expected by 6:15 AM)
+  - eng-app report exists? (expected by 6:45 AM)
+  - eng-product-qa report exists? (expected by 7:15 AM)
+
+If any missing:
+  → Slack alert: "Guardian agent {name} did not report today"
+  → Quest log entry with urgency: high
+```
+
+Implemented as an Inngest cron function, separate from the guardian agents themselves — so if the agents are down, the watchdog still fires.
+
+### 6. Technical Decisions from CEO Review
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| PR trigger mechanism | GitHub Actions workflow (`.github/workflows/product-guardian.yml`) | Simpler than webhook, repo already uses Actions |
+| Dispatch timeout behavior | 5-minute timeout, BLOCK on timeout | Safe default prevents silent pass; message: "Guardian check timed out — please re-run" |
+| Agent dispatch coordination | Inngest events with timeout polling of agent_reports | role:worker can't use supervisor job_dispatch |
+
 ## Open Questions
 
 1. **Test tenant for headless browser checks** — eng-app needs a tenant with known test data to validate against. Should this be a dedicated test tenant, or should it validate against real customer data (read-only)?
