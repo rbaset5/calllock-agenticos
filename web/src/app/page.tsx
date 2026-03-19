@@ -16,6 +16,7 @@ export default async function CallsPage() {
       .select(
         "id, tenant_id, call_id, retell_call_id, phone_number, extracted_fields, extraction_status, urgency_tier, end_call_reason, callback_scheduled, booking_id, created_at, updated_at"
       )
+      .neq("extraction_status", "quarantined")
       .order("created_at", { ascending: false })
       .limit(100)
 

@@ -1,23 +1,23 @@
 """FastAPI router for Retell call-ended webhook (post-call pipeline).
 
-Synchronous pipeline (<2s):
+Synchronous path:
 1. Verify HMAC
-2. Extract tenant_id from custom_metadata
-3. Generate call_id (uuid4), persist raw Retell payload to call_records
-4. Run extraction pipeline (pure functions, no external calls)
-5. Update call_records with extracted fields
-6. Fire Inngest event calllock/call.ended
-7. Return 200 to Retell
+2. Parse payload and extract tenant_id
+3. Persist the raw Retell payload to call_records
+4. Queue background extraction + supervisor processing
+5. Return 200 to Retell immediately
 """
 
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
-from fastapi import APIRouter, Request
+import yaml
+from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from voice.auth import HMACVerificationError, verify_retell_hmac
 from voice.extraction.pipeline import run_extraction
@@ -27,17 +27,110 @@ logger = logging.getLogger(__name__)
 
 post_call_router = APIRouter(tags=["voice-post-call"])
 
+VOICE_WORKER_SPEC_PATH = Path(__file__).resolve().parents[3] / "knowledge" / "worker-specs" / "eng-ai-voice.yaml"
+VOICE_WORKER_SPEC_FALLBACK = {
+    "id": "eng-ai-voice",
+    "title": "Voice Pipeline Worker",
+    "department": "engineering",
+    "role": "worker",
+    "tools_allowed": [],
+}
 
-def _fire_inngest_event(event_name: str, payload: dict[str, Any]) -> None:
-    """Fire an Inngest event. Placeholder — real implementation connects to Inngest SDK."""
-    logger.info("inngest.event.fired", extra={"event": event_name, "call_id": payload.get("call_id")})
+
+def _validate_voice_worker_spec() -> None:
+    try:
+        with open(VOICE_WORKER_SPEC_PATH, encoding="utf-8") as handle:
+            spec = yaml.safe_load(handle)
+        if not isinstance(spec, dict):
+            raise ValueError("voice worker spec must deserialize to a mapping")
+    except FileNotFoundError:
+        logger.warning(
+            "voice.worker_spec_missing",
+            extra={"path": str(VOICE_WORKER_SPEC_PATH)},
+        )
+    except yaml.YAMLError:
+        logger.warning(
+            "voice.worker_spec_invalid_yaml",
+            extra={"path": str(VOICE_WORKER_SPEC_PATH)},
+            exc_info=True,
+        )
+    except Exception:
+        logger.warning(
+            "voice.worker_spec_validation_failed",
+            extra={"path": str(VOICE_WORKER_SPEC_PATH)},
+            exc_info=True,
+        )
+
+
+def _load_voice_worker_spec() -> dict[str, Any]:
+    """Load the eng-ai-voice worker spec from knowledge/worker-specs/."""
+    try:
+        with open(VOICE_WORKER_SPEC_PATH, encoding="utf-8") as handle:
+            spec = yaml.safe_load(handle)
+        if not isinstance(spec, dict):
+            raise ValueError("voice worker spec must deserialize to a mapping")
+        return spec
+    except FileNotFoundError:
+        logger.warning(
+            "voice.worker_spec_missing",
+            extra={"path": str(VOICE_WORKER_SPEC_PATH)},
+        )
+    except yaml.YAMLError:
+        logger.warning(
+            "voice.worker_spec_invalid_yaml",
+            extra={"path": str(VOICE_WORKER_SPEC_PATH)},
+            exc_info=True,
+        )
+    except Exception:
+        logger.warning(
+            "voice.worker_spec_fallback",
+            extra={"path": str(VOICE_WORKER_SPEC_PATH)},
+            exc_info=True,
+        )
+    return dict(VOICE_WORKER_SPEC_FALLBACK)
+
+
+_validate_voice_worker_spec()
+
+
+def _run_voice_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
+    """Run the supervisor directly instead of going through Inngest."""
+    from harness.graphs.supervisor import run_supervisor
+
+    logger.info(
+        "supervisor.direct_invoke",
+        extra={"call_id": payload.get("call_id")},
+    )
+
+    state = {
+        "tenant_id": payload["tenant_id"],
+        "run_id": payload.get("call_id", ""),
+        "worker_id": "eng-ai-voice",
+        "task": {
+            "worker_spec": _load_voice_worker_spec(),
+            "tenant_config": {},
+            "problem_description": payload.get("problem_description", ""),
+            "transcript": payload.get("transcript", ""),
+            "task_context": {"call_payload": payload},
+            "call_payload": payload,
+            "feature_flags": {"llm_workers_enabled": False},
+        },
+    }
+    result = run_supervisor(state)
+    guardian_gate = result.get("guardian_gate", {})
+    gate_result = "quarantined" if guardian_gate.get("quarantine") else "passed"
+    logger.info(
+        "supervisor.direct_invoke_success",
+        extra={
+            "call_id": payload.get("call_id"),
+            "guardian_gate_result": gate_result,
+        },
+    )
+    return result
 
 
 def _parse_booking_id(tool_call_results: list[dict[str, Any]]) -> str | None:
-    """Parse booking_id from Retell's tool_call_results (book_service result).
-
-    Per spec finding #16: booking_id is parsed from tool_call_results, NOT transcript.
-    """
+    """Parse booking_id from Retell's tool_call_results (book_service result)."""
     for result in tool_call_results:
         tool_name = result.get("tool_name") or result.get("name", "")
         if tool_name == "book_service":
@@ -47,6 +140,7 @@ def _parse_booking_id(tool_call_results: list[dict[str, Any]]) -> str | None:
             if isinstance(content, str):
                 try:
                     import json
+
                     parsed = json.loads(content)
                     if isinstance(parsed, dict):
                         return parsed.get("booking_id") or parsed.get("bookingId") or parsed.get("uid")
@@ -55,81 +149,22 @@ def _parse_booking_id(tool_call_results: list[dict[str, Any]]) -> str | None:
     return None
 
 
-@post_call_router.post("/call-ended")
-async def handle_call_ended(request: Request) -> JSONResponse:
-    """Handle Retell call-ended webhook."""
-
-    # 1. Verify HMAC
-    body = await request.body()
-    signature = request.headers.get("x-retell-signature", "")
-    timestamp = request.headers.get("x-retell-timestamp", "")
-    try:
-        verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError:
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-
-    # 2. Parse payload and extract tenant_id
-    payload = RetellCallEndedPayload.model_validate_json(body)
-    tenant_id = payload.custom_metadata.get("tenant_id", "")
-    retell_call_id = payload.call_id
-
-    if not tenant_id:
-        logger.error("post_call.missing_tenant_id", extra={"retell_call_id": retell_call_id})
-        return JSONResponse(status_code=400, content={"error": "Missing tenant_id in custom_metadata"})
-
-    # 3. Generate call_id (use retell_call_id for dedup) and persist raw payload
-    call_id = retell_call_id
-    raw_payload = payload.model_dump(by_alias=True)
-
-    from db import repository as db_repo
-
-    try:
-        record = db_repo.insert_call_record(
-            tenant_id=tenant_id,
-            call_id=call_id,
-            retell_call_id=retell_call_id,
-            raw_payload=raw_payload,
-        )
-    except Exception:
-        logger.error("post_call.persist_failed", extra={"call_id": call_id}, exc_info=True)
-        return JSONResponse(status_code=500, content={"error": "Failed to persist call record"})
-
-    if record is None:
-        logger.info("post_call.duplicate", extra={"retell_call_id": retell_call_id})
-        return JSONResponse(content={"status": "duplicate", "retell_call_id": retell_call_id})
-
-    # 4. Run extraction pipeline
-    extraction = run_extraction(payload.transcript, raw_payload)
-
-    # Parse booking_id from tool_call_results
-    booking_id = _parse_booking_id(payload.tool_call_results)
-
-    # Determine callback_scheduled
-    callback_scheduled = extraction.get("end_call_reason") == "callback_scheduled"
-
-    # 5. Update call_records with extracted fields + call metadata
-    duration_ms = payload.duration_ms or 0
-    try:
-        db_repo.update_call_record_extraction(
-            tenant_id=tenant_id,
-            call_id=call_id,
-            extracted_fields=extraction,
-            end_call_reason=extraction.get("end_call_reason") or "agent_hangup",
-            booking_id=booking_id,
-            callback_scheduled=callback_scheduled,
-            call_duration_seconds=duration_ms // 1000,
-            call_recording_url=payload.recording_url,
-        )
-    except Exception:
-        logger.error("post_call.update_extraction_failed", extra={"call_id": call_id}, exc_info=True)
-
-    # 6. Fire Inngest event
-    event_payload = {
+def _build_supervisor_payload(
+    *,
+    raw_payload: dict[str, Any],
+    tenant_id: str,
+    call_id: str,
+    extraction: dict[str, Any],
+    booking_id: str | None,
+    callback_scheduled: bool,
+    duration_seconds: int,
+) -> dict[str, Any]:
+    return {
         "tenant_id": tenant_id,
         "call_id": call_id,
         "call_source": "retell",
-        "phone_number": payload.from_number or "",
-        "transcript": payload.transcript,
+        "phone_number": raw_payload.get("from_number") or "",
+        "transcript": raw_payload.get("transcript", ""),
         "customer_name": extraction.get("customer_name"),
         "service_address": extraction.get("service_address"),
         "problem_description": extraction.get("problem_description"),
@@ -144,23 +179,178 @@ async def handle_call_ended(request: Request) -> JSONResponse:
         "booking_id": booking_id,
         "callback_scheduled": callback_scheduled,
         "extraction_status": extraction.get("extraction_status", "complete"),
-        "retell_call_id": retell_call_id,
-        "call_duration_seconds": duration_ms // 1000,
+        "retell_call_id": raw_payload.get("call_id"),
+        "call_duration_seconds": duration_seconds,
         "end_call_reason": extraction.get("end_call_reason") or "agent_hangup",
-        "call_recording_url": payload.recording_url,
+        "call_recording_url": raw_payload.get("recording_url"),
     }
 
-    try:
-        _fire_inngest_event("calllock/call.ended", event_payload)
-    except Exception:
-        logger.error("post_call.inngest_failed", extra={"call_id": call_id}, exc_info=True)
 
-    # 7. Return 200 to Retell
-    return JSONResponse(content={
-        "status": "ok",
-        "call_id": call_id,
-        "extraction_status": extraction.get("extraction_status", "complete"),
-    })
+def _merge_quarantine_fields(
+    extracted_fields: dict[str, Any],
+    gate_failures: list[str],
+) -> dict[str, Any]:
+    merged = dict(extracted_fields)
+    merged.update(
+        {
+            "quarantine": True,
+            "gate_failures": gate_failures,
+            "extraction_status": "quarantined",
+        }
+    )
+    return merged
+
+
+async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
+    from db import repository as db_repo
+
+    call_id = str(raw_payload.get("call_id") or "")
+    tenant_id = str((raw_payload.get("custom_metadata") or {}).get("tenant_id") or "")
+    extraction: dict[str, Any] = {}
+
+    try:
+        extraction = run_extraction(raw_payload.get("transcript"), raw_payload)
+    except Exception:
+        logger.error(
+            "post_call.extraction_failed",
+            extra={"call_id": call_id},
+            exc_info=True,
+        )
+        extraction = {"extraction_status": "partial"}
+
+    booking_id = _parse_booking_id(raw_payload.get("tool_call_results") or [])
+    callback_scheduled = extraction.get("end_call_reason") == "callback_scheduled"
+    duration_seconds = int(raw_payload.get("duration_ms") or 0) // 1000
+    end_call_reason = extraction.get("end_call_reason") or "agent_hangup"
+    final_extraction = dict(extraction)
+
+    supervisor_payload = _build_supervisor_payload(
+        raw_payload=raw_payload,
+        tenant_id=tenant_id,
+        call_id=call_id,
+        extraction=extraction,
+        booking_id=booking_id,
+        callback_scheduled=callback_scheduled,
+        duration_seconds=duration_seconds,
+    )
+
+    try:
+        supervisor_result = _run_voice_supervisor(supervisor_payload)
+        guardian_gate = supervisor_result.get("guardian_gate", {})
+        if guardian_gate.get("quarantine"):
+            final_extraction = _merge_quarantine_fields(
+                extraction,
+                list(guardian_gate.get("gate_failures", [])),
+            )
+        else:
+            final_extraction["extraction_status"] = extraction.get(
+                "extraction_status",
+                "complete",
+            )
+    except Exception:
+        logger.error(
+            "supervisor.direct_invoke_failed",
+            extra={"call_id": call_id},
+            exc_info=True,
+        )
+        final_extraction = _merge_quarantine_fields(extraction, ["supervisor_failed"])
+
+    try:
+        db_repo.update_call_record_extraction(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            extracted_fields=final_extraction,
+            end_call_reason=end_call_reason,
+            booking_id=booking_id,
+            callback_scheduled=callback_scheduled,
+            call_duration_seconds=duration_seconds,
+            call_recording_url=raw_payload.get("recording_url"),
+        )
+    except Exception:
+        logger.error(
+            "post_call.update_extraction_failed",
+            extra={"call_id": call_id},
+            exc_info=True,
+        )
+
+
+@post_call_router.post("/call-ended")
+async def handle_call_ended(
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> JSONResponse:
+    """Handle Retell call-ended webhook."""
+
+    body = await request.body()
+    signature = request.headers.get("x-retell-signature", "")
+    timestamp = request.headers.get("x-retell-timestamp", "")
+    try:
+        verify_retell_hmac(body, signature, timestamp)
+    except HMACVerificationError:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+    try:
+        payload = RetellCallEndedPayload.model_validate_json(body)
+    except ValidationError as exc:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "Invalid payload",
+                "details": exc.errors(include_input=False),
+            },
+        )
+
+    tenant_id = payload.custom_metadata.get("tenant_id", "")
+    retell_call_id = payload.call_id
+
+    if not tenant_id:
+        logger.error(
+            "post_call.missing_tenant_id",
+            extra={"retell_call_id": retell_call_id},
+        )
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Missing tenant_id in custom_metadata"},
+        )
+
+    call_id = retell_call_id
+    raw_payload = payload.model_dump(by_alias=True)
+
+    from db import repository as db_repo
+
+    try:
+        record = db_repo.insert_call_record(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=retell_call_id,
+            raw_payload=raw_payload,
+        )
+    except Exception:
+        logger.error(
+            "post_call.persist_failed",
+            extra={"call_id": call_id},
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to persist call record"},
+        )
+
+    if record is None:
+        logger.info("post_call.duplicate", extra={"retell_call_id": retell_call_id})
+        return JSONResponse(
+            content={"status": "duplicate", "retell_call_id": retell_call_id}
+        )
+
+    background_tasks.add_task(_process_call_ended, raw_payload)
+
+    return JSONResponse(
+        content={
+            "status": "ok",
+            "call_id": call_id,
+            "extraction_status": "pending",
+        }
+    )
 
 
 __all__ = ["post_call_router"]

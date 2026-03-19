@@ -10,11 +10,23 @@ from harness.resilience.recovery_journal import write_recovery_entry
 
 def build_persist_record(state: dict[str, Any]) -> dict[str, Any]:
     verification = state.get("verification", {})
+    guardian_gate = state.get("guardian_gate", {})
+    quarantined = guardian_gate.get("quarantine", False)
+
+    if quarantined:
+        status = "quarantined"
+    elif verification.get("passed"):
+        status = "verified"
+    else:
+        status = verification.get("verdict", "blocked")
+
     return {
         "tenant_id": state.get("tenant_id"),
         "run_id": state.get("run_id"),
         "worker_id": state.get("worker_id"),
-        "status": "verified" if verification.get("passed") else verification.get("verdict", "blocked"),
+        "status": status,
+        "quarantine": quarantined,
+        "gate_failures": guardian_gate.get("gate_failures", []),
         "policy_verdict": state.get("policy_decision", {}).get("verdict"),
         "output": state.get("worker_output"),
         "verification": verification,

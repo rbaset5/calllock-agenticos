@@ -38,11 +38,19 @@ Three nested layers with one invariant: governance wraps execution, never the re
 │                                                               │
 │  context_assembly → policy_gate → worker → verification      │
 │                                              │                │
+│                                         guardian_gate         │
+│                                         (pre-persist check)  │
+│                                              │                │
 │                                         skill_candidate?     │
 │                                              │                │
-│                                         job_dispatch          │
-│                                              │                │
-│                                           persist             │
+│                                    ┌─────────┴────────┐      │
+│                                    │                  │      │
+│                               job_dispatch      quarantine   │
+│                                    │                  │      │
+│                                 persist            persist   │
+│                                    │            (audit only)  │
+│                                    ▼                         │
+│                            /runs/{id}/stream (NDJSON)        │
 └──────────────────────────────┬────────────────────────────────┘
                                │
 ┌──────────────────────────────┼────────────────────────────────┐
@@ -253,7 +261,7 @@ Worker specs define domain-specific `tools_allowed` (e.g., `supabase_read`, `ext
 | *(never)* | `memory` | Always blocked |
 | *(never)* | `clarify` | Always blocked |
 
-**Layer 2: Domain-specific tools as MCP** — tools like `supabase_read`, `extraction_rerun`, `retell_config_diff` become MCP tools available to the Hermes agent. These are implemented as a lightweight MCP server that wraps the existing harness tool implementations, scoped to the current tenant. This is a Week 7+ deliverable — initial rollout uses only Hermes built-in toolsets.
+**Layer 2: Domain-specific tools as unified MCP server** — tools like `supabase_read`, `extraction_rerun`, `retell_config_diff` become MCP tools available to the Hermes agent. These are implemented as a **single unified MCP server** (`harness/src/harness/mcp_server.py`) that wraps all existing harness tool implementations, scoped to the current tenant via `set_config('app.current_tenant', ...)`. Inspired by Antspace's embedded Supabase MCP pattern (6 tools auto-provisioned per session), the unified server provides a consistent tool surface for both Hermes workers and the CEO agent. **Pulled forward to Week 5-6** — ships alongside the CEO agent so both execution and founder layers share the same MCP surface from day one.
 
 ### Output Extraction
 
@@ -546,13 +554,15 @@ Shadow mode runs both paths, logs field-by-field comparison, but always returns 
 | Cost per run | ≤ 5× single-shot |
 | Verification failures from output shape | Zero |
 
-### Week 5-6: CEO Agent + Discord + Skills
+### Week 5-6: CEO Agent + Discord + Skills + Unified MCP
 
-**Goal:** CEO agent live on Telegram. Discord projector streaming agent activity. Skill candidate detection active.
+**Goal:** CEO agent live on Telegram. Discord projector streaming agent activity. Skill candidate detection active. Unified MCP server providing tool surface for both workers and CEO agent.
 
-**CEO agent deployment:** Standalone Hermes on $5 VPS. Telegram gateway. MCP server with 10 CallLock tools. Cron jobs for morning briefing, evening digest, weekly retro.
+**Unified MCP server:** `harness/src/harness/mcp_server.py` — single MCP server wrapping all harness tool implementations. Tenant-scoped via `set_config('app.current_tenant', ...)`. 10 tools exposed (same surface for CEO agent and Hermes workers). Follows Antspace pattern of auto-provisioning tools per session. NDJSON streaming endpoint (`/runs/{run_id}/stream`) provides real-time run status to Discord projector and CEO agent without polling.
 
-**Discord projector:** Inngest function subscribing to agent events, posting to Discord via webhooks.
+**CEO agent deployment:** Standalone Hermes on $5 VPS. Telegram gateway. Connects to unified MCP server (same tool surface as workers). Cron jobs for morning briefing, evening digest, weekly retro.
+
+**Discord projector:** Inngest function subscribing to NDJSON stream + agent events, posting to Discord via webhooks. Thread-per-run updates in real-time via streaming endpoint.
 
 **Skill pipeline:** `check_skill_candidate()` active in verification node. Candidates surface in Discord #skills and Telegram morning briefing.
 
@@ -586,7 +596,7 @@ create policy "tenant_isolation" on skill_candidates
 
 ### Week 7+: Expansion
 
-Roll Hermes to additional workers based on shadow mode data. Priority order:
+Unified MCP server already ships in Week 5-6. This phase focuses on rolling Hermes to additional workers based on shadow mode data. Priority order:
 
 | Priority | Worker | Rationale |
 |---|---|---|

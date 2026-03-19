@@ -993,6 +993,49 @@ Implemented as an Inngest cron function, separate from the guardian agents thems
 | Dispatch timeout behavior | 5-minute timeout, BLOCK on timeout | Safe default prevents silent pass; message: "Guardian check timed out — please re-run" |
 | Agent dispatch coordination | Inngest events with timeout polling of agent_reports | role:worker can't use supervisor job_dispatch |
 
+## Antspace-Inspired Patterns (2026-03-18)
+
+Four patterns extracted from the Antspace environment-runner reverse-engineering analysis, applied to the Product Guardian and supervisor graph.
+
+### 1. Pre-Persist Guardian Gate
+
+A `guardian_gate` node now sits between verification and persist in the supervisor graph. Inspired by Antspace's pre-stop hook (multi-condition validation before session end). The gate checks:
+
+- Verification verdict passed (or is an expected block)
+- Required output fields present (no nulls where seam contract says required)
+- Tenant ID set (prevents orphan records)
+
+Records that fail the gate persist with `quarantine: true` — they're in Supabase for audit but invisible to app-facing queries. This means **eng-app headless browser checks will never show quarantined data**, and eng-product-qa can still query quarantined records for investigation.
+
+Implementation: `harness/src/harness/nodes/guardian_gate.py`
+
+### 2. Unified MCP Server (pulled to Week 5-6)
+
+A single MCP server wrapping all harness tool implementations, tenant-scoped. Both Hermes workers and the CEO agent share the same tool surface. Modeled after Antspace's embedded Supabase MCP (6 tools auto-provisioned per session).
+
+### 3. Explicit `run_status` Lifecycle
+
+Every supervisor run now tracks a `run_status` field through explicit phases:
+
+```
+queued → context_assembly → policy_check → executing → verifying → gate_check → dispatching → persisting → completed|quarantined|failed
+```
+
+The watchdog, Discord projector, and CEO agent all observe `run_status` instead of inferring state from `current_state`. The guardian self-monitoring watchdog (Section 5 above) can now check `run_status` for stuck runs (e.g., `executing` for > 5 minutes).
+
+Implementation: `harness/src/harness/state.py` (RunStatus type), `supervisor.py` (_NODE_TO_RUN_STATUS mapping)
+
+### 4. NDJSON Streaming
+
+Real-time run status streaming via `GET /runs/{run_id}/stream` returning `application/x-ndjson`. Each supervisor node transition emits one JSON line. Terminal statuses (`completed`, `quarantined`, `failed`) close the stream. Heartbeats every 15s keep connections alive.
+
+Consumers:
+- **Discord projector**: connects to stream per run, posts thread updates in real-time
+- **CEO agent**: subscribes to high-priority runs for push notifications
+- **Watchdog**: monitors for runs stuck in non-terminal status
+
+Implementation: `harness/src/harness/streaming.py`, endpoint in `server.py`
+
 ## Open Questions
 
 1. **Test tenant for headless browser checks** — eng-app needs a tenant with known test data to validate against. Should this be a dedicated test tenant, or should it validate against real customer data (read-only)?

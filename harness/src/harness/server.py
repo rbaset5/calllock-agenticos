@@ -109,6 +109,7 @@ from harness.models import (
     ScheduleSweepRequest,
     WedgeFitnessSnapshotResponse,
 )
+from harness.jobs.dispatch import dispatch_job_requests as dispatch_async_jobs
 from harness.resilience.recovery_journal import list_recovery_entries
 from harness.resilience.replayer import replay_recovery_entry
 from harness.scheduling import (
@@ -155,7 +156,6 @@ def build_task_payload(request: ProcessCallRequest, tenant: dict[str, Any]) -> d
         "feature_flags": request.feature_flags,
         "compliance_rules": request.compliance_rules or get_compliance_rules(request.tenant_id),
         "environment_allowed_tools": request.environment_allowed_tools,
-        "job_requests": request.job_requests,
     }
 
 
@@ -257,6 +257,24 @@ if FastAPI:
     def health() -> dict[str, Any]:
         return health_dependencies()
 
+    # --- NDJSON streaming endpoint for real-time run status ---
+    # Protocol: application/x-ndjson — one JSON object per line.
+    # Inspired by Antspace deployment status streaming.
+    try:
+        from fastapi.responses import StreamingResponse
+    except Exception:  # pragma: no cover
+        StreamingResponse = None  # type: ignore[assignment]
+
+    if StreamingResponse is not None:
+        from harness.streaming import subscribe_run
+
+        @app.get("/runs/{run_id}/stream")
+        async def stream_run_status(run_id: str) -> StreamingResponse:
+            return StreamingResponse(
+                subscribe_run(run_id),
+                media_type="application/x-ndjson",
+            )
+
     @app.post("/process-call", response_model=ProcessCallResponse)
     def process_call(request: ProcessCallRequest) -> ProcessCallResponse:
         run_id = f"run-{uuid4()}"
@@ -269,6 +287,12 @@ if FastAPI:
                 "task": build_task_payload(request, tenant),
             }
         )
+        async_jobs = dispatch_async_jobs(
+            request.job_requests,
+            tenant_id=tenant["id"],
+            origin_worker_id=request.worker_id,
+            origin_run_id=run_id,
+        ) if request.job_requests else []
         submit_trace(
             name="process-call",
             payload={
@@ -293,7 +317,7 @@ if FastAPI:
             verification_passed=result["verification"]["passed"],
             verification_verdict=result["verification"]["verdict"],
             output=result["worker_output"],
-            jobs=result.get("jobs", []),
+            jobs=[*result.get("jobs", []), *async_jobs],
         )
 
     @app.post("/events/process-call", response_model=ProcessCallResponse)

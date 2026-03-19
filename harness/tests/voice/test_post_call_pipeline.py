@@ -1,15 +1,4 @@
-"""Pipeline integration test — the 2am Friday confidence test.
-
-Fires a realistic Retell call-ended payload at the FastAPI endpoint
-with REAL extraction (not mocked) and verifies the full pipeline:
-  1. call_records row created with extraction_status='complete'
-  2. Inngest event fired with correct CallEndedEvent schema
-  3. CallLock App webhook payload captured and validated
-
-Also tests:
-  - Partial extraction: one step throws, extraction_status='partial'
-  - Duplicate call: same call_id -> skip, return 200
-"""
+"""Pipeline integration tests for the post-call background flow."""
 
 from __future__ import annotations
 
@@ -106,26 +95,25 @@ def _post_call_ended(client: TestClient, payload: dict[str, Any]) -> Any:
 
 
 class TestPipelineIntegrationHappyPath:
-    """Full pipeline: real extraction, mock Inngest, assert call_records + event schema."""
+    """Full pipeline: real extraction, mocked supervisor, assert record + payload schema."""
 
     def test_full_pipeline(self, client: TestClient) -> None:
-        captured_events: list[tuple[str, dict[str, Any]]] = []
+        captured_payloads: list[dict[str, Any]] = []
 
-        def capture_inngest(event_name: str, payload: dict[str, Any]) -> None:
-            captured_events.append((event_name, payload))
+        def capture_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
+            captured_payloads.append(payload)
+            return {"guardian_gate": {"gate_passed": True, "quarantine": False, "gate_failures": []}}
 
         payload = _realistic_payload()
 
-        with patch("voice.post_call_router._fire_inngest_event", side_effect=capture_inngest):
+        with patch("voice.post_call_router._run_voice_supervisor", side_effect=capture_supervisor):
             response = _post_call_ended(client, payload)
 
-        # Step 1: HTTP response is 200
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-        assert data["extraction_status"] == "complete"
+        assert data["extraction_status"] == "pending"
 
-        # Step 2: call_records row exists with extraction_status='complete'
         records = _state()["call_records"]
         assert len(records) == 1
         record = records[0]
@@ -133,13 +121,10 @@ class TestPipelineIntegrationHappyPath:
         assert record["call_id"] == "ret-integration-001"
         assert record["extraction_status"] == "complete"
         assert record["extracted_fields"] is not None
-        # Real extraction should have pulled customer_name from dynamic_variables
         assert record["extracted_fields"].get("customer_name") == "John Smith"
 
-        # Step 3: Inngest event fired with correct schema
-        assert len(captured_events) == 1
-        event_name, event_payload = captured_events[0]
-        assert event_name == "calllock/call.ended"
+        assert len(captured_payloads) == 1
+        event_payload = captured_payloads[0]
         assert event_payload["tenant_id"] == "tenant-ace-001"
         assert event_payload["call_id"] == "ret-integration-001"
         assert event_payload["call_source"] == "retell"
@@ -147,12 +132,9 @@ class TestPipelineIntegrationHappyPath:
         assert event_payload["extraction_status"] == "complete"
         assert event_payload["retell_call_id"] == "ret-integration-001"
         assert event_payload["call_duration_seconds"] == 180
-        # map_disconnection_reason("agent_hangup") returns None, router falls through to "agent_hangup"
         assert event_payload["end_call_reason"] == "agent_hangup"
         assert event_payload["call_recording_url"] == "https://retell.ai/recordings/ret-integration-001.mp3"
 
-        # Validate the event payload is compatible with CallEndedEvent schema
-        # (this confirms our event matches what Inngest consumers expect)
         event_obj = CallEndedEvent.model_validate(event_payload)
         assert event_obj.tenant_id == "tenant-ace-001"
         assert event_obj.extraction_status == "complete"
@@ -162,36 +144,32 @@ class TestPipelinePartialExtraction:
     """When one extraction step throws, extraction_status should be 'partial'."""
 
     def test_partial_extraction_on_step_failure(self, client: TestClient) -> None:
-        captured_events: list[tuple[str, dict[str, Any]]] = []
+        captured_payloads: list[dict[str, Any]] = []
 
-        def capture_inngest(event_name: str, payload: dict[str, Any]) -> None:
-            captured_events.append((event_name, payload))
+        def capture_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
+            captured_payloads.append(payload)
+            return {"guardian_gate": {"gate_passed": True, "quarantine": False, "gate_failures": []}}
 
         payload = _realistic_payload(call_id="ret-partial-001")
 
-        # Patch one extraction step function to force a failure.
-        # infer_urgency_from_context is used inside the "urgency" step.
         with (
-            patch("voice.post_call_router._fire_inngest_event", side_effect=capture_inngest),
+            patch("voice.post_call_router._run_voice_supervisor", side_effect=capture_supervisor),
             patch("voice.extraction.pipeline.infer_hvac_issue_type", side_effect=RuntimeError("Boom")),
         ):
             response = _post_call_ended(client, payload)
 
         assert response.status_code == 200
         data = response.json()
-        assert data["extraction_status"] == "partial"
+        assert data["extraction_status"] == "pending"
 
-        # call_records should reflect partial
         records = _state()["call_records"]
         assert len(records) == 1
         assert records[0]["extraction_status"] == "partial"
 
-        # Inngest event still fires
-        assert len(captured_events) == 1
-        _, event_payload = captured_events[0]
+        assert len(captured_payloads) == 1
+        event_payload = captured_payloads[0]
         assert event_payload["extraction_status"] == "partial"
 
-        # CallEndedEvent schema still validates with partial
         event_obj = CallEndedEvent.model_validate(event_payload)
         assert event_obj.extraction_status == "partial"
 
@@ -202,19 +180,20 @@ class TestPipelineDuplicate:
     def test_duplicate_skips_processing(self, client: TestClient) -> None:
         payload = _realistic_payload(call_id="ret-dup-001")
 
-        with patch("voice.post_call_router._fire_inngest_event"):
+        with patch(
+            "voice.post_call_router._run_voice_supervisor",
+            return_value={"guardian_gate": {"gate_passed": True, "quarantine": False, "gate_failures": []}},
+        ):
             response1 = _post_call_ended(client, payload)
         assert response1.status_code == 200
         assert response1.json()["status"] == "ok"
 
-        with patch("voice.post_call_router._fire_inngest_event") as mock_inngest:
+        with patch("voice.post_call_router._run_voice_supervisor") as mock_supervisor:
             response2 = _post_call_ended(client, payload)
         assert response2.status_code == 200
         assert response2.json()["status"] == "duplicate"
 
-        # Inngest should NOT have been called on the duplicate
-        mock_inngest.assert_not_called()
+        mock_supervisor.assert_not_called()
 
-        # Only one call_record
         records = _state()["call_records"]
         assert len(records) == 1

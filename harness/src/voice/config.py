@@ -122,11 +122,27 @@ def _prepare_db_config(raw_config: Any) -> Any:
 
 
 def _fetch_voice_config_from_db(tenant_id: str) -> dict[str, Any]:
-    raise NotImplementedError(f"Voice config DB fetch not implemented for tenant {tenant_id}")
+    from db.repository import get_tenant_config
+
+    try:
+        config = get_tenant_config(tenant_id)
+    except (KeyError, Exception):
+        raise VoiceConfigError(f"Tenant {tenant_id} not found")
+    if config and config.get("voice_config"):
+        return config["voice_config"]
+    raise VoiceConfigError(f"No voice_config found in tenant_configs for tenant {tenant_id}")
 
 
 def _fetch_calcom_config_from_db(tenant_id: str) -> dict[str, Any]:
-    raise NotImplementedError(f"Cal.com config DB fetch not implemented for tenant {tenant_id}")
+    from db.repository import get_tenant_config
+
+    try:
+        config = get_tenant_config(tenant_id)
+    except (KeyError, Exception):
+        raise VoiceConfigError(f"Tenant {tenant_id} not found")
+    if config and config.get("calcom_config"):
+        return config["calcom_config"]
+    raise VoiceConfigError(f"No calcom_config found in tenant_configs for tenant {tenant_id}")
 
 
 __all__ = [

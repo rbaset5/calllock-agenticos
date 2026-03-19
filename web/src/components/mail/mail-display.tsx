@@ -2,42 +2,92 @@
 
 import { useEffect, useState } from "react"
 import { format } from "date-fns"
-import { Phone, MapPin, Wrench, Clock, AlertTriangle, Calendar } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { getUrgencyVariant } from "@/lib/utils"
+import { Bot, Zap, Play, Sparkles, Archive, Ellipsis } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase"
 import { parseTranscript } from "@/lib/transforms"
-import type { Call, TranscriptEntry } from "@/types/call"
-import { cn } from "@/lib/utils"
+import type { Call, EndCallReason, TranscriptEntry, UrgencyTier } from "@/types/call"
 
 interface MailDisplayProps {
   call: Call | null
 }
 
+type Tab = "summary" | "transcript" | "details"
+
+function urgencyToTag(urgency: UrgencyTier): string {
+  switch (urgency) {
+    case "LifeSafety": return "urgent"
+    case "Urgent": return "needs-review"
+    case "Routine": return "routine"
+    case "Estimate": return "estimate"
+  }
+}
+
+function outcomeToText(reason: EndCallReason | null): string {
+  if (!reason) return "Outcome pending"
+  const map: Record<EndCallReason, string> = {
+    completed: "Service call completed",
+    booking_failed: "Booking attempt failed",
+    callback_later: "Customer will call back",
+    safety_emergency: "Safety emergency escalated",
+    urgent_escalation: "Urgently escalated to dispatcher",
+    wrong_number: "Wrong number",
+    out_of_area: "Outside service area",
+    waitlist_added: "Added to waitlist",
+    customer_hangup: "Customer disconnected",
+    sales_lead: "Sales lead captured",
+    cancelled: "Appointment cancelled",
+    rescheduled: "Appointment rescheduled",
+  }
+  return map[reason]
+}
+
+function Badge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs border border-[#3e3e3e] text-[#ccc] bg-transparent">
+      {label}
+    </span>
+  )
+}
+
+function ActionButton({
+  icon,
+  label,
+  primary,
+}: {
+  icon?: React.ReactNode
+  label: string
+  primary?: boolean
+}) {
+  return (
+    <button
+      className={
+        primary
+          ? "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors cursor-pointer bg-[#252525] border-[#3e3e3e] text-[#f0f0f0] hover:bg-[#2e2e2e]"
+          : "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors cursor-pointer bg-transparent border-[#323232] text-[#ccc] hover:bg-[#1e1e1e] hover:text-[#f0f0f0]"
+      }
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
 export function MailDisplay({ call }: MailDisplayProps) {
+  const [activeTab, setActiveTab] = useState<Tab>("summary")
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(false)
 
-  // Lazy-load transcript when a call is selected (review decision 10A)
   useEffect(() => {
     if (!call) {
       setTranscript([])
       return
     }
-
-    // If transcript was already in the initial data, use it
     if (call.transcript.length > 0) {
       setTranscript(call.transcript)
       return
     }
-
-    // Otherwise fetch the raw transcript for this call
     let cancelled = false
     setLoadingTranscript(true)
-
     const supabase = createBrowserClient()
     const fetchTranscript = async () => {
       try {
@@ -46,15 +96,12 @@ export function MailDisplay({ call }: MailDisplayProps) {
           .select("transcript")
           .eq("call_id", call.id)
           .single()
-
         if (cancelled) return
         setLoadingTranscript(false)
-
         if (typeof data?.transcript !== "string") {
           setTranscript([])
           return
         }
-
         setTranscript(parseTranscript(data.transcript))
       } catch {
         if (!cancelled) {
@@ -64,180 +111,212 @@ export function MailDisplay({ call }: MailDisplayProps) {
       }
     }
     fetchTranscript()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [call?.id, call?.transcript])
 
   if (!call) {
     return (
-      <div className="flex h-full items-center justify-center p-8 text-center text-muted-foreground">
-        <p className="text-sm">Select a call to view details</p>
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-[#555]">Select a call to view details</p>
       </div>
     )
   }
 
+  const urgencyTag = urgencyToTag(call.urgency)
+  const outcomeText = outcomeToText(call.endCallReason)
+  const title = call.problemDescription || call.hvacIssueType || "Call record"
+  const equipmentParts = [call.equipmentType, call.equipmentBrand, call.equipmentAge].filter(Boolean)
+  const bookingTag = call.appointmentBooked ? "booked" : call.endCallReason === "callback_later" ? "callback" : "pending"
+  const automationStatus = call.appointmentBooked
+    ? "Appointment booked via Cal.com."
+    : call.endCallReason === "callback_later"
+    ? "Callback scheduled. Autopilot is observe."
+    : "No booking action taken."
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex items-start p-4">
-        <div className="flex items-start gap-4 text-sm">
-          <Avatar>
-            <AvatarFallback>
-              {(call.customerName || "?")
-                .split(" ")
-                .map((w) => w[0])
-                .join("")
-                .substring(0, 2)
-                .toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="grid gap-1">
-            <div className="font-semibold">
-              {call.customerName || "Unknown Caller"}
-            </div>
-            {call.customerPhone && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Phone className="h-3 w-3" />
-                {call.customerPhone}
-              </div>
-            )}
-            {call.serviceAddress && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                {call.serviceAddress}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="ml-auto flex flex-col items-end gap-1">
-          <div className="text-xs text-muted-foreground">
-            {format(new Date(call.createdAt), "PPpp")}
-          </div>
-          <div className="flex gap-1">
-            <Badge variant={getUrgencyVariant(call.urgency)}>
-              {call.urgency}
-            </Badge>
-            {call.appointmentBooked && (
-              <Badge variant="outline">Booked</Badge>
-            )}
-          </div>
-        </div>
+    <div className="px-8 py-6 max-w-5xl">
+      <h1 className="text-xl font-bold text-[#f5f5f5] leading-tight text-pretty">{title}</h1>
+
+      <div className="mt-2 space-y-0.5">
+        {call.customerPhone && (
+          <p className="text-sm text-[#777]">From {call.customerPhone}</p>
+        )}
+        <p className="text-sm text-[#777]">
+          {format(new Date(call.createdAt), "MMM d, yyyy, h:mm aa")}
+        </p>
       </div>
 
-      <Separator />
+      <div className="mt-3 flex items-center gap-2">
+        <Badge label={urgencyTag} />
+        {call.hvacIssueType && <Badge label={call.hvacIssueType.toLowerCase()} />}
+        {call.isSafetyEmergency && <Badge label="safety" />}
+      </div>
 
-      <ScrollArea className="flex-1">
-        <div className="space-y-4 p-4">
-          {/* Problem Description */}
-          {call.problemDescription && (
-            <section>
-              <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-                Problem
-              </h3>
-              <p className="text-sm">{call.problemDescription}</p>
-              {call.hvacIssueType && (
-                <Badge variant="outline" className="mt-1">
-                  {call.hvacIssueType}
-                </Badge>
+      <div className="mt-4 flex items-center gap-2 flex-wrap">
+        <ActionButton primary icon={<Play width={13} height={13} aria-hidden />} label="Review" />
+        <ActionButton icon={<Sparkles width={13} height={13} aria-hidden />} label="Ask AI" />
+        <ActionButton label="Mark reviewed" />
+        <ActionButton icon={<Archive width={13} height={13} aria-hidden />} label="Archive" />
+        <ActionButton icon={<Ellipsis width={13} height={13} aria-hidden />} label="More" />
+      </div>
+
+      <div className="mt-5 flex items-center gap-6 border-b border-[#252525]">
+        {(["summary", "transcript", "details"] as Tab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={
+              activeTab === tab
+                ? "pb-2 text-sm font-medium transition-colors border-b-2 border-[#f0f0f0] text-[#f0f0f0] capitalize"
+                : "pb-2 text-sm font-medium transition-colors border-b-2 border-transparent text-[#666] hover:text-[#aaa] capitalize"
+            }
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "summary" && (
+        <div className="mt-5 grid grid-cols-2 gap-4">
+          {/* Why This Matters */}
+          <div className="bg-[#191919] border border-[#2a2a2a] rounded-xl p-5 flex flex-col gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
+              Why This Matters
+            </p>
+            <div className="text-sm text-[#d0d0d0] leading-relaxed">
+              <p>{call.problemDescription || "No problem description captured."}</p>
+            </div>
+          </div>
+
+          {/* Best Next Move */}
+          <div className="bg-[#191919] border border-[#2a2a2a] rounded-xl p-5 flex flex-col gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
+              Best Next Move
+            </p>
+            <div className="text-sm text-[#d0d0d0] leading-relaxed">
+              <p>{outcomeText}</p>
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <Badge label={urgencyTag} />
+                {call.endCallReason && (
+                  <Badge label={call.endCallReason.replace(/_/g, "-")} />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Summary */}
+          <div className="bg-[#191919] border border-[#2a2a2a] rounded-xl p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[#888]">
+                <Bot width={15} height={15} aria-hidden />
+              </span>
+              <p className="text-sm font-semibold text-[#f0f0f0]">AI summary</p>
+            </div>
+            <div className="text-sm text-[#c0c0c0] leading-relaxed">
+              <p>{call.problemDescription || "No summary available."}</p>
+              {equipmentParts.length > 0 && (
+                <div className="mt-3 flex flex-col gap-1.5">
+                  {equipmentParts.map((part, i) => (
+                    <button
+                      key={i}
+                      className="text-left text-xs text-[#bbb] px-3 py-2 rounded-md border border-[#2a2a2a] hover:bg-[#222] hover:text-[#f0f0f0] transition-colors"
+                    >
+                      {part}
+                    </button>
+                  ))}
+                </div>
               )}
-            </section>
-          )}
+            </div>
+          </div>
 
-          {/* Equipment Details */}
-          {(call.equipmentType || call.equipmentBrand || call.equipmentAge) && (
-            <section>
-              <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-                Equipment
-              </h3>
-              <div className="flex flex-wrap gap-2 text-sm">
-                {call.equipmentType && (
-                  <div className="flex items-center gap-1">
-                    <Wrench className="h-3 w-3 text-muted-foreground" />
-                    {call.equipmentType}
-                  </div>
+          {/* Automation Status */}
+          <div className="bg-[#191919] border border-[#2a2a2a] rounded-xl p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[#888]">
+                <Zap width={15} height={15} aria-hidden />
+              </span>
+              <p className="text-sm font-semibold text-[#f0f0f0]">Automation status</p>
+            </div>
+            <div className="text-sm text-[#c0c0c0] leading-relaxed">
+              <p className="text-[#777] text-xs">{automationStatus}</p>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <Badge label={bookingTag} />
+                {call.appointmentBooked && call.appointmentDateTime && (
+                  <Badge label={format(new Date(call.appointmentDateTime), "MMM d")} />
                 )}
-                {call.equipmentBrand && (
-                  <span className="text-muted-foreground">
-                    · {call.equipmentBrand}
+              </div>
+              {call.isSafetyEmergency && (
+                <p className="mt-2 text-xs text-[#aaa]">Safety emergency was detected and escalated.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "transcript" && (
+        <div className="mt-5">
+          {loadingTranscript ? (
+            <p className="text-xs text-[#555]">Loading transcript...</p>
+          ) : transcript.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {transcript.map((entry, i) => (
+                <div
+                  key={i}
+                  className={
+                    entry.role === "agent"
+                      ? "rounded-lg px-3 py-2 text-sm bg-[#191919] border border-[#2a2a2a]"
+                      : "rounded-lg px-3 py-2 text-sm bg-[#141414] border border-[#242424]"
+                  }
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-[#666]">
+                    {entry.role === "agent" ? "AI Agent" : "Customer"}
                   </span>
-                )}
-                {call.equipmentAge && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    {call.equipmentAge}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Booking Details */}
-          {call.appointmentBooked && call.appointmentDateTime && (
-            <section>
-              <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-                Appointment
-              </h3>
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-3 w-3 text-muted-foreground" />
-                {format(new Date(call.appointmentDateTime), "PPpp")}
-              </div>
-            </section>
-          )}
-
-          {/* Safety Warning */}
-          {call.isSafetyEmergency && (
-            <section className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-destructive">
-                <AlertTriangle className="h-4 w-4" />
-                Safety Emergency Detected
-              </div>
-            </section>
-          )}
-
-          {/* Transcript */}
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-              Transcript
-            </h3>
-            {loadingTranscript ? (
-              <p className="text-xs text-muted-foreground">Loading transcript...</p>
-            ) : transcript.length > 0 ? (
-              <div className="space-y-2">
-                {transcript.map((entry, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "rounded-lg px-3 py-2 text-sm",
-                      entry.role === "agent" ? "bg-muted" : "bg-primary/5"
-                    )}
-                  >
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {entry.role === "agent" ? "AI Agent" : "Customer"}
-                    </span>
-                    <p className="mt-0.5">{entry.content}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">No transcript available</p>
-            )}
-          </section>
-
-          {/* Call Outcome */}
-          {call.endCallReason && (
-            <section>
-              <h3 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-                Call Outcome
-              </h3>
-              <Badge variant="secondary">
-                {call.endCallReason.replace(/_/g, " ")}
-              </Badge>
-            </section>
+                  <p className="mt-0.5 text-[#c0c0c0]">{entry.content}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-[#555]">No transcript available for this call.</p>
           )}
         </div>
-      </ScrollArea>
+      )}
+
+      {activeTab === "details" && (
+        <div className="mt-5 flex flex-col gap-4">
+          {call.serviceAddress && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#666] mb-1">
+                Service address
+              </p>
+              <p className="text-sm text-[#d0d0d0]">{call.serviceAddress}</p>
+            </div>
+          )}
+          {equipmentParts.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#666] mb-1">
+                Equipment
+              </p>
+              <p className="text-sm text-[#d0d0d0]">{equipmentParts.join(" · ")}</p>
+            </div>
+          )}
+          {call.appointmentBooked && call.appointmentDateTime && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#666] mb-1">
+                Appointment
+              </p>
+              <p className="text-sm text-[#d0d0d0]">
+                {format(new Date(call.appointmentDateTime), "PPpp")}
+              </p>
+            </div>
+          )}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#666] mb-1">
+              Call outcome
+            </p>
+            <p className="text-sm text-[#d0d0d0]">{outcomeText}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

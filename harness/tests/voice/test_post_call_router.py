@@ -69,7 +69,7 @@ class TestCallEndedHappyPath:
         body = json.dumps(payload).encode()
         sig, ts = _sign_body(body)
 
-        with patch("voice.post_call_router._fire_inngest_event") as mock_inngest:
+        with patch("voice.post_call_router.BackgroundTasks.add_task") as mock_add_task:
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -83,7 +83,9 @@ class TestCallEndedHappyPath:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-        assert "call_id" in data
+        assert data["call_id"] == payload["call_id"]
+        assert data["extraction_status"] == "pending"
+        mock_add_task.assert_called_once()
 
     def test_extraction_runs_on_transcript(self, client: TestClient) -> None:
         payload = _call_ended_payload(
@@ -92,7 +94,7 @@ class TestCallEndedHappyPath:
         body = json.dumps(payload).encode()
         sig, ts = _sign_body(body)
 
-        with patch("voice.post_call_router._fire_inngest_event") as mock_inngest:
+        with patch("voice.post_call_router.BackgroundTasks.add_task"):
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -113,7 +115,7 @@ class TestCallEndedDuplicate:
         body = json.dumps(payload).encode()
         sig, ts = _sign_body(body)
 
-        with patch("voice.post_call_router._fire_inngest_event"):
+        with patch("voice.post_call_router.BackgroundTasks.add_task"):
             client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -125,7 +127,7 @@ class TestCallEndedDuplicate:
             )
 
         sig2, ts2 = _sign_body(body)
-        with patch("voice.post_call_router._fire_inngest_event"):
+        with patch("voice.post_call_router.BackgroundTasks.add_task"):
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -164,7 +166,7 @@ class TestCallEndedEmptyTranscript:
         body = json.dumps(payload).encode()
         sig, ts = _sign_body(body)
 
-        with patch("voice.post_call_router._fire_inngest_event"):
+        with patch("voice.post_call_router.BackgroundTasks.add_task"):
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
