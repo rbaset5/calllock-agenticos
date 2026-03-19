@@ -1,7 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { PanelLeft, Phone, RefreshCw, Search } from "lucide-react"
+import { ChevronLeft, Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { filterCalls } from "@/lib/call-records"
 import type { Call } from "@/types/call"
 import { useRealtimeCalls } from "@/hooks/use-realtime-calls"
 import { useReadState } from "@/hooks/use-read-state"
@@ -10,83 +21,214 @@ import { MailDisplay } from "./mail-display"
 
 interface MailProps {
   initialCalls: Call[]
+  initialHasMore: boolean
 }
 
-export function Mail({ initialCalls }: MailProps) {
+export function Mail({ initialCalls, initialHasMore }: MailProps) {
+  const [filter, setFilter] = React.useState<"all" | "unread">("all")
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [mobileView, setMobileView] = React.useState<"list" | "detail">("list")
   const [selectedId, setSelectedId] = React.useState<string | null>(
     initialCalls[0]?.id ?? null
   )
 
   const { readIds, markAsRead } = useReadState()
-  const calls = useRealtimeCalls(initialCalls, readIds)
-  const selectedCall = calls.find((c) => c.id === selectedId) ?? null
+  const {
+    calls,
+    hasMore,
+    isLoadingMore,
+    loadMore,
+    loadMoreError,
+  } = useRealtimeCalls(initialCalls, readIds, initialHasMore)
+
+  const filteredByStatus =
+    filter === "unread" ? calls.filter((c) => !c.read) : calls
+  const filteredCalls = filterCalls(filteredByStatus, searchQuery)
+  const selectedCall = filteredCalls.find((c) => c.id === selectedId) ?? null
+
+  React.useEffect(() => {
+    if (filteredCalls.length === 0) {
+      if (selectedId !== null) {
+        setSelectedId(null)
+      }
+      return
+    }
+
+    if (!selectedId || !filteredCalls.some((call) => call.id === selectedId)) {
+      setSelectedId(filteredCalls[0].id)
+    }
+  }, [filteredCalls, selectedId])
 
   const handleSelect = (id: string) => {
     setSelectedId(id)
     markAsRead(id)
+    setMobileView("detail")
   }
 
+  const emptyMessage = searchQuery.trim()
+    ? `No calls match "${searchQuery.trim()}"`
+    : filter === "unread"
+      ? "No unread calls"
+      : "No calls yet"
+
   return (
-    <div className="flex flex-col h-screen bg-[#0f0f0f] text-[#f0f0f0] overflow-hidden">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a2a] bg-[#111111]">
-        <div className="flex items-center gap-3">
-          <button className="p-1 text-[#888] hover:text-[#ccc] transition-colors">
-            <PanelLeft width={18} height={18} aria-hidden />
-            <span className="sr-only">Toggle sidebar</span>
-          </button>
-          <div>
-            <p className="text-sm font-semibold text-[#f0f0f0] leading-tight">Incoming calls</p>
-            <p className="text-xs text-[#888]">The queue is already sorted so you can work top-down.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-2 h-8 rounded-md px-3 bg-[#1e1e1e] border border-[#3a3a3a] text-[#f0f0f0] hover:bg-[#2a2a2a] hover:text-white text-sm font-medium transition-colors">
-            <Phone width={14} height={14} aria-hidden />
-            Calls
-          </button>
-          <button className="inline-flex items-center gap-2 h-8 rounded-md px-3 bg-[#1e1e1e] border border-[#3a3a3a] text-[#f0f0f0] hover:bg-[#2a2a2a] hover:text-white text-sm font-medium transition-colors">
-            <RefreshCw width={14} height={14} aria-hidden />
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="w-[380px] flex-shrink-0 flex flex-col border-r border-[#2a2a2a] bg-[#131313] overflow-hidden">
-          <div className="px-4 pt-5 pb-3">
-            <h2 className="text-sm font-semibold text-[#f0f0f0]">Incoming calls</h2>
-            <p className="text-xs text-[#888] mt-0.5 leading-relaxed">
-              The queue is already sorted so you can work top-down.
-            </p>
-            <div className="mt-3">
-              <p className="text-xs font-semibold text-[#f0f0f0]">Call list</p>
-              <p className="text-xs text-[#888]">
-                {calls.length} visible of {calls.length} calls
-              </p>
+    <TooltipProvider delayDuration={0}>
+      {/* Mobile layout */}
+      <div className="flex h-full flex-col md:hidden">
+        {mobileView === "list" ? (
+          <Tabs defaultValue="all">
+            <div className="flex h-[52px] items-center px-4">
+              <h1 className="text-lg font-semibold">Calls</h1>
+              <TabsList className="ml-auto">
+                <TabsTrigger
+                  value="all"
+                  className="text-zinc-600 dark:text-zinc-200"
+                  onClick={() => setFilter("all")}
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="unread"
+                  className="text-zinc-600 dark:text-zinc-200"
+                  onClick={() => setFilter("unread")}
+                >
+                  Unread
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <Separator />
+            <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <form onSubmit={(event) => event.preventDefault()}>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search name, phone, or problem"
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
+                </div>
+              </form>
+            </div>
+            <TabsContent value="all" className="m-0">
+              <MailList
+                items={filteredCalls}
+                selected={selectedId}
+                onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
+              />
+            </TabsContent>
+            <TabsContent value="unread" className="m-0">
+              <MailList
+                items={filteredCalls}
+                selected={selectedId}
+                onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="flex h-full flex-col">
+            <div className="flex h-[52px] items-center gap-2 px-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileView("list")}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Back</span>
+              </Button>
+              <div className="text-sm font-medium">Call Details</div>
+            </div>
+            <Separator />
+            <div className="min-h-0 flex-1">
+              <MailDisplay call={selectedCall} />
             </div>
           </div>
-          <div className="px-4 pb-3">
-            <div className="relative">
-              <Search
-                width={14}
-                height={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]"
-                aria-hidden
-              />
-              <input
-                type="text"
-                placeholder="Search caller, issue, summary"
-                className="w-full bg-[#1c1c1c] border border-[#2e2e2e] rounded-md pl-8 pr-3 py-2 text-xs text-[#aaa] placeholder:text-[#555] focus:outline-none focus:border-[#444] transition-colors"
-              />
-            </div>
-          </div>
-          <MailList items={calls} selected={selectedId} onSelect={handleSelect} />
-        </aside>
-
-        <main className="flex-1 overflow-y-auto bg-[#0f0f0f]">
-          <MailDisplay call={selectedCall} />
-        </main>
+        )}
       </div>
-    </div>
+
+      {/* Desktop layout */}
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="hidden h-full max-h-screen items-stretch md:flex"
+      >
+        <ResizablePanel id="mail-list" defaultSize={40} minSize={30}>
+          <Tabs defaultValue="all">
+            <div className="flex h-[52px] items-center px-4">
+              <h1 className="text-xl font-bold">Calls</h1>
+              <TabsList className="ml-auto">
+                <TabsTrigger
+                  value="all"
+                  className="text-zinc-600 dark:text-zinc-200"
+                  onClick={() => setFilter("all")}
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="unread"
+                  className="text-zinc-600 dark:text-zinc-200"
+                  onClick={() => setFilter("unread")}
+                >
+                  Unread
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <Separator />
+            <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <form onSubmit={(event) => event.preventDefault()}>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search name, phone, or problem"
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
+                </div>
+              </form>
+            </div>
+            <TabsContent value="all" className="m-0">
+              <MailList
+                items={filteredCalls}
+                selected={selectedId}
+                onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
+              />
+            </TabsContent>
+            <TabsContent value="unread" className="m-0">
+              <MailList
+                items={filteredCalls}
+                selected={selectedId}
+                onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
+              />
+            </TabsContent>
+          </Tabs>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+
+        <ResizablePanel id="mail-display" defaultSize={60} minSize={30}>
+          <MailDisplay call={selectedCall} />
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </TooltipProvider>
   )
 }

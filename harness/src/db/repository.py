@@ -39,6 +39,18 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     return local_repository.persist_run_record(record)
 
 
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_agent_report(report)
+    return local_repository.upsert_agent_report(report)
+
+
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.create_shadow_comparison(record)
+    return local_repository.create_shadow_comparison(record)
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.create_artifact(record)
@@ -412,6 +424,24 @@ def list_approval_requests(*, tenant_id: str | None = None, status: str | None =
     if using_supabase():
         return supabase_repository.list_approval_requests(tenant_id=tenant_id, status=status)
     return local_repository.list_approval_requests(tenant_id=tenant_id, status=status)
+
+
+def create_skill_candidate(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.create_skill_candidate(payload)
+    return local_repository.create_skill_candidate(payload)
+
+
+def list_skill_candidates(*, tenant_id: str | None = None, status: str | None = None, worker_id: str | None = None) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_skill_candidates(tenant_id=tenant_id, status=status, worker_id=worker_id)
+    return local_repository.list_skill_candidates(tenant_id=tenant_id, status=status, worker_id=worker_id)
+
+
+def update_skill_candidate(candidate_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_skill_candidate(candidate_id, updates)
+    return local_repository.update_skill_candidate(candidate_id, updates)
 
 
 def upsert_scheduler_backlog_entry(payload: dict[str, Any]) -> dict[str, Any]:

@@ -112,7 +112,7 @@
     }
   ],
   "context_sources": [
-    "knowledge/voice-pipeline/",
+    "knowledge/voice-pipeline/voice-contract.yaml",
     "knowledge/voice-pipeline/seam-contract.yaml",
     "knowledge/industry-packs/hvac/",
     "scripts/deploy-retell-agent.py"
@@ -126,6 +126,6 @@
     "branch_pattern": "agent/eng-ai-voice/{task-description}",
     "commit_prefix": "agent(eng-ai-voice):",
     "pr_labels": ["auto-merge", "agent-review", "human-review", "urgent"],
-    "validated_by": "eng-qa"
+    "validated_by": "eng-product-qa"
   }
 }

@@ -1,56 +1,123 @@
 "use client"
 
-import type { Call, UrgencyTier } from "@/types/call"
+import { formatDistanceToNow } from "date-fns"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { getUrgencyVariant } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import type { Call } from "@/types/call"
 
 interface MailListProps {
   items: Call[]
   selected: string | null
   onSelect: (id: string) => void
+  hasMore?: boolean
+  isLoadingMore?: boolean
+  onLoadMore?: () => void
+  loadMoreError?: string | null
+  emptyMessage?: string
 }
 
-function urgencyToTag(urgency: UrgencyTier): string {
-  switch (urgency) {
-    case "LifeSafety": return "urgent"
-    case "Urgent": return "needs-review"
-    case "Routine": return "routine"
-    case "Estimate": return "estimate"
-  }
-}
-
-export function MailList({ items, selected, onSelect }: MailListProps) {
+export function MailList({
+  items,
+  selected,
+  onSelect,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+  loadMoreError,
+  emptyMessage = "No calls found",
+}: MailListProps) {
   return (
-    <div className="flex-1 overflow-y-auto px-3 pb-3 flex flex-col gap-2">
-      {items.map((item) => {
-        const isSelected = selected === item.id
-        const subject = item.problemDescription
-          ? item.problemDescription.substring(0, 60)
-          : item.hvacIssueType || "Missed call"
-
-        return (
-          <div
-            key={item.id}
-            onClick={() => onSelect(item.id)}
-            className={
-              isSelected
-                ? "rounded-lg p-3 cursor-pointer transition-colors bg-[#1e1e1e] border border-[#3a3a3a] ring-1 ring-[#444]/50"
-                : "rounded-lg p-3 cursor-pointer transition-colors bg-[#181818] border border-[#242424] hover:bg-[#1e1e1e]"
-            }
-          >
-            <p className="text-sm font-semibold text-[#f0f0f0] leading-tight">
-              {item.customerName || item.customerPhone || "Unknown Caller"}
-            </p>
-            <p className="text-xs text-[#777] mt-0.5 truncate">{subject}</p>
-            <p className="text-xs text-[#999] mt-1.5 leading-relaxed line-clamp-2">
-              {item.problemDescription || "No description available."}
-            </p>
-            <div className="mt-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs border border-[#444] text-[#ccc] bg-transparent">
-                {urgencyToTag(item.urgency)}
-              </span>
-            </div>
+    <ScrollArea className="h-screen">
+      <div className="flex flex-col gap-2 p-4 pt-0">
+        {items.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            {emptyMessage}
           </div>
-        )
-      })}
-    </div>
+        ) : null}
+        {items.map((item) => (
+          <button
+            key={item.id}
+            className={cn(
+              "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent",
+              selected === item.id && "bg-muted"
+            )}
+            onClick={() => onSelect(item.id)}
+          >
+            <div className="flex w-full flex-col gap-1">
+              <div className="flex items-center">
+                <div className="flex items-center gap-2">
+                  <div className="font-semibold">
+                    {item.customerName || item.customerPhone || "Unknown"}
+                  </div>
+                  {!item.read && (
+                    <span className="flex h-2 w-2 rounded-full bg-blue-600" />
+                  )}
+                </div>
+                <div
+                  className={cn(
+                    "ml-auto text-xs",
+                    selected === item.id
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {formatDistanceToNow(new Date(item.createdAt), {
+                    addSuffix: true,
+                  })}
+                </div>
+              </div>
+              <div className="text-xs font-medium">
+                {item.problemDescription
+                  ? item.problemDescription.substring(0, 80)
+                  : item.hvacIssueType || "Missed call"}
+              </div>
+            </div>
+            {item.customerPhone && (
+              <div className="text-xs text-muted-foreground">
+                {item.customerPhone}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Badge variant={getUrgencyVariant(item.urgency)}>
+                {item.urgency}
+              </Badge>
+              {item.appointmentBooked && (
+                <Badge variant="outline">Booked</Badge>
+              )}
+              {item.isSafetyEmergency && (
+                <Badge variant="destructive">Safety</Badge>
+              )}
+              {item.endCallReason === "callback_later" && (
+                <Badge variant="secondary">Callback</Badge>
+              )}
+            </div>
+          </button>
+        ))}
+        {(hasMore || loadMoreError) && onLoadMore ? (
+          <div className="pt-2">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={onLoadMore}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore
+                ? "Loading older calls..."
+                : loadMoreError
+                  ? "Retry loading older calls"
+                  : "Load more calls"}
+            </Button>
+            {loadMoreError ? (
+              <p className="mt-2 text-xs text-destructive">
+                {loadMoreError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </ScrollArea>
   )
 }

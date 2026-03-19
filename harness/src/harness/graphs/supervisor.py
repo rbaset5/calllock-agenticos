@@ -190,6 +190,7 @@ def run_supervisor(state: HarnessState) -> HarnessState:
 
     assembled = assemble_context(
         worker_spec=worker_spec,
+        worker_skills=state["task"].get("worker_skills", []),
         task_context=state["task"],
         tenant_config=tenant_config,
         industry_pack=state["task"].get("industry_pack", {}),

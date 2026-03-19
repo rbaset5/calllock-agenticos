@@ -173,6 +173,22 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "agent_reports",
+        params={"on_conflict": "agent_id,report_date,tenant_id"},
+        json=report,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else report
+
+
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    data = _request("POST", "shadow_comparisons", json=record, prefer="return=representation")
+    return data[0] if data else record
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     data = _request("POST", "artifacts", json=record, prefer="return=representation")
     return data[0] if data else record
@@ -712,6 +728,27 @@ def list_approval_requests(*, tenant_id: str | None = None, status: str | None =
     if status:
         params["status"] = f"eq.{status}"
     return _request("GET", "approval_requests", params=params)
+
+
+def create_skill_candidate(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request("POST", "skill_candidates", json=payload, prefer="return=representation")
+    return data[0] if data else payload
+
+
+def list_skill_candidates(*, tenant_id: str | None = None, status: str | None = None, worker_id: str | None = None) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if tenant_id:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if status:
+        params["status"] = f"eq.{status}"
+    if worker_id:
+        params["worker_id"] = f"eq.{worker_id}"
+    return _request("GET", "skill_candidates", params=params)
+
+
+def update_skill_candidate(candidate_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    data = _request("PATCH", "skill_candidates", params={"id": f"eq.{candidate_id}"}, json=updates, prefer="return=representation")
+    return data[0]
 
 
 def upsert_scheduler_backlog_entry(payload: dict[str, Any]) -> dict[str, Any]:

@@ -20,6 +20,8 @@ Items considered during the Supabase wiring design review and explicitly deferre
 
 ## 2. Lazy-Load Transcript Error/Loading State
 
+**Status:** Implemented 2026-03-19 in `src/components/mail/mail-display.tsx`.
+
 **What:** Add a loading spinner and "Transcript unavailable" fallback for the detail panel's transcript section.
 
 **Why:** The implementation lazy-loads `retell_data` (which contains the transcript) only when a call is selected — it's not fetched in the initial list load (performance optimization from review Issue 10A). If this secondary fetch fails (Supabase timeout, missing data), the transcript section would silently show nothing. A loading state makes the fetch visible; an error fallback makes failures explicit.
@@ -32,6 +34,8 @@ Items considered during the Supabase wiring design review and explicitly deferre
 **Depends on:** Supabase wiring complete.
 
 ## 3. Search Wiring
+
+**Status:** Implemented 2026-03-19 in `src/components/mail/mail.tsx`, `src/components/mail/mail-list.tsx`, and `src/hooks/use-realtime-calls.ts`.
 
 **What:** Wire the existing search input placeholder to filter calls by customer name, phone number, or problem description.
 

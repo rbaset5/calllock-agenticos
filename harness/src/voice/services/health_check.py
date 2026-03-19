@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SEAM_CONTRACT_PATH = REPO_ROOT / "knowledge" / "voice-pipeline" / "seam-contract.yaml"
+VOICE_CONTRACT_PATH = REPO_ROOT / "knowledge" / "voice-pipeline" / "voice-contract.yaml"
 TAXONOMY_PATH = REPO_ROOT / "knowledge" / "industry-packs" / "hvac" / "taxonomy.yaml"
 DEPLOY_SCRIPT_PATH = REPO_ROOT / "scripts" / "deploy-retell-agent.py"
 CALL_SAMPLE_LIMIT = 10
@@ -121,6 +122,11 @@ def _load_seam_contract(path: Path = SEAM_CONTRACT_PATH) -> list[ContractField]:
         payload = yaml.safe_load(handle) or {}
 
     raw_fields = payload.get("fields", [])
+    if not raw_fields and payload.get("field_mappings"):
+        with VOICE_CONTRACT_PATH.open("r", encoding="utf-8") as handle:
+            voice_payload = yaml.safe_load(handle) or {}
+        raw_fields = voice_payload.get("fields", [])
+
     fields: list[ContractField] = []
     for item in raw_fields:
         if not isinstance(item, dict):

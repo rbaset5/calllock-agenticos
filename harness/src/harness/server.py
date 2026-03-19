@@ -61,6 +61,7 @@ from harness.improvement.experiments import run_experiment
 from harness.incident_notifications import notify_incident
 from harness.incident_reminders import send_incident_reminders
 from harness.incident_routing import resolve_assignee
+from harness.jobs.dispatch import dispatch_job_requests as dispatch_async_job_requests
 from harness.incident_runbooks import (
     get_runbook_step,
     pending_runbook_steps,

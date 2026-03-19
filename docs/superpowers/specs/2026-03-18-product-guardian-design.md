@@ -5,6 +5,22 @@
 **Author:** Rashid Baset + Claude
 **Supersedes:** 2026-03-17-product-guardian-design.md (voice + app seam only)
 
+## Implementation Status
+
+| Component | Status | Plan Task | Files |
+|---|---|---|---|
+| eng-qa → eng-product-qa rename | ✅ Done | Task 1 | `knowledge/worker-specs/eng-product-qa.yaml` |
+| Three-contract split | ✅ Done | Task 2 | `voice-contract.yaml`, `app-contract.yaml`, `seam-contract.yaml` v2.0 |
+| eng-app worker spec | ✅ Done | Task 3 | `knowledge/worker-specs/eng-app.yaml` |
+| agent_reports table | ✅ Done | Task 5 | `supabase/migrations/052_agent_reports.sql` |
+| guardian_overrides table | ✅ Done | Task 6 | `supabase/migrations/053_guardian_overrides.sql` |
+| Guardian dispatch event | ✅ Done | Task 7 | `inngest/src/functions/guardian-dispatch.ts` |
+| Guardian watchdog | ✅ Done | Task 8 | `inngest/src/functions/guardian-watchdog.ts` |
+| Contract validation CI | ✅ Done | Tasks 9-10 | `scripts/validate-contracts.py`, `.github/workflows/contract-validate.yml` |
+| PR gate workflow | ✅ Done | Task 11 | `.github/workflows/product-guardian.yml` |
+| Visual regression infra | ✅ Done | Task 12 | `knowledge/voice-pipeline/app-baselines/` |
+
+
 ## Overview
 
 The Product Guardian is a three-agent system under VP Engineering that continuously monitors, validates, and gates changes across the entire CallLock product: the voice AI pipeline, the customer app, and the seams between them.
@@ -1042,6 +1058,8 @@ Implementation: `harness/src/harness/streaming.py`, endpoint in `server.py`
 
 2. **Multi-industry-pack support** — When CallLock adds a second industry pack beyond HVAC, does each pack get its own voice contract, or is there one contract with pack-specific field sections?
 
-3. **Alert channels** — Where do urgent notifications go beyond the quest log? Slack? SMS? The office is the primary surface, but the founder may not be watching 24/7.
+3. **Alert channels** — Watchdog sends Slack alerts + quest log entries.
+   Discord integration planned (see Hermes integration design spec).
+   SMS for critical alerts TBD.
 
-4. **eng-fullstack dependency** — eng-app and eng-product-qa create issues for eng-fullstack when app code needs fixing. eng-fullstack doesn't exist as an active agent yet. Who picks up those issues in the meantime? (Likely the founder.)
+4. ~~**eng-fullstack dependency**~~ — Resolved. eng-fullstack worker spec added. Functions as a triage agent: reads guardian issues, examines code, suggests fixes. With Hermes integration, will be able to create fix PRs autonomously.

@@ -333,6 +333,8 @@ export function validateAgentHandoffPayload(payload: AgentHandoffPayload): strin
   return errors;
 }
 
+export { type GuardianDispatchPayload, type GuardianWatchdogPayload } from "./guardian-schemas.js";
+
 export function validateAgentStateChangedPayload(
   payload: AgentStateChangedPayload,
 ): string[] {
@@ -411,3 +413,4 @@ export function validateInboundMessageReceivedPayload(payload: InboundMessageRec
   }
   return errors;
 }
+

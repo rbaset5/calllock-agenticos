@@ -1,0 +1,22 @@
+name: Contract Validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "knowledge/voice-pipeline/**"
+  pull_request:
+    paths:
+      - "knowledge/voice-pipeline/**"
+
+jobs:
+  validate-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pyyaml
+      - run: python scripts/validate-contracts.py

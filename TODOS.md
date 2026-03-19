@@ -187,6 +187,7 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 ## P2 — Post-Contract-Lock Extensions
 
 ### Wire search input to filter calls in CallLock App
+**Status:** Implemented 2026-03-19 in `web/src/components/mail/mail.tsx` and related call feed helpers.
 **What:** Connect the existing search input in the call list header to filter calls client-side by name, phone, or description.
 **Why:** The UI element already exists but does nothing. Contractors with many calls need to find specific ones quickly.
 **Effort:** S
@@ -195,6 +196,7 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Source:** CallLock App migration CEO review, 2026-03-17.
 
 ### Add call pagination to CallLock App
+**Status:** Implemented 2026-03-19 in `web/src/app/page.tsx` and `web/src/hooks/use-realtime-calls.ts` with cursor-based load-more pagination.
 **What:** Add cursor-based pagination (load more / infinite scroll) to the call list. Currently capped at 100 most recent calls.
 **Why:** A busy HVAC company might get 50+ calls/day. After 2 days, older calls fall off the 100-call limit.
 **Effort:** M
