@@ -1,6 +1,7 @@
 "use client"
 
 import { formatDistanceToNow } from "date-fns"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getUrgencyVariant } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -11,12 +12,31 @@ interface MailListProps {
   items: Call[]
   selected: string | null
   onSelect: (id: string) => void
+  hasMore?: boolean
+  isLoadingMore?: boolean
+  onLoadMore?: () => void
+  loadMoreError?: string | null
+  emptyMessage?: string
 }
 
-export function MailList({ items, selected, onSelect }: MailListProps) {
+export function MailList({
+  items,
+  selected,
+  onSelect,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+  loadMoreError,
+  emptyMessage = "No calls found",
+}: MailListProps) {
   return (
     <ScrollArea className="h-screen">
       <div className="flex flex-col gap-2 p-4 pt-0">
+        {items.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+          </div>
+        ) : null}
         {items.map((item) => (
           <button
             key={item.id}
@@ -76,6 +96,27 @@ export function MailList({ items, selected, onSelect }: MailListProps) {
             </div>
           </button>
         ))}
+        {(hasMore || loadMoreError) && onLoadMore ? (
+          <div className="pt-2">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={onLoadMore}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore
+                ? "Loading older calls..."
+                : loadMoreError
+                  ? "Retry loading older calls"
+                  : "Load more calls"}
+            </Button>
+            {loadMoreError ? (
+              <p className="mt-2 text-xs text-destructive">
+                {loadMoreError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </ScrollArea>
   )

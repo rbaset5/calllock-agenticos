@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 
 const STORAGE_KEY = "calllock-read-calls"
 
@@ -15,11 +15,7 @@ function loadReadIds(): Set<string> {
 }
 
 export function useReadState() {
-  const [readIds, setReadIds] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    setReadIds(loadReadIds())
-  }, [])
+  const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds())
 
   const markAsRead = useCallback((id: string) => {
     setReadIds((prev) => {

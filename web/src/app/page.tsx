@@ -1,4 +1,9 @@
 import { createServerClient } from "@/lib/supabase"
+import {
+  CALL_RECORD_LIST_COLUMNS,
+  CALLS_PAGE_SIZE,
+  trimCallRecordPage,
+} from "@/lib/call-records"
 import { transformCallRecord } from "@/lib/transforms"
 import { Mail } from "@/components/mail/mail"
 import type { Call, CallRecordListRow } from "@/types/call"
@@ -7,22 +12,22 @@ export const dynamic = "force-dynamic"
 
 export default async function CallsPage() {
   let calls: Call[] = []
+  let hasMore = false
 
   try {
     const supabase = createServerClient()
 
     const { data, error } = await supabase
       .from("call_records")
-      .select(
-        "id, tenant_id, call_id, retell_call_id, phone_number, extracted_fields, extraction_status, urgency_tier, end_call_reason, callback_scheduled, booking_id, created_at, updated_at"
-      )
+      .select(CALL_RECORD_LIST_COLUMNS)
       .order("created_at", { ascending: false })
-      .limit(100)
+      .limit(CALLS_PAGE_SIZE + 1)
 
     if (!error && data) {
-      const rows = data as CallRecordListRow[]
+      const page = trimCallRecordPage(data as CallRecordListRow[])
       const emptyReadIds = new Set<string>()
-      calls = rows.map((row) => transformCallRecord(row, emptyReadIds))
+      calls = page.rows.map((row) => transformCallRecord(row, emptyReadIds))
+      hasMore = page.hasMore
     }
   } catch {
     // Supabase unreachable — render empty state
@@ -30,7 +35,7 @@ export default async function CallsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <Mail initialCalls={calls} />
+      <Mail initialCalls={calls} initialHasMore={hasMore} />
     </div>
   )
 }

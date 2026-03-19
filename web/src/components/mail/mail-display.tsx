@@ -20,35 +20,48 @@ interface MailDisplayProps {
 export function MailDisplay({ call }: MailDisplayProps) {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(false)
+  const [transcriptError, setTranscriptError] = useState(false)
+  const callId = call?.id ?? null
+  const existingTranscript = call?.transcript
 
   // Lazy-load transcript when a call is selected (review decision 10A)
   useEffect(() => {
-    if (!call) {
+    if (!callId) {
       setTranscript([])
+      setLoadingTranscript(false)
+      setTranscriptError(false)
       return
     }
 
     // If transcript was already in the initial data, use it
-    if (call.transcript.length > 0) {
-      setTranscript(call.transcript)
+    if ((existingTranscript?.length ?? 0) > 0) {
+      setTranscript(existingTranscript ?? [])
+      setLoadingTranscript(false)
+      setTranscriptError(false)
       return
     }
 
     // Otherwise fetch the raw transcript for this call
     let cancelled = false
     setLoadingTranscript(true)
+    setTranscriptError(false)
 
     const supabase = createBrowserClient()
     const fetchTranscript = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("call_records")
           .select("transcript")
-          .eq("call_id", call.id)
+          .eq("call_id", callId)
           .single()
 
+        if (error) {
+          throw error
+        }
         if (cancelled) return
+
         setLoadingTranscript(false)
+        setTranscriptError(false)
 
         if (typeof data?.transcript !== "string") {
           setTranscript([])
@@ -60,6 +73,7 @@ export function MailDisplay({ call }: MailDisplayProps) {
         if (!cancelled) {
           setLoadingTranscript(false)
           setTranscript([])
+          setTranscriptError(true)
         }
       }
     }
@@ -68,7 +82,7 @@ export function MailDisplay({ call }: MailDisplayProps) {
     return () => {
       cancelled = true
     }
-  }, [call?.id, call?.transcript])
+  }, [callId, existingTranscript])
 
   if (!call) {
     return (
@@ -203,6 +217,10 @@ export function MailDisplay({ call }: MailDisplayProps) {
             </h3>
             {loadingTranscript ? (
               <p className="text-xs text-muted-foreground">Loading transcript...</p>
+            ) : transcriptError ? (
+              <p className="text-xs text-muted-foreground">
+                Transcript unavailable. Try refreshing.
+              </p>
             ) : transcript.length > 0 ? (
               <div className="space-y-2">
                 {transcript.map((entry, i) => (

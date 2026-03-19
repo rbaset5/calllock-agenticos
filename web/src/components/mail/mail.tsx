@@ -12,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { filterCalls } from "@/lib/call-records"
 import type { Call } from "@/types/call"
 import { useRealtimeCalls } from "@/hooks/use-realtime-calls"
 import { useReadState } from "@/hooks/use-read-state"
@@ -20,26 +21,55 @@ import { MailDisplay } from "./mail-display"
 
 interface MailProps {
   initialCalls: Call[]
+  initialHasMore: boolean
 }
 
-export function Mail({ initialCalls }: MailProps) {
+export function Mail({ initialCalls, initialHasMore }: MailProps) {
   const [filter, setFilter] = React.useState<"all" | "unread">("all")
+  const [searchQuery, setSearchQuery] = React.useState("")
   const [mobileView, setMobileView] = React.useState<"list" | "detail">("list")
   const [selectedId, setSelectedId] = React.useState<string | null>(
     initialCalls[0]?.id ?? null
   )
 
   const { readIds, markAsRead } = useReadState()
-  const calls = useRealtimeCalls(initialCalls, readIds)
+  const {
+    calls,
+    hasMore,
+    isLoadingMore,
+    loadMore,
+    loadMoreError,
+  } = useRealtimeCalls(initialCalls, readIds, initialHasMore)
 
-  const filteredCalls = filter === "unread" ? calls.filter((c) => !c.read) : calls
-  const selectedCall = calls.find((c) => c.id === selectedId) ?? null
+  const filteredByStatus =
+    filter === "unread" ? calls.filter((c) => !c.read) : calls
+  const filteredCalls = filterCalls(filteredByStatus, searchQuery)
+  const selectedCall = filteredCalls.find((c) => c.id === selectedId) ?? null
+
+  React.useEffect(() => {
+    if (filteredCalls.length === 0) {
+      if (selectedId !== null) {
+        setSelectedId(null)
+      }
+      return
+    }
+
+    if (!selectedId || !filteredCalls.some((call) => call.id === selectedId)) {
+      setSelectedId(filteredCalls[0].id)
+    }
+  }, [filteredCalls, selectedId])
 
   const handleSelect = (id: string) => {
     setSelectedId(id)
     markAsRead(id)
     setMobileView("detail")
   }
+
+  const emptyMessage = searchQuery.trim()
+    ? `No calls match "${searchQuery.trim()}"`
+    : filter === "unread"
+      ? "No unread calls"
+      : "No calls yet"
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -68,10 +98,15 @@ export function Mail({ initialCalls }: MailProps) {
             </div>
             <Separator />
             <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <form>
+              <form onSubmit={(event) => event.preventDefault()}>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search" className="pl-8" />
+                  <Input
+                    placeholder="Search name, phone, or problem"
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
                 </div>
               </form>
             </div>
@@ -80,6 +115,11 @@ export function Mail({ initialCalls }: MailProps) {
                 items={filteredCalls}
                 selected={selectedId}
                 onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
               />
             </TabsContent>
             <TabsContent value="unread" className="m-0">
@@ -87,6 +127,11 @@ export function Mail({ initialCalls }: MailProps) {
                 items={filteredCalls}
                 selected={selectedId}
                 onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
               />
             </TabsContent>
           </Tabs>
@@ -139,10 +184,15 @@ export function Mail({ initialCalls }: MailProps) {
             </div>
             <Separator />
             <div className="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <form>
+              <form onSubmit={(event) => event.preventDefault()}>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search" className="pl-8" />
+                  <Input
+                    placeholder="Search name, phone, or problem"
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
                 </div>
               </form>
             </div>
@@ -151,6 +201,11 @@ export function Mail({ initialCalls }: MailProps) {
                 items={filteredCalls}
                 selected={selectedId}
                 onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
               />
             </TabsContent>
             <TabsContent value="unread" className="m-0">
@@ -158,6 +213,11 @@ export function Mail({ initialCalls }: MailProps) {
                 items={filteredCalls}
                 selected={selectedId}
                 onSelect={handleSelect}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={loadMore}
+                loadMoreError={loadMoreError}
+                emptyMessage={emptyMessage}
               />
             </TabsContent>
           </Tabs>
