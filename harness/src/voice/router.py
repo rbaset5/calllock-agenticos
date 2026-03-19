@@ -24,6 +24,26 @@ logger = logging.getLogger(__name__)
 
 _GRACEFUL_ERROR = "We're experiencing technical difficulties. Please call back or leave a message."
 
+
+def _normalize_tool_payload(body: bytes) -> RetellToolCallRequest:
+    """Parse a Retell tool-call webhook, handling both flat and nested formats.
+
+    Retell's current format: ``{ "name": "<tool>", "args": {...}, "call": {...} }``
+    Legacy format: ``{ "call_id": "...", "tool_name": "...", "args": {...}, "metadata": {...} }``
+    """
+    import json as _json
+
+    raw = _json.loads(body)
+    if isinstance(raw, dict) and "call" in raw and isinstance(raw["call"], dict):
+        call_obj = raw["call"]
+        return RetellToolCallRequest(
+            call_id=call_obj.get("call_id", ""),
+            tool_name=raw.get("name", ""),
+            args=raw.get("args", {}),
+            metadata=call_obj.get("metadata") or call_obj.get("custom_metadata") or {},
+        )
+    return RetellToolCallRequest.model_validate(raw)
+
 voice_router = APIRouter(tags=["voice"])
 
 
@@ -38,8 +58,7 @@ async def handle_inbound_webhook(request: Request) -> JSONResponse:
     try:
         body = await request.body()
         signature = request.headers.get("x-retell-signature", "")
-        timestamp = request.headers.get("x-retell-timestamp", "")
-        verify_retell_hmac(body, signature, timestamp)
+        verify_retell_hmac(body, signature)
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
@@ -84,9 +103,8 @@ async def require_retell_hmac(request: Request) -> None:
     """FastAPI dependency that verifies Retell HMAC-SHA256 signatures."""
     body = await request.body()
     signature = request.headers.get("x-retell-signature", "")
-    timestamp = request.headers.get("x-retell-timestamp", "")
     try:
-        verify_retell_hmac(body, signature, timestamp)
+        verify_retell_hmac(body, signature)
     except HMACVerificationError as exc:
         logger.warning("voice.hmac.failed", extra={"error": str(exc)})
         raise HMACVerificationError(str(exc)) from exc
@@ -114,12 +132,11 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
     try:
         body = await request.body()
         signature = request.headers.get("x-retell-signature", "")
-        timestamp = request.headers.get("x-retell-timestamp", "")
-        verify_retell_hmac(body, signature, timestamp)
+        verify_retell_hmac(body, signature)
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
-    payload = RetellToolCallRequest.model_validate_json(body)
+    payload = _normalize_tool_payload(body)
     tenant_id = _extract_tenant_id(payload)
     phone = payload.args.get("phone_number", payload.args.get("phone", ""))
 
@@ -141,12 +158,11 @@ async def handle_create_callback(request: Request) -> JSONResponse:
     try:
         body = await request.body()
         signature = request.headers.get("x-retell-signature", "")
-        timestamp = request.headers.get("x-retell-timestamp", "")
-        verify_retell_hmac(body, signature, timestamp)
+        verify_retell_hmac(body, signature)
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
-    payload = RetellToolCallRequest.model_validate_json(body)
+    payload = _normalize_tool_payload(body)
     tenant_id = _extract_tenant_id(payload)
     config = _resolve_config(tenant_id)
 
@@ -165,12 +181,11 @@ async def handle_sales_lead_alert(request: Request) -> JSONResponse:
     try:
         body = await request.body()
         signature = request.headers.get("x-retell-signature", "")
-        timestamp = request.headers.get("x-retell-timestamp", "")
-        verify_retell_hmac(body, signature, timestamp)
+        verify_retell_hmac(body, signature)
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
-    payload = RetellToolCallRequest.model_validate_json(body)
+    payload = _normalize_tool_payload(body)
     tenant_id = _extract_tenant_id(payload)
     config = _resolve_config(tenant_id)
 

@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+    monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     from harness.server import app
@@ -22,12 +22,12 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     return TestClient(app)
 
 
-def _sign_body(body: bytes, secret: str = "test-secret") -> tuple[str, str]:
-    """Generate HMAC signature and timestamp for Retell webhook."""
-    timestamp = str(int(time.time()))
-    message = timestamp.encode() + b"." + body
-    signature = hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
-    return signature, timestamp
+def _sign_body(body: bytes, api_key: str = "test-api-key") -> str:
+    """Generate Retell-format combined signature header."""
+    ts_ms = int(time.time() * 1000)
+    message = body + str(ts_ms).encode()
+    digest = hmac.new(api_key.encode(), message, hashlib.sha256).hexdigest()
+    return f"v={ts_ms},d={digest}"
 
 
 class TestLookupCallerEndpoint:
@@ -38,7 +38,7 @@ class TestLookupCallerEndpoint:
             "args": {"phone_number": "+15125550101"},
             "metadata": {"tenant_id": "tenant-test"},
         }).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         with patch("voice.router.lookup_caller", return_value={"found": False, "jobs": [], "calls": [], "bookings": []}):
             response = client.post(
@@ -46,7 +46,6 @@ class TestLookupCallerEndpoint:
                 content=body,
                 headers={
                     "x-retell-signature": sig,
-                    "x-retell-timestamp": ts,
                     "content-type": "application/json",
                 },
             )
@@ -62,14 +61,13 @@ class TestLookupCallerEndpoint:
             "args": {},
             "metadata": {"tenant_id": "tenant-test"},
         }).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         response = client.post(
             "/webhook/retell/lookup_caller",
             content=body,
             headers={
                 "x-retell-signature": sig,
-                "x-retell-timestamp": ts,
                 "content-type": "application/json",
             },
         )
@@ -88,13 +86,37 @@ class TestLookupCallerEndpoint:
             "/webhook/retell/lookup_caller",
             content=body,
             headers={
-                "x-retell-signature": "bad-signature",
-                "x-retell-timestamp": str(int(time.time())),
+                "x-retell-signature": "v=123,d=bad-digest",
                 "content-type": "application/json",
             },
         )
 
         assert response.status_code == 401
+
+    def test_nested_retell_format(self, client: TestClient) -> None:
+        """Retell's current format: { name, args, call: { call_id, metadata } }."""
+        body = json.dumps({
+            "name": "lookup_caller",
+            "args": {"phone_number": "+15125550101"},
+            "call": {
+                "call_id": "ret-004",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.router.lookup_caller", return_value={"found": False, "jobs": [], "calls": [], "bookings": []}):
+            response = client.post(
+                "/webhook/retell/lookup_caller",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        assert "found" in response.json()
 
 
 class TestCreateCallbackEndpoint:
@@ -109,14 +131,13 @@ class TestCreateCallbackEndpoint:
             },
             "metadata": {"tenant_id": "tenant-test"},
         }).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         response = client.post(
             "/webhook/retell/create_callback",
             content=body,
             headers={
                 "x-retell-signature": sig,
-                "x-retell-timestamp": ts,
                 "content-type": "application/json",
             },
         )
@@ -139,14 +160,13 @@ class TestSalesLeadAlertEndpoint:
             },
             "metadata": {"tenant_id": "tenant-test"},
         }).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         response = client.post(
             "/webhook/retell/send_sales_lead_alert",
             content=body,
             headers={
                 "x-retell-signature": sig,
-                "x-retell-timestamp": ts,
                 "content-type": "application/json",
             },
         )

@@ -21,7 +21,7 @@ def _reset_state() -> None:
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+    monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     from harness.server import app
@@ -29,11 +29,12 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     return TestClient(app)
 
 
-def _sign_body(body: bytes, secret: str = "test-secret") -> tuple[str, str]:
-    timestamp = str(int(time.time()))
-    message = timestamp.encode() + b"." + body
-    signature = hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
-    return signature, timestamp
+def _sign_body(body: bytes, api_key: str = "test-api-key") -> str:
+    """Generate Retell-format combined signature header."""
+    ts_ms = int(time.time() * 1000)
+    message = body + str(ts_ms).encode()
+    digest = hmac.new(api_key.encode(), message, hashlib.sha256).hexdigest()
+    return f"v={ts_ms},d={digest}"
 
 
 def _call_ended_payload(
@@ -67,7 +68,7 @@ class TestCallEndedHappyPath:
     def test_returns_200_and_persists_record(self, client: TestClient) -> None:
         payload = _call_ended_payload()
         body = json.dumps(payload).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         with patch("voice.post_call_router._fire_inngest_event") as mock_inngest:
             response = client.post(
@@ -75,7 +76,6 @@ class TestCallEndedHappyPath:
                 content=body,
                 headers={
                     "x-retell-signature": sig,
-                    "x-retell-timestamp": ts,
                     "content-type": "application/json",
                 },
             )
@@ -90,7 +90,7 @@ class TestCallEndedHappyPath:
             transcript="Agent: How can I help? User: Hi my name is Jane Doe. My heater stopped working. I live at 456 Elm St, Austin TX 78702."
         )
         body = json.dumps(payload).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         with patch("voice.post_call_router._fire_inngest_event") as mock_inngest:
             response = client.post(
@@ -98,7 +98,6 @@ class TestCallEndedHappyPath:
                 content=body,
                 headers={
                     "x-retell-signature": sig,
-                    "x-retell-timestamp": ts,
                     "content-type": "application/json",
                 },
             )
@@ -111,7 +110,7 @@ class TestCallEndedDuplicate:
         """UNIQUE(tenant_id, call_id) constraint -> skip, return 200."""
         payload = _call_ended_payload()
         body = json.dumps(payload).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         with patch("voice.post_call_router._fire_inngest_event"):
             client.post(
@@ -119,19 +118,17 @@ class TestCallEndedDuplicate:
                 content=body,
                 headers={
                     "x-retell-signature": sig,
-                    "x-retell-timestamp": ts,
                     "content-type": "application/json",
                 },
             )
 
-        sig2, ts2 = _sign_body(body)
+        sig2 = _sign_body(body)
         with patch("voice.post_call_router._fire_inngest_event"):
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
                 headers={
                     "x-retell-signature": sig2,
-                    "x-retell-timestamp": ts2,
                     "content-type": "application/json",
                 },
             )
@@ -148,8 +145,7 @@ class TestCallEndedAuth:
             "/webhook/retell/call-ended",
             content=body,
             headers={
-                "x-retell-signature": "bad",
-                "x-retell-timestamp": str(int(time.time())),
+                "x-retell-signature": "v=123,d=bad-digest",
                 "content-type": "application/json",
             },
         )
@@ -162,7 +158,7 @@ class TestCallEndedEmptyTranscript:
         """Short calls (<20 chars) get default values per spec finding #18."""
         payload = _call_ended_payload(transcript="Hi")
         body = json.dumps(payload).encode()
-        sig, ts = _sign_body(body)
+        sig = _sign_body(body)
 
         with patch("voice.post_call_router._fire_inngest_event"):
             response = client.post(
@@ -170,7 +166,6 @@ class TestCallEndedEmptyTranscript:
                 content=body,
                 headers={
                     "x-retell-signature": sig,
-                    "x-retell-timestamp": ts,
                     "content-type": "application/json",
                 },
             )

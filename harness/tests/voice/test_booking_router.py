@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+    monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     from harness.server import app
