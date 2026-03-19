@@ -23,18 +23,19 @@ def _reset_state() -> None:
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+    monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     from harness.server import app
     return TestClient(app)
 
 
-def _sign_body(body: bytes, secret: str = "test-secret") -> tuple[str, str]:
-    timestamp = str(int(time.time()))
-    message = timestamp.encode() + b"." + body
-    signature = hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
-    return signature, timestamp
+def _sign_body(body: bytes, api_key: str = "test-api-key") -> str:
+    """Generate Retell-format combined signature header."""
+    ts_ms = int(time.time() * 1000)
+    message = body + str(ts_ms).encode()
+    digest = hmac.new(api_key.encode(), message, hashlib.sha256).hexdigest()
+    return f"v={ts_ms},d={digest}"
 
 
 def _realistic_payload(
@@ -82,13 +83,12 @@ def _realistic_payload(
 
 def _post_call_ended(client: TestClient, payload: dict[str, Any]) -> Any:
     body = json.dumps(payload).encode()
-    sig, ts = _sign_body(body)
+    sig = _sign_body(body)
     return client.post(
         "/webhook/retell/call-ended",
         content=body,
         headers={
             "x-retell-signature": sig,
-            "x-retell-timestamp": ts,
             "content-type": "application/json",
         },
     )

@@ -283,14 +283,27 @@ async def handle_call_ended(
 
     body = await request.body()
     signature = request.headers.get("x-retell-signature", "")
-    timestamp = request.headers.get("x-retell-timestamp", "")
     try:
-        verify_retell_hmac(body, signature, timestamp)
+        verify_retell_hmac(body, signature)
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
+    import json as _json
+
     try:
-        payload = RetellCallEndedPayload.model_validate_json(body)
+        raw = _json.loads(body)
+    except (ValueError, _json.JSONDecodeError):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Invalid payload", "details": "Malformed JSON"},
+        )
+
+    # Retell sends nested format: { "event": "call_ended", "call": { ...fields } }
+    if isinstance(raw, dict) and "call" in raw and isinstance(raw["call"], dict):
+        raw = raw["call"]
+
+    try:
+        payload = RetellCallEndedPayload.model_validate(raw)
     except ValidationError as exc:
         return JSONResponse(
             status_code=400,
