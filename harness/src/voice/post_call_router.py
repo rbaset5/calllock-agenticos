@@ -88,11 +88,17 @@ async def handle_call_ended(request: Request) -> JSONResponse:
 
     if not tenant_id:
         # MVP fallback: resolve tenant from the inbound phone number (single-tenant).
-        # Covers calls made before the inbound webhook was re-added (no custom_metadata).
+        # Covers calls made before the inbound webhook is configured (no custom_metadata).
         _PHONE_TO_TENANT: dict[str, str] = {
             "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
         }
         tenant_id = _PHONE_TO_TENANT.get(payload.to_number or "", "")
+        if tenant_id:
+            logger.warning("post_call.tenant_fallback", extra={
+                "retell_call_id": retell_call_id,
+                "to_number": payload.to_number,
+                "tenant_id": tenant_id,
+            })
 
     if not tenant_id:
         logger.error("post_call.missing_tenant_id", extra={"retell_call_id": retell_call_id})

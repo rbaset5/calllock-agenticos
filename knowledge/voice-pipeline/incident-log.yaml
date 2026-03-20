@@ -1,0 +1,65 @@
+# CallLock Incident Log
+# Each entry records what broke, why, and what was done to prevent recurrence.
+# This file grows after every fix — it is the "memory" of the system.
+version: "1.0"
+incidents:
+
+  - id: "inc-20260319-001"
+    date: "2026-03-19"
+    layer: "infra"
+    severity: "critical"
+    what_broke: "Phone calls not connecting — Retell webhook timed out"
+    root_cause: "Render cold start exceeded Retell's webhook timeout window"
+    fix: "Added keep-alive cron job to prevent Render from sleeping"
+    prevention:
+      smoke_test_added: true
+      golden_set_added: false
+      notes: "Check 1 in smoke-test.sh catches this (health endpoint timeout)"
+
+  - id: "inc-20260319-002"
+    date: "2026-03-19"
+    layer: "backend"
+    severity: "critical"
+    what_broke: "All inbound calls rejected with 401"
+    root_cause: "HMAC signature format changed from raw hex to v=ts,d=hex — auth.py expected old format"
+    fix: "Updated auth.py to parse v=timestamp,d=digest format"
+    prevention:
+      smoke_test_added: true
+      golden_set_added: false
+      notes: "Check 2 in smoke-test.sh sends a real HMAC-signed request"
+
+  - id: "inc-20260319-003"
+    date: "2026-03-19"
+    layer: "infra"
+    severity: "critical"
+    what_broke: "Post-call webhook returning 500"
+    root_cause: "RETELL_API_KEY env var missing on Render after redeployment"
+    fix: "Added RETELL_API_KEY to Render environment variables"
+    prevention:
+      smoke_test_added: true
+      golden_set_added: false
+      notes: "Check 4 in smoke-test.sh catches 500 on post-call endpoint"
+
+  - id: "inc-20260319-004"
+    date: "2026-03-19"
+    layer: "app"
+    severity: "moderate"
+    what_broke: "Vercel app crashed on load"
+    root_cause: "Invalid/encrypted Supabase URL in Vercel environment variables"
+    fix: "Removed and re-added SUPABASE_URL with correct unencrypted value"
+    prevention:
+      smoke_test_added: true
+      golden_set_added: false
+      notes: "Check 5 in smoke-test.sh verifies Supabase connectivity"
+
+  - id: "inc-20260319-005"
+    date: "2026-03-19"
+    layer: "voice"
+    severity: "moderate"
+    what_broke: "Booking and lookup tools failing during calls"
+    root_cause: "Retell agent tool URLs still pointed to old Vercel deployment after migration"
+    fix: "Updated all tool endpoint URLs in Retell agent config via API"
+    prevention:
+      smoke_test_added: true
+      golden_set_added: false
+      notes: "Check 3 in smoke-test.sh validates agent tool URLs against known domains"
