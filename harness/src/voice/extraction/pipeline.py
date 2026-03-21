@@ -70,16 +70,33 @@ def _extract_from_tool_calls(raw_payload: Mapping[str, Any]) -> dict[str, Any]:
     are not configured, this is the only source of structured data.
     """
     extracted: dict[str, Any] = {}
-    # Prefer tool_call_results (contains both args and results)
-    tool_calls = raw_payload.get("tool_call_results") or []
+    import json as _json
+    # Primary source: transcript_with_tool_calls (has full args as JSON strings)
+    # Fallback: tool_call_results / tool_calls (often has empty args in Retell v2)
+    tool_calls = raw_payload.get("transcript_with_tool_calls") or []
+    if not any(
+        tc.get("role") in ("tool_call_invocation", "tool_call_result")
+        for tc in tool_calls
+    ):
+        tool_calls = raw_payload.get("tool_call_results") or raw_payload.get("tool_calls") or []
     for tc in tool_calls:
-        args = tc.get("args") or tc.get("arguments") or tc.get("input") or {}
+        # Skip transcript entries (only process tool calls)
+        role = tc.get("role", "")
+        if role and role not in ("tool_call_invocation", "tool_call_result"):
+            continue
+        args = tc.get("arguments") or tc.get("args") or tc.get("input") or {}
         if isinstance(args, str):
             try:
-                import json
-                args = json.loads(args)
+                args = _json.loads(args)
             except Exception:
                 continue
+        # Also check result content for booking confirmations
+        content = tc.get("content") or tc.get("result") or {}
+        if isinstance(content, str):
+            try:
+                content = _json.loads(content)
+            except Exception:
+                content = {}
         if not isinstance(args, dict):
             continue
         # Merge — later tool calls overwrite earlier ones (more refined data)
@@ -92,6 +109,9 @@ def _extract_from_tool_calls(raw_payload: Mapping[str, Any]) -> dict[str, Any]:
         # book_service confirmation means appointment was booked
         tool_name = tc.get("tool_name") or tc.get("name", "")
         if tool_name == "book_service":
+            extracted["appointment_booked"] = True
+        # Check result content for booking confirmation
+        if isinstance(content, dict) and content.get("booking_confirmed"):
             extracted["appointment_booked"] = True
     # Map issue_description → problem_description
     if "issue_description" in extracted and "problem_description" not in extracted:

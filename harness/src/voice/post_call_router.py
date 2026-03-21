@@ -218,7 +218,10 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
         )
         extraction = {"extraction_status": "partial"}
 
-    booking_id = _parse_booking_id(raw_payload.get("tool_call_results") or [])
+    # Try transcript_with_tool_calls first (has full results), fall back to tool_call_results
+    booking_id = _parse_booking_id(raw_payload.get("transcript_with_tool_calls") or [])
+    if not booking_id:
+        booking_id = _parse_booking_id(raw_payload.get("tool_call_results") or [])
     callback_scheduled = extraction.get("end_call_reason") == "callback_scheduled"
     duration_seconds = int(raw_payload.get("duration_ms") or 0) // 1000
     end_call_reason = extraction.get("end_call_reason") or "agent_hangup"
