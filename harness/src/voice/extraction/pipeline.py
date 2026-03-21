@@ -61,6 +61,44 @@ def _minimal_scorecard() -> dict[str, Any]:
     }
 
 
+def _extract_from_tool_calls(raw_payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Extract structured data from Retell tool call arguments.
+
+    The Retell agent collects customer_name, service_address, etc. during
+    conversation and passes them as arguments to tools like book_service,
+    check_availability, and create_callback_request. When dynamic_variables
+    are not configured, this is the only source of structured data.
+    """
+    extracted: dict[str, Any] = {}
+    # Prefer tool_call_results (contains both args and results)
+    tool_calls = raw_payload.get("tool_call_results") or []
+    for tc in tool_calls:
+        args = tc.get("args") or tc.get("arguments") or tc.get("input") or {}
+        if isinstance(args, str):
+            try:
+                import json
+                args = json.loads(args)
+            except Exception:
+                continue
+        if not isinstance(args, dict):
+            continue
+        # Merge — later tool calls overwrite earlier ones (more refined data)
+        for key in ("customer_name", "service_address", "issue_description",
+                     "urgency_tier", "customer_phone", "callback_type",
+                     "current_equipment", "equipment_age", "notes"):
+            val = args.get(key)
+            if val and isinstance(val, str) and val.strip():
+                extracted[key] = val.strip()
+        # book_service confirmation means appointment was booked
+        tool_name = tc.get("tool_name") or tc.get("name", "")
+        if tool_name == "book_service":
+            extracted["appointment_booked"] = True
+    # Map issue_description → problem_description
+    if "issue_description" in extracted and "problem_description" not in extracted:
+        extracted["problem_description"] = extracted.pop("issue_description")
+    return extracted
+
+
 def _build_state(transcript: str, raw_payload: Mapping[str, Any]) -> dict[str, Any]:
     dynamic_variables = _get_value(
         raw_payload,
@@ -68,20 +106,59 @@ def _build_state(transcript: str, raw_payload: Mapping[str, Any]) -> dict[str, A
         "dynamic_variables",
     ) or {}
 
+    # Also extract from tool call arguments (fallback when dynamic_variables empty)
+    tool_data = _extract_from_tool_calls(raw_payload)
+
+    def _first(*values: Any) -> Any:
+        for v in values:
+            if v:
+                return v
+        return None
+
     return {
         "call_id": _get_value(raw_payload, "call_id", "callId"),
-        "customer_phone": _get_value(raw_payload, "from_number", "phone_number", "customer_phone"),
-        "customer_name": _get_value(dynamic_variables, "customer_name"),
-        "service_address": _get_value(dynamic_variables, "service_address"),
-        "problem_description": _get_value(dynamic_variables, "problem_description")
-        or _get_value(raw_payload, "call_summary"),
-        "urgency": _get_value(dynamic_variables, "urgency", "urgency_level", "urgency_tier"),
-        "appointment_booked": _to_bool(_get_value(dynamic_variables, "booking_confirmed", "appointment_booked")),
-        "callback_type": _get_value(dynamic_variables, "callback_type"),
+        "customer_phone": _first(
+            _get_value(raw_payload, "from_number", "phone_number", "customer_phone"),
+            tool_data.get("customer_phone"),
+        ),
+        "customer_name": _first(
+            _get_value(dynamic_variables, "customer_name"),
+            tool_data.get("customer_name"),
+        ),
+        "service_address": _first(
+            _get_value(dynamic_variables, "service_address"),
+            tool_data.get("service_address"),
+        ),
+        "problem_description": _first(
+            _get_value(dynamic_variables, "problem_description"),
+            tool_data.get("problem_description"),
+            _get_value(raw_payload, "call_summary"),
+        ),
+        "urgency": _first(
+            _get_value(dynamic_variables, "urgency", "urgency_level", "urgency_tier"),
+            tool_data.get("urgency_tier"),
+        ),
+        "appointment_booked": _to_bool(
+            _get_value(dynamic_variables, "booking_confirmed", "appointment_booked")
+            or tool_data.get("appointment_booked", False)
+        ),
+        "callback_type": _first(
+            _get_value(dynamic_variables, "callback_type"),
+            tool_data.get("callback_type"),
+        ),
         "property_type": _get_value(dynamic_variables, "property_type"),
-        "equipment_age": _get_value(dynamic_variables, "equipment_age"),
-        "equipment_type": _get_value(dynamic_variables, "equipment_type"),
-        "sales_lead_notes": _get_value(dynamic_variables, "sales_lead_notes"),
+        "equipment_age": _first(
+            _get_value(dynamic_variables, "equipment_age"),
+            tool_data.get("equipment_age"),
+        ),
+        "equipment_type": _first(
+            _get_value(dynamic_variables, "equipment_type"),
+            tool_data.get("current_equipment"),
+        ),
+        "sales_lead_notes": _first(
+            _get_value(dynamic_variables, "sales_lead_notes"),
+            tool_data.get("notes"),
+        ),
         "transcript": transcript,
     }
 
