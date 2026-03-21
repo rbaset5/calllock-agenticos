@@ -224,36 +224,13 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
     end_call_reason = extraction.get("end_call_reason") or "agent_hangup"
     final_extraction = dict(extraction)
 
-    supervisor_payload = _build_supervisor_payload(
-        raw_payload=raw_payload,
-        tenant_id=tenant_id,
-        call_id=call_id,
-        extraction=extraction,
-        booking_id=booking_id,
-        callback_scheduled=callback_scheduled,
-        duration_seconds=duration_seconds,
+    # Supervisor disabled — OOMs and quarantines all extraction data.
+    # Re-enable when memory budget allows or supervisor is optimized.
+    # See: 2026-03-21 — supervisor_failed quarantined a successful 132s call.
+    final_extraction["extraction_status"] = extraction.get(
+        "extraction_status",
+        "complete",
     )
-
-    try:
-        supervisor_result = _run_voice_supervisor(supervisor_payload)
-        guardian_gate = supervisor_result.get("guardian_gate", {})
-        if guardian_gate.get("quarantine"):
-            final_extraction = _merge_quarantine_fields(
-                extraction,
-                list(guardian_gate.get("gate_failures", [])),
-            )
-        else:
-            final_extraction["extraction_status"] = extraction.get(
-                "extraction_status",
-                "complete",
-            )
-    except Exception:
-        logger.error(
-            "supervisor.direct_invoke_failed",
-            extra={"call_id": call_id},
-            exc_info=True,
-        )
-        final_extraction = _merge_quarantine_fields(extraction, ["supervisor_failed"])
 
     try:
         db_repo.update_call_record_extraction(
