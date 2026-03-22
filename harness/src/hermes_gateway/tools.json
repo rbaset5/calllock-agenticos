@@ -1,0 +1,142 @@
+{
+  "tools": [
+    {
+      "name": "dispatch_worker",
+      "description": "Send a task to any worker in the agent roster",
+      "parameters": {
+        "worker_id": {"type": "string", "required": true},
+        "tenant_id": {"type": "string", "required": true},
+        "task_type": {"type": "string", "required": true},
+        "problem_description": {"type": "string", "required": false},
+        "feature_flags": {"type": "object", "required": false}
+      }
+    },
+    {
+      "name": "check_quest_log",
+      "description": "Read pending approval requests",
+      "parameters": {
+        "tenant_id": {"type": "string", "required": false},
+        "status": {"type": "string", "required": false, "default": "pending"}
+      }
+    },
+    {
+      "name": "approve_quest",
+      "description": "Approve a blocked dispatch or quest",
+      "parameters": {
+        "approval_id": {"type": "string", "required": true},
+        "approved_by": {"type": "string", "required": false, "default": "founder"}
+      }
+    },
+    {
+      "name": "promote_skill",
+      "description": "Extract and save a skill from a completed run",
+      "parameters": {
+        "candidate_id": {"type": "string", "required": true},
+        "skill_title": {"type": "string", "required": true},
+        "skill_body": {"type": "string", "required": true},
+        "universal": {"type": "boolean", "required": false, "default": true}
+      }
+    },
+    {
+      "name": "dismiss_skill_candidate",
+      "description": "Mark a skill candidate as reviewed and dismissed",
+      "parameters": {
+        "candidate_id": {"type": "string", "required": true},
+        "reason": {"type": "string", "required": false}
+      }
+    },
+    {
+      "name": "read_daily_memo",
+      "description": "Get aggregated status across all agents",
+      "parameters": {
+        "tenant_id": {"type": "string", "required": true}
+      }
+    },
+    {
+      "name": "query_knowledge",
+      "description": "Read from the knowledge graph",
+      "parameters": {
+        "path": {"type": "string", "required": true, "description": "Path relative to knowledge/ (e.g., 'company/mission')"}
+      }
+    },
+    {
+      "name": "check_agent_status",
+      "description": "Check current state of agents (idle/active/queued)",
+      "parameters": {
+        "worker_id": {"type": "string", "required": false}
+      }
+    },
+    {
+      "name": "read_audit_log",
+      "description": "Read recent command audit log entries",
+      "parameters": {
+        "tenant_id": {"type": "string", "required": false},
+        "action_type": {"type": "string", "required": false},
+        "limit": {"type": "integer", "required": false, "default": 20}
+      }
+    },
+    {
+      "name": "trigger_voice_eval",
+      "description": "Kick off a voice pipeline evaluation run",
+      "parameters": {
+        "tenant_id": {"type": "string", "required": true}
+      }
+    },
+    {
+      "name": "decompose_problem",
+      "description": "Analyze raw problem input — checks prior decisions and errors, detects domain, recommends next action. Always run this first when the founder posts a problem.",
+      "parameters": {
+        "raw_input": {"type": "string", "required": true, "description": "The raw problem text from the founder"}
+      }
+    },
+    {
+      "name": "check_decisions",
+      "description": "Search decisions index for prior decisions matching a query",
+      "parameters": {
+        "query": {"type": "string", "required": true},
+        "domain": {"type": "string", "required": false, "enum": ["voice-pipeline", "product", "architecture"]}
+      }
+    },
+    {
+      "name": "create_decision",
+      "description": "Write a new decision record to the repo. Updates the index automatically.",
+      "parameters": {
+        "title": {"type": "string", "required": true},
+        "domain": {"type": "string", "required": true, "enum": ["voice-pipeline", "product", "architecture"]},
+        "context": {"type": "string", "required": true, "description": "What triggered this decision"},
+        "options": {"type": "array", "required": true, "description": "List of {name, description} objects"},
+        "decision": {"type": "string", "required": true, "description": "What we chose and why"},
+        "consequences": {"type": "string", "required": true}
+      }
+    },
+    {
+      "name": "check_errors",
+      "description": "Search errors index for known error patterns matching a query",
+      "parameters": {
+        "query": {"type": "string", "required": true},
+        "domain": {"type": "string", "required": false, "enum": ["voice-pipeline", "product", "architecture"]}
+      }
+    },
+    {
+      "name": "log_error",
+      "description": "Create or update an error pattern. Bumps occurrences if matching error exists. Alerts when pattern hits 3+ occurrences (extract rule threshold).",
+      "parameters": {
+        "title": {"type": "string", "required": true},
+        "domain": {"type": "string", "required": true, "enum": ["voice-pipeline", "product", "architecture"]},
+        "symptoms": {"type": "string", "required": true},
+        "root_cause": {"type": "string", "required": false},
+        "fix": {"type": "string", "required": false},
+        "pattern_notes": {"type": "string", "required": false}
+      }
+    },
+    {
+      "name": "update_knowledge",
+      "description": "Write or append to a knowledge file",
+      "parameters": {
+        "path": {"type": "string", "required": true, "description": "Path relative to knowledge/ (e.g., 'company/mission.md')"},
+        "content": {"type": "string", "required": true},
+        "append": {"type": "boolean", "required": false, "default": false}
+      }
+    }
+  ]
+}
