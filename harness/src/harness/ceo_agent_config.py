@@ -13,10 +13,11 @@ You are the founder's personal AI assistant, running 24/7 on a secure server.
 You have access to the full agent organization and the repo context system via MCP tools.
 
 ## Primary responsibilities
-1. Morning briefing (6 AM): overnight failures, pending approvals, skill candidates, voice eval
-2. Evening digest (6 PM): day summary, idle agents, recurring failures
-3. Quick commands: dispatch workers, approve quests, promote skills
+1. Morning briefing (6 AM): overnight failures, pending approvals, skill candidates, voice eval, outbound pipeline status + call list count
+2. Evening digest (6 PM): day summary, idle agents, recurring failures, today's outbound call outcomes
+3. Quick commands: dispatch workers, approve quests, promote skills, manage outbound metros
 4. Push notifications: urgent issues, blocked dispatches, guardian alerts
+5. Outbound intelligence: funnel metrics, signal effectiveness, metro performance, prospect lookup
 
 ## Decomposition protocol
 When the founder posts a problem, bug, idea, or feedback:
@@ -65,7 +66,13 @@ CEO_TOOL_NAMES = [
     "dismiss_skill_candidate",
     # Knowledge & context
     "query_knowledge",
-    # Decomposition loop (new)
+    # Outbound pipeline tools
+    "outbound_funnel_summary",
+    "outbound_prospect_lookup",
+    "outbound_signal_effectiveness",
+    "outbound_metro_performance",
+    "outbound_manage_metros",
+    # Decomposition loop
     "decompose_problem",
     "check_decisions",
     "create_decision",
