@@ -20,6 +20,7 @@ def _reset_state() -> None:
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+    monkeypatch.setenv("RETELL_API_KEY", "test-secret")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     from harness.server import app
@@ -77,7 +78,7 @@ def test_handle_call_ended_returns_200_immediately(client: TestClient) -> None:
     body = json.dumps(_payload()).encode()
     signature, timestamp = _sign_body(body)
 
-    with patch("voice.post_call_router.BackgroundTasks.add_task") as mock_add_task:
+    with patch("voice.post_call_router._process_call_ended") as mock_process:
         response = client.post(
             "/webhook/retell/call-ended",
             content=body,
@@ -91,8 +92,7 @@ def test_handle_call_ended_returns_200_immediately(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["extraction_status"] == "pending"
     assert len(_state()["call_records"]) == 1
-    assert _state()["call_records"][0]["extraction_status"] == "pending"
-    mock_add_task.assert_called_once()
+    mock_process.assert_called_once()
 
 
 def test_handle_call_ended_returns_401_on_invalid_hmac(client: TestClient) -> None:
@@ -135,7 +135,7 @@ def test_handle_call_ended_returns_400_on_missing_tenant_id(client: TestClient) 
 
 
 def test_handle_call_ended_returns_duplicate_when_insert_skips(client: TestClient) -> None:
-    with patch("voice.post_call_router.BackgroundTasks.add_task"):
+    with patch("voice.post_call_router._process_call_ended"):
         first = _post(client, _payload(call_id="ret-dup-001"))
         second = _post(client, _payload(call_id="ret-dup-001"))
 

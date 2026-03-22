@@ -70,7 +70,7 @@ class TestCallEndedHappyPath:
         body = json.dumps(payload).encode()
         sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task") as mock_add_task:
+        with patch("voice.post_call_router._process_call_ended") as mock_add_task:
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -94,7 +94,7 @@ class TestCallEndedHappyPath:
         body = json.dumps(payload).encode()
         sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
+        with patch("voice.post_call_router._process_call_ended"):
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -114,7 +114,7 @@ class TestCallEndedDuplicate:
         body = json.dumps(payload).encode()
         sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
+        with patch("voice.post_call_router._process_call_ended"):
             client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -125,7 +125,7 @@ class TestCallEndedDuplicate:
             )
 
         sig2 = _sign_body(body)
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
+        with patch("voice.post_call_router._process_call_ended"):
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,
@@ -162,7 +162,7 @@ class TestCallEndedEmptyTranscript:
         body = json.dumps(payload).encode()
         sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
+        with patch("voice.post_call_router._process_call_ended"):
             response = client.post(
                 "/webhook/retell/call-ended",
                 content=body,

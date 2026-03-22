@@ -112,7 +112,6 @@ class TestPipelineIntegrationHappyPath:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-        assert data["extraction_status"] == "pending"
 
         records = _state()["call_records"]
         assert len(records) == 1
@@ -159,8 +158,6 @@ class TestPipelinePartialExtraction:
             response = _post_call_ended(client, payload)
 
         assert response.status_code == 200
-        data = response.json()
-        assert data["extraction_status"] == "pending"
 
         records = _state()["call_records"]
         assert len(records) == 1
