@@ -190,6 +190,7 @@ def run_extraction(transcript: str | None, raw_payload: Mapping[str, Any] | None
     payload = dict(raw_payload or {})
     transcript_text = transcript if transcript is not None else str(_get_value(payload, "transcript") or "")
     state = _build_state(transcript_text, payload)
+    tool_data = _extract_from_tool_calls(payload)
     tag_categories = _empty_tag_categories()
     failed_steps: list[str] = []
     minimal_transcript = len(transcript_text.strip()) < 20
@@ -230,19 +231,25 @@ def run_extraction(transcript: str | None, raw_payload: Mapping[str, Any] | None
             return
         on_success(value)
 
-    run_step(
-        "customer_name",
-        lambda: extract_customer_name(transcript_text),
-        lambda value: (
-            result.__setitem__("customer_name", value or result["customer_name"]),
-            state.__setitem__("customer_name", value or state.get("customer_name")),
-        ),
-    )
-    run_step(
-        "service_address",
-        lambda: extract_address_from_transcript(transcript_text),
-        lambda value: (
-            result.__setitem__("service_address", value or result["service_address"]),
+    # Only run transcript NER if tool_data didn't provide a customer_name.
+    # Tool call args (from the agent's state machine) are more reliable than
+    # transcript parsing, which often picks up garbled speech fragments.
+    if not tool_data.get("customer_name"):
+        run_step(
+            "customer_name",
+            lambda: extract_customer_name(transcript_text),
+            lambda value: (
+                result.__setitem__("customer_name", value or result["customer_name"]),
+                state.__setitem__("customer_name", value or state.get("customer_name")),
+            ),
+        )
+    # Same for service_address — prefer tool_data over transcript parsing
+    if not tool_data.get("service_address"):
+        run_step(
+            "service_address",
+            lambda: extract_address_from_transcript(transcript_text),
+            lambda value: (
+                result.__setitem__("service_address", value or result["service_address"]),
             state.__setitem__("service_address", value or state.get("service_address")),
         ),
     )
