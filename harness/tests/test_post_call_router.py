@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import json
 import time
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,8 +19,7 @@ def _reset_state() -> None:
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
-    monkeypatch.setenv("RETELL_API_KEY", "test-secret")
+    monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     from harness.server import app
@@ -28,11 +27,12 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     return TestClient(app)
 
 
-def _sign_body(body: bytes, secret: str = "test-secret") -> tuple[str, str]:
-    timestamp = str(int(time.time()))
-    message = timestamp.encode() + b"." + body
-    signature = hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
-    return signature, timestamp
+def _sign_body(body: bytes, api_key: str = "test-api-key") -> str:
+    """Generate Retell-format combined signature header: v=<ts_ms>,d=<digest>."""
+    ts_ms = int(time.time() * 1000)
+    message = body + str(ts_ms).encode()
+    digest = hmac.new(api_key.encode(), message, hashlib.sha256).hexdigest()
+    return f"v={ts_ms},d={digest}"
 
 
 def _payload(
@@ -60,15 +60,14 @@ def _payload(
     }
 
 
-def _post(client: TestClient, payload: dict[str, object]) -> TestClient:
+def _post(client: TestClient, payload: dict[str, object]):
     body = json.dumps(payload).encode()
-    signature, timestamp = _sign_body(body)
+    sig = _sign_body(body)
     return client.post(
         "/webhook/retell/call-ended",
         content=body,
         headers={
-            "x-retell-signature": signature,
-            "x-retell-timestamp": timestamp,
+            "x-retell-signature": sig,
             "content-type": "application/json",
         },
     )
@@ -76,23 +75,23 @@ def _post(client: TestClient, payload: dict[str, object]) -> TestClient:
 
 def test_handle_call_ended_returns_200_immediately(client: TestClient) -> None:
     body = json.dumps(_payload()).encode()
-    signature, timestamp = _sign_body(body)
+    sig = _sign_body(body)
 
-    with patch("voice.post_call_router._process_call_ended") as mock_process:
+    # Patch must stay active through background task execution in TestClient
+    with patch("voice.post_call_router._process_call_ended", new_callable=AsyncMock) as mock_process:
         response = client.post(
             "/webhook/retell/call-ended",
             content=body,
             headers={
-                "x-retell-signature": signature,
-                "x-retell-timestamp": timestamp,
+                "x-retell-signature": sig,
                 "content-type": "application/json",
             },
         )
 
-    assert response.status_code == 200
-    assert response.json()["extraction_status"] == "pending"
-    assert len(_state()["call_records"]) == 1
-    mock_process.assert_called_once()
+        assert response.status_code == 200
+        assert response.json()["extraction_status"] == "pending"
+        assert len(_state()["call_records"]) == 1
+        mock_process.assert_called_once()
 
 
 def test_handle_call_ended_returns_401_on_invalid_hmac(client: TestClient) -> None:
@@ -101,7 +100,6 @@ def test_handle_call_ended_returns_401_on_invalid_hmac(client: TestClient) -> No
         content=json.dumps(_payload()).encode(),
         headers={
             "x-retell-signature": "bad",
-            "x-retell-timestamp": str(int(time.time())),
             "content-type": "application/json",
         },
     )
@@ -111,14 +109,13 @@ def test_handle_call_ended_returns_401_on_invalid_hmac(client: TestClient) -> No
 
 def test_handle_call_ended_returns_400_on_malformed_payload(client: TestClient) -> None:
     body = b'{"call_id":'
-    signature, timestamp = _sign_body(body)
+    sig = _sign_body(body)
 
     response = client.post(
         "/webhook/retell/call-ended",
         content=body,
         headers={
-            "x-retell-signature": signature,
-            "x-retell-timestamp": timestamp,
+            "x-retell-signature": sig,
             "content-type": "application/json",
         },
     )
@@ -135,10 +132,10 @@ def test_handle_call_ended_returns_400_on_missing_tenant_id(client: TestClient) 
 
 
 def test_handle_call_ended_returns_duplicate_when_insert_skips(client: TestClient) -> None:
-    with patch("voice.post_call_router._process_call_ended"):
+    with patch("voice.post_call_router._process_call_ended", new_callable=AsyncMock):
         first = _post(client, _payload(call_id="ret-dup-001"))
         second = _post(client, _payload(call_id="ret-dup-001"))
 
-    assert first.status_code == 200
-    assert second.status_code == 200
-    assert second.json()["status"] == "duplicate"
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert second.json()["status"] == "duplicate"
