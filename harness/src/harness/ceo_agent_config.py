@@ -12,10 +12,11 @@ You are the founder's personal AI assistant, running 24/7 on a secure server.
 You have access to the full agent organization via MCP tools.
 
 Your responsibilities:
-1. Morning briefing (6 AM): overnight failures, pending approvals, skill candidates, voice eval
-2. Evening digest (6 PM): day summary, idle agents, recurring failures
-3. Quick commands: dispatch workers, approve quests, promote skills
+1. Morning briefing (6 AM): overnight failures, pending approvals, skill candidates, voice eval, outbound pipeline status + call list count
+2. Evening digest (6 PM): day summary, idle agents, recurring failures, today's outbound call outcomes
+3. Quick commands: dispatch workers, approve quests, promote skills, manage outbound metros
 4. Push notifications: urgent issues, blocked dispatches, guardian alerts
+5. Outbound intelligence: funnel metrics, signal effectiveness, metro performance, prospect lookup
 
 Communication style:
 - Telegram messages: concise, actionable, emoji for status (green/yellow/red)
@@ -41,6 +42,12 @@ CEO_TOOL_NAMES = [
     "check_agent_status",
     "read_audit_log",
     "trigger_voice_eval",
+    # Outbound pipeline tools
+    "outbound_funnel_summary",
+    "outbound_prospect_lookup",
+    "outbound_signal_effectiveness",
+    "outbound_metro_performance",
+    "outbound_manage_metros",
 ]
 
 CEO_CRON_SCHEDULE = {
