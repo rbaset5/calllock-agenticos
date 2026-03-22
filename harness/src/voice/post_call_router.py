@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
@@ -323,7 +323,6 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
 @post_call_router.post("/call-ended")
 async def handle_call_ended(
     request: Request,
-    background_tasks: BackgroundTasks,
 ) -> JSONResponse:
     """Handle Retell call-ended webhook."""
 
@@ -422,13 +421,66 @@ async def handle_call_ended(
             content={"status": "duplicate", "retell_call_id": retell_call_id}
         )
 
-    background_tasks.add_task(_process_call_ended, raw_payload)
+    # Run enrichment + extraction synchronously (not as background task).
+    # Background tasks swallow errors silently — synchronous ensures we see failures.
+    try:
+        full_call = _fetch_full_call(call_id)
+        enriched_keys: list[str] = []
+        if full_call:
+            for key in ("transcript_with_tool_calls", "tool_calls"):
+                if full_call.get(key) and not raw_payload.get(key):
+                    raw_payload[key] = full_call[key]
+                    enriched_keys.append(key)
+            if full_call.get("duration_ms") and not raw_payload.get("duration_ms"):
+                raw_payload["duration_ms"] = full_call["duration_ms"]
+                enriched_keys.append("duration_ms")
+            logger.info(
+                "retell.fetch_call_success",
+                extra={"call_id": call_id, "enriched_keys": enriched_keys},
+            )
+
+        extraction = run_extraction(raw_payload.get("transcript"), raw_payload)
+
+        booking_id = _parse_booking_id(raw_payload.get("transcript_with_tool_calls") or [])
+        if not booking_id:
+            booking_id = _parse_booking_id(raw_payload.get("tool_call_results") or [])
+        callback_scheduled = extraction.get("end_call_reason") == "callback_scheduled"
+        duration_seconds = int(raw_payload.get("duration_ms") or 0) // 1000
+        end_call_reason = extraction.get("end_call_reason") or "agent_hangup"
+
+        db_repo.update_call_record_extraction(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            extracted_fields=extraction,
+            end_call_reason=end_call_reason,
+            booking_id=booking_id,
+            callback_scheduled=callback_scheduled,
+            call_duration_seconds=duration_seconds,
+            call_recording_url=raw_payload.get("recording_url"),
+        )
+
+        if enriched_keys:
+            try:
+                db_repo.update_raw_payload(
+                    tenant_id=tenant_id,
+                    call_id=call_id,
+                    raw_payload=raw_payload,
+                )
+            except Exception:
+                logger.warning("post_call.update_raw_payload_failed",
+                               extra={"call_id": call_id}, exc_info=True)
+
+        extraction_status = extraction.get("extraction_status", "complete")
+    except Exception:
+        logger.error("post_call.sync_processing_failed",
+                     extra={"call_id": call_id}, exc_info=True)
+        extraction_status = "pending"
 
     return JSONResponse(
         content={
             "status": "ok",
             "call_id": call_id,
-            "extraction_status": "pending",
+            "extraction_status": extraction_status,
         }
     )
 

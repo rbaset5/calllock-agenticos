@@ -9,6 +9,11 @@ import {
   discordSkillCandidate,
   discordVerification,
 } from "./functions/discord-projector.js";
+import {
+  discordOutboundDiscovery,
+  discordOutboundError,
+  discordOutboundTestResults,
+} from "./functions/outbound-projector.js";
 import { processInboundMessage } from "./functions/inbound/process-inbound-message.js";
 import { pollInbound } from "./functions/inbound/poll-inbound.js";
 import { growthAdvisorWeekly } from "./functions/growth/growth-advisor-weekly.js";
@@ -53,4 +58,7 @@ export const functions = [
   discordVerification,
   discordSkillCandidate,
   discordHealthCheck,
+  discordOutboundDiscovery,
+  discordOutboundTestResults,
+  discordOutboundError,
 ];
