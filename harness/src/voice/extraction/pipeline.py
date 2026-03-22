@@ -101,8 +101,9 @@ def _extract_from_tool_calls(raw_payload: Mapping[str, Any]) -> dict[str, Any]:
             continue
         # Merge — later tool calls overwrite earlier ones (more refined data)
         for key in ("customer_name", "service_address", "issue_description",
-                     "urgency_tier", "customer_phone", "callback_type",
-                     "current_equipment", "equipment_age", "notes"):
+                     "problem_description", "urgency_tier", "customer_phone",
+                     "callback_type", "preferred_time", "lead_type",
+                     "current_equipment", "equipment_type", "equipment_age", "notes"):
             val = args.get(key)
             if val and isinstance(val, str) and val.strip():
                 extracted[key] = val.strip()
