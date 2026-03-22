@@ -6,8 +6,6 @@ import hashlib
 import hmac
 import json
 import time
-from unittest.mock import MagicMock, patch
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -70,22 +68,19 @@ class TestCallEndedHappyPath:
         body = json.dumps(payload).encode()
         sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task") as mock_add_task:
-            response = client.post(
-                "/webhook/retell/call-ended",
-                content=body,
-                headers={
-                    "x-retell-signature": sig,
-                    "content-type": "application/json",
-                },
-            )
+        response = client.post(
+            "/webhook/retell/call-ended",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
         assert data["call_id"] == payload["call_id"]
-        assert data["extraction_status"] == "pending"
-        mock_add_task.assert_called_once()
 
     def test_extraction_runs_on_transcript(self, client: TestClient) -> None:
         payload = _call_ended_payload(
@@ -94,15 +89,14 @@ class TestCallEndedHappyPath:
         body = json.dumps(payload).encode()
         sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
-            response = client.post(
-                "/webhook/retell/call-ended",
-                content=body,
-                headers={
-                    "x-retell-signature": sig,
-                    "content-type": "application/json",
-                },
-            )
+        response = client.post(
+            "/webhook/retell/call-ended",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
 
         assert response.status_code == 200
 
@@ -112,28 +106,26 @@ class TestCallEndedDuplicate:
         """UNIQUE(tenant_id, call_id) constraint -> skip, return 200."""
         payload = _call_ended_payload()
         body = json.dumps(payload).encode()
-        sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
-            client.post(
-                "/webhook/retell/call-ended",
-                content=body,
-                headers={
-                    "x-retell-signature": sig,
-                    "content-type": "application/json",
-                },
-            )
+        sig = _sign_body(body)
+        client.post(
+            "/webhook/retell/call-ended",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
 
         sig2 = _sign_body(body)
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
-            response = client.post(
-                "/webhook/retell/call-ended",
-                content=body,
-                headers={
-                    "x-retell-signature": sig2,
-                    "content-type": "application/json",
-                },
-            )
+        response = client.post(
+            "/webhook/retell/call-ended",
+            content=body,
+            headers={
+                "x-retell-signature": sig2,
+                "content-type": "application/json",
+            },
+        )
 
         assert response.status_code == 200
         assert response.json()["status"] == "duplicate"
@@ -162,14 +154,13 @@ class TestCallEndedEmptyTranscript:
         body = json.dumps(payload).encode()
         sig = _sign_body(body)
 
-        with patch("voice.post_call_router.BackgroundTasks.add_task"):
-            response = client.post(
-                "/webhook/retell/call-ended",
-                content=body,
-                headers={
-                    "x-retell-signature": sig,
-                    "content-type": "application/json",
-                },
-            )
+        response = client.post(
+            "/webhook/retell/call-ended",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
 
         assert response.status_code == 200

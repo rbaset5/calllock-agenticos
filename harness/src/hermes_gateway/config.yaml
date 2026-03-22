@@ -1,0 +1,84 @@
+# Hermes Agent Gateway Configuration
+# https://github.com/NousResearch/hermes-agent
+#
+# This configures the hermes-agent gateway to connect Discord (primary)
+# and Telegram (mobile fallback) to the CallLock CEO agent.
+#
+# Setup:
+#   1. pip install hermes-agent (or uv add hermes-agent)
+#   2. hermes gateway setup (interactive platform config)
+#   3. Set env vars: DISCORD_BOT_TOKEN, TELEGRAM_BOT_TOKEN
+#   4. hermes gateway start
+#
+# The gateway reads this config and the MCP tool definitions in tools.json.
+# Tools map to functions in harness/src/harness/ceo_tools.py and context_tools.py.
+
+agent:
+  name: "CallLock CEO Agent"
+  model: "anthropic/claude-opus-4-6"
+  max_iterations: 20
+  system_prompt_file: "./system_prompt.md"
+
+  # Hermes-specific settings
+  memory:
+    enabled: true
+    # Persistent memory across sessions — the agent remembers
+    # conversations, but the repo (decisions/, errors/, knowledge/)
+    # is the authoritative long-term memory.
+    reinforcement_interval: "24h"
+
+  skills:
+    enabled: false
+    # Skills are human-gated via the skill promotion pipeline,
+    # not auto-created by Hermes. The agent can promote candidates
+    # via the promote_skill tool, but cannot create skills directly.
+
+gateway:
+  platforms:
+    discord:
+      enabled: true
+      # Token set via DISCORD_BOT_TOKEN env var
+      # Channels the bot watches:
+      #   #incoming  — founder posts problems/ideas
+      #   #decisions — bot posts decision summaries
+      #   #errors    — bot posts error patterns
+      #   DM         — private commands
+      guild_id: "1485324786455543891"
+      channels:
+        incoming: "1485326287525646527"
+        decisions: "1485326289505226886"
+        errors: "1485326290952388699"
+        outbound_calls: "1485326291983925529"
+        outbound_feed: "1485326292801949799"
+        skills: "1485326294576005267"
+        health_checks: "1485326296262250588"
+
+    telegram:
+      enabled: true
+      # Token set via TELEGRAM_BOT_TOKEN env var
+      # Mobile fallback — same tools, same agent
+
+  # Cross-platform conversation continuity
+  # Conversations persist across platform switches
+  conversation_continuity: true
+
+tools:
+  # MCP tools exposed to the agent
+  # These map to Python functions in ceo_tools.py and context_tools.py
+  source: "./tools.json"
+
+cron:
+  morning_briefing:
+    schedule: "0 6 * * *"
+    description: "Summarize overnight activity"
+    deliver_to: ["discord:incoming", "telegram"]
+
+  evening_digest:
+    schedule: "0 18 * * *"
+    description: "Day summary and status"
+    deliver_to: ["discord:incoming", "telegram"]
+
+  weekly_retro:
+    schedule: "0 9 * * 0"
+    description: "Weekly analysis and trends"
+    deliver_to: ["discord:incoming"]

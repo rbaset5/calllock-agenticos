@@ -5,7 +5,9 @@ graph: outbound
 owner: rashid
 last_reviewed: 2026-03-22
 trust_level: authoritative
-progressive_disclosure: foundational
+progressive_disclosure:
+  summary_tokens: 80
+  full_tokens: 200
 ---
 
 # Target Metros
