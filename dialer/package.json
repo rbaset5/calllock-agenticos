@@ -1,0 +1,14 @@
+{
+  "name": "calllock-call-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "twilio": "^5.4.0"
+  }
+}
