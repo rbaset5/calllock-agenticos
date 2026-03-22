@@ -1722,6 +1722,19 @@ def update_call_record_extraction(
     raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
 
 
+def update_raw_payload(
+    tenant_id: str,
+    call_id: str,
+    raw_payload: dict[str, Any],
+) -> None:
+    """Persist enriched raw_retell_payload after Retell API fetch."""
+    for row in _state()["call_records"]:
+        if row["tenant_id"] == tenant_id and row["call_id"] == call_id:
+            row["raw_retell_payload"] = deepcopy(raw_payload)
+            row["updated_at"] = datetime.now(timezone.utc).isoformat()
+            return
+
+
 def get_caller_history(
     tenant_id: str,
     phone: str,

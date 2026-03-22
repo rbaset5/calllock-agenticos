@@ -239,14 +239,23 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
     tenant_id = str((raw_payload.get("custom_metadata") or {}).get("tenant_id") or "")
 
     # Enrich webhook payload with full call data from Retell API.
-    # The webhook doesn't include transcript_with_tool_calls (which has tool args).
+    # The webhook sends transcript_with_tool_calls as [] (empty) — the full
+    # call object from GET /v2/get-call has the actual tool args and results.
+    # We overwrite empty/missing keys, not just missing ones.
     full_call = _fetch_full_call(call_id)
+    enriched_keys: list[str] = []
     if full_call:
         for key in ("transcript_with_tool_calls", "tool_calls"):
-            if key in full_call and key not in raw_payload:
+            if full_call.get(key) and not raw_payload.get(key):
                 raw_payload[key] = full_call[key]
-        if not raw_payload.get("duration_ms") and full_call.get("duration_ms"):
+                enriched_keys.append(key)
+        if full_call.get("duration_ms") and not raw_payload.get("duration_ms"):
             raw_payload["duration_ms"] = full_call["duration_ms"]
+            enriched_keys.append("duration_ms")
+        logger.info(
+            "retell.fetch_call_success",
+            extra={"call_id": call_id, "enriched_keys": enriched_keys},
+        )
 
     extraction: dict[str, Any] = {}
 
@@ -294,6 +303,21 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
             extra={"call_id": call_id},
             exc_info=True,
         )
+
+    # Persist the enriched payload so reruns/audits have full tool-call data.
+    if enriched_keys:
+        try:
+            db_repo.update_raw_payload(
+                tenant_id=tenant_id,
+                call_id=call_id,
+                raw_payload=raw_payload,
+            )
+        except Exception:
+            logger.warning(
+                "post_call.update_raw_payload_failed",
+                extra={"call_id": call_id},
+                exc_info=True,
+            )
 
 
 @post_call_router.post("/call-ended")

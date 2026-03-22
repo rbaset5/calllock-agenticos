@@ -814,6 +814,18 @@ def update_call_record_extraction(
     return local_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields, **kwargs)
 
 
+def update_raw_payload(
+    tenant_id: str,
+    call_id: str,
+    raw_payload: dict[str, Any],
+) -> None:
+    """Persist enriched raw_retell_payload (after Retell API fetch adds tool-call data)."""
+    if using_supabase():
+        supabase_repository.update_raw_payload(tenant_id, call_id, raw_payload)
+    else:
+        local_repository.update_raw_payload(tenant_id, call_id, raw_payload)
+
+
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.get_caller_history(tenant_id, phone)

@@ -1316,6 +1316,20 @@ def update_call_record_extraction(
     return data[0]
 
 
+def update_raw_payload(
+    tenant_id: str,
+    call_id: str,
+    raw_payload: dict[str, Any],
+) -> None:
+    """Persist enriched raw_retell_payload after Retell API fetch."""
+    _request(
+        "PATCH",
+        "call_records",
+        params={"tenant_id": f"eq.{tenant_id}", "call_id": f"eq.{call_id}"},
+        json={"raw_retell_payload": raw_payload},
+    )
+
+
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
     jobs = _request(
         "GET",
