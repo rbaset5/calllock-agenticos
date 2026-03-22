@@ -201,11 +201,53 @@ def _merge_quarantine_fields(
     return merged
 
 
+def _fetch_full_call(call_id: str) -> dict[str, Any] | None:
+    """Fetch full call data from Retell API (includes transcript_with_tool_calls).
+
+    The call_ended webhook only sends tool_call_results (with empty args).
+    The full call object from GET /v2/get-call includes transcript_with_tool_calls
+    which has the actual tool arguments and results.
+    """
+    import os
+    import httpx
+
+    api_key = os.environ.get("RETELL_API_KEY")
+    if not api_key:
+        logger.warning("retell.api_key_missing", extra={"call_id": call_id})
+        return None
+    try:
+        resp = httpx.get(
+            f"https://api.retellai.com/v2/get-call/{call_id}",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        logger.warning(
+            "retell.fetch_call_failed",
+            extra={"call_id": call_id, "status": resp.status_code},
+        )
+    except Exception:
+        logger.warning("retell.fetch_call_error", extra={"call_id": call_id}, exc_info=True)
+    return None
+
+
 async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
     from db import repository as db_repo
 
     call_id = str(raw_payload.get("call_id") or "")
     tenant_id = str((raw_payload.get("custom_metadata") or {}).get("tenant_id") or "")
+
+    # Enrich webhook payload with full call data from Retell API.
+    # The webhook doesn't include transcript_with_tool_calls (which has tool args).
+    full_call = _fetch_full_call(call_id)
+    if full_call:
+        for key in ("transcript_with_tool_calls", "tool_calls"):
+            if key in full_call and key not in raw_payload:
+                raw_payload[key] = full_call[key]
+        if not raw_payload.get("duration_ms") and full_call.get("duration_ms"):
+            raw_payload["duration_ms"] = full_call["duration_ms"]
+
     extraction: dict[str, Any] = {}
 
     try:
