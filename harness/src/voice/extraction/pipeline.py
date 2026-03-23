@@ -101,6 +101,7 @@ def _extract_from_tool_calls(raw_payload: Mapping[str, Any]) -> dict[str, Any]:
             continue
         # Merge — later tool calls overwrite earlier ones (more refined data)
         for key in ("customer_name", "service_address", "issue_description",
+                     "problem_summary", "problem_description", "preferred_time",
                      "urgency_tier", "customer_phone", "callback_type",
                      "current_equipment", "equipment_age", "notes"):
             val = args.get(key)
@@ -116,6 +117,10 @@ def _extract_from_tool_calls(raw_payload: Mapping[str, Any]) -> dict[str, Any]:
     # Map issue_description → problem_description
     if "issue_description" in extracted and "problem_description" not in extracted:
         extracted["problem_description"] = extracted.pop("issue_description")
+    # Map problem_summary → problem_description (Retell uses this in transition_to_lookup)
+    if "problem_summary" in extracted and "problem_description" not in extracted:
+        extracted["problem_description"] = extracted.pop("problem_summary")
+    extracted.pop("problem_summary", None)
     return extracted
 
 
