@@ -6,7 +6,7 @@
 
 ## Summary
 
-Introduce a `vapi-shadow` evaluation lane alongside the current Retell inbound HVAC receptionist. Phase 1 does not route customer traffic to Vapi. Instead, it runs controlled replay and synthetic-call scenarios against a Vapi assistant configured to match the existing inbound HVAC receptionist contract, then compares Vapi and Retell using a neutral benchmark.
+Introduce a `vapi-shadow` evaluation lane alongside the current Retell inbound HVAC receptionist. Phase 1 does not route customer traffic to Vapi. Instead, it runs controlled replay and synthetic-call scenarios against a Vapi assistant configured to match the existing inbound HVAC receptionist contract. Phase 1 also includes the minimum neutral benchmark needed to compare Retell and Vapi fairly on that contract. Phase 2 expands and hardens that benchmark after the initial parity lane exists.
 
 The key design constraint is boundary discipline. Vapi should own conversation orchestration, endpointing, interruption behavior, and voice-pipeline tuning. This repo should continue to own tenant resolution, tool business logic, persistence, post-call extraction, and reporting. That keeps the comparison apples-to-apples and avoids forking domain logic across providers.
 
@@ -40,6 +40,7 @@ The key design constraint is boundary discipline. Vapi should own conversation o
 - No expansion into outbound, internal operations, or non-HVAC packs.
 - No provider-specific business logic forks.
 - No assumption that MCP is required to beat Retell; phase 1 should prove parity before deeper platform specialization.
+- No booking scenarios in the initial wedge.
 
 ## 2. Architectural Boundary
 
@@ -55,26 +56,29 @@ This means the Vapi assistant should call into the same domain operations alread
 - caller lookup
 - callback request creation
 - sales lead alerting
-- booking flow when phase scope later expands
 
 For phase 1, Vapi should reach those operations through thin compatibility endpoints that wrap the existing Python business logic. The compatibility layer translates Vapi-native tool requests into the repo’s canonical function signatures and returns normalized responses. The underlying domain code remains shared.
 
+Booking is out of scope for the first implementation plan. If booking is later added to the provider comparison, that should be treated as a deliberate scope expansion after parity is proven on the narrower receptionist wedge.
+
 ## 3. Phased Delivery
 
-### Phase 1: Contract Parity
+### Phase 1: Contract Parity Plus Minimum Benchmark
 
-Build a Vapi assistant for the inbound HVAC receptionist contract and run only offline replay and synthetic scenarios. The output of this phase is a fair comparison lane, not a production-ready migration.
+Build a Vapi assistant for the inbound HVAC receptionist contract and run only offline replay and synthetic scenarios. This phase includes the minimum provider-neutral benchmark required to judge parity on the chosen wedge. The output of this phase is a fair comparison lane, not a production-ready migration.
 
 Deliverables:
 
 - Vapi assistant configuration for inbound HVAC receptionist flows
 - Vapi compatibility tool adapter endpoints
+- audio-first scenario fixtures for controlled replay
 - normalized artifact capture for Vapi runs
 - initial scenario bank covering the current receptionist scope
+- minimum shared scorecard for latency, interruption recovery, tool correctness, and downstream extraction parity
 
-### Phase 2: Neutral Conversation Benchmark
+### Phase 2: Benchmark Hardening
 
-Extend the current extraction-focused evaluator into a full-call benchmark that scores both Retell and Vapi against the same scenario set.
+Extend the phase-1 benchmark into a more robust conversation benchmark that scores both Retell and Vapi against a broader and more stable scenario set.
 
 Deliverables:
 
@@ -82,6 +86,7 @@ Deliverables:
 - shared scorecard implementation
 - run storage and report generation
 - historical benchmark snapshots for regression tracking
+- expanded scenario coverage and stricter promotion thresholds
 
 ### Phase 3: Vapi Optimization
 
@@ -101,7 +106,7 @@ If Vapi repeatedly clears the gate, move to higher-risk validation such as mirro
 
 The current repo evaluator at `scripts/run-voice-eval.py` only compares post-call extraction output against `knowledge/voice-pipeline/eval/golden-set.yaml`. That remains useful, but it is insufficient for deciding whether Vapi can outperform Retell as a receptionist.
 
-The benchmark must become a repo-native, provider-neutral pipeline with these layers:
+The benchmark must become a repo-native, provider-neutral pipeline with these layers. Phase 1 builds the minimum viable version of this pipeline; phase 2 strengthens it rather than introducing it for the first time.
 
 ### Layer 1: Objective Telemetry
 
@@ -118,7 +123,7 @@ The benchmark must become a repo-native, provider-neutral pipeline with these la
 - correct routing outcome
 - correct tool choice
 - correct tool arguments
-- correct booking, callback, or escalation outcome
+- correct callback or escalation outcome within the initial wedge
 
 ### Layer 3: Downstream Business Quality
 
@@ -161,6 +166,8 @@ Scenario Bank
 ```
 
 This design allows provider substitution without rewriting the benchmark core.
+
+Replay modality for phase 1 is fixed as `audio-first synthetic replay`. Text transcripts can still be used for cheaper extraction-only regression checks, but phase-1 provider comparison must use audio fixtures so latency, endpointing, interruption behavior, and transcript quality are measured from comparable inputs.
 
 ## 6. Components
 
@@ -312,7 +319,6 @@ Testing should proceed in four layers:
 ### Open Questions Deferred From This Spec
 
 - exact storage location and schema for benchmark run persistence
-- whether replay inputs are text-only, audio-first, or both in phase 1
 - exact minimum sample size for promotion decisions
 - whether benchmark reporting lives in the customer-facing app, internal office dashboard, or a separate internal surface
 
