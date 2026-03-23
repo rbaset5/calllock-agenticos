@@ -6,7 +6,7 @@
 
 ## Summary
 
-Introduce a `vapi-shadow` evaluation lane alongside the current Retell inbound HVAC receptionist. Phase 1 does not route customer traffic to Vapi. Instead, it runs controlled replay and synthetic-call scenarios against a Vapi assistant configured to match the existing inbound HVAC receptionist contract. Phase 1 also includes the minimum neutral benchmark needed to compare Retell and Vapi fairly on that contract. Phase 2 expands and hardens that benchmark after the initial parity lane exists.
+Introduce a `vapi-shadow` evaluation lane alongside the current Retell inbound HVAC receptionist. Phase 1 does not route customer traffic to Vapi. Instead, it runs offline replay against a curated bank of audio fixtures using a Vapi assistant configured to match the existing inbound HVAC receptionist contract. Phase 1 also includes the minimum neutral benchmark needed to compare Retell and Vapi fairly on that contract. The next implementation plan should cover Phase 1 only. Phases 2 through 4 are roadmap context for later specs and later planning.
 
 The key design constraint is boundary discipline. Vapi should own conversation orchestration, endpointing, interruption behavior, and voice-pipeline tuning. This repo should continue to own tenant resolution, tool business logic, persistence, post-call extraction, and reporting. That keeps the comparison apples-to-apples and avoids forking domain logic across providers.
 
@@ -17,7 +17,7 @@ The key design constraint is boundary discipline. Vapi should own conversation o
 | Decision | Choice | Rationale |
 |---|---|---|
 | Initial scope | Inbound HVAC receptionist only | Matches the current Retell production scope and avoids widening the comparison surface before parity exists. |
-| Rollout mode | Offline replay and synthetic scenarios only | Lowest-risk way to compare providers without customer exposure. |
+| Rollout mode | Offline replay of curated audio fixtures only | Lowest-risk way to compare providers without customer exposure while still measuring latency and interruption behavior. |
 | Success standard | Balanced gate | Vapi must achieve near-parity on quality and a material latency or cost advantage. |
 | Benchmark owner | Repo-native neutral harness | Prevents provider-specific tooling from becoming the source of truth. |
 | Business logic ownership | Existing repo services remain canonical | Avoids drift between Retell and Vapi behavior. |
@@ -65,26 +65,26 @@ Booking is out of scope for the first implementation plan. If booking is later a
 
 ### Phase 1: Contract Parity Plus Minimum Benchmark
 
-Build a Vapi assistant for the inbound HVAC receptionist contract and run only offline replay and synthetic scenarios. This phase includes the minimum provider-neutral benchmark required to judge parity on the chosen wedge. The output of this phase is a fair comparison lane, not a production-ready migration.
+Build a Vapi assistant for the inbound HVAC receptionist contract and run only offline replay against curated audio fixtures. This phase includes the minimum provider-neutral benchmark required to judge parity on the chosen wedge. The output of this phase is a fair comparison lane, not a production-ready migration.
 
 Deliverables:
 
 - Vapi assistant configuration for inbound HVAC receptionist flows
 - Vapi compatibility tool adapter endpoints
-- audio-first scenario fixtures for controlled replay
+- curated audio fixtures for offline replay
 - normalized artifact capture for Vapi runs
 - initial scenario bank covering the current receptionist scope
 - minimum shared scorecard for latency, interruption recovery, tool correctness, and downstream extraction parity
+- file-backed benchmark artifacts plus CLI comparison reporting
 
 ### Phase 2: Benchmark Hardening
 
-Extend the phase-1 benchmark into a more robust conversation benchmark that scores both Retell and Vapi against a broader and more stable scenario set.
+Extend the phase-1 benchmark into a more robust conversation benchmark with stronger persistence, richer reporting surfaces, broader scenario coverage, and stricter thresholds.
 
 Deliverables:
 
-- provider adapters that emit one normalized eval artifact format
-- shared scorecard implementation
-- run storage and report generation
+- durable benchmark persistence beyond file-backed artifacts
+- richer reporting surfaces beyond CLI comparison output
 - historical benchmark snapshots for regression tracking
 - expanded scenario coverage and stricter promotion thresholds
 
@@ -141,13 +141,14 @@ Each provider should produce one normalized `voice_eval_run` artifact shape cont
 - tool call log
 - final call outcome
 - post-call extraction output
+- provider cost metadata for the run
 - benchmark scores and failure reasons
 
 ## 5. Data Flow
 
 The phase-1 data flow should look like this:
 
-1. A scenario runner selects a replay or synthetic HVAC receptionist scenario.
+1. A scenario runner selects a curated HVAC receptionist audio fixture.
 2. The runner executes the scenario against Retell and Vapi independently.
 3. Each provider adapter captures native artifacts and maps them into the shared eval format.
 4. The shared scorer computes telemetry, correctness, and downstream extraction results.
@@ -167,7 +168,7 @@ Scenario Bank
 
 This design allows provider substitution without rewriting the benchmark core.
 
-Replay modality for phase 1 is fixed as `audio-first synthetic replay`. Text transcripts can still be used for cheaper extraction-only regression checks, but phase-1 provider comparison must use audio fixtures so latency, endpointing, interruption behavior, and transcript quality are measured from comparable inputs.
+Replay modality for phase 1 is fixed as `offline replay of curated audio fixtures`. Text transcripts can still be used for cheaper extraction-only regression checks, but phase-1 provider comparison must use audio fixtures so latency, endpointing, interruption behavior, and transcript quality are measured from comparable inputs.
 
 ## 6. Components
 
