@@ -826,6 +826,13 @@ def update_raw_payload(
         local_repository.update_raw_payload(tenant_id, call_id, raw_payload)
 
 
+def get_call_record(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    """Get a single call record by tenant + call_id."""
+    if using_supabase():
+        return supabase_repository.get_call_record(tenant_id, call_id)
+    return local_repository.get_call_record(tenant_id, call_id)
+
+
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.get_caller_history(tenant_id, phone)

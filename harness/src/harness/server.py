@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s %(message)s",
+    stream=__import__('sys').stderr,
+)
+
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

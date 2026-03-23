@@ -1330,6 +1330,16 @@ def update_raw_payload(
     )
 
 
+def get_call_record(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    """Get a single call record by tenant + call_id."""
+    data = _request(
+        "GET",
+        "call_records",
+        params={"tenant_id": f"eq.{tenant_id}", "call_id": f"eq.{call_id}", "limit": "1"},
+    )
+    return data[0] if data else None
+
+
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
     jobs = _request(
         "GET",

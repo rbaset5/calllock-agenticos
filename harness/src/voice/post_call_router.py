@@ -416,10 +416,28 @@ async def handle_call_ended(
         )
 
     if record is None:
-        logger.info("post_call.duplicate", extra={"retell_call_id": retell_call_id})
-        return JSONResponse(
-            content={"status": "duplicate", "retell_call_id": retell_call_id}
-        )
+        # Retell sends the webhook multiple times. The first one often arrives
+        # before Retell has processed tool calls, so extraction is empty.
+        # On duplicate, check if re-extraction is needed.
+        try:
+            existing = db_repo.get_call_record(tenant_id=tenant_id, call_id=call_id)
+            quality = (existing or {}).get("quality_score") or 0
+            if quality > 0:
+                logger.info("post_call.duplicate_skip", extra={
+                    "retell_call_id": retell_call_id, "quality_score": quality})
+                return JSONResponse(
+                    content={"status": "duplicate", "retell_call_id": retell_call_id})
+            logger.info("post_call.duplicate_reextract", extra={
+                "retell_call_id": retell_call_id, "quality_score": quality})
+            # Fall through to re-run extraction with the newer (fuller) payload
+            raw_payload = payload.model_dump(by_alias=True)
+            if "custom_metadata" not in raw_payload or not raw_payload["custom_metadata"]:
+                raw_payload["custom_metadata"] = {}
+            raw_payload["custom_metadata"]["tenant_id"] = tenant_id
+        except Exception:
+            logger.info("post_call.duplicate", extra={"retell_call_id": retell_call_id})
+            return JSONResponse(
+                content={"status": "duplicate", "retell_call_id": retell_call_id})
 
     # Run enrichment + extraction synchronously (not as background task).
     # Background tasks swallow errors silently — synchronous ensures we see failures.

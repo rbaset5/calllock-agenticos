@@ -11,6 +11,10 @@
   "inputs": ["leads database", "signal rubric", "metro config", "call test results"],
   "outputs": ["ranked prospect list", "signal scores", "probe results", "pipeline status"],
   "tools_allowed": ["read_knowledge", "notify_dispatch"],
+  "success_metrics": [
+    {"name": "prospects_scored_per_run", "eval_dataset": "evals/outbound-scout/prospects-scored-per-run.json"},
+    {"name": "probe_success_rate", "eval_dataset": "evals/outbound-scout/probe-success-rate.json"}
+  ],
   "approval_boundaries": ["customer-facing outreach", "changes to source leads data"],
   "dependencies": [
     "knowledge/outbound/_moc.md",
