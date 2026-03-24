@@ -5,8 +5,64 @@ from pathlib import Path
 import re
 from typing import Any
 
-from db.repository import list_agent_reports, list_approval_requests, list_artifacts, list_jobs
-from harness.detection.posture import build_detection_posture
+from db.repository import (
+    list_agent_reports,
+    list_alerts,
+    list_approval_requests,
+    list_artifacts,
+    list_incidents,
+    list_jobs,
+)
+
+try:
+    from harness.detection.posture import build_detection_posture
+except ModuleNotFoundError:
+    def build_detection_posture(*, tenant_id: str | None = None) -> dict[str, Any]:
+        alerts = {
+            alert.get("id"): alert
+            for alert in list_alerts(tenant_id=tenant_id, status="open")
+        }
+        incidents = [
+            incident
+            for incident in list_incidents(tenant_id=tenant_id, status="open")
+            if incident.get("workflow_status") != "closed"
+        ]
+
+        active_threads = []
+        for incident in incidents:
+            alert = alerts.get(incident.get("current_alert_id"))
+            notification_outcome = (
+                alert.get("metrics", {})
+                .get("detection", {})
+                .get("notification_outcome")
+                if isinstance(alert, dict)
+                else None
+            ) or "internal_only"
+            active_threads.append(
+                {
+                    "incident_id": incident.get("id"),
+                    "incident_key": incident.get("incident_key"),
+                    "workflow_status": incident.get("workflow_status"),
+                    "severity": incident.get("severity"),
+                    "current_alert_id": incident.get("current_alert_id"),
+                    "alert_type": incident.get("alert_type"),
+                    "incident_domain": incident.get("incident_domain"),
+                    "incident_category": incident.get("incident_category"),
+                    "notification_outcome": notification_outcome,
+                }
+            )
+
+        return {
+            "counts": {
+                "open_threads": len(active_threads),
+                "founder_visible_threads": sum(
+                    1
+                    for thread in active_threads
+                    if thread.get("notification_outcome") == "founder_notify"
+                ),
+            },
+            "active_threads": active_threads,
+        }
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AGENT_MD_PATH = REPO_ROOT / "AGENT.md"
