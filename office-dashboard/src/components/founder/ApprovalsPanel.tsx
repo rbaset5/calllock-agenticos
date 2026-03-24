@@ -29,6 +29,25 @@ function riskClasses(riskLevel: string) {
   }
 }
 
+function parseAgeToMinutes(age: string) {
+  const match = age.match(/^(\d+)(m|h|d)$/);
+  if (!match) {
+    return 0;
+  }
+
+  const value = Number(match[1]);
+  const unit = match[2];
+
+  switch (unit) {
+    case "d":
+      return value * 24 * 60;
+    case "h":
+      return value * 60;
+    default:
+      return value;
+  }
+}
+
 function sortApprovals(items: FounderApprovalItem[]) {
   return [...items].sort((left, right) => {
     const riskDelta =
@@ -37,7 +56,7 @@ function sortApprovals(items: FounderApprovalItem[]) {
       return riskDelta;
     }
 
-    return left.age.localeCompare(right.age);
+    return parseAgeToMinutes(right.age) - parseAgeToMinutes(left.age);
   });
 }
 
@@ -250,6 +269,20 @@ export default function ApprovalsPanel() {
                 <p className="mt-2 text-sm text-white">
                   {selectedItem.requested_action}
                 </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                  Risk Level
+                </p>
+                <p className="mt-2 text-sm text-white">
+                  {selectedItem.risk_level}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                  Age
+                </p>
+                <p className="mt-2 text-sm text-white">{selectedItem.age}</p>
               </div>
             </div>
 
