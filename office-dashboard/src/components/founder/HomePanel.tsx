@@ -161,6 +161,35 @@ export default function HomePanel() {
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-10">
+      <div className="mb-6 overflow-hidden rounded-full border border-sky-400/20 bg-sky-400/10 shadow-lg backdrop-blur">
+        <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-sky-200">
+              Active Priority
+            </p>
+            <p className="mt-1 text-sm font-medium text-white">
+              {data.active_priority.label ?? "No active priority set"}
+            </p>
+          </div>
+          {data.active_priority.constraints.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {data.active_priority.constraints.map((constraint) => (
+                <span
+                  key={constraint}
+                  className="rounded-full bg-white/10 px-3 py-1 text-xs text-slate-100"
+                >
+                  {constraint}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs text-slate-300">
+              Source: {data.active_priority.source}
+            </span>
+          )}
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
         <article className="rounded-[2rem] border border-white/10 bg-slate-950/75 p-6 shadow-2xl backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -177,53 +206,42 @@ export default function HomePanel() {
             </span>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Top Change
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-100">
-                {describeTopChange(data.briefing.top_change)}
-              </p>
-            </div>
+          <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+            <p className="text-sm leading-6 text-slate-100">
+              {describeTopChange(data.briefing.top_change)}
+            </p>
+            <p className="mt-4 text-sm font-medium text-white">
+              Recommended now: {data.briefing.recommended_action}
+            </p>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Recommended Action
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-100">
-                {data.briefing.recommended_action}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Pending Approval
-              </p>
-              <p className="mt-2 text-sm text-white">
-                {data.briefing.top_pending_approval?.title ?? "None"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Top Issue
-              </p>
-              <p className="mt-2 text-sm text-white">
-                {data.briefing.top_issue_thread?.alert_type ??
-                  data.briefing.top_issue_thread?.incident_key ??
-                  "None"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Top Blocked Work
-              </p>
-              <p className="mt-2 text-sm text-white">
-                {data.briefing.top_blocked_work?.blocked_reason ?? "None"}
-              </p>
-            </div>
+            <dl className="mt-5 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
+              <div>
+                <dt className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                  Pending Approval
+                </dt>
+                <dd className="mt-1 text-slate-100">
+                  {data.briefing.top_pending_approval?.title ?? "None"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                  Top Issue
+                </dt>
+                <dd className="mt-1 text-slate-100">
+                  {data.briefing.top_issue_thread?.alert_type ??
+                    data.briefing.top_issue_thread?.incident_key ??
+                    "None"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                  Top Blocked Work
+                </dt>
+                <dd className="mt-1 text-slate-100">
+                  {data.briefing.top_blocked_work?.blocked_reason ?? "None"}
+                </dd>
+              </div>
+            </dl>
           </div>
         </article>
 
@@ -261,27 +279,6 @@ export default function HomePanel() {
                 <dd>{data.voice_truth.failed_metric_count}</dd>
               </div>
             </dl>
-          </article>
-
-          <article className="rounded-[2rem] border border-white/10 bg-slate-950/75 p-6 shadow-2xl backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.28em] text-sky-300">
-              Active Priority
-            </p>
-            <p className="mt-3 text-lg font-medium text-white">
-              {data.active_priority.label ?? "No active priority set"}
-            </p>
-            {data.active_priority.constraints.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {data.active_priority.constraints.map((constraint) => (
-                  <span
-                    key={constraint}
-                    className="rounded-full bg-white/10 px-3 py-1 text-xs text-slate-200"
-                  >
-                    {constraint}
-                  </span>
-                ))}
-              </div>
-            ) : null}
           </article>
         </div>
       </div>
