@@ -221,8 +221,6 @@ def _recommended_next_step(job: dict[str, Any], *, verdict: str, approvals: list
         return "Revise candidate and rerun truth gate"
     if verdict == "retry":
         return "Retry after fixing verification findings"
-    if verdict == "escalate":
-        return "Review approval request"
     return None
 
 
