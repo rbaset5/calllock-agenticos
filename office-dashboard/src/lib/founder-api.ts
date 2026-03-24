@@ -120,14 +120,57 @@ type FounderTenantRequest = {
   tenantId?: string | null;
 };
 
-type ProxyFounderRequestOptions = {
+type LocalFounderRequestOptions = {
+  body?: BodyInit | null;
+  headers?: HeadersInit;
+  method?: "GET" | "POST";
+};
+
+type FounderEndpointConfig = {
+  localPath: string;
+  upstreamPath: string;
+};
+
+type UpstreamFounderRequestOptions = {
   body?: BodyInit | null;
   headers?: HeadersInit;
   method?: "GET" | "POST";
   tenantId?: string | null;
 };
 
-function getFounderApiBaseUrl() {
+const JSON_CONTENT_TYPE = "application/json";
+const FORWARDED_UPSTREAM_HEADERS = [
+  "content-type",
+  "retry-after",
+  "x-request-id",
+  "x-correlation-id",
+  "traceparent",
+] as const;
+
+export const founderEndpoints = {
+  home: {
+    localPath: "/api/founder/home",
+    upstreamPath: "/founder/home",
+  },
+  approvals: {
+    localPath: "/api/founder/approvals",
+    upstreamPath: "/founder/approvals",
+  },
+  blockedWork: {
+    localPath: "/api/founder/blocked-work",
+    upstreamPath: "/founder/blocked-work",
+  },
+} satisfies Record<string, FounderEndpointConfig>;
+
+function getFounderApprovalLocalPath(approvalId: string) {
+  return `${founderEndpoints.approvals.localPath}/${encodeURIComponent(approvalId)}`;
+}
+
+function getFounderApprovalUpstreamPath(approvalId: string) {
+  return `/approvals/${encodeURIComponent(approvalId)}`;
+}
+
+function getFounderHarnessBaseUrl() {
   const baseUrl = process.env.NEXT_PUBLIC_HARNESS_BASE_URL?.trim();
 
   if (!baseUrl) {
@@ -137,11 +180,11 @@ function getFounderApiBaseUrl() {
   return baseUrl.replace(/\/+$/, "");
 }
 
-function buildFounderApiUrl(
+function buildFounderUpstreamUrl(
   path: string,
   query: Record<string, string | null | undefined> = {}
 ) {
-  const url = new URL(path, `${getFounderApiBaseUrl()}/`);
+  const url = new URL(path, `${getFounderHarnessBaseUrl()}/`);
 
   for (const [key, value] of Object.entries(query)) {
     if (value) {
@@ -169,10 +212,42 @@ function mergeHeaders(...headerSets: Array<HeadersInit | undefined>) {
   return headers;
 }
 
-async function fetchFounderApi(path: string, options: ProxyFounderRequestOptions = {}) {
+function buildFounderLocalUrl(
+  path: string,
+  query: Record<string, string | null | undefined> = {}
+) {
+  const url = new URL(path, "http://localhost");
+
+  for (const [key, value] of Object.entries(query)) {
+    if (value) {
+      url.searchParams.set(key, value);
+    }
+  }
+
+  return `${url.pathname}${url.search}`;
+}
+
+async function fetchFounderUpstream(
+  path: string,
+  options: UpstreamFounderRequestOptions = {}
+) {
   const { body, headers, method = "GET", tenantId } = options;
 
-  return fetch(buildFounderApiUrl(path, { tenant_id: tenantId }), {
+  return fetch(buildFounderUpstreamUrl(path, { tenant_id: tenantId }), {
+    method,
+    headers,
+    body,
+    cache: "no-store",
+  });
+}
+
+async function fetchFounderLocal(
+  path: string,
+  options: LocalFounderRequestOptions = {}
+) {
+  const { body, headers, method = "GET" } = options;
+
+  return fetch(path, {
     method,
     headers,
     body,
@@ -181,36 +256,66 @@ async function fetchFounderApi(path: string, options: ProxyFounderRequestOptions
 }
 
 async function fetchFounderJson<T>(
-  path: string,
-  options: ProxyFounderRequestOptions = {}
+  responsePromise: Promise<Response>
 ) {
-  const response = await fetchFounderApi(path, options);
+  const response = await responsePromise;
+  const contentType = response.headers.get("content-type") ?? "";
+  const isJson = contentType.includes(JSON_CONTENT_TYPE);
+  const payload = isJson
+    ? ((await response.json()) as T | { error?: string })
+    : await response.text();
 
   if (!response.ok) {
-    throw new Error(`Founder API request failed with status ${response.status}`);
+    if (typeof payload === "string") {
+      throw new Error(payload || `Founder API request failed with status ${response.status}`);
+    }
+
+    const errorMessage =
+      typeof payload === "object" &&
+      payload !== null &&
+      "error" in payload &&
+      typeof payload.error === "string"
+        ? payload.error
+        : `Founder API request failed with status ${response.status}`;
+
+    throw new Error(
+      errorMessage
+    );
   }
 
-  return (await response.json()) as T;
+  return payload as T;
 }
 
 export async function fetchFounderHome(options: FounderTenantRequest = {}) {
-  return fetchFounderJson<FounderHomeResponse>("/founder/home", {
-    tenantId: options.tenantId,
-  });
+  return fetchFounderJson<FounderHomeResponse>(
+    fetchFounderLocal(
+      buildFounderLocalUrl(founderEndpoints.home.localPath, {
+        tenant_id: options.tenantId,
+      })
+    )
+  );
 }
 
 export async function fetchFounderApprovals(options: FounderTenantRequest = {}) {
-  return fetchFounderJson<FounderApprovalsResponse>("/founder/approvals", {
-    tenantId: options.tenantId,
-  });
+  return fetchFounderJson<FounderApprovalsResponse>(
+    fetchFounderLocal(
+      buildFounderLocalUrl(founderEndpoints.approvals.localPath, {
+        tenant_id: options.tenantId,
+      })
+    )
+  );
 }
 
 export async function fetchFounderBlockedWork(
   options: FounderTenantRequest = {}
 ) {
-  return fetchFounderJson<FounderBlockedWorkResponse>("/founder/blocked-work", {
-    tenantId: options.tenantId,
-  });
+  return fetchFounderJson<FounderBlockedWorkResponse>(
+    fetchFounderLocal(
+      buildFounderLocalUrl(founderEndpoints.blockedWork.localPath, {
+        tenant_id: options.tenantId,
+      })
+    )
+  );
 }
 
 export async function resolveFounderApproval(
@@ -219,39 +324,130 @@ export async function resolveFounderApproval(
   headers?: HeadersInit
 ) {
   return fetchFounderJson<FounderApprovalDecisionResponse>(
-    `/approvals/${encodeURIComponent(approvalId)}`,
-    {
+    fetchFounderLocal(getFounderApprovalLocalPath(approvalId), {
       method: "POST",
       headers: mergeHeaders(
         {
-          "content-type": "application/json",
+          "content-type": JSON_CONTENT_TYPE,
         },
         headers
       ),
       body: JSON.stringify(payload),
-    }
+    })
   );
 }
 
-export async function proxyFounderRequest(
-  path: string,
-  options: ProxyFounderRequestOptions = {}
+function copyFounderUpstreamHeaders(upstream: Response) {
+  const headers = new Headers({
+    "cache-control": "no-store",
+  });
+
+  for (const headerName of FORWARDED_UPSTREAM_HEADERS) {
+    const value = upstream.headers.get(headerName);
+    if (value) {
+      headers.set(headerName, value);
+    }
+  }
+
+  if (!headers.has("content-type")) {
+    headers.set("content-type", JSON_CONTENT_TYPE);
+  }
+
+  return headers;
+}
+
+function createFounderJsonResponse(
+  payload: Record<string, unknown>,
+  status: number
 ) {
-  return fetchFounderApi(path, options);
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "content-type": JSON_CONTENT_TYPE,
+    },
+  });
+}
+
+function createFounderProxyErrorResponse(error: unknown) {
+  if (
+    error instanceof Error &&
+    error.message === "NEXT_PUBLIC_HARNESS_BASE_URL is required"
+  ) {
+    return createFounderJsonResponse({ error: error.message }, 500);
+  }
+
+  return createFounderJsonResponse(
+    {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to reach founder upstream",
+    },
+    502
+  );
+}
+
+export async function requestFounderUpstream(
+  path: string,
+  options: UpstreamFounderRequestOptions = {}
+) {
+  return fetchFounderUpstream(path, options);
 }
 
 export async function createFounderProxyResponse(upstream: Response) {
   const body = await upstream.text();
-  const headers = new Headers();
-
-  headers.set(
-    "content-type",
-    upstream.headers.get("content-type") ?? "application/json"
-  );
-  headers.set("cache-control", "no-store");
 
   return new Response(body, {
     status: upstream.status,
-    headers,
+    headers: copyFounderUpstreamHeaders(upstream),
   });
+}
+
+export async function proxyFounderEndpoint(
+  request: Request,
+  endpoint: FounderEndpointConfig
+) {
+  try {
+    const url = new URL(request.url);
+    const upstream = await requestFounderUpstream(endpoint.upstreamPath, {
+      tenantId: url.searchParams.get("tenant_id"),
+    });
+
+    return createFounderProxyResponse(upstream);
+  } catch (error) {
+    return createFounderProxyErrorResponse(error);
+  }
+}
+
+export async function proxyFounderApprovalDecision(
+  request: Request,
+  approvalId: string
+) {
+  try {
+    const headers = new Headers();
+
+    headers.set(
+      "content-type",
+      request.headers.get("content-type") ?? JSON_CONTENT_TYPE
+    );
+
+    const actorId = request.headers.get("x-actor-id");
+    if (actorId) {
+      headers.set("x-actor-id", actorId);
+    }
+
+    const upstream = await requestFounderUpstream(
+      getFounderApprovalUpstreamPath(approvalId),
+      {
+        method: "POST",
+        body: await request.text(),
+        headers,
+      }
+    );
+
+    return createFounderProxyResponse(upstream);
+  } catch (error) {
+    return createFounderProxyErrorResponse(error);
+  }
 }

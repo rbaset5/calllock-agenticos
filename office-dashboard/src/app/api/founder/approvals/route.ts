@@ -1,13 +1,8 @@
 import {
-  createFounderProxyResponse,
-  proxyFounderRequest,
+  founderEndpoints,
+  proxyFounderEndpoint,
 } from "@/lib/founder-api";
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const upstream = await proxyFounderRequest("/founder/approvals", {
-    tenantId: url.searchParams.get("tenant_id"),
-  });
-
-  return createFounderProxyResponse(upstream);
+  return proxyFounderEndpoint(request, founderEndpoints.approvals);
 }
