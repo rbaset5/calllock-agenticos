@@ -764,9 +764,11 @@ def test_audit_log_endpoint() -> None:
 
 
 def test_founder_home_endpoint_returns_seeded_contract_payload() -> None:
+    tenant_id = "00000000-0000-0000-0000-000000000001"
+
     create_alert_and_sync_incident(
         {
-            "tenant_id": "tenant-alpha",
+            "tenant_id": tenant_id,
             "alert_type": "voice_route_missing_spike",
             "severity": "high",
             "message": "Route missing spike",
@@ -776,7 +778,7 @@ def test_founder_home_endpoint_returns_seeded_contract_payload() -> None:
     )
     create_approval_request(
         {
-            "tenant_id": "tenant-alpha",
+            "tenant_id": tenant_id,
             "run_id": "run-founder-home-approval",
             "worker_id": "voice-builder",
             "status": "pending",
@@ -788,7 +790,7 @@ def test_founder_home_endpoint_returns_seeded_contract_payload() -> None:
     )
     create_artifact(
         {
-            "tenant_id": "tenant-alpha",
+            "tenant_id": tenant_id,
             "run_id": "run-founder-home-truth",
             "created_by": "voice-truth",
             "artifact_type": "voice_truth_eval",
@@ -814,9 +816,11 @@ def test_founder_home_endpoint_returns_seeded_contract_payload() -> None:
 
 
 def test_founder_approvals_endpoint_returns_real_approval_request_contract() -> None:
+    tenant_id = "00000000-0000-0000-0000-000000000001"
+
     approval = create_approval_request(
         {
-            "tenant_id": "tenant-alpha",
+            "tenant_id": tenant_id,
             "run_id": "run-founder-approval",
             "worker_id": "voice-builder",
             "status": "pending",
@@ -839,9 +843,11 @@ def test_founder_approvals_endpoint_returns_real_approval_request_contract() -> 
 
 
 def test_founder_blocked_work_endpoint_returns_blocked_job_contract() -> None:
+    tenant_id = "00000000-0000-0000-0000-000000000001"
+
     job = create_job(
         {
-            "tenant_id": "tenant-alpha",
+            "tenant_id": tenant_id,
             "origin_worker_id": "voice-builder",
             "origin_run_id": "run-founder-blocked",
             "job_type": "voice-change",
@@ -857,7 +863,7 @@ def test_founder_blocked_work_endpoint_returns_blocked_job_contract() -> None:
     )
     create_artifact(
         {
-            "tenant_id": "tenant-alpha",
+            "tenant_id": tenant_id,
             "run_id": "run-founder-blocked",
             "created_by": "voice-truth",
             "artifact_type": "run_record",
