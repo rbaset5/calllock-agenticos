@@ -10,11 +10,13 @@ type BlockedWorkPageProps = {
 export default function BlockedWorkPage({
   searchParams,
 }: BlockedWorkPageProps) {
+  const tenantId = searchParams?.tenant_id ?? null;
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172033_0%,#0f172a_48%,#020617_100%)] text-slate-100">
-      <FounderNav currentPath="/blocked-work" />
+      <FounderNav currentPath="/blocked-work" tenantId={tenantId} />
       <section className="mx-auto max-w-6xl px-6 py-10">
-        <BlockedWorkPanel tenantId={searchParams?.tenant_id ?? null} />
+        <BlockedWorkPanel tenantId={tenantId} />
       </section>
     </main>
   );

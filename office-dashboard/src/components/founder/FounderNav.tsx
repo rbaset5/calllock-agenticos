@@ -8,10 +8,12 @@ const NAV_ITEMS = [
 
 type FounderNavProps = {
   currentPath?: string;
+  tenantId?: string | null;
 };
 
 export default function FounderNav({
   currentPath = "/",
+  tenantId = null,
 }: FounderNavProps) {
   return (
     <nav className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/85 backdrop-blur">
@@ -32,7 +34,10 @@ export default function FounderNav({
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={{
+                  pathname: item.href,
+                  query: tenantId ? { tenant_id: tenantId } : undefined,
+                }}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   isActive
                     ? "bg-cyan-400/15 text-cyan-100 ring-1 ring-cyan-300/30"
