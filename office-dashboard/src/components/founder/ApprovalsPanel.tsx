@@ -60,7 +60,13 @@ function sortApprovals(items: FounderApprovalItem[]) {
   });
 }
 
-export default function ApprovalsPanel() {
+type ApprovalsPanelProps = {
+  tenantId?: string | null;
+};
+
+export default function ApprovalsPanel({
+  tenantId = null,
+}: ApprovalsPanelProps) {
   const [items, setItems] = useState<FounderApprovalItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState("");
@@ -71,7 +77,7 @@ export default function ApprovalsPanel() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function loadApprovals() {
-    const response = await fetchFounderApprovals();
+    const response = await fetchFounderApprovals({ tenantId });
     const sorted = sortApprovals(response.items);
     setItems(sorted);
     setSelectedId((current) => {
@@ -88,7 +94,7 @@ export default function ApprovalsPanel() {
 
     void (async () => {
       try {
-        const response = await fetchFounderApprovals();
+        const response = await fetchFounderApprovals({ tenantId });
         if (!active) {
           return;
         }
@@ -117,7 +123,7 @@ export default function ApprovalsPanel() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [tenantId]);
 
   const selectedItem = useMemo(
     () => items.find((item) => item.id === selectedId) ?? items[0] ?? null,
@@ -137,6 +143,8 @@ export default function ApprovalsPanel() {
       await resolveFounderApproval(selectedItem.id, {
         status,
         resolution_notes: resolutionNotes.trim() || `Founder ${status}`,
+      }, {
+        tenantId,
       });
 
       await loadApprovals();
