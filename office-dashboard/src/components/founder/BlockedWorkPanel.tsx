@@ -7,6 +7,10 @@ import {
   fetchFounderBlockedWork,
 } from "@/lib/founder-api";
 
+type BlockedWorkPanelProps = {
+  tenantId?: string | null;
+};
+
 function stateClasses(state: string) {
   switch (state) {
     case "block":
@@ -95,7 +99,9 @@ function BlockedWorkRow({ item }: { item: FounderBlockedWorkItem }) {
   );
 }
 
-export default function BlockedWorkPanel() {
+export default function BlockedWorkPanel({
+  tenantId = null,
+}: BlockedWorkPanelProps) {
   const [items, setItems] = useState<FounderBlockedWorkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -105,7 +111,7 @@ export default function BlockedWorkPanel() {
 
     void (async () => {
       try {
-        const response = await fetchFounderBlockedWork();
+        const response = await fetchFounderBlockedWork({ tenantId });
         if (!active) {
           return;
         }
@@ -132,7 +138,7 @@ export default function BlockedWorkPanel() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [tenantId]);
 
   if (loading) {
     return (
