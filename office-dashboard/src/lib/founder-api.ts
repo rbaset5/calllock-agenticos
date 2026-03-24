@@ -162,8 +162,16 @@ export const founderEndpoints = {
   },
 } satisfies Record<string, FounderEndpointConfig>;
 
-function getFounderApprovalLocalPath(approvalId: string) {
-  return `${founderEndpoints.approvals.localPath}/${encodeURIComponent(approvalId)}`;
+function getFounderApprovalLocalPath(
+  approvalId: string,
+  tenantId?: string | null
+) {
+  return buildFounderLocalUrl(
+    `${founderEndpoints.approvals.localPath}/${encodeURIComponent(approvalId)}`,
+    {
+      tenant_id: tenantId,
+    }
+  );
 }
 
 function getFounderApprovalUpstreamPath(approvalId: string) {
@@ -321,10 +329,12 @@ export async function fetchFounderBlockedWork(
 export async function resolveFounderApproval(
   approvalId: string,
   payload: ResolveFounderApprovalPayload,
-  headers?: HeadersInit
+  options: FounderTenantRequest & { headers?: HeadersInit } = {}
 ) {
+  const { headers, tenantId } = options;
+
   return fetchFounderJson<FounderApprovalDecisionResponse>(
-    fetchFounderLocal(getFounderApprovalLocalPath(approvalId), {
+    fetchFounderLocal(getFounderApprovalLocalPath(approvalId, tenantId), {
       method: "POST",
       headers: mergeHeaders(
         {
@@ -425,6 +435,7 @@ export async function proxyFounderApprovalDecision(
   approvalId: string
 ) {
   try {
+    const url = new URL(request.url);
     const headers = new Headers();
 
     headers.set(
@@ -440,6 +451,7 @@ export async function proxyFounderApprovalDecision(
         method: "POST",
         body: await request.text(),
         headers,
+        tenantId: url.searchParams.get("tenant_id"),
       }
     );
 
