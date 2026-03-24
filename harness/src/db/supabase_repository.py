@@ -184,6 +184,15 @@ def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
     return data[0] if data else report
 
 
+def list_agent_reports(*, tenant_id: str | None = None, agent_id: str | None = None) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "report_date.desc,created_at.desc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if agent_id is not None:
+        params["agent_id"] = f"eq.{agent_id}"
+    return _request("GET", "agent_reports", params=params)
+
+
 def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
     data = _request("POST", "shadow_comparisons", json=record, prefer="return=representation")
     return data[0] if data else record
@@ -201,8 +210,13 @@ def update_artifact_lifecycle(artifact_id: str, target_state: str, *, tenant_id:
     return data[0]
 
 
-def list_artifacts(tenant_id: str) -> list[dict[str, Any]]:
-    return _request("GET", "artifacts", params={"tenant_id": f"eq.{tenant_id}"})
+def list_artifacts(tenant_id: str | None, *, run_id: str | None = None) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if run_id is not None:
+        params["run_id"] = f"eq.{run_id}"
+    return _request("GET", "artifacts", params=params)
 
 
 def create_job(payload: dict[str, Any]) -> dict[str, Any]:

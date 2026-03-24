@@ -13,8 +13,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Office Dashboard",
-  description: "3D agent office dashboard prototype powered by Supabase Realtime.",
+  title: "CallLock Founder MVP",
+  description: "Founder-facing operating surface for briefing, truth, and issue posture.",
 };
 
 export default function RootLayout({
