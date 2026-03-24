@@ -1,4 +1,10 @@
-from db.repository import create_alert, create_job
+from db.repository import (
+    create_alert,
+    create_alert_and_sync_incident,
+    create_approval_request,
+    create_artifact,
+    create_job,
+)
 from fastapi.testclient import TestClient
 
 from harness.server import app
@@ -757,9 +763,123 @@ def test_audit_log_endpoint() -> None:
     assert any(log["actor_id"] == "operator-7" for log in filtered.json())
 
 
-def test_approval_endpoints() -> None:
-    from db.repository import create_approval_request
+def test_founder_home_endpoint_returns_seeded_contract_payload() -> None:
+    create_alert_and_sync_incident(
+        {
+            "tenant_id": "tenant-alpha",
+            "alert_type": "voice_route_missing_spike",
+            "severity": "high",
+            "message": "Route missing spike",
+            "metrics": {"detection": {"notification_outcome": "founder_notify"}},
+            "created_at": "2026-03-24T09:00:00+00:00",
+        }
+    )
+    create_approval_request(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-founder-home-approval",
+            "worker_id": "voice-builder",
+            "status": "pending",
+            "reason": "Truth escalation requires review",
+            "requested_by": "harness",
+            "request_type": "verification",
+            "payload": {"verification": {"verdict": "escalate", "reasons": ["Boundary call"]}},
+        }
+    )
+    create_artifact(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-founder-home-truth",
+            "created_by": "voice-truth",
+            "artifact_type": "voice_truth_eval",
+            "payload": {
+                "state": "block",
+                "top_reason": "customer_phone_exact regressed",
+                "failed_metric_count": 1,
+            },
+            "lineage": {"worker_id": "voice-truth"},
+        }
+    )
 
+    client = TestClient(app)
+    response = client.get("/founder/home", params={"tenant_id": "tenant-alpha"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["briefing"]["recommended_action"] == "Review pending approval"
+    assert payload["voice_truth"]["state"] in {"pass", "block", "escalate", "not_active"}
+    assert payload["voice_truth"]["state"] == "block"
+    assert payload["issue_posture"]["active_threads"]
+    assert payload["issue_posture"]["active_threads"][0]["alert_type"] == "voice_route_missing_spike"
+
+
+def test_founder_approvals_endpoint_returns_real_approval_request_contract() -> None:
+    approval = create_approval_request(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-founder-approval",
+            "worker_id": "voice-builder",
+            "status": "pending",
+            "reason": "Truth escalation requires review",
+            "requested_by": "harness",
+            "request_type": "verification",
+            "payload": {"verification": {"verdict": "escalate", "reasons": ["Boundary call"]}},
+        }
+    )
+
+    client = TestClient(app)
+    response = client.get("/founder/approvals", params={"tenant_id": "tenant-alpha"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["id"] == approval["id"]
+    assert payload["items"][0]["source"] == "approval_requests"
+    assert payload["items"][0]["reason"] == "Truth escalation requires review"
+    assert payload["items"][0]["recommended_action"] == "Review approval request"
+
+
+def test_founder_blocked_work_endpoint_returns_blocked_job_contract() -> None:
+    job = create_job(
+        {
+            "tenant_id": "tenant-alpha",
+            "origin_worker_id": "voice-builder",
+            "origin_run_id": "run-founder-blocked",
+            "job_type": "voice-change",
+            "status": "failed",
+            "idempotency_key": "voice-builder:run-founder-blocked",
+            "payload": {"target_worker_id": "voice-builder"},
+            "result": {
+                "status": "block",
+                "verification": {"passed": False, "verdict": "block", "reasons": ["route_no_regression failed"]},
+            },
+            "created_by": "harness",
+        }
+    )
+    create_artifact(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-founder-blocked",
+            "created_by": "voice-truth",
+            "artifact_type": "run_record",
+            "source_job_id": job["id"],
+            "payload": {"summary": "blocked run artifact"},
+            "lineage": {"worker_id": "voice-truth"},
+        }
+    )
+
+    client = TestClient(app)
+    response = client.get("/founder/blocked-work", params={"tenant_id": "tenant-alpha"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["id"] == job["id"]
+    assert payload["items"][0]["blocked_reason"] == "route_no_regression failed"
+    assert payload["items"][0]["recommended_next_step"] == "Revise candidate and rerun truth gate"
+    assert isinstance(payload["items"][0]["artifact_refs"], list)
+    assert payload["items"][0]["artifact_refs"]
+
+
+def test_approval_endpoints() -> None:
     approval = create_approval_request(
         {
             "tenant_id": "00000000-0000-0000-0000-000000000001",
