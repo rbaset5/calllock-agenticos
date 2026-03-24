@@ -230,6 +230,7 @@ def list_agent_reports(*, tenant_id: str | None = None, agent_id: str | None = N
             str(report.get("report_date", "")),
             str(report.get("created_at", "")),
         ),
+        reverse=True,
     )
 
 
@@ -258,8 +259,10 @@ def update_artifact_lifecycle(artifact_id: str, target_state: str, *, tenant_id:
     raise KeyError(f"Unknown artifact: {artifact_id}")
 
 
-def list_artifacts(tenant_id: str, *, run_id: str | None = None) -> list[dict[str, Any]]:
-    artifacts = [artifact for artifact in _state()["artifacts"] if artifact["tenant_id"] == tenant_id]
+def list_artifacts(tenant_id: str | None, *, run_id: str | None = None) -> list[dict[str, Any]]:
+    artifacts = list(_state()["artifacts"])
+    if tenant_id is not None:
+        artifacts = [artifact for artifact in artifacts if artifact["tenant_id"] == tenant_id]
     if run_id is not None:
         artifacts = [artifact for artifact in artifacts if artifact.get("run_id") == run_id]
     return artifacts

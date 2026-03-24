@@ -34,21 +34,17 @@ def build_founder_briefing(*, tenant_id: str | None = None) -> dict[str, Any]:
     top_issue_thread = _select_top_issue_thread(issue_posture.get("active_threads", []))
     top_blocked_work = blocked_work[0] if blocked_work else None
     top_regression = voice_truth if voice_truth.get("state") in {"block", "escalate"} else None
-
-    if top_pending_approval is not None:
-        recommended_action = "Review pending approval"
-    elif top_regression is not None:
-        recommended_action = "Inspect latest voice truth regression"
-    elif top_blocked_work is not None:
-        recommended_action = top_blocked_work.get("recommended_next_step")
-    elif top_issue_thread is not None:
-        recommended_action = "Review active issue thread"
-    else:
-        recommended_action = "No urgent founder action"
+    top_change_kind, top_change = _select_briefing_focus(
+        top_pending_approval=top_pending_approval,
+        top_regression=top_regression,
+        top_blocked_work=top_blocked_work,
+        top_issue_thread=top_issue_thread,
+    )
+    recommended_action = _briefing_recommended_action(top_change_kind, top_change)
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "top_change": top_pending_approval or top_blocked_work or top_issue_thread or top_regression,
+        "top_change": top_change,
         "top_regression": top_regression,
         "top_issue_thread": top_issue_thread,
         "top_blocked_work": top_blocked_work,
@@ -61,9 +57,9 @@ def build_founder_briefing(*, tenant_id: str | None = None) -> dict[str, Any]:
 def build_voice_truth_summary(*, tenant_id: str | None = None) -> dict[str, Any]:
     artifacts = [
         artifact
-        for artifact in list_artifacts(tenant_id or "")
+        for artifact in list_artifacts(tenant_id)
         if _is_voice_truth_artifact(artifact)
-    ] if tenant_id is not None else []
+    ]
     if artifacts:
         artifact = _latest_by_timestamp(artifacts)
         payload = artifact.get("payload", {})
@@ -236,6 +232,37 @@ def _select_top_issue_thread(threads: list[dict[str, Any]]) -> dict[str, Any] | 
             str(thread.get("incident_id", "")),
         ),
     )[0]
+
+
+def _select_briefing_focus(
+    *,
+    top_pending_approval: dict[str, Any] | None,
+    top_regression: dict[str, Any] | None,
+    top_blocked_work: dict[str, Any] | None,
+    top_issue_thread: dict[str, Any] | None,
+) -> tuple[str, dict[str, Any] | None]:
+    priority_order = (
+        ("pending_approval", top_pending_approval),
+        ("regression", top_regression),
+        ("blocked_work", top_blocked_work),
+        ("issue_thread", top_issue_thread),
+    )
+    for kind, item in priority_order:
+        if item is not None:
+            return kind, item
+    return "idle", None
+
+
+def _briefing_recommended_action(top_change_kind: str, top_change: dict[str, Any] | None) -> str:
+    if top_change_kind == "pending_approval":
+        return "Review pending approval"
+    if top_change_kind == "regression":
+        return "Inspect latest voice truth regression"
+    if top_change_kind == "blocked_work":
+        return str(top_change.get("recommended_next_step") or "Review blocked work")
+    if top_change_kind == "issue_thread":
+        return "Review active issue thread"
+    return "No urgent founder action"
 
 
 def _is_voice_truth_artifact(artifact: dict[str, Any]) -> bool:

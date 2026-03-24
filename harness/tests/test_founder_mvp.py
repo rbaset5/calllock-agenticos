@@ -9,6 +9,7 @@ from db.repository import (
 )
 from harness.founder_mvp import (
     build_founder_approvals,
+    build_founder_briefing,
     build_founder_blocked_work,
     build_founder_home,
     build_voice_truth_summary,
@@ -156,3 +157,144 @@ def test_blocked_work_derives_reason_next_step_and_artifacts_from_jobs() -> None
     assert item["blocked_reason"] == "route_no_regression failed"
     assert item["recommended_next_step"] == "Revise candidate and rerun truth gate"
     assert len(item["artifact_refs"]) == 1
+
+
+def test_blocked_work_escalate_only_recommends_review_with_matching_pending_approval() -> None:
+    create_job(
+        {
+            "tenant_id": "tenant-alpha",
+            "origin_worker_id": "voice-builder",
+            "origin_run_id": "run-escalate-without-approval",
+            "job_type": "voice-change",
+            "status": "failed",
+            "idempotency_key": "voice-builder:run-escalate-without-approval",
+            "payload": {"target_worker_id": "voice-builder"},
+            "result": {
+                "status": "escalate",
+                "verification": {"passed": False, "verdict": "escalate", "reasons": ["Needs founder judgment"]},
+            },
+            "created_by": "harness",
+        }
+    )
+    escalated_with_approval = create_job(
+        {
+            "tenant_id": "tenant-alpha",
+            "origin_worker_id": "voice-builder",
+            "origin_run_id": "run-escalate-with-approval",
+            "job_type": "voice-change",
+            "status": "failed",
+            "idempotency_key": "voice-builder:run-escalate-with-approval",
+            "payload": {"target_worker_id": "voice-builder"},
+            "result": {
+                "status": "escalate",
+                "verification": {"passed": False, "verdict": "escalate", "reasons": ["Boundary case"]},
+            },
+            "created_by": "harness",
+        }
+    )
+    create_approval_request(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-escalate-with-approval",
+            "worker_id": "voice-builder",
+            "status": "pending",
+            "reason": "Boundary case",
+            "requested_by": "harness",
+            "request_type": "verification",
+            "payload": {"verification": {"verdict": "escalate", "reasons": ["Boundary case"]}},
+        }
+    )
+
+    blocked = build_founder_blocked_work(tenant_id="tenant-alpha")
+    items_by_run = {item["id"]: item for item in blocked["items"]}
+
+    without_approval = next(
+        item
+        for item in blocked["items"]
+        if item["blocked_reason"] == "Needs founder judgment"
+    )
+    assert without_approval["recommended_next_step"] is None
+    assert items_by_run[escalated_with_approval["id"]]["recommended_next_step"] == "Review approval request"
+
+
+def test_founder_briefing_keeps_top_change_and_recommended_action_aligned() -> None:
+    approval = create_approval_request(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-priority-approval",
+            "worker_id": "voice-builder",
+            "status": "pending",
+            "reason": "Approve voice rollout boundary",
+            "requested_by": "harness",
+            "request_type": "verification",
+            "payload": {"verification": {"verdict": "escalate", "reasons": ["Boundary case"]}},
+        }
+    )
+    create_job(
+        {
+            "tenant_id": "tenant-alpha",
+            "origin_worker_id": "voice-builder",
+            "origin_run_id": "run-priority-blocked",
+            "job_type": "voice-change",
+            "status": "failed",
+            "idempotency_key": "voice-builder:run-priority-blocked",
+            "payload": {"target_worker_id": "voice-builder"},
+            "result": {
+                "status": "block",
+                "verification": {"passed": False, "verdict": "block", "reasons": ["route_no_regression failed"]},
+            },
+            "created_by": "harness",
+        }
+    )
+    create_alert_and_sync_incident(
+        {
+            "tenant_id": "tenant-alpha",
+            "alert_type": "voice_route_missing_spike",
+            "severity": "high",
+            "message": "Route missing spike",
+            "metrics": {"detection": {"notification_outcome": "founder_notify"}},
+        }
+    )
+    create_artifact(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-priority-truth",
+            "created_by": "voice-truth",
+            "artifact_type": "voice_truth_eval",
+            "payload": {
+                "state": "block",
+                "top_reason": "customer_phone_exact regressed",
+                "failed_metric_count": 1,
+            },
+            "lineage": {"worker_id": "voice-truth"},
+        }
+    )
+
+    briefing = build_founder_briefing(tenant_id="tenant-alpha")
+
+    assert briefing["top_change"]["id"] == approval["id"]
+    assert briefing["top_pending_approval"]["id"] == approval["id"]
+    assert briefing["top_regression"]["top_reason"] == "customer_phone_exact regressed"
+    assert briefing["recommended_action"] == "Review pending approval"
+
+
+def test_voice_truth_summary_aggregates_truth_artifacts_when_tenant_is_omitted() -> None:
+    create_artifact(
+        {
+            "tenant_id": "tenant-alpha",
+            "run_id": "run-global-voice-truth",
+            "created_by": "voice-truth",
+            "artifact_type": "voice_truth_eval",
+            "payload": {
+                "state": "block",
+                "top_reason": "global artifact should still surface",
+                "failed_metric_count": 3,
+            },
+            "lineage": {"worker_id": "voice-truth"},
+        }
+    )
+
+    summary = build_voice_truth_summary()
+
+    assert summary["state"] == "block"
+    assert summary["top_reason"] == "global artifact should still surface"
