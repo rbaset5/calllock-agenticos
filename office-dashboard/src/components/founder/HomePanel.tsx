@@ -11,6 +11,10 @@ import {
   fetchFounderHome,
 } from "@/lib/founder-api";
 
+type HomePanelProps = {
+  tenantId?: string | null;
+};
+
 function formatTimestamp(value: string | null | undefined) {
   if (!value) {
     return "Not evaluated yet";
@@ -93,7 +97,7 @@ function IssueThreadRow({ thread }: { thread: FounderIssueThread }) {
   );
 }
 
-export default function HomePanel() {
+export default function HomePanel({ tenantId = null }: HomePanelProps) {
   const [data, setData] = useState<FounderHomeResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +107,7 @@ export default function HomePanel() {
 
     void (async () => {
       try {
-        const response = await fetchFounderHome();
+        const response = await fetchFounderHome({ tenantId });
         if (!active) {
           return;
         }
@@ -128,7 +132,7 @@ export default function HomePanel() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [tenantId]);
 
   const issueThreads = useMemo(
     () => data?.issue_posture.active_threads ?? [],
