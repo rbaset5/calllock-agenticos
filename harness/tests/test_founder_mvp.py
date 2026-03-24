@@ -89,8 +89,11 @@ def test_founder_home_contains_contract_fields_not_just_keys() -> None:
     assert payload["active_priority"]["source"] == "AGENT.md"
 
 
-def test_load_active_priority_returns_null_projection_when_agent_file_has_no_priority() -> None:
-    priority = load_active_priority()
+def test_load_active_priority_returns_null_projection_when_agent_file_has_no_priority(tmp_path) -> None:
+    agent_path = tmp_path / "AGENT.md"
+    agent_path.write_text("# Instructions\n\nNo explicit active priority here.\n")
+
+    priority = load_active_priority(path=agent_path)
 
     assert priority["label"] is None
     assert priority["constraints"] == []
