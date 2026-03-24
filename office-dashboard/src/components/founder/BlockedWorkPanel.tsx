@@ -60,6 +60,37 @@ function BlockedWorkRow({ item }: { item: FounderBlockedWorkItem }) {
           </p>
         </div>
       </div>
+
+      <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+          Supporting Artifacts
+        </p>
+        {item.artifact_refs.length > 0 ? (
+          <ul className="mt-3 space-y-2">
+            {item.artifact_refs.map((artifact, index) => (
+              <li
+                key={
+                  artifact.id ??
+                  `${artifact.run_id}-${artifact.artifact_type}-${index}`
+                }
+                className="rounded-2xl border border-white/10 bg-slate-950/50 px-3 py-3 text-sm text-slate-200"
+              >
+                <p className="font-medium text-white">
+                  {artifact.artifact_type ?? "artifact"}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Run {artifact.run_id ?? "unknown"} · Created{" "}
+                  {artifact.created_at ?? "unknown"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-slate-300">
+            No supporting artifacts are attached yet.
+          </p>
+        )}
+      </div>
     </article>
   );
 }
