@@ -92,6 +92,11 @@ export default function ApprovalsPanel({
   useEffect(() => {
     let active = true;
 
+    setLoading(true);
+    setItems([]);
+    setSelectedId(null);
+    setErrorMessage(null);
+
     void (async () => {
       try {
         const response = await fetchFounderApprovals({ tenantId });

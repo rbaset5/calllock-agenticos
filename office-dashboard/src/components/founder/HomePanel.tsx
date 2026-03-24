@@ -105,6 +105,10 @@ export default function HomePanel({ tenantId = null }: HomePanelProps) {
   useEffect(() => {
     let active = true;
 
+    setLoading(true);
+    setData(null);
+    setErrorMessage(null);
+
     void (async () => {
       try {
         const response = await fetchFounderHome({ tenantId });

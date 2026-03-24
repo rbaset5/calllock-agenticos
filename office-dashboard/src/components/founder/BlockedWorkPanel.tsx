@@ -109,6 +109,10 @@ export default function BlockedWorkPanel({
   useEffect(() => {
     let active = true;
 
+    setLoading(true);
+    setItems([]);
+    setErrorMessage(null);
+
     void (async () => {
       try {
         const response = await fetchFounderBlockedWork({ tenantId });
