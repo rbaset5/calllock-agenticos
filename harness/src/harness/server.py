@@ -924,6 +924,24 @@ if FastAPI:
         resolved_tenant_id = get_tenant(tenant_id)["id"] if tenant_id else None
         return list_audit_logs(tenant_id=resolved_tenant_id, action_type=action_type)
 
+    @app.get("/founder/home")
+    def founder_home_endpoint(tenant_id: str = None) -> dict[str, Any]:
+        from harness.founder_mvp import build_founder_home
+
+        return build_founder_home(tenant_id=tenant_id)
+
+    @app.get("/founder/approvals")
+    def founder_approvals_endpoint(tenant_id: str = None) -> dict[str, Any]:
+        from harness.founder_mvp import build_founder_approvals
+
+        return build_founder_approvals(tenant_id=tenant_id)
+
+    @app.get("/founder/blocked-work")
+    def founder_blocked_work_endpoint(tenant_id: str = None) -> dict[str, Any]:
+        from harness.founder_mvp import build_founder_blocked_work
+
+        return build_founder_blocked_work(tenant_id=tenant_id)
+
     @app.get("/approvals")
     def get_approvals(tenant_id: str = None, status: str = None) -> list[dict[str, Any]]:
         resolved_tenant_id = get_tenant(tenant_id)["id"] if tenant_id else None
