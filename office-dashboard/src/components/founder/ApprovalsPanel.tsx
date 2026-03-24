@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type FounderApprovalItem,
@@ -67,6 +67,7 @@ type ApprovalsPanelProps = {
 export default function ApprovalsPanel({
   tenantId = null,
 }: ApprovalsPanelProps) {
+  const latestTenantIdRef = useRef<string | null>(tenantId);
   const [items, setItems] = useState<FounderApprovalItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState("");
@@ -76,18 +77,32 @@ export default function ApprovalsPanel({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  async function loadApprovals() {
-    const response = await fetchFounderApprovals({ tenantId });
-    const sorted = sortApprovals(response.items);
-    setItems(sorted);
-    setSelectedId((current) => {
-      if (current && sorted.some((item) => item.id === current)) {
-        return current;
+  latestTenantIdRef.current = tenantId;
+
+  const loadApprovals = useCallback(
+    async (expectedTenantId: string | null = tenantId) => {
+      const response = await fetchFounderApprovals({
+        tenantId: expectedTenantId,
+      });
+      const sorted = sortApprovals(response.items);
+
+      if (latestTenantIdRef.current !== expectedTenantId) {
+        return false;
       }
 
-      return sorted[0]?.id ?? null;
-    });
-  }
+      setItems(sorted);
+      setSelectedId((current) => {
+        if (current && sorted.some((item) => item.id === current)) {
+          return current;
+        }
+
+        return sorted[0]?.id ?? null;
+      });
+
+      return true;
+    },
+    [tenantId]
+  );
 
   useEffect(() => {
     let active = true;
@@ -96,18 +111,12 @@ export default function ApprovalsPanel({
     setItems([]);
     setSelectedId(null);
     setErrorMessage(null);
+    setSuccessMessage(null);
+    setResolutionNotes("");
 
     void (async () => {
       try {
-        const response = await fetchFounderApprovals({ tenantId });
-        if (!active) {
-          return;
-        }
-
-        const sorted = sortApprovals(response.items);
-        setItems(sorted);
-        setSelectedId(sorted[0]?.id ?? null);
-        setErrorMessage(null);
+        await loadApprovals(tenantId);
       } catch (error) {
         if (!active) {
           return;
@@ -128,7 +137,7 @@ export default function ApprovalsPanel({
     return () => {
       active = false;
     };
-  }, [tenantId]);
+  }, [loadApprovals, tenantId]);
 
   const selectedItem = useMemo(
     () => items.find((item) => item.id === selectedId) ?? items[0] ?? null,
@@ -140,6 +149,7 @@ export default function ApprovalsPanel({
       return;
     }
 
+    const decisionTenantId = tenantId;
     setSubmittingAction(status);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -149,10 +159,14 @@ export default function ApprovalsPanel({
         status,
         resolution_notes: resolutionNotes.trim() || `Founder ${status}`,
       }, {
-        tenantId,
+        tenantId: decisionTenantId,
       });
 
-      await loadApprovals();
+      const reloaded = await loadApprovals(decisionTenantId);
+      if (!reloaded) {
+        return;
+      }
+
       setResolutionNotes("");
       setSuccessMessage(
         status === "cancelled"
