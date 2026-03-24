@@ -210,8 +210,10 @@ def update_artifact_lifecycle(artifact_id: str, target_state: str, *, tenant_id:
     return data[0]
 
 
-def list_artifacts(tenant_id: str, *, run_id: str | None = None) -> list[dict[str, Any]]:
-    params = {"tenant_id": f"eq.{tenant_id}"}
+def list_artifacts(tenant_id: str | None, *, run_id: str | None = None) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
     if run_id is not None:
         params["run_id"] = f"eq.{run_id}"
     return _request("GET", "artifacts", params=params)

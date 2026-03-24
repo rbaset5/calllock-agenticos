@@ -69,7 +69,7 @@ def update_artifact_lifecycle(artifact_id: str, target_state: str, *, tenant_id:
     return local_repository.update_artifact_lifecycle(artifact_id, target_state, tenant_id=tenant_id)
 
 
-def list_artifacts(tenant_id: str, *, run_id: str | None = None) -> list[dict[str, Any]]:
+def list_artifacts(tenant_id: str | None, *, run_id: str | None = None) -> list[dict[str, Any]]:
     if using_supabase():
         return supabase_repository.list_artifacts(tenant_id, run_id=run_id)
     return local_repository.list_artifacts(tenant_id, run_id=run_id)
