@@ -432,10 +432,7 @@ export async function proxyFounderApprovalDecision(
       request.headers.get("content-type") ?? JSON_CONTENT_TYPE
     );
 
-    const actorId = request.headers.get("x-actor-id");
-    if (actorId) {
-      headers.set("x-actor-id", actorId);
-    }
+    headers.set("x-actor-id", request.headers.get("x-actor-id") ?? "founder");
 
     const upstream = await requestFounderUpstream(
       getFounderApprovalUpstreamPath(approvalId),
