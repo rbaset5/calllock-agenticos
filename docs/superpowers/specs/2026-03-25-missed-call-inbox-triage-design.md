@@ -58,6 +58,12 @@ One of four action-timing labels:
 
 These labels should become the operating language of the inbox. They are for ordering work, not describing call types.
 
+Copy requirement:
+
+- Every command label must stay inside one semantic frame: action timing.
+- Every command label should be no more than two words.
+- If user testing shows `Next up` or `Can wait` feels ambiguous or judgmental, the preferred fallback copy is `Soon` and `Later`.
+
 ### Evidence
 
 A short reason that explains why the call belongs in that bucket. The evidence line should be compact, factual, and fast to scan.
@@ -175,6 +181,13 @@ Fallback mapping for sparse data:
 - If the call mainly indicates a callback or follow-up need, default to `Next up`.
 - If the call is unresolved but the extracted fields are too thin to justify stronger action, default to `Can wait` with evidence such as `incomplete details, needs review`.
 
+Glanceability constraints:
+
+- The triage block must remain readable in under 2 seconds.
+- The command line should stay visually dominant over the evidence line.
+- The evidence line should be a short fragment, not a sentence, and should target roughly 18 to 32 characters.
+- The row should not depend on wrapping long evidence across multiple lines to communicate the main reason.
+
 ## Data Dependencies
 
 The current call model already exposes several useful inputs for first-pass triage:
@@ -195,10 +208,15 @@ If a later version introduces a hidden ranking score for tie-breaking, the visib
 ## UX Notes
 
 - Place the triage block on the far left of each unresolved row so it becomes the first scan target.
+- Give the triage block a fixed visual footprint so rows feel comparable while scanning.
+- Use one coherent urgency palette with intensity shifts, not four unrelated badge colors. `Call now` can carry the strongest alert styling; lower buckets should become progressively quieter.
 - Keep caller name, time, and snippet as supporting detail, not the primary decision surface.
 - Keep the existing urgency chips and follow-up metadata as secondary row details in v1; the new triage block becomes the primary ordering cue.
+- Clicking the triage block or row should open the detail view, not immediately place a call.
+- The detail view should reflect the triage outcome by making the matching next action visually primary when appropriate, so the handoff from inbox judgment to owner action feels continuous.
 - Preserve the detail pane as the place where the owner validates context before calling.
 - Treat this as an inbox-wide system for all unresolved calls, not only AI failures or handoff exceptions.
+- On smaller screens, preserve the command label as the non-negotiable visible element; the evidence line may truncate earlier than the command.
 
 ## Validation Criteria
 
@@ -219,6 +237,8 @@ Success criteria:
 - Evidence earns the click
 - Urgency-first behavior holds under conflict
 - Labels do not feel arbitrary or opaque
+- The triage copy feels calm and useful rather than alarmist or dismissive
+- The owner can move from inbox scan to confident callback action without a jarring context switch
 
 ## Planning Readiness
 
