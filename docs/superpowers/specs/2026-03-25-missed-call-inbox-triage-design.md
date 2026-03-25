@@ -72,7 +72,7 @@ Examples:
 - `requested callback`
 - `estimate request`
 - `urgent escalation`
-- `booking not completed`
+- `booking failed`
 - `incomplete details, needs review`
 
 Avoid:
@@ -92,11 +92,11 @@ Use when delay is likely to cause immediate customer pain, safety risk, service 
 
 Typical triggers:
 
-- Safety emergency
-- No heat or no cooling outage
-- Explicit urgency from the caller
+- `isSafetyEmergency = true`
+- `urgency = LifeSafety`
+- Severe outage language in `problemDescription` or `hvacIssueType`
 - `isUrgentEscalation = true`
-- Severe problem language in `problemDescription`
+- `urgency = Urgent` with a concrete service issue
 
 ### `Next up`
 
@@ -107,8 +107,8 @@ Typical triggers:
 - Callback requested
 - `endCallReason = callback_later`
 - `callbackType` present
-- Scheduling friction blocked the call
-- Likely urgent issue with enough uncertainty that a human should review soon
+- `endCallReason = booking_failed`
+- `urgency = Urgent` without enough detail to justify `Call now`
 
 ### `Today`
 
@@ -118,8 +118,8 @@ Typical triggers:
 
 - Estimate requests
 - `urgency = Estimate`
-- Routine service calls that the AI did not capture
-- General follow-up that deserves same-day response
+- `urgency = Routine` with a concrete service issue
+- Concrete unresolved issue that does not match a stronger bucket
 
 ### `Can wait`
 
@@ -211,7 +211,7 @@ Validation scenarios should include:
 - Routine estimate
 - Low-information unresolved inquiry
 - Incomplete transcript or ambiguous issue
-- Booking flow that failed to complete
+- `endCallReason = booking_failed`
 
 Success criteria:
 
