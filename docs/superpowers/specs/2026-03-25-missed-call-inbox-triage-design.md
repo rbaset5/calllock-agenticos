@@ -68,11 +68,11 @@ Preferred pattern:
 
 Examples:
 
-- `no cooling, existing customer`
-- `requested callback, missed booking`
-- `system quote, new lead`
-- `parts question, can wait`
-- `after-hours outage`
+- `no cooling`
+- `requested callback`
+- `estimate request`
+- `urgent escalation`
+- `booking not completed`
 - `incomplete details, needs review`
 
 Avoid:
@@ -95,8 +95,8 @@ Typical triggers:
 - Safety emergency
 - No heat or no cooling outage
 - Explicit urgency from the caller
-- Existing customer with a stranded or acute problem
-- Repeat failed resolution that now needs human intervention
+- `isUrgentEscalation = true`
+- Severe problem language in `problemDescription`
 
 ### `Next up`
 
@@ -105,7 +105,8 @@ Use when a human should respond soon, but the situation is not an immediate emer
 Typical triggers:
 
 - Callback requested
-- Owner decision needed
+- `endCallReason = callback_later`
+- `callbackType` present
 - Scheduling friction blocked the call
 - Likely urgent issue with enough uncertainty that a human should review soon
 
@@ -116,9 +117,9 @@ Use when the call matters and deserves same-day follow-up, but waiting a few hou
 Typical triggers:
 
 - Estimate requests
-- Replacement leads
+- `urgency = Estimate`
 - Routine service calls that the AI did not capture
-- Non-urgent sales opportunities
+- General follow-up that deserves same-day response
 
 ### `Can wait`
 
@@ -126,9 +127,8 @@ Use when the unresolved call is real but low-cost to defer.
 
 Typical triggers:
 
-- Vendor or partner inquiry
-- Low-priority admin request
-- Weak-intent lead
+- Low-information unresolved call
+- Ambiguous issue with no urgency cue
 - Incomplete call with no clear urgency cue
 
 ## Ordering Logic
@@ -136,17 +136,20 @@ Typical triggers:
 The inbox should order unresolved calls by:
 
 1. Command bucket
-2. Strongest urgency cue within the bucket
+2. Deterministic signal rank within the bucket
 3. Recency
 
-Business value can break ties inside a bucket, but it must not promote a lower-urgency call above a higher-urgency call in another bucket.
+For v1, business value is out of scope as a ranking signal. If two calls land in the same command bucket and share the same signal rank, recency decides the order.
 
-Example:
+Recommended within-bucket signal rank for v1:
 
-- `Call now` + `no cooling, existing customer`
-- `Today` + `high-ticket system quote`
+1. Safety emergency
+2. Urgent escalation
+3. Callback requested
+4. Concrete service issue extracted (`problemDescription` or `hvacIssueType`)
+5. Generic unresolved record
 
-The quote can still rank highly within `Today`, but it does not outrank the urgent outage.
+This keeps the sort logic deterministic and grounded in currently available fields.
 
 ## Trust And Uncertainty Guardrails
 
@@ -161,8 +164,14 @@ Guardrails:
 
 - No numeric score in the UI
 - No fabricated certainty language
-- No urgency overrides based only on projected revenue
+- No urgency overrides based on projected revenue in v1
 - No highly specific evidence unless supporting fields are reliable
+
+Fallback mapping for sparse data:
+
+- If the call has a concrete issue but no urgency cue, default to `Today`.
+- If the call mainly indicates a callback or follow-up need, default to `Next up`.
+- If the call is unresolved but the extracted fields are too thin to justify stronger action, default to `Can wait` with evidence such as `incomplete details, needs review`.
 
 ## Data Dependencies
 
@@ -179,12 +188,15 @@ The current call model already exposes several useful inputs for first-pass tria
 - `customerName`
 - `createdAt`
 
-The first version should prefer deterministic rules over a fully learned ranking system. If a later version introduces a hidden ranking score for tie-breaking, the visible UI should still remain command + evidence.
+The first version should prefer deterministic rules over a fully learned ranking system. The spec intentionally does not require new extraction work for concepts such as customer lifetime value, customer history, lead value, partner/vendor identification, or after-hours classification. Those can be future enhancements after the command + evidence pattern proves useful.
+
+If a later version introduces a hidden ranking score for tie-breaking, the visible UI should still remain command + evidence.
 
 ## UX Notes
 
 - Place the triage block on the far left of each unresolved row so it becomes the first scan target.
 - Keep caller name, time, and snippet as supporting detail, not the primary decision surface.
+- Keep the existing urgency chips and follow-up metadata as secondary row details in v1; the new triage block becomes the primary ordering cue.
 - Preserve the detail pane as the place where the owner validates context before calling.
 - Treat this as an inbox-wide system for all unresolved calls, not only AI failures or handoff exceptions.
 
@@ -197,9 +209,9 @@ Validation scenarios should include:
 - Emergency outage
 - Urgent callback request
 - Routine estimate
-- Vendor or low-priority inquiry
+- Low-information unresolved inquiry
 - Incomplete transcript or ambiguous issue
-- High-value but non-urgent lead
+- Booking flow that failed to complete
 
 Success criteria:
 
