@@ -37,6 +37,21 @@ export function useRealtimeCalls(
           setCalls((prev) => [call, ...prev])
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "call_records",
+        },
+        (payload) => {
+          const row = payload.new as CallRecordRow
+          const updated = transformCallRecord(row, readIdsRef.current)
+          setCalls((prev) =>
+            prev.map((c) => (c.id === updated.id ? updated : c))
+          )
+        }
+      )
       .subscribe()
 
     return () => {
