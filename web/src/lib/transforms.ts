@@ -37,6 +37,15 @@ function field(
   return fields[snakeKey] ?? (camelKey ? fields[camelKey] : undefined)
 }
 
+export function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "")
+  const national = digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits
+  if (national.length === 10) {
+    return `(${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6)}`
+  }
+  return phone
+}
+
 export function mapUrgency(tier: string | null): UrgencyTier {
   if (!tier) return "Routine"
   return URGENCY_MAP[tier.toLowerCase()] ?? "Routine"
@@ -78,7 +87,7 @@ export function transformCallRecord(
 
   return {
     id: row.call_id,
-    customerName: str(field(fields, "customer_name", "customerName"), "Unknown Caller"),
+    customerName: str(field(fields, "customer_name", "customerName")) || "Unknown Caller",
     customerPhone:
       row.phone_number ?? str(field(fields, "customer_phone", "customerPhone")),
     serviceAddress: str(field(fields, "service_address", "serviceAddress")),
@@ -104,6 +113,10 @@ export function transformCallRecord(
     transcript,
     callbackType: callbackType || null,
     read: readIds.has(row.call_id),
+    callbackOutcome: (row.callback_outcome as import("@/types/call").CallbackOutcome) ?? null,
+    callbackOutcomeAt: row.callback_outcome_at ?? null,
+    callbackWindowStart: str(field(fields, "callback_window_start", "callbackWindowStart")) || null,
+    callbackWindowEnd: str(field(fields, "callback_window_end", "callbackWindowEnd")) || null,
     createdAt: row.created_at,
   }
 }

@@ -17,6 +17,63 @@ export type EndCallReason =
   | "rescheduled"
   | "booking_failed"
 
+export type CallbackOutcome =
+  | "reached_customer"
+  | "scheduled"
+  | "left_voicemail"
+  | "no_answer"
+  | "resolved_elsewhere"
+
+/** Terminal outcomes that remove a call from the unresolved queue */
+export const TERMINAL_CALLBACK_OUTCOMES: ReadonlySet<CallbackOutcome> = new Set([
+  "reached_customer",
+  "scheduled",
+  "resolved_elsewhere",
+])
+
+/**
+ * EndCallReasons that make a call terminal (never enters unresolved queue).
+ *
+ * Confirmed against EndCallReason enum:
+ * - wrong_number, out_of_area, cancelled, completed, rescheduled → terminal
+ * - callback_later, booking_failed, customer_hangup, safety_emergency,
+ *   urgent_escalation, waitlist_added, sales_lead → non-terminal (stay unresolved)
+ *
+ * Rationale: rescheduled means the customer was already reached and rebooked.
+ * waitlist_added and sales_lead remain unresolved because the owner still
+ * needs to follow up or convert.
+ */
+export const TERMINAL_END_CALL_REASONS: ReadonlySet<EndCallReason> = new Set([
+  "wrong_number",
+  "out_of_area",
+  "cancelled",
+  "completed",
+  "rescheduled",
+])
+
+export type TriageCommand = "Call now" | "Next up" | "Today" | "Can wait"
+
+export type TriageReason =
+  | "no_cooling"
+  | "no_heating"
+  | "estimate_request"
+  | "callback_requested"
+  | "booking_failed"
+  | "urgent_escalation"
+  | "generic_service_issue"
+
+export interface TriageResult {
+  isUnresolved: boolean
+  command: TriageCommand
+  evidence: string
+  reason: TriageReason
+  isStale: boolean
+  staleMinutes: number
+  callbackWindowStart: string | null
+  callbackWindowEnd: string | null
+  callbackWindowValid: boolean
+}
+
 export type HVACIssueType =
   | "Cooling"
   | "Heating"
@@ -53,6 +110,10 @@ export interface Call {
   transcript: TranscriptEntry[]
   callbackType: string | null
   read: boolean
+  callbackOutcome: CallbackOutcome | null
+  callbackOutcomeAt: string | null
+  callbackWindowStart: string | null
+  callbackWindowEnd: string | null
   createdAt: string
 }
 
@@ -78,6 +139,8 @@ export interface CallRecordRow {
   callback_scheduled: boolean
   call_duration_seconds: number | null
   end_call_reason: string | null
+  callback_outcome: string | null
+  callback_outcome_at: string | null
   call_recording_url: string | null
   created_at: string
   updated_at: string
@@ -90,10 +153,13 @@ export type CallRecordListRow = Pick<
   | "call_id"
   | "retell_call_id"
   | "phone_number"
+  | "transcript"
   | "extracted_fields"
   | "extraction_status"
   | "urgency_tier"
   | "end_call_reason"
+  | "callback_outcome"
+  | "callback_outcome_at"
   | "callback_scheduled"
   | "booking_id"
   | "created_at"
