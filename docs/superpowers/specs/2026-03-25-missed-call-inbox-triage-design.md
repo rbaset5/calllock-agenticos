@@ -139,13 +139,15 @@ The inbox should order unresolved calls by:
 2. Deterministic signal rank within the bucket
 3. Recency
 
+If a call matches multiple possible outcomes, the highest matching command bucket wins before any within-bucket ranking is applied.
+
 For v1, business value is out of scope as a ranking signal. If two calls land in the same command bucket and share the same signal rank, recency decides the order.
 
 Recommended within-bucket signal rank for v1:
 
 1. Safety emergency
 2. Urgent escalation
-3. Callback requested
+3. Follow-up signal (`callback requested`, `endCallReason = callback_later`, `callbackType`, or `endCallReason = booking_failed`)
 4. Concrete service issue extracted (`problemDescription` or `hvacIssueType`)
 5. Generic unresolved record
 
@@ -182,10 +184,8 @@ The current call model already exposes several useful inputs for first-pass tria
 - `isUrgentEscalation`
 - `endCallReason`
 - `callbackType`
-- `appointmentBooked`
 - `problemDescription`
 - `hvacIssueType`
-- `customerName`
 - `createdAt`
 
 The first version should prefer deterministic rules over a fully learned ranking system. The spec intentionally does not require new extraction work for concepts such as customer lifetime value, customer history, lead value, partner/vendor identification, or after-hours classification. Those can be future enhancements after the command + evidence pattern proves useful.
