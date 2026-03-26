@@ -1,0 +1,36 @@
+version: "1.0"
+owner: eng-app
+pages:
+  - path: /calls
+    must_render:
+      - element: call-card
+        fields:
+          - customer_name
+          - customer_phone
+          - problem_description
+          - urgency_tier
+          - safety_emergency
+          - appointment_booked
+          - callback_type
+          - created_at
+        realtime: true
+      - element: call-detail
+        fields:
+          - transcript
+          - service_address
+          - hvac_issue_type
+          - equipment_type
+          - equipment_brand
+          - equipment_age
+          - appointment_date_time
+          - end_call_reason
+        realtime: false
+  - path: /overview
+    must_render: []
+behaviors:
+  - name: realtime-card-appearance
+    trigger: "new call completed"
+    expected: "card appears in /calls within 5 seconds without page refresh"
+  - name: card-click-detail
+    trigger: "user clicks call card"
+    expected: "detail view opens with all detail fields populated"

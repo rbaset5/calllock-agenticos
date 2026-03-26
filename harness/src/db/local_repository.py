@@ -43,6 +43,8 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("eval_runs", [])
     seed.setdefault("audit_logs", [])
     seed.setdefault("approval_requests", [])
+    seed.setdefault("agent_reports", [])
+    seed.setdefault("shadow_comparisons", [])
     seed.setdefault("scheduler_backlog", [])
     seed.setdefault("incidents", [])
     seed.setdefault("touchpoint_log", [])
@@ -198,6 +200,29 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     )
     stored = deepcopy(record)
     stored["job"] = job
+    return stored
+
+
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    agent_reports = _state()["agent_reports"]
+    for existing in agent_reports:
+        if (
+            existing.get("agent_id") == report.get("agent_id")
+            and existing.get("report_date") == report.get("report_date")
+            and existing.get("tenant_id") == report.get("tenant_id")
+        ):
+            existing.update(deepcopy(report))
+            return existing
+    stored = deepcopy(report)
+    agent_reports.append(stored)
+    return stored
+
+
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    stored = deepcopy(record)
+    stored.setdefault("id", str(uuid4()))
+    stored.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+    _state()["shadow_comparisons"].append(stored)
     return stored
 
 
@@ -929,6 +954,18 @@ def list_approval_requests(*, tenant_id: str | None = None, status: str | None =
     if status is not None:
         requests = [request for request in requests if request["status"] == status]
     return requests
+
+
+def create_skill_candidate(payload: dict[str, Any]) -> dict[str, Any]:
+    return {"id": "local-skill-candidate", **payload}
+
+
+def list_skill_candidates(*, tenant_id: str | None = None, status: str | None = None, worker_id: str | None = None) -> list[dict[str, Any]]:
+    return []
+
+
+def update_skill_candidate(candidate_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    return {"id": candidate_id, **updates}
 
 
 def upsert_scheduler_backlog_entry(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1683,6 +1720,19 @@ def update_call_record_extraction(
             row["updated_at"] = datetime.now(timezone.utc).isoformat()
             return row
     raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
+
+
+def update_raw_payload(
+    tenant_id: str,
+    call_id: str,
+    raw_payload: dict[str, Any],
+) -> None:
+    """Persist enriched raw_retell_payload after Retell API fetch."""
+    for row in _state()["call_records"]:
+        if row["tenant_id"] == tenant_id and row["call_id"] == call_id:
+            row["raw_retell_payload"] = deepcopy(raw_payload)
+            row["updated_at"] = datetime.now(timezone.utc).isoformat()
+            return
 
 
 def get_caller_history(

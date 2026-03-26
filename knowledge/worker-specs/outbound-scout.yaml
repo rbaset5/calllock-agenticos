@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "worker_id": "outbound-scout",
+  "version": "0.1.0",
+  "mission": "Discover, score, and qualify outbound prospects from the leads database. Run silent phone probes to confirm weak after-hours coverage. Surface ranked call lists for founder cold calling.",
+  "scope": {
+    "can_do": ["ingest leads", "score dispatch maturity", "run silent probes", "rank prospects", "post Discord status"],
+    "cannot_do": ["place outbound sales calls", "send customer-facing messages", "modify leads database"]
+  },
+  "execution_scope": "internal",
+  "inputs": ["leads database", "signal rubric", "metro config", "call test results"],
+  "outputs": ["ranked prospect list", "signal scores", "probe results", "pipeline status"],
+  "tools_allowed": ["read_knowledge", "notify_dispatch"],
+  "success_metrics": [
+    {"name": "prospects_scored_per_run", "eval_dataset": "evals/outbound-scout/prospects-scored-per-run.json"},
+    {"name": "probe_success_rate", "eval_dataset": "evals/outbound-scout/probe-success-rate.json"}
+  ],
+  "approval_boundaries": ["customer-facing outreach", "changes to source leads data"],
+  "dependencies": [
+    "knowledge/outbound/_moc.md",
+    "knowledge/outbound/scoring-rubric.md",
+    "knowledge/outbound/metros.md"
+  ]
+}

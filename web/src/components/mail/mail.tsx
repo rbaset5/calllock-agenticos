@@ -40,7 +40,7 @@ export function Mail({ initialCalls }: MailProps) {
   })
 
   const { readIds, markAsRead } = useReadState()
-  const calls = useRealtimeCalls(initialCalls, readIds)
+  const { calls } = useRealtimeCalls(initialCalls, readIds, false)
 
   const scheduledCalls = React.useMemo(
     () =>

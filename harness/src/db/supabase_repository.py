@@ -173,6 +173,22 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "agent_reports",
+        params={"on_conflict": "agent_id,report_date,tenant_id"},
+        json=report,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else report
+
+
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    data = _request("POST", "shadow_comparisons", json=record, prefer="return=representation")
+    return data[0] if data else record
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     data = _request("POST", "artifacts", json=record, prefer="return=representation")
     return data[0] if data else record
@@ -712,6 +728,27 @@ def list_approval_requests(*, tenant_id: str | None = None, status: str | None =
     if status:
         params["status"] = f"eq.{status}"
     return _request("GET", "approval_requests", params=params)
+
+
+def create_skill_candidate(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request("POST", "skill_candidates", json=payload, prefer="return=representation")
+    return data[0] if data else payload
+
+
+def list_skill_candidates(*, tenant_id: str | None = None, status: str | None = None, worker_id: str | None = None) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if tenant_id:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if status:
+        params["status"] = f"eq.{status}"
+    if worker_id:
+        params["worker_id"] = f"eq.{worker_id}"
+    return _request("GET", "skill_candidates", params=params)
+
+
+def update_skill_candidate(candidate_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    data = _request("PATCH", "skill_candidates", params={"id": f"eq.{candidate_id}"}, json=updates, prefer="return=representation")
+    return data[0]
 
 
 def upsert_scheduler_backlog_entry(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1277,6 +1314,30 @@ def update_call_record_extraction(
     if not data:
         raise KeyError(f"Unknown call record: tenant_id={tenant_id}, call_id={call_id}")
     return data[0]
+
+
+def update_raw_payload(
+    tenant_id: str,
+    call_id: str,
+    raw_payload: dict[str, Any],
+) -> None:
+    """Persist enriched raw_retell_payload after Retell API fetch."""
+    _request(
+        "PATCH",
+        "call_records",
+        params={"tenant_id": f"eq.{tenant_id}", "call_id": f"eq.{call_id}"},
+        json={"raw_retell_payload": raw_payload},
+    )
+
+
+def get_call_record(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    """Get a single call record by tenant + call_id."""
+    data = _request(
+        "GET",
+        "call_records",
+        params={"tenant_id": f"eq.{tenant_id}", "call_id": f"eq.{call_id}", "limit": "1"},
+    )
+    return data[0] if data else None
 
 
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:

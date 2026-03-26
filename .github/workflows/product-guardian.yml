@@ -1,0 +1,88 @@
+name: Product Guardian PR Gate
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - "knowledge/voice-pipeline/**"
+      - "harness/src/voice/**"
+      - "scripts/deploy-retell-agent.py"
+
+jobs:
+  guardian-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip When Guardian Secrets Are Unset
+        id: secret-check
+        env:
+          INNGEST_EVENT_URL: ${{ secrets.INNGEST_EVENT_URL }}
+          INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$INNGEST_EVENT_URL" ] || [ -z "$INNGEST_EVENT_KEY" ] || [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Product Guardian secrets are unset; skipping gate."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get changed files
+        id: changed-files
+        if: steps.secret-check.outputs.configured == 'true'
+        uses: tj-actions/changed-files@v45
+        with:
+          separator: ","
+
+      - name: Trigger Product Guardian
+        if: steps.secret-check.outputs.configured == 'true'
+        env:
+          INNGEST_EVENT_URL: ${{ secrets.INNGEST_EVENT_URL }}
+          INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY }}
+        run: |
+          curl -X POST "$INNGEST_EVENT_URL" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $INNGEST_EVENT_KEY" \
+            -d '{
+              "name": "calllock/pr.created",
+              "data": {
+                "pr_number": ${{ github.event.pull_request.number }},
+                "pr_url": "${{ github.event.pull_request.html_url }}",
+                "branch": "${{ github.head_ref }}",
+                "changed_file_paths": "${{ steps.changed-files.outputs.all_changed_files }}",
+                "changed_files": "${{ steps.changed-files.outputs.all_changed_files }}"
+              }
+            }'
+
+      - name: Wait for Guardian Result
+        if: steps.secret-check.outputs.configured == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        timeout-minutes: 6
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          echo "Waiting for Product Guardian to process PR #${PR}..."
+
+          for i in $(seq 1 30); do
+            sleep 10
+            RESULT=$(curl -s \
+              "${SUPABASE_URL}/rest/v1/agent_reports?agent_id=eq.eng-product-qa&report_type=eq.change-gate-review&payload->>pr_number=eq.${PR}&order=created_at.desc&limit=1&select=status,payload" \
+              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              | jq -r '.[0].status // empty')
+
+            if [ -n "$RESULT" ]; then
+              echo "Guardian verdict: $RESULT"
+              if [ "$RESULT" = "red" ]; then
+                echo "::error::Product Guardian BLOCKED this PR"
+                exit 1
+              fi
+              exit 0
+            fi
+          done
+
+          echo "::error::Product Guardian timed out - BLOCK (safe default)"
+          exit 1

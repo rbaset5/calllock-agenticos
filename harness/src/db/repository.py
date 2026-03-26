@@ -39,6 +39,18 @@ def persist_run_record(record: dict[str, Any]) -> dict[str, Any]:
     return local_repository.persist_run_record(record)
 
 
+def upsert_agent_report(report: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_agent_report(report)
+    return local_repository.upsert_agent_report(report)
+
+
+def create_shadow_comparison(record: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.create_shadow_comparison(record)
+    return local_repository.create_shadow_comparison(record)
+
+
 def create_artifact(record: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.create_artifact(record)
@@ -414,6 +426,24 @@ def list_approval_requests(*, tenant_id: str | None = None, status: str | None =
     return local_repository.list_approval_requests(tenant_id=tenant_id, status=status)
 
 
+def create_skill_candidate(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.create_skill_candidate(payload)
+    return local_repository.create_skill_candidate(payload)
+
+
+def list_skill_candidates(*, tenant_id: str | None = None, status: str | None = None, worker_id: str | None = None) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_skill_candidates(tenant_id=tenant_id, status=status, worker_id=worker_id)
+    return local_repository.list_skill_candidates(tenant_id=tenant_id, status=status, worker_id=worker_id)
+
+
+def update_skill_candidate(candidate_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_skill_candidate(candidate_id, updates)
+    return local_repository.update_skill_candidate(candidate_id, updates)
+
+
 def upsert_scheduler_backlog_entry(payload: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.upsert_scheduler_backlog_entry(payload)
@@ -782,6 +812,25 @@ def update_call_record_extraction(
     if using_supabase():
         return supabase_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields, **kwargs)
     return local_repository.update_call_record_extraction(tenant_id, call_id, extracted_fields, **kwargs)
+
+
+def update_raw_payload(
+    tenant_id: str,
+    call_id: str,
+    raw_payload: dict[str, Any],
+) -> None:
+    """Persist enriched raw_retell_payload (after Retell API fetch adds tool-call data)."""
+    if using_supabase():
+        supabase_repository.update_raw_payload(tenant_id, call_id, raw_payload)
+    else:
+        local_repository.update_raw_payload(tenant_id, call_id, raw_payload)
+
+
+def get_call_record(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    """Get a single call record by tenant + call_id."""
+    if using_supabase():
+        return supabase_repository.get_call_record(tenant_id, call_id)
+    return local_repository.get_call_record(tenant_id, call_id)
 
 
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:

@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.1",
+  "worker_id": "eng-app",
+  "version": "0.1.0",
+  "title": "App Guardian Engineer",
+  "department": "engineering",
+  "supervisor": "eng-vp",
+  "role": "worker",
+  "mission": "Guard the CallLock App. Run headless browser checks to verify pages render correctly, realtime subscriptions deliver updates, and data displayed matches what's in Supabase. Validate against the app contract.",
+  "scope": {
+    "can_do": [
+      "load CallLock App pages in headless browser (Playwright)",
+      "verify all must_render fields are visible in the DOM",
+      "compare displayed data against Supabase source records",
+      "test realtime subscription delivery within timeout",
+      "take baseline and comparison screenshots for visual regression",
+      "validate PR changes render correctly in headless browser",
+      "create GitHub issues for rendering gaps or realtime failures",
+      "generate pixel-diff images for visual regression reports"
+    ],
+    "cannot_do": [
+      "modify CallLock App source code",
+      "modify voice pipeline code or prompts",
+      "deploy changes to production",
+      "access customer PII beyond what renders in the app",
+      "auto-merge any PR — only validates and reports"
+    ]
+  },
+  "execution_scope": "internal",
+  "inputs": [
+    "knowledge/voice-pipeline/app-contract.yaml",
+    "call_records from Supabase (read-only)",
+    "CallLock App running in headless browser",
+    "calllock/guardian.dispatch events from eng-product-qa"
+  ],
+  "outputs": [
+    "app health reports (daily)",
+    "app deep sweep reports (weekly)",
+    "PR validation reports (pass/fail with screenshot evidence)",
+    "GitHub issues for rendering gaps",
+    "visual regression diff images"
+  ],
+  "tools_allowed": [
+    "supabase_read",
+    "headless_browser",
+    "app_contract_validate",
+    "git_pr_review",
+    "issue_create"
+  ],
+  "success_metrics": [
+    {"name": "field_render_rate", "target": 1.0, "eval_dataset": "evals/eng-app/field-render.json"},
+    {"name": "realtime_delivery_rate", "target": 1.0, "eval_dataset": "evals/eng-app/realtime-delivery.json"},
+    {"name": "data_accuracy_rate", "target": 1.0, "eval_dataset": "evals/eng-app/data-accuracy.json"},
+    {"name": "visual_regression_rate", "target": 0, "eval_dataset": "evals/eng-app/visual-regression.json"}
+  ],
+  "approval_boundaries": [
+    "Cannot approve any PR — only validates and reports",
+    "Cannot modify app contract directly — only proposes changes via issues",
+    "Cannot override eng-product-qa gate decision"
+  ],
+  "validation_checks": {
+    "field_render": {
+      "description": "All must_render fields in app-contract visible in headless browser",
+      "check": "DOM element exists and contains expected value"
+    },
+    "realtime_delivery": {
+      "description": "New call records appear in app within 5 seconds",
+      "check": "Insert test record, wait for DOM update, verify within timeout"
+    },
+    "data_accuracy": {
+      "description": "Displayed values match Supabase source records",
+      "check": "Query Supabase, compare to DOM text content"
+    },
+    "visual_regression": {
+      "description": "Screenshots match baselines within threshold",
+      "check": "Pixel-diff comparison, threshold per element (default 1%)"
+    }
+  },
+  "scheduled_tasks": [
+    {
+      "cron": "30 6 * * *",
+      "task_type": "app-health-check",
+      "description": "Load each page in headless browser, verify must_render fields, test realtime, take screenshots, report to agent_reports"
+    },
+    {
+      "cron": "30 6 * * 0",
+      "task_type": "app-deep-sweep",
+      "description": "Full page audit — every page, every element, realtime latency measurement, rendering edge cases"
+    }
+  ],
+  "reactive_triggers": [
+    {
+      "event": "calllock/guardian.dispatch",
+      "filter": {"target": "eng-app"},
+      "task_type": "app-pr-validation",
+      "description": "Run headless browser validation for PR changes, dispatched by eng-product-qa"
+    },
+    {
+      "event": "calllock/app.error",
+      "task_type": "app-investigate",
+      "description": "Investigate app rendering errors"
+    },
+    {
+      "event": "calllock/realtime.drop",
+      "task_type": "app-investigate",
+      "description": "Investigate realtime subscription drops"
+    }
+  ],
+  "context_sources": [
+    "knowledge/voice-pipeline/app-contract.yaml",
+    "web/src/lib/transforms.ts",
+    "web/src/types/call.ts",
+    "web/src/components/mail/mail-display.tsx",
+    "web/src/components/mail/mail-list.tsx"
+  ],
+  "dependencies": [
+    "knowledge/voice-pipeline/app-contract.yaml",
+    "web/src/lib/transforms.ts",
+    "web/src/types/call.ts"
+  ],
+  "interaction_with": {
+    "eng-product-qa": "Receives dispatch events for PR validation. Reports app health to agent_reports. Escalates rendering failures.",
+    "eng-vp": "Reports department health status for daily memo and office dashboard."
+  },
+  "git_workflow": {
+    "branch_pattern": "agent/eng-app/{task-description}",
+    "commit_prefix": "agent(eng-app):",
+    "pr_labels": ["auto-merge", "agent-review", "human-review", "urgent"],
+    "validated_by": "eng-product-qa"
+  }
+}
