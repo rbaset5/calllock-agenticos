@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { format } from "date-fns"
 import { parseTranscript, formatPhone } from "@/lib/transforms"
 import type { Call, TranscriptEntry, CallbackOutcome, TriageResult } from "@/types/call"
 import { cn } from "@/lib/utils"
 import { isUnresolved, getAssistTemplate } from "@/lib/triage"
+import { useOutcomeSubmit } from "@/hooks/use-outcome-submit"
 
 interface MailDisplayProps {
   call: Call | null
@@ -72,30 +73,16 @@ export function MailDisplay({ call, triageMap, onOutcomeChange }: MailDisplayPro
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(false)
   const [activeTab, setActiveTab] = useState<"summary" | "transcript">("summary")
-  const [submittingOutcome, setSubmittingOutcome] = useState(false)
+
+  const optimisticUpdate = useCallback(
+    (callId: string, outcome: CallbackOutcome | null) => onOutcomeChange?.(callId, outcome),
+    [onOutcomeChange]
+  )
+  const { submitOutcome, submitting: submittingOutcome } = useOutcomeSubmit(optimisticUpdate)
 
   const handleOutcome = async (outcome: CallbackOutcome) => {
-    if (!call || submittingOutcome) return
-    setSubmittingOutcome(true)
-
-    // Optimistic: update parent state immediately
-    onOutcomeChange?.(call.id, outcome)
-
-    try {
-      const res = await fetch(`/api/calls/${call.id}/outcome`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ outcome }),
-      })
-      if (!res.ok) {
-        // Revert on failure
-        onOutcomeChange?.(call.id, call.callbackOutcome)
-      }
-    } catch {
-      onOutcomeChange?.(call.id, call.callbackOutcome)
-    } finally {
-      setSubmittingOutcome(false)
-    }
+    if (!call) return
+    await submitOutcome(call.id, outcome, call.callbackOutcome)
   }
 
   useEffect(() => {
