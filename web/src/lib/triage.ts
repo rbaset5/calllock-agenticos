@@ -284,3 +284,34 @@ export function triageSort<T extends TriageableCall>(
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   })
 }
+
+// ---------------------------------------------------------------------------
+// SectionKey + assignSection
+// ---------------------------------------------------------------------------
+
+export type SectionKey = "NEEDS_CALLBACK" | "HANDLED" | "UPCOMING"
+
+/**
+ * Assign a call to exactly one UI section.
+ *
+ * 1. appointmentBooked → UPCOMING
+ * 2. terminal callbackOutcome OR terminal endCallReason → HANDLED
+ * 3. otherwise → NEEDS_CALLBACK
+ */
+export function assignSection(call: TriageableCall): SectionKey {
+  if (call.appointmentBooked) return "UPCOMING"
+
+  if (
+    call.callbackOutcome &&
+    TERMINAL_CALLBACK_OUTCOMES.has(call.callbackOutcome)
+  )
+    return "HANDLED"
+
+  if (
+    call.endCallReason &&
+    TERMINAL_END_CALL_REASONS.has(call.endCallReason)
+  )
+    return "HANDLED"
+
+  return "NEEDS_CALLBACK"
+}
