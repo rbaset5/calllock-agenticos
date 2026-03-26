@@ -343,3 +343,45 @@ describe("triageSort", () => {
     expect(sorted[1].id).toBe("older")
   })
 })
+
+describe("isUnresolved — phone-field independence", () => {
+  it("call with no customerPhone field is still unresolved (phone does not affect triage)", () => {
+    // TriageableCall has no customerPhone — triage is phone-agnostic
+    const call = makeCall()
+    expect(isUnresolved(call)).toBe(true)
+  })
+
+  it("call with reached_customer terminal outcome is resolved", () => {
+    expect(isUnresolved(makeCall({ callbackOutcome: "reached_customer" }))).toBe(false)
+  })
+})
+
+describe("computeTriage — resolved call", () => {
+  it("resolved call (appointmentBooked) has isUnresolved=false and command 'Can wait'", () => {
+    const call = makeCall({ appointmentBooked: true })
+    expect(isUnresolved(call)).toBe(false)
+    const result = computeTriage(call, Date.now())
+    // resolved calls fall through to Can wait (no active signal)
+    expect(result.command).toBe("Can wait")
+    expect(result.isUnresolved).toBe(false)
+  })
+})
+
+describe("getAssistTemplate", () => {
+  const reasons = [
+    "no_cooling",
+    "no_heating",
+    "estimate_request",
+    "callback_requested",
+    "booking_failed",
+    "urgent_escalation",
+    "generic_service_issue",
+  ] as const
+
+  it.each(reasons)("reason '%s' returns a non-empty template string", (reason) => {
+    const template = getAssistTemplate(reason, "TestCo")
+    expect(typeof template).toBe("string")
+    expect(template.length).toBeGreaterThan(0)
+    expect(template).toContain("TestCo")
+  })
+})
