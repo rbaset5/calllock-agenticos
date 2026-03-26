@@ -29,9 +29,15 @@ export function Mail({ initialCalls }: MailProps) {
   const [view, setView] = React.useState<"activity" | "test">("activity")
   const [filter, setFilter] = React.useState<"all" | "scheduled">("all")
   const [mobileView, setMobileView] = React.useState<"list" | "detail">("list")
-  const [selectedId, setSelectedId] = React.useState<string | null>(
-    initialCalls[0]?.id ?? null
-  )
+  const [selectedId, setSelectedId] = React.useState<string | null>(() => {
+    try {
+      const stored = sessionStorage.getItem("calllock_selectedId")
+      if (stored && initialCalls.some((c) => c.id === stored)) return stored
+    } catch {
+      // sessionStorage unavailable (private browsing)
+    }
+    return initialCalls[0]?.id ?? null
+  })
 
   const { readIds, markAsRead } = useReadState()
   const calls = useRealtimeCalls(initialCalls, readIds)
@@ -98,6 +104,28 @@ export function Mail({ initialCalls }: MailProps) {
   const testCalls = scheduledCalls
   const selectedCall = mergedCalls.find((c) => c.id === selectedId) ?? null
 
+  // Post-call pulse behavior
+  const lastCallBackRef = React.useRef<{ id: string; time: number } | null>(null)
+  const [pulsingId, setPulsingId] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return
+      const ref = lastCallBackRef.current
+      if (!ref) return
+      if (Date.now() - ref.time < 300_000) {
+        setPulsingId(ref.id)
+        setTimeout(() => setPulsingId(null), 3_000)
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }, [])
+
+  const handleCallBackTap = React.useCallback((callId: string) => {
+    lastCallBackRef.current = { id: callId, time: Date.now() }
+  }, [])
+
   // Stale-recompute timer
   React.useEffect(() => {
     if (view !== "activity") return
@@ -132,6 +160,16 @@ export function Mail({ initialCalls }: MailProps) {
     })
   }, [calls])
 
+  // Memoized summary strip counts
+  const criticalCount = React.useMemo(
+    () => unresolvedCalls.filter(c => triageMap.get(c.id)?.command === "Call now").length,
+    [unresolvedCalls, triageMap]
+  )
+  const pendingCount = React.useMemo(
+    () => unresolvedCalls.filter(c => triageMap.get(c.id)?.command !== "Call now").length,
+    [unresolvedCalls, triageMap]
+  )
+
   // Auto-select first item when switching views
   React.useEffect(() => {
     const list = view === "test" ? testCalls : activityCalls
@@ -144,7 +182,10 @@ export function Mail({ initialCalls }: MailProps) {
     setSelectedId(id)
     markAsRead(id)
     setMobileView("detail")
+    try { sessionStorage.setItem("calllock_selectedId", id) } catch { /* ignore */ }
   }
+
+  const clearPulse = React.useCallback(() => setPulsingId(null), [])
 
   return (
     <>
@@ -261,7 +302,35 @@ export function Mail({ initialCalls }: MailProps) {
                 </span>
               ) : null}
             </div>
-            {(view === "activity" || view === "test") && (
+            {view === "activity" && (
+              <div className="grid grid-cols-2 gap-px border-b border-[#484848]/10 flex-shrink-0">
+                <div className="flex flex-col gap-1 p-4">
+                  <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Critical</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-[#ff9993] tracking-tighter text-3xl font-black leading-none">
+                      {String(criticalCount).padStart(2, "0")}
+                    </p>
+                    <span className="text-[10px] text-[#ed8a85] font-bold tracking-widest uppercase">Need callback</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 p-4">
+                  <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Pending</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-[#c8c6c5] tracking-tighter text-3xl font-black leading-none">
+                      {String(pendingCount).padStart(2, "0")}
+                    </p>
+                    <span className="text-[10px] text-[#acabaa] font-bold tracking-widest uppercase">In queue</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {view === "activity" ? (
+              <div className="px-4 pt-4 pb-2 flex-shrink-0">
+                <h3 className="text-[#e7e5e4] text-[12px] font-bold tracking-[0.15em] uppercase border-l-2 border-[#10b981] pl-3">
+                  Missed Calls
+                </h3>
+              </div>
+            ) : view === "test" ? (
               <div className="flex gap-6 px-5 pb-3 pt-3 flex-shrink-0">
                 <button
                   onClick={() => setFilter("all")}
@@ -271,10 +340,10 @@ export function Mail({ initialCalls }: MailProps) {
                       : "text-[#acabaa] border-transparent hover:text-[#e7e5e4]"
                   }`}
                 >
-                  {view === "test" ? "Scheduled Calls" : "Missed Calls"}
+                  Scheduled Calls
                 </button>
               </div>
-            )}
+            ) : null}
             {view === "activity" && unresolvedCalls.length === 0 && (
               <div className="flex items-center justify-center gap-2 py-6 text-[#acabaa]">
                 <svg className="h-5 w-5 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,7 +356,11 @@ export function Mail({ initialCalls }: MailProps) {
               items={view === "test" ? testCalls : activityCalls}
               selected={selectedId}
               onSelect={handleSelect}
+              onOutcomeChange={handleOutcomeChange}
               triageMap={triageMap}
+              pulsingId={pulsingId}
+              onCallBackTap={handleCallBackTap}
+              onPulseClear={clearPulse}
             />
           </>
         ) : (
@@ -376,7 +449,35 @@ export function Mail({ initialCalls }: MailProps) {
               </span>
             ) : null}
           </div>
-          {(view === "activity" || view === "test") && (
+          {view === "activity" && (
+            <div className="grid grid-cols-2 gap-px border-b border-[#484848]/10 flex-shrink-0">
+              <div className="flex flex-col gap-1 p-3">
+                <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Critical</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-[#ff9993] tracking-tighter text-2xl font-black leading-none">
+                    {String(criticalCount).padStart(2, "0")}
+                  </p>
+                  <span className="text-[10px] text-[#ed8a85] font-bold tracking-widest uppercase">Need callback</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 p-3">
+                <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Pending</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-[#c8c6c5] tracking-tighter text-2xl font-black leading-none">
+                    {String(pendingCount).padStart(2, "0")}
+                  </p>
+                  <span className="text-[10px] text-[#acabaa] font-bold tracking-widest uppercase">In queue</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {view === "activity" ? (
+            <div className="px-5 pt-4 pb-2 flex-shrink-0">
+              <h3 className="text-[#e7e5e4] text-[12px] font-bold tracking-[0.15em] uppercase border-l-2 border-[#10b981] pl-3">
+                Missed Calls
+              </h3>
+            </div>
+          ) : view === "test" ? (
             <div className="flex gap-6 px-5 pb-3 pt-3 flex-shrink-0">
               <button
                 onClick={() => setFilter("all")}
@@ -386,10 +487,10 @@ export function Mail({ initialCalls }: MailProps) {
                     : "text-[#acabaa] border-transparent hover:text-[#e7e5e4]"
                 }`}
               >
-                {view === "test" ? "Scheduled Calls" : "Missed Calls"}
+                Scheduled Calls
               </button>
             </div>
-          )}
+          ) : null}
           {view === "activity" && unresolvedCalls.length === 0 && (
             <div className="flex items-center justify-center gap-2 py-6 text-[#acabaa]">
               <svg className="h-5 w-5 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -402,7 +503,11 @@ export function Mail({ initialCalls }: MailProps) {
             items={view === "test" ? testCalls : activityCalls}
             selected={selectedId}
             onSelect={handleSelect}
+            onOutcomeChange={handleOutcomeChange}
             triageMap={triageMap}
+            pulsingId={pulsingId}
+            onCallBackTap={handleCallBackTap}
+            onPulseClear={clearPulse}
           />
         </aside>
 
