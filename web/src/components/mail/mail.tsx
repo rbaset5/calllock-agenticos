@@ -18,6 +18,7 @@ import { useRealtimeCalls } from "@/hooks/use-realtime-calls"
 import { useReadState } from "@/hooks/use-read-state"
 import { MailList } from "./mail-list"
 import { MailDisplay } from "./mail-display"
+import { LeadIntel } from "./lead-intel"
 import { PulseBar } from "./pulse-bar"
 
 interface MailProps {
@@ -389,6 +390,11 @@ export function Mail({ initialCalls }: MailProps) {
 
         {/* Detail Panel */}
         <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} bucketMap={bucketMap} />
+
+        {/* Lead Intel Sidebar — xl (≥1280px) only */}
+        <div className="hidden xl:flex">
+          <LeadIntel call={selectedCall} />
+        </div>
       </main>
     </>
   )

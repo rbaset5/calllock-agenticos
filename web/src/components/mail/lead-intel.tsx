@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { Call } from "@/types/call"
 import { formatPhone } from "@/lib/transforms"
 import { Map3DWrapper } from "@/components/ui/map-3d-wrapper"
@@ -36,30 +36,52 @@ function getSentiment(call: Call): string {
 export function LeadIntel({ call }: LeadIntelProps) {
   const [coords, setCoords] = useState<Coords | null>(null)
 
+  // Geocode cache to avoid redundant requests
+  const geocodeCacheRef = useRef<Map<string, Coords | null>>(new Map())
+
   useEffect(() => {
     if (!call?.serviceAddress) { setCoords(null); return }
+    const address = call.serviceAddress
+
+    // Check cache first
+    if (geocodeCacheRef.current.has(address)) {
+      setCoords(geocodeCacheRef.current.get(address) ?? null)
+      return
+    }
+
     const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
     if (!token) return
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(call.serviceAddress)}.json?access_token=${token}&limit=1`
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        const [lng, lat] = data.features?.[0]?.center ?? []
-        if (lat && lng) setCoords({ lat, lng })
-      })
-      .catch(() => setCoords(null))
+
+    let cancelled = false
+
+    // Debounce: 300ms delay before firing geocode
+    const timer = setTimeout(() => {
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${token}&limit=1`
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          if (cancelled) return
+          const [lng, lat] = data.features?.[0]?.center ?? []
+          const result = lat && lng ? { lat, lng } : null
+          geocodeCacheRef.current.set(address, result)
+          setCoords(result)
+        })
+        .catch(() => { if (!cancelled) { setCoords(null) } })
+    }, 300)
+
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [call?.serviceAddress])
 
   if (!call) {
     return (
-      <aside className="hidden md:flex w-[320px] bg-[#131313] flex-col border-l border-[#dfdfdf]/20 overflow-y-auto no-scrollbar p-6 shrink-0">
+      <aside className="flex w-[320px] bg-[#131313] flex-col border-l border-[#484848]/20 overflow-y-auto no-scrollbar p-6 shrink-0">
         <p className="text-[#acabaa] text-sm">No call selected</p>
       </aside>
     )
   }
 
   return (
-    <aside className="hidden md:flex w-[320px] bg-[#131313] flex-col border-l border-[#dfdfdf]/20 overflow-y-auto no-scrollbar p-6 space-y-8 shrink-0">
+    <aside className="hidden md:flex w-[320px] bg-[#131313] flex-col border-l border-[#484848]/20 overflow-y-auto no-scrollbar p-6 space-y-8 shrink-0">
 
       {/* Lead Intelligence section */}
       <div>
@@ -69,7 +91,7 @@ export function LeadIntel({ call }: LeadIntelProps) {
 
         {/* Map View */}
         {call.serviceAddress ? (
-          <div className="bg-black rounded-[6px] border border-[#dfdfdf]/20 mb-8 overflow-hidden">
+          <div className="bg-black rounded-[6px] border border-[#484848]/20 mb-8 overflow-hidden">
             <div className="relative h-36">
               {coords ? (
                 <Map3DWrapper lat={coords.lat} lng={coords.lng} className="w-full h-full" />
@@ -80,7 +102,7 @@ export function LeadIntel({ call }: LeadIntelProps) {
                 href={`https://maps.google.com/maps?q=${encodeURIComponent(call.serviceAddress)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm border border-[#dfdfdf]/20 text-[#e7e5e4] text-[10px] font-bold tracking-wider px-2 py-1 rounded-[6px] uppercase flex items-center gap-1 hover:bg-black transition-colors"
+                className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm border border-[#484848]/20 text-[#e7e5e4] text-[10px] font-bold tracking-wider px-2 py-1 rounded-[6px] uppercase flex items-center gap-1 hover:bg-black transition-colors"
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -96,7 +118,7 @@ export function LeadIntel({ call }: LeadIntelProps) {
             </div>
           </div>
         ) : (
-          <div className="bg-black rounded-[6px] border border-[#dfdfdf]/20 mb-8 flex items-center justify-center h-36">
+          <div className="bg-black rounded-[6px] border border-[#484848]/20 mb-8 flex items-center justify-center h-36">
             <p className="text-[#acabaa] text-xs">No address on file</p>
           </div>
         )}
@@ -157,16 +179,52 @@ export function LeadIntel({ call }: LeadIntelProps) {
               <p className="text-[#e7e5e4] font-medium">{call.hvacIssueType}</p>
             </div>
           )}
+
+          {call.revenueTier && call.revenueTier !== "unknown" && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+                Estimated Value
+              </p>
+              <p className="text-[#e7e5e4] font-medium capitalize">
+                {call.revenueTier.replace(/_/g, " ")}
+              </p>
+            </div>
+          )}
+
+          {(call.equipmentType || call.equipmentBrand || call.equipmentAge) && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+                Equipment
+              </p>
+              <p className="text-[#e7e5e4] font-medium leading-tight">
+                {[call.equipmentBrand, call.equipmentType].filter(Boolean).join(" ")}
+                {call.equipmentAge && (
+                  <span className="text-[#acabaa]"> · {call.equipmentAge}</span>
+                )}
+              </p>
+            </div>
+          )}
+
+          {call.callerType && call.callerType !== "unknown" && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+                Caller Type
+              </p>
+              <p className="text-[#e7e5e4] font-medium capitalize">
+                {call.callerType.replace(/_/g, " ")}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Caller History */}
-      <div className="pt-8 border-t border-[#dfdfdf]/20">
+      <div className="pt-8 border-t border-[#484848]/20">
         <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-[#acabaa] mb-4">
           Caller History
         </h3>
         <div className="space-y-4">
-          <div className="bg-[#252626] p-3 rounded-[6px] border border-[#dfdfdf]/20">
+          <div className="bg-[#252626] p-3 rounded-[6px] border border-[#484848]/20">
             <p className="text-xs text-[#e7e5e4] font-bold">
               {call.appointmentBooked ? "Returning Customer" : "New Prospect"}
             </p>
@@ -178,7 +236,7 @@ export function LeadIntel({ call }: LeadIntelProps) {
           </div>
 
           {call.endCallReason && (
-            <div className="bg-[#252626] p-3 rounded-[6px] border border-[#dfdfdf]/20 border-l-2 border-l-[#c6c6c7]">
+            <div className="bg-[#252626] p-3 rounded-[6px] border border-[#484848]/20 border-l-2 border-l-[#c6c6c7]">
               <p className="text-xs text-[#e7e5e4] font-bold">Call Outcome</p>
               <p className="text-[10px] text-[#acabaa] capitalize">
                 {call.endCallReason.replace(/_/g, " ")}
