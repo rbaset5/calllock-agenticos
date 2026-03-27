@@ -20,6 +20,7 @@ import { MailList } from "./mail-list"
 import { MailDisplay } from "./mail-display"
 import { LeadIntel } from "./lead-intel"
 import { PulseBar } from "./pulse-bar"
+import { getInitialSelectedId, resolveStoredSelectedId } from "./selection-state"
 
 interface MailProps {
   initialCalls: Call[]
@@ -27,15 +28,9 @@ interface MailProps {
 
 export function Mail({ initialCalls }: MailProps) {
   const [mobileView, setMobileView] = React.useState<"list" | "detail">("list")
-  const [selectedId, setSelectedId] = React.useState<string | null>(() => {
-    try {
-      const stored = sessionStorage.getItem("calllock_selectedId")
-      if (stored && initialCalls.some((c) => c.id === stored)) return stored
-    } catch {
-      // sessionStorage unavailable (private browsing)
-    }
-    return initialCalls[0]?.id ?? null
-  })
+  const [selectedId, setSelectedId] = React.useState<string | null>(
+    () => getInitialSelectedId(initialCalls)
+  )
 
   const { readIds, markAsRead } = useReadState()
   const { calls } = useRealtimeCalls(initialCalls, readIds, false)
@@ -138,6 +133,19 @@ export function Mail({ initialCalls }: MailProps) {
     const interval = setInterval(() => setNow(Date.now()), 30_000)
     return () => clearInterval(interval)
   }, [])
+
+  // Restore persisted selection only after mount to avoid SSR/client hydration drift.
+  React.useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem("calllock_selectedId")
+      const restored = resolveStoredSelectedId(initialCalls, stored)
+      if (restored) {
+        setSelectedId(restored)
+      }
+    } catch {
+      // sessionStorage unavailable (private browsing)
+    }
+  }, [initialCalls])
 
   // Optimistic outcome handler
   const handleOutcomeChange = React.useCallback(
