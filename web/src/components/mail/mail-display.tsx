@@ -1,18 +1,20 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { format } from "date-fns"
+import { format, isToday, isTomorrow } from "date-fns"
 import { Phone } from "lucide-react"
 import { parseTranscript, formatPhone } from "@/lib/transforms"
 import type { Call, TranscriptEntry, CallbackOutcome, TriageResult } from "@/types/call"
 import { cn } from "@/lib/utils"
-import { isUnresolved, getAssistTemplate } from "@/lib/triage"
+import { isActionable, getAssistTemplate } from "@/lib/triage"
+import type { BucketAssignment } from "@/lib/triage"
 import { useOutcomeSubmit } from "@/hooks/use-outcome-submit"
 
 interface MailDisplayProps {
   call: Call | null
   triageMap?: Map<string, TriageResult>
   onOutcomeChange?: (callId: string, outcome: CallbackOutcome | null) => void
+  bucketMap?: Map<string, BucketAssignment>
 }
 
 function buildAISummary(call: Call): string {
@@ -42,7 +44,7 @@ function buildAISummary(call: Call): string {
   return parts.join(" ")
 }
 
-export function MailDisplay({ call, triageMap, onOutcomeChange }: MailDisplayProps) {
+export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: MailDisplayProps) {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(false)
   const [activeTab, setActiveTab] = useState<"summary" | "transcript">("summary")
@@ -94,8 +96,13 @@ export function MailDisplay({ call, triageMap, onOutcomeChange }: MailDisplayPro
   const isEmergency = call.isSafetyEmergency || call.urgency === "LifeSafety"
   const isUrgent = call.urgency === "Urgent"
 
+  const assignment = bucketMap?.get(call.id)
+  const callIsActionable = assignment?.bucket === "ACTION_QUEUE"
+  const isFollowUp = assignment?.subGroup === "FOLLOW_UP"
+  const isAiHandled = assignment?.bucket === "AI_HANDLED"
+
   const triage = triageMap?.get(call.id)
-  const callbackWindowEnd = triage && isUnresolved(call) && triage.callbackWindowValid && triage.callbackWindowEnd
+  const callbackWindowEnd = triage && callIsActionable && triage.callbackWindowValid && triage.callbackWindowEnd
     ? new Date(triage.callbackWindowEnd)
     : null
 
@@ -140,8 +147,25 @@ export function MailDisplay({ call, triageMap, onOutcomeChange }: MailDisplayPro
           )}
           {callbackWindowEnd && (
             <span className="text-[0.6875rem] text-[#acabaa] uppercase">
-              Available until {format(callbackWindowEnd, "h:mm a")}
+              {triage?.callbackWindowStart && (
+                <>Available {format(new Date(triage.callbackWindowStart), "h:mm a")} – </>
+              )}
+              {triage?.callbackWindowStart ? format(callbackWindowEnd, "h:mm a") : `Available until ${format(callbackWindowEnd, "h:mm a")}`}
             </span>
+          )}
+          {call.callRecordingUrl && (
+            <a
+              href={call.callRecordingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[0.6875rem] text-[#acabaa] uppercase hover:text-[#e7e5e4] transition-colors flex items-center gap-1"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Listen
+            </a>
           )}
         </div>
         <p className="text-[#acabaa] text-xs mt-1">
@@ -151,16 +175,65 @@ export function MailDisplay({ call, triageMap, onOutcomeChange }: MailDisplayPro
 
       {/* Action Bar */}
       <div className="px-8 pb-4 flex-shrink-0 space-y-3">
-        {call.customerPhone && (
+        {/* AI Action summary for handled calls */}
+        {isAiHandled && assignment && (
+          <div className="bg-[#131313] p-4 rounded-md">
+            <p className="text-sm text-[#acabaa]">
+              {assignment.escalationMarker && <span className="text-[#fd9791]">⚠ </span>}
+              {assignment.handledReason === "escalated" && "Escalated: safety emergency forwarded to dispatch"}
+              {assignment.handledReason === "resolved" && "Resolved: callback completed"}
+              {assignment.handledReason === "non_customer" && "Blocked: non-customer call (spam/vendor)"}
+              {assignment.handledReason === "wrong_number" && "Dismissed: wrong number or out of service area"}
+              {assignment.handledReason === "booked" && (
+                <>
+                  Booked: appointment scheduled by AI
+                  {call.appointmentDateTime && (
+                    <span className="block mt-1 text-[#e7e5e4] font-medium">
+                      {(() => {
+                        try {
+                          const d = new Date(call.appointmentDateTime)
+                          if (isToday(d)) return `Today @ ${format(d, "h:mm a")}`
+                          if (isTomorrow(d)) return `Tomorrow @ ${format(d, "h:mm a")}`
+                          return format(d, "MMM d @ h:mm a")
+                        } catch { return call.appointmentDateTime }
+                      })()}
+                    </span>
+                  )}
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* Follow-up previous outcome */}
+        {isFollowUp && call.callbackOutcome && (
+          <div className="flex items-center gap-2 mb-1">
+            <span className="bg-[#3b3b3b] text-[#c1bfbe] text-[0.6875rem] px-3 py-1.5 rounded-full uppercase font-semibold">
+              {call.callbackOutcome.replace(/_/g, " ")}
+              {call.callbackOutcomeAt && (
+                <> · {format(new Date(call.callbackOutcomeAt), "h:mm a")}</>
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* CALL BACK button — only for actionable calls */}
+        {callIsActionable && call.customerPhone && (
           <a
             href={`tel:${call.customerPhone}`}
-            className="flex items-center justify-center gap-2 w-full h-12 bg-gradient-to-r from-[#c6c6c7] to-[#b8b9b9] text-[#3f4041] font-bold rounded-lg hover:brightness-110 transition-all active:scale-[0.98]"
+            className={cn(
+              "flex items-center justify-center gap-2 w-full h-12 font-bold rounded-lg transition-all active:scale-[0.98]",
+              isFollowUp
+                ? "bg-[#3b3b3b] text-[#c1bfbe] hover:bg-[#454747]"
+                : "bg-gradient-to-r from-[#c6c6c7] to-[#b8b9b9] text-[#3f4041] hover:brightness-110"
+            )}
+            aria-label={`Call back ${call.customerName}`}
           >
             <Phone className="h-5 w-5" />
             <span>Call Back</span>
           </a>
         )}
-        {call && isUnresolved(call) && (
+        {call && callIsActionable && (
           <div>
             <div className="flex flex-wrap gap-2">
               {([
@@ -230,7 +303,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange }: MailDisplayPro
         {activeTab === "summary" ? (
           <div className="space-y-6 max-w-3xl">
             {/* Callback Opener (above AI Summary) */}
-            {call && isUnresolved(call) && (() => {
+            {call && callIsActionable && (() => {
               const t = triageMap?.get(call.id)
               if (!t) return null
               const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "our company"

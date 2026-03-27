@@ -168,6 +168,7 @@ export function transformCallRecord(
     route: ROUTE_MAP[(row as CallRecordRow).route ?? ""] ?? null,
     revenueTier: REVENUE_TIER_MAP[(row as CallRecordRow).revenue_tier ?? ""] ?? null,
     extractionStatus: row.extraction_status ?? null,
+    callRecordingUrl: (row as CallRecordRow).call_recording_url ?? null,
     createdAt: row.created_at,
   }
 }

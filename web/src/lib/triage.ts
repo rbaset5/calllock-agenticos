@@ -1,10 +1,14 @@
 import type {
-  EndCallReason,
+  CallerType,
   CallbackOutcome,
-  UrgencyTier,
+  EndCallReason,
+  PrimaryIntent,
+  Route,
+  RevenueTier,
   TriageCommand,
   TriageReason,
   TriageResult,
+  UrgencyTier,
 } from "@/types/call"
 import {
   TERMINAL_END_CALL_REASONS,
@@ -28,6 +32,12 @@ export interface TriageableCall {
   callbackType: string | null
   callbackWindowStart: string | null
   callbackWindowEnd: string | null
+  callbackOutcomeAt: string | null
+  callerType: CallerType | null
+  primaryIntent: PrimaryIntent | null
+  route: Route | null
+  revenueTier: RevenueTier | null
+  extractionStatus: string | null
   createdAt: string
 }
 
@@ -217,7 +227,11 @@ export function computeTriage(
   const reason = classifyReason(call)
   const evidence = buildEvidence(call, reason)
 
-  const ageMs = now - new Date(call.createdAt).getTime()
+  // Staleness measures time since last owner action (or call arrival if untouched)
+  const lastActionTime = call.callbackOutcomeAt
+    ? Math.max(new Date(call.callbackOutcomeAt).getTime(), new Date(call.createdAt).getTime())
+    : new Date(call.createdAt).getTime()
+  const ageMs = now - lastActionTime
   const ageMin = ageMs / 60_000
   const threshold = STALE_THRESHOLDS[command]
   const isStale = threshold != null ? ageMin >= threshold : false
@@ -314,4 +328,124 @@ export function assignSection(call: TriageableCall): SectionKey {
     return "HANDLED"
 
   return "NEEDS_CALLBACK"
+}
+
+// ---------------------------------------------------------------------------
+// Bucket System (IA Redesign)
+// ---------------------------------------------------------------------------
+
+export type BucketKey = "ACTION_QUEUE" | "AI_HANDLED"
+export type ActionSubGroup = "NEW_LEAD" | "FOLLOW_UP"
+export type HandledReason = "escalated" | "resolved" | "non_customer" | "wrong_number" | "booked"
+
+export interface BucketAssignment {
+  bucket: BucketKey
+  subGroup: ActionSubGroup | null
+  escalationMarker: boolean
+  handledReason: HandledReason | null
+}
+
+const NON_SERVICE_CALLER_TYPES = new Set<CallerType>(["job_applicant", "vendor", "spam"])
+const FOLLOW_UP_INTENTS = new Set<PrimaryIntent>(["followup", "complaint", "active_job_issue"])
+const RETRY_OUTCOMES = new Set<CallbackOutcome>(["left_voicemail", "no_answer"])
+const FOLLOW_UP_END_REASONS = new Set<EndCallReason>(["callback_later", "booking_failed"])
+
+function handled(reason: HandledReason, escalation = false): BucketAssignment {
+  return { bucket: "AI_HANDLED", subGroup: null, escalationMarker: escalation, handledReason: reason }
+}
+
+function actionQueue(subGroup: ActionSubGroup): BucketAssignment {
+  return { bucket: "ACTION_QUEUE", subGroup, escalationMarker: false, handledReason: null }
+}
+
+/**
+ * Assign a call to a UI bucket. Order matters — first match wins.
+ *
+ * If extraction is pending and classification fields are all null,
+ * classification-dependent rules (route, callerType, primaryIntent)
+ * are skipped and the call falls through to NEW_LEAD.
+ */
+export function assignBucket(call: TriageableCall): BucketAssignment {
+  // 1. Terminal callback outcome → resolved
+  if (call.callbackOutcome && TERMINAL_CALLBACK_OUTCOMES.has(call.callbackOutcome))
+    return handled("resolved")
+
+  // Extraction guard: if pending and no classification data, skip classification rules
+  const hasClassification = !!(call.route || call.callerType || call.primaryIntent)
+  const isPendingExtraction = call.extractionStatus === "pending" && !hasClassification
+
+  if (!isPendingExtraction) {
+    // 2. Spam/vendor route
+    if (call.route === "spam" || call.route === "vendor")
+      return handled("non_customer")
+
+    // 3. Non-service caller types
+    if (call.callerType && NON_SERVICE_CALLER_TYPES.has(call.callerType))
+      return handled("non_customer")
+  }
+
+  // 4. Wrong number / out of area (stable field, not classification-dependent)
+  if (call.endCallReason === "wrong_number" || call.endCallReason === "out_of_area")
+    return handled("wrong_number")
+
+  // 5. Emergencies → AI escalated
+  if (call.isSafetyEmergency || call.urgency === "LifeSafety" || call.isUrgentEscalation)
+    return handled("escalated", true)
+
+  // 6. Appointment booked → AI handled (Phase 2 adds confirmation workflow)
+  if (call.appointmentBooked)
+    return handled("booked")
+
+  // 7. Terminal end-call reasons
+  if (call.endCallReason && TERMINAL_END_CALL_REASONS.has(call.endCallReason))
+    return handled("resolved")
+
+  // 8. Leads from waitlist/sales
+  if (call.endCallReason === "waitlist_added" || call.endCallReason === "sales_lead")
+    return actionQueue("NEW_LEAD")
+
+  // 9. Legacy follow-up signals
+  if (call.endCallReason && FOLLOW_UP_END_REASONS.has(call.endCallReason))
+    return actionQueue("FOLLOW_UP")
+
+  // 10. Follow-up intents (classification-dependent, guarded)
+  if (!isPendingExtraction && call.primaryIntent && FOLLOW_UP_INTENTS.has(call.primaryIntent))
+    return actionQueue("FOLLOW_UP")
+
+  // 11. Retry outcomes
+  if (call.callbackOutcome && RETRY_OUTCOMES.has(call.callbackOutcome))
+    return actionQueue("FOLLOW_UP")
+
+  // 12. Default → new lead
+  return actionQueue("NEW_LEAD")
+}
+
+/**
+ * Check if a call is in the owner's action queue (replaces isUnresolved for rendering).
+ */
+export function isActionable(call: TriageableCall): boolean {
+  return assignBucket(call).bucket === "ACTION_QUEUE"
+}
+
+// ---------------------------------------------------------------------------
+// followUpSort — sort follow-up calls by urgency + recency
+// ---------------------------------------------------------------------------
+
+export function followUpSort<T extends TriageableCall>(calls: T[]): T[] {
+  return [...calls].sort((a, b) => {
+    // 1. Active issues first (complaint, active_job_issue)
+    const aActive = FOLLOW_UP_INTENTS.has(a.primaryIntent as PrimaryIntent) && a.primaryIntent !== "followup" ? 0 : 1
+    const bActive = FOLLOW_UP_INTENTS.has(b.primaryIntent as PrimaryIntent) && b.primaryIntent !== "followup" ? 0 : 1
+    if (aActive !== bActive) return aActive - bActive
+
+    // 2. Callback retries before generic followup
+    const aRetry = RETRY_OUTCOMES.has(a.callbackOutcome as CallbackOutcome) ? 0 : 1
+    const bRetry = RETRY_OUTCOMES.has(b.callbackOutcome as CallbackOutcome) ? 0 : 1
+    if (aRetry !== bRetry) return aRetry - bRetry
+
+    // 3. Recency (newest first, guard against NaN)
+    const aTime = new Date(a.createdAt).getTime() || 0
+    const bTime = new Date(b.createdAt).getTime() || 0
+    return bTime - aTime
+  })
 }

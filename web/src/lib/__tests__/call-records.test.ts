@@ -31,6 +31,12 @@ function buildCall(overrides: Partial<Call> = {}): Call {
     callbackOutcomeAt: null,
     callbackWindowStart: null,
     callbackWindowEnd: null,
+    callerType: null,
+    primaryIntent: null,
+    route: null,
+    revenueTier: null,
+    extractionStatus: null,
+    callRecordingUrl: null,
     createdAt: "2026-03-18T15:00:00Z",
     ...overrides,
   }
@@ -52,6 +58,10 @@ function buildRow(index: number): CallRecordListRow {
     callback_outcome_at: null,
     callback_scheduled: false,
     booking_id: null,
+    route: null,
+    caller_type: null,
+    primary_intent: null,
+    revenue_tier: null,
     created_at: `2026-03-18T15:${String(index).padStart(2, "0")}:00Z`,
     updated_at: `2026-03-18T15:${String(index).padStart(2, "0")}:30Z`,
   }

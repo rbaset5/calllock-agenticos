@@ -4,7 +4,9 @@ import { useState, useCallback } from "react"
 import { formatDistanceToNow, format, isToday, isTomorrow } from "date-fns"
 import {
   AlertCircle,
+  AlertTriangle,
   CalendarCheck,
+  ChevronRight,
   CircleCheck,
   Clock,
   Minus,
@@ -16,8 +18,8 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { formatPhone } from "@/lib/transforms"
-import { isUnresolved } from "@/lib/triage"
-import type { SectionKey } from "@/lib/triage"
+import { isActionable } from "@/lib/triage"
+import type { BucketAssignment, HandledReason } from "@/lib/triage"
 import type { Call, CallbackOutcome, TriageResult } from "@/types/call"
 
 interface MailListProps {
@@ -28,8 +30,9 @@ interface MailListProps {
   triageMap?: Map<string, TriageResult>
   pulsingId?: string | null
   onCallBackTap?: (callId: string) => void
-  onPulseClear?: () => void  // kept for post-phone return flow
-  sections?: Record<SectionKey, Call[]>
+  onPulseClear?: () => void
+  buckets?: { NEW_LEADS: Call[]; FOLLOW_UPS: Call[]; AI_HANDLED: Call[] }
+  bucketMap?: Map<string, BucketAssignment>
 }
 
 const COMMAND_STYLES: Record<string, { text: string; bg: string }> = {
@@ -58,6 +61,15 @@ function formatAppointmentTime(dateStr: string | null): string {
   }
 }
 
+function formatOutcomeAge(call: Call): string {
+  if (!call.callbackOutcomeAt) return ""
+  try {
+    return formatDistanceToNow(new Date(call.callbackOutcomeAt), { addSuffix: true })
+  } catch {
+    return ""
+  }
+}
+
 const OUTCOME_CONFIG = [
   { value: "reached_customer" as CallbackOutcome, label: "Reached Customer", Icon: UserCheck },
   { value: "scheduled" as CallbackOutcome, label: "Scheduled", Icon: CalendarCheck },
@@ -65,6 +77,16 @@ const OUTCOME_CONFIG = [
   { value: "no_answer" as CallbackOutcome, label: "No Answer", Icon: PhoneMissed },
   { value: "resolved_elsewhere" as CallbackOutcome, label: "Resolved Elsewhere", Icon: CircleCheck },
 ] as const
+
+const HANDLED_REASON_LABELS: Record<HandledReason, string> = {
+  escalated: "escalated",
+  resolved: "resolved",
+  non_customer: "spam/vendor",
+  wrong_number: "wrong number",
+  booked: "booked",
+}
+
+type CardSection = "NEW_LEADS" | "FOLLOW_UPS" | "AI_HANDLED"
 
 export function MailList({
   items,
@@ -75,13 +97,15 @@ export function MailList({
   pulsingId,
   onCallBackTap,
   onPulseClear,
-  sections,
+  buckets,
+  bucketMap,
 }: MailListProps) {
   const [submittingId, setSubmittingId] = useState<string | null>(null)
   const [flashingState, setFlashingState] = useState<{
     cardId: string
     outcome: CallbackOutcome
   } | null>(null)
+  const [aiHandledExpanded, setAiHandledExpanded] = useState(false)
 
   const handleOutcomeClick = useCallback(
     async (call: Call, outcome: CallbackOutcome) => {
@@ -110,13 +134,14 @@ export function MailList({
   )
 
   // Render a single call card
-  const renderCard = (item: Call, section: SectionKey) => {
+  const renderCard = (item: Call, section: CardSection) => {
     const isActive = selected === item.id
     const triage = triageMap?.get(item.id)
-    const callUnresolved = isUnresolved(item)
+    const callActionable = isActionable(item)
     const style = COMMAND_STYLES[triage?.command ?? "Can wait"] ?? COMMAND_STYLES["Can wait"]
     const Icon = COMMAND_ICONS[triage?.command ?? "Can wait"] ?? Minus
     const snippet = item.problemDescription || item.hvacIssueType || "Missed call"
+    const assignment = bucketMap?.get(item.id)
 
     return (
       <div
@@ -126,15 +151,15 @@ export function MailList({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(item.id) } }}
         className={cn(
           "flex items-stretch overflow-hidden rounded-lg cursor-pointer transition-all duration-200 shrink-0",
-          section === "HANDLED" && "opacity-60",
+          section === "AI_HANDLED" && "opacity-50",
           isActive
-            ? "bg-[#252626]"
-            : section === "HANDLED" ? "bg-[#131313]" : "bg-[#131313] hover:bg-[#191a1a]"
+            ? "bg-[#2c2c2c]"
+            : "bg-[#0e0e0e] hover:bg-[#191a1a]"
         )}
         onClick={() => onSelect(item.id)}
       >
-        {/* Triage priority panel — NEEDS_CALLBACK only */}
-        {section === "NEEDS_CALLBACK" && callUnresolved && triage && (
+        {/* Triage priority panel — NEW_LEADS only */}
+        {section === "NEW_LEADS" && callActionable && triage && (
           <div
             className={cn(
               "w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center",
@@ -147,6 +172,11 @@ export function MailList({
             {triage.command.split(" ").map((word, i) => (
               <span key={i} className="block">{word}</span>
             ))}
+            {triage.isStale && (
+              <span className="block mt-0.5 text-[8px] font-semibold opacity-80">
+                {triage.staleMinutes}m
+              </span>
+            )}
           </div>
         )}
 
@@ -155,33 +185,41 @@ export function MailList({
           {/* Line 1: Name · evidence | time-ago */}
           <div className="flex justify-between items-start gap-2">
             <div className="flex items-baseline gap-1.5 min-w-0 truncate">
-              <span className="text-[#e7e5e4] text-sm font-semibold truncate">
+              {!item.read && (
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#c6c6c7] shrink-0 mt-1.5 mr-1" aria-label="Unread" />
+              )}
+              <span className={cn("text-sm truncate", item.read ? "text-[#e7e5e4] font-semibold" : "text-[#e7e5e4] font-bold")}>
                 {item.customerName || (item.customerPhone ? formatPhone(item.customerPhone) : "Unknown")}
               </span>
-              {triage?.evidence && section === "NEEDS_CALLBACK" && (
+              {triage?.evidence && section === "NEW_LEADS" && (
                 <>
-                  <span className="text-[#acabaa] text-[0.6875rem]">·</span>
+                  <span className="text-[#acabaa] text-[0.6875rem]">&middot;</span>
                   <span className="text-[#acabaa] text-[0.6875rem] truncate">{triage.evidence}</span>
                 </>
               )}
             </div>
-            {section !== "UPCOMING" && (
-              <span className="text-[0.6875rem] text-[#acabaa] shrink-0 ml-2">
-                {formatDistanceToNow(new Date(item.createdAt), { addSuffix: false })} ago
-              </span>
-            )}
-            {section === "UPCOMING" && (
-              <span className="text-[0.6875rem] text-[#acabaa] shrink-0 ml-2">
-                {formatAppointmentTime(item.appointmentDateTime)}
-              </span>
-            )}
+            <span className="text-[0.6875rem] text-[#acabaa] shrink-0 ml-2">
+              {formatDistanceToNow(new Date(item.createdAt), { addSuffix: false })} ago
+            </span>
           </div>
 
           {/* Line 2: Snippet */}
           <p className="text-[#acabaa] text-sm line-clamp-2 leading-relaxed">{snippet}</p>
 
-          {/* Line 3: CALL BACK — tel: link on ALL platforms (NEEDS_CALLBACK only) */}
-          {section === "NEEDS_CALLBACK" && callUnresolved && item.customerPhone && (
+          {/* Follow-up: previous outcome chip instead of triage panel */}
+          {section === "FOLLOW_UPS" && item.callbackOutcome && (
+            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-[#3b3b3b] text-[#c1bfbe] text-[0.6875rem] font-semibold uppercase">
+              {item.callbackOutcome.replace(/_/g, " ")}
+              {item.callbackOutcomeAt && (
+                <span className="text-[#acabaa] normal-case font-normal">
+                  {" "}{formatOutcomeAge(item)}
+                </span>
+              )}
+            </span>
+          )}
+
+          {/* Line 3: CALL BACK — NEW_LEADS and FOLLOW_UPS only */}
+          {(section === "NEW_LEADS" || section === "FOLLOW_UPS") && callActionable && item.customerPhone && (
             <a
               href={`tel:${item.customerPhone}`}
               aria-label={`Call back ${item.customerName || "customer"}`}
@@ -199,8 +237,8 @@ export function MailList({
             </a>
           )}
 
-          {/* Line 4: Outcome chips — selected card only, NEEDS_CALLBACK */}
-          {section === "NEEDS_CALLBACK" && isActive && callUnresolved && (
+          {/* Line 4: Outcome chips — selected card only, action queue sections */}
+          {(section === "NEW_LEADS" || section === "FOLLOW_UPS") && isActive && callActionable && (
             <div className="flex gap-1.5 mt-1 flex-wrap">
               {OUTCOME_CONFIG.map(({ value, label, Icon: OutcomeIcon }) => {
                 const isSelected = item.callbackOutcome === value
@@ -227,10 +265,17 @@ export function MailList({
             </div>
           )}
 
-          {/* HANDLED section: show outcome label */}
-          {section === "HANDLED" && item.callbackOutcome && (
-            <span className="text-[0.6875rem] text-[#acabaa] capitalize">
-              {item.callbackOutcome.replace(/_/g, " ")}
+          {/* AI_HANDLED: show escalation marker or handled reason */}
+          {section === "AI_HANDLED" && assignment && (
+            <span className="inline-flex items-center gap-1 text-[0.6875rem] text-[#acabaa]">
+              {assignment.escalationMarker && (
+                <AlertTriangle className="h-3 w-3 text-[#fd9791]" />
+              )}
+              {assignment.handledReason && (
+                <span className="capitalize">
+                  {HANDLED_REASON_LABELS[assignment.handledReason]}
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -246,53 +291,117 @@ export function MailList({
     )
   }
 
-  // Unified timeline with section headers
-  if (sections) {
+  // Bucket-based rendering
+  if (buckets && bucketMap) {
+    // Compute AI Handled sub-counts from bucketMap
+    const aiHandledSubCounts = new Map<HandledReason, number>()
+    for (const call of buckets.AI_HANDLED) {
+      const assignment = bucketMap.get(call.id)
+      if (assignment?.handledReason) {
+        aiHandledSubCounts.set(
+          assignment.handledReason,
+          (aiHandledSubCounts.get(assignment.handledReason) ?? 0) + 1
+        )
+      }
+    }
+
+    const subCountParts: string[] = []
+    const escalated = aiHandledSubCounts.get("escalated") ?? 0
+    const resolved = aiHandledSubCounts.get("resolved") ?? 0
+    const nonCustomer = aiHandledSubCounts.get("non_customer") ?? 0
+    const wrongNumber = aiHandledSubCounts.get("wrong_number") ?? 0
+    const booked = aiHandledSubCounts.get("booked") ?? 0
+
+    if (escalated > 0) subCountParts.push(`\u26A0 ${escalated} escalated`)
+    if (resolved > 0) subCountParts.push(`${resolved} resolved`)
+    if (booked > 0) subCountParts.push(`${booked} booked`)
+    if (nonCustomer > 0) subCountParts.push(`${nonCustomer} spam/vendor`)
+    if (wrongNumber > 0) subCountParts.push(`${wrongNumber} wrong number`)
+
+    const subCountSummary = subCountParts.join(" \u00B7 ")
+
     return (
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-[#0e0e0e]">
-        {/* NEEDS CALLBACK */}
-        {sections.NEEDS_CALLBACK.length > 0 && (
+        {/* New Leads */}
+        {buckets.NEW_LEADS.length > 0 && (
           <>
-            <h3 className="font-headline text-[1.75rem] font-bold text-[#e7e5e4] tracking-[-0.02em] pt-4 pb-2">
-              Needs Callback ({sections.NEEDS_CALLBACK.length})
+            <h3
+              role="heading"
+              aria-level={3}
+              className="font-headline text-[1.75rem] font-bold text-[#e7e5e4] tracking-[-0.02em] pt-4 pb-2"
+            >
+              New Leads ({buckets.NEW_LEADS.length})
             </h3>
             <div className="flex flex-col gap-1">
-              {sections.NEEDS_CALLBACK.map((item) => renderCard(item, "NEEDS_CALLBACK"))}
+              {buckets.NEW_LEADS.map((item) => renderCard(item, "NEW_LEADS"))}
             </div>
           </>
         )}
 
-        {/* HANDLED */}
-        {sections.HANDLED.length > 0 && (
+        {/* Follow-ups */}
+        {buckets.FOLLOW_UPS.length > 0 && (
           <>
-            <h3 className="text-sm font-semibold text-[#acabaa] uppercase tracking-wider pt-8 pb-2">
-              Handled
+            <h3
+              role="heading"
+              aria-level={3}
+              className="font-headline text-[1.75rem] font-bold text-[#e7e5e4] tracking-[-0.02em] mt-8 pb-2"
+            >
+              Follow-ups ({buckets.FOLLOW_UPS.length})
             </h3>
             <div className="flex flex-col gap-1">
-              {sections.HANDLED.map((item) => renderCard(item, "HANDLED"))}
+              {buckets.FOLLOW_UPS.map((item) => renderCard(item, "FOLLOW_UPS"))}
             </div>
           </>
         )}
 
-        {/* UPCOMING */}
-        {sections.UPCOMING.length > 0 && (
-          <>
-            <h3 className="text-sm font-semibold text-[#acabaa] uppercase tracking-wider pt-8 pb-2">
-              Upcoming ({sections.UPCOMING.length})
-            </h3>
-            <div className="flex flex-col gap-1">
-              {sections.UPCOMING.map((item) => renderCard(item, "UPCOMING"))}
+        {/* AI Handled (collapsible) */}
+        {buckets.AI_HANDLED.length > 0 && (
+          <div className="mt-8">
+            <button
+              onClick={() => setAiHandledExpanded((prev) => !prev)}
+              aria-expanded={aiHandledExpanded}
+              aria-controls="ai-handled-list"
+              className="w-full flex items-center justify-between py-3 px-1 text-left group"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-semibold text-[#acabaa] uppercase tracking-wider">
+                  AI Handled ({buckets.AI_HANDLED.length})
+                </span>
+                {subCountSummary && (
+                  <span className="text-[0.6875rem] text-[#acabaa]">
+                    {subCountSummary}
+                  </span>
+                )}
+              </div>
+              <ChevronRight
+                className={cn(
+                  "h-4 w-4 text-[#acabaa] transition-transform duration-200",
+                  aiHandledExpanded && "rotate-90"
+                )}
+              />
+            </button>
+
+            <div
+              id="ai-handled-list"
+              className={cn(
+                "overflow-hidden transition-all duration-200",
+                aiHandledExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+              )}
+            >
+              <div className="flex flex-col gap-1">
+                {buckets.AI_HANDLED.map((item) => renderCard(item, "AI_HANDLED"))}
+              </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     )
   }
 
-  // Fallback: flat list (no sections)
+  // Fallback: flat list (no buckets)
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-[#0e0e0e]">
-      {items.map((item) => renderCard(item, "NEEDS_CALLBACK"))}
+      {items.map((item) => renderCard(item, "NEW_LEADS"))}
     </div>
   )
 }

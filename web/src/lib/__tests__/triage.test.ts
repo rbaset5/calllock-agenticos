@@ -4,6 +4,9 @@ import {
   computeTriage,
   getAssistTemplate,
   triageSort,
+  assignBucket,
+  followUpSort,
+  isActionable,
   type TriageableCall,
 } from "../triage"
 
@@ -21,6 +24,12 @@ function makeCall(overrides: Partial<TriageableCall> = {}): TriageableCall {
     callbackType: null,
     callbackWindowStart: null,
     callbackWindowEnd: null,
+    callbackOutcomeAt: null,
+    callerType: null,
+    primaryIntent: null,
+    route: null,
+    revenueTier: null,
+    extractionStatus: null,
     createdAt: new Date().toISOString(),
     ...overrides,
   }
@@ -383,5 +392,239 @@ describe("getAssistTemplate", () => {
     expect(typeof template).toBe("string")
     expect(template.length).toBeGreaterThan(0)
     expect(template).toContain("TestCo")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// assignBucket
+// ---------------------------------------------------------------------------
+
+describe("assignBucket", () => {
+  // Rule 1: terminal callbackOutcome → AI_HANDLED resolved
+  it("reached_customer → AI_HANDLED resolved", () => {
+    const r = assignBucket(makeCall({ callbackOutcome: "reached_customer" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("resolved")
+  })
+
+  it("scheduled → AI_HANDLED resolved", () => {
+    const r = assignBucket(makeCall({ callbackOutcome: "scheduled" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("resolved")
+  })
+
+  it("resolved_elsewhere → AI_HANDLED resolved", () => {
+    const r = assignBucket(makeCall({ callbackOutcome: "resolved_elsewhere" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("resolved")
+  })
+
+  // Rule 2: route spam/vendor
+  it("route=spam → AI_HANDLED non_customer", () => {
+    const r = assignBucket(makeCall({ route: "spam" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("non_customer")
+  })
+
+  it("route=vendor → AI_HANDLED non_customer", () => {
+    const r = assignBucket(makeCall({ route: "vendor" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("non_customer")
+  })
+
+  // Rule 3: non-service caller types
+  it("callerType=job_applicant → AI_HANDLED non_customer", () => {
+    const r = assignBucket(makeCall({ callerType: "job_applicant" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("non_customer")
+  })
+
+  it("callerType=spam → AI_HANDLED non_customer", () => {
+    const r = assignBucket(makeCall({ callerType: "spam" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("non_customer")
+  })
+
+  // Rule 4: wrong number / out of area
+  it("endCallReason=wrong_number → AI_HANDLED wrong_number", () => {
+    const r = assignBucket(makeCall({ endCallReason: "wrong_number" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("wrong_number")
+  })
+
+  it("endCallReason=out_of_area → AI_HANDLED wrong_number", () => {
+    const r = assignBucket(makeCall({ endCallReason: "out_of_area" as any }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("wrong_number")
+  })
+
+  // Rule 5: emergencies
+  it("isSafetyEmergency → AI_HANDLED escalated with marker", () => {
+    const r = assignBucket(makeCall({ isSafetyEmergency: true }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("escalated")
+    expect(r.escalationMarker).toBe(true)
+  })
+
+  it("urgency=LifeSafety → AI_HANDLED escalated with marker", () => {
+    const r = assignBucket(makeCall({ urgency: "LifeSafety" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.escalationMarker).toBe(true)
+  })
+
+  // Rule 6: appointment booked
+  it("appointmentBooked → AI_HANDLED booked", () => {
+    const r = assignBucket(makeCall({ appointmentBooked: true }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("booked")
+  })
+
+  // Rule 7: terminal endCallReason
+  it("endCallReason=cancelled → AI_HANDLED resolved", () => {
+    const r = assignBucket(makeCall({ endCallReason: "cancelled" }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("resolved")
+  })
+
+  // Rule 8: leads
+  it("endCallReason=waitlist_added → ACTION_QUEUE NEW_LEAD", () => {
+    const r = assignBucket(makeCall({ endCallReason: "waitlist_added" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("NEW_LEAD")
+  })
+
+  it("endCallReason=sales_lead → ACTION_QUEUE NEW_LEAD", () => {
+    const r = assignBucket(makeCall({ endCallReason: "sales_lead" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("NEW_LEAD")
+  })
+
+  // Rule 9: legacy follow-up signals
+  it("endCallReason=callback_later → ACTION_QUEUE FOLLOW_UP", () => {
+    const r = assignBucket(makeCall({ endCallReason: "callback_later" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("FOLLOW_UP")
+  })
+
+  it("endCallReason=booking_failed → ACTION_QUEUE FOLLOW_UP", () => {
+    const r = assignBucket(makeCall({ endCallReason: "booking_failed" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("FOLLOW_UP")
+  })
+
+  // Rule 10: follow-up intents
+  it("primaryIntent=followup → ACTION_QUEUE FOLLOW_UP", () => {
+    const r = assignBucket(makeCall({ primaryIntent: "followup" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("FOLLOW_UP")
+  })
+
+  it("primaryIntent=complaint → ACTION_QUEUE FOLLOW_UP", () => {
+    const r = assignBucket(makeCall({ primaryIntent: "complaint" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("FOLLOW_UP")
+  })
+
+  it("primaryIntent=active_job_issue → ACTION_QUEUE FOLLOW_UP", () => {
+    const r = assignBucket(makeCall({ primaryIntent: "active_job_issue" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("FOLLOW_UP")
+  })
+
+  // Rule 11: retry outcomes
+  it("callbackOutcome=left_voicemail → ACTION_QUEUE FOLLOW_UP", () => {
+    const r = assignBucket(makeCall({ callbackOutcome: "left_voicemail" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("FOLLOW_UP")
+  })
+
+  it("callbackOutcome=no_answer → ACTION_QUEUE FOLLOW_UP", () => {
+    const r = assignBucket(makeCall({ callbackOutcome: "no_answer" }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("FOLLOW_UP")
+  })
+
+  // Rule 12: default
+  it("default (all nulls) → ACTION_QUEUE NEW_LEAD", () => {
+    const r = assignBucket(makeCall())
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("NEW_LEAD")
+  })
+
+  // Backward compat: null classification fields
+  it("null classification fields → ACTION_QUEUE NEW_LEAD", () => {
+    const r = assignBucket(makeCall({
+      callerType: null,
+      primaryIntent: null,
+      route: null,
+      revenueTier: null,
+    }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("NEW_LEAD")
+  })
+
+  // Extraction guard
+  it("extraction_status=pending + null classification → NEW_LEAD (not classified)", () => {
+    const r = assignBucket(makeCall({
+      extractionStatus: "pending",
+      callerType: null,
+      primaryIntent: null,
+      route: null,
+    }))
+    expect(r.bucket).toBe("ACTION_QUEUE")
+    expect(r.subGroup).toBe("NEW_LEAD")
+  })
+
+  it("extraction_status=pending + route=spam → AI_HANDLED (classification present)", () => {
+    const r = assignBucket(makeCall({
+      extractionStatus: "pending",
+      route: "spam",
+    }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("non_customer")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// followUpSort
+// ---------------------------------------------------------------------------
+
+describe("followUpSort", () => {
+  it("active_job_issue sorts before generic followup", () => {
+    const generic = makeCall({ id: "generic", primaryIntent: "followup" })
+    const active = makeCall({ id: "active", primaryIntent: "active_job_issue" })
+    const sorted = followUpSort([generic, active])
+    expect(sorted[0].id).toBe("active")
+  })
+
+  it("no_answer sorts before generic followup", () => {
+    const generic = makeCall({ id: "generic", primaryIntent: "followup" })
+    const retry = makeCall({ id: "retry", callbackOutcome: "no_answer" })
+    const sorted = followUpSort([generic, retry])
+    expect(sorted[0].id).toBe("retry")
+  })
+
+  it("handles null primaryIntent without crashing", () => {
+    const call = makeCall({ primaryIntent: null })
+    expect(() => followUpSort([call])).not.toThrow()
+  })
+
+  it("handles null callbackOutcome without crashing", () => {
+    const call = makeCall({ callbackOutcome: null })
+    expect(() => followUpSort([call])).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// isActionable
+// ---------------------------------------------------------------------------
+
+describe("isActionable", () => {
+  it("default call (NEW_LEAD) is actionable", () => {
+    expect(isActionable(makeCall())).toBe(true)
+  })
+
+  it("spam call (AI_HANDLED) is not actionable", () => {
+    expect(isActionable(makeCall({ route: "spam" }))).toBe(false)
   })
 })

@@ -12,12 +12,13 @@ import {
 } from "lucide-react"
 import type { Call, CallbackOutcome } from "@/types/call"
 import type { TriageResult } from "@/types/call"
-import { triageSort, computeTriage, assignSection } from "@/lib/triage"
-import type { SectionKey } from "@/lib/triage"
+import { triageSort, computeTriage, assignBucket, followUpSort } from "@/lib/triage"
+import type { BucketAssignment } from "@/lib/triage"
 import { useRealtimeCalls } from "@/hooks/use-realtime-calls"
 import { useReadState } from "@/hooks/use-read-state"
 import { MailList } from "./mail-list"
 import { MailDisplay } from "./mail-display"
+import { PulseBar } from "./pulse-bar"
 
 interface MailProps {
   initialCalls: Call[]
@@ -63,34 +64,48 @@ export function Mail({ initialCalls }: MailProps) {
     return map
   }, [mergedCalls, now])
 
-  // Section assignment: split calls into NEEDS_CALLBACK, HANDLED, UPCOMING
-  const sections = React.useMemo(() => {
-    const grouped: Record<SectionKey, Call[]> = {
-      NEEDS_CALLBACK: [],
-      HANDLED: [],
-      UPCOMING: [],
-    }
+  // Bucket assignment: split calls into ACTION_QUEUE (New Leads + Follow-ups) and AI_HANDLED
+  const { buckets, bucketMap } = React.useMemo(() => {
+    const newLeads: Call[] = []
+    const followUps: Call[] = []
+    const aiHandled: Call[] = []
+    const map = new Map<string, BucketAssignment>()
+
     for (const call of mergedCalls) {
-      grouped[assignSection(call)].push(call)
-    }
-    // Sort NEEDS_CALLBACK by triage priority
-    grouped.NEEDS_CALLBACK = triageSort(grouped.NEEDS_CALLBACK, now)
-    // Sort UPCOMING by appointment date
-    grouped.UPCOMING.sort((a, b) => {
-      if (a.appointmentDateTime && b.appointmentDateTime) {
-        return new Date(a.appointmentDateTime).getTime() - new Date(b.appointmentDateTime).getTime()
+      const assignment = assignBucket(call)
+      map.set(call.id, assignment)
+
+      if (assignment.bucket === "ACTION_QUEUE" && assignment.subGroup === "FOLLOW_UP") {
+        followUps.push(call)
+      } else if (assignment.bucket === "ACTION_QUEUE") {
+        newLeads.push(call)
+      } else {
+        aiHandled.push(call)
       }
-      if (a.appointmentDateTime) return -1
-      if (b.appointmentDateTime) return 1
-      return 0
-    })
-    return grouped
+    }
+
+    return {
+      buckets: {
+        NEW_LEADS: triageSort(newLeads, now),
+        FOLLOW_UPS: followUpSort(followUps),
+        AI_HANDLED: aiHandled.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ),
+      },
+      bucketMap: map,
+    }
   }, [mergedCalls, now])
 
-  // Unified feed: NEEDS_CALLBACK → HANDLED → UPCOMING
+  // Unified feed: New Leads → Follow-ups → AI Handled
   const allSectionedCalls = React.useMemo(
-    () => [...sections.NEEDS_CALLBACK, ...sections.HANDLED, ...sections.UPCOMING],
-    [sections]
+    () => [...buckets.NEW_LEADS, ...buckets.FOLLOW_UPS, ...buckets.AI_HANDLED],
+    [buckets]
+  )
+
+  // Actionable calls (for auto-select)
+  const actionableCalls = React.useMemo(
+    () => [...buckets.NEW_LEADS, ...buckets.FOLLOW_UPS],
+    [buckets]
   )
 
   const selectedCall = mergedCalls.find((c) => c.id === selectedId) ?? null
@@ -150,22 +165,21 @@ export function Mail({ initialCalls }: MailProps) {
     })
   }, [calls])
 
-  // Memoized summary strip counts
-  const criticalCount = React.useMemo(
-    () => sections.NEEDS_CALLBACK.filter(c => triageMap.get(c.id)?.command === "Call now").length,
-    [sections.NEEDS_CALLBACK, triageMap]
-  )
-  const pendingCount = React.useMemo(
-    () => sections.NEEDS_CALLBACK.filter(c => triageMap.get(c.id)?.command !== "Call now").length,
-    [sections.NEEDS_CALLBACK, triageMap]
-  )
+  // Pulse bar counts
+  const pulseBarCounts = React.useMemo(() => ({
+    leads: buckets.NEW_LEADS.length,
+    followUps: buckets.FOLLOW_UPS.length,
+    aiHandled: buckets.AI_HANDLED.length,
+  }), [buckets])
 
-  // Auto-select first item
+  // Auto-select first actionable item (only from Action Queue, not AI Handled)
   React.useEffect(() => {
-    if (allSectionedCalls.length > 0 && !allSectionedCalls.find((c) => c.id === selectedId)) {
-      setSelectedId(allSectionedCalls[0].id)
+    if (actionableCalls.length > 0 && !actionableCalls.find((c) => c.id === selectedId)) {
+      setSelectedId(actionableCalls[0].id)
+    } else if (actionableCalls.length === 0) {
+      setSelectedId(null)
     }
-  }, [allSectionedCalls, selectedId])
+  }, [actionableCalls, selectedId])
 
   const handleSelect = (id: string) => {
     setSelectedId(id)
@@ -176,7 +190,7 @@ export function Mail({ initialCalls }: MailProps) {
 
   const clearPulse = React.useCallback(() => setPulsingId(null), [])
 
-  const allEmpty = sections.NEEDS_CALLBACK.length === 0 && sections.HANDLED.length === 0 && sections.UPCOMING.length === 0
+  const actionQueueEmpty = buckets.NEW_LEADS.length === 0 && buckets.FOLLOW_UPS.length === 0
 
   return (
     <>
@@ -252,34 +266,32 @@ export function Mail({ initialCalls }: MailProps) {
       <main className="pt-16 h-screen md:hidden flex flex-col overflow-hidden">
         {mobileView === "list" ? (
           <>
-            {/* Counter strip */}
-            <div className="bg-[#000000] flex-shrink-0">
-              <div className="grid grid-cols-2 gap-px">
-                <div className="flex flex-col gap-1 p-4">
-                  <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Critical</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-[#ff9993] tracking-tighter text-3xl font-black leading-none">
-                      {String(criticalCount).padStart(2, "0")}
-                    </p>
-                    <span className="text-[10px] text-[#ed8a85] font-bold tracking-widest uppercase">Need callback</span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1 p-4">
-                  <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Pending</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-[#c8c6c5] tracking-tighter text-3xl font-black leading-none">
-                      {String(pendingCount).padStart(2, "0")}
-                    </p>
-                    <span className="text-[10px] text-[#acabaa] font-bold tracking-widest uppercase">In queue</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Pulse bar */}
+            <PulseBar {...pulseBarCounts} />
 
-            {/* All caught up empty state */}
-            {allEmpty ? (
+            {/* All caught up or call list */}
+            {actionQueueEmpty && buckets.AI_HANDLED.length === 0 ? (
               <div className="flex-1 flex items-center justify-center bg-[#000000] p-8">
                 <p className="text-[#acabaa] text-sm font-medium">All caught up — no callbacks needed</p>
+              </div>
+            ) : actionQueueEmpty ? (
+              <div className="flex-1 flex flex-col bg-[#0e0e0e]">
+                <div className="flex-1 flex flex-col items-center justify-center p-8 gap-3">
+                  <p className="text-[#e7e5e4] text-sm font-medium">All caught up</p>
+                  <p className="text-[#acabaa] text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
+                </div>
+                <MailList
+                  items={allSectionedCalls}
+                  selected={selectedId}
+                  onSelect={handleSelect}
+                  onOutcomeChange={handleOutcomeChange}
+                  triageMap={triageMap}
+                  pulsingId={pulsingId}
+                  onCallBackTap={handleCallBackTap}
+                  onPulseClear={clearPulse}
+                  buckets={buckets}
+                  bucketMap={bucketMap}
+                />
               </div>
             ) : (
               <MailList
@@ -291,7 +303,8 @@ export function Mail({ initialCalls }: MailProps) {
                 pulsingId={pulsingId}
                 onCallBackTap={handleCallBackTap}
                 onPulseClear={clearPulse}
-                sections={sections}
+                buckets={buckets}
+                bucketMap={bucketMap}
               />
             )}
           </>
@@ -307,7 +320,7 @@ export function Mail({ initialCalls }: MailProps) {
               <span className="text-sm font-medium text-[#e7e5e4]">Call Details</span>
             </div>
             <div className="flex-1 overflow-hidden flex">
-              <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} />
+              <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} bucketMap={bucketMap} />
             </div>
           </div>
         )}
@@ -331,34 +344,32 @@ export function Mail({ initialCalls }: MailProps) {
             </span>
           </div>
 
-          {/* Counter strip */}
-          <div className="bg-[#000000] flex-shrink-0">
-            <div className="grid grid-cols-2 gap-px">
-              <div className="flex flex-col gap-1 p-3">
-                <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Critical</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-[#ff9993] tracking-tighter text-2xl font-black leading-none">
-                    {String(criticalCount).padStart(2, "0")}
-                  </p>
-                  <span className="text-[10px] text-[#ed8a85] font-bold tracking-widest uppercase">Need callback</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1 p-3">
-                <p className="text-[#acabaa] text-[10px] font-bold tracking-[0.15em] uppercase">Pending</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-[#c8c6c5] tracking-tighter text-2xl font-black leading-none">
-                    {String(pendingCount).padStart(2, "0")}
-                  </p>
-                  <span className="text-[10px] text-[#acabaa] font-bold tracking-widest uppercase">In queue</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Pulse bar */}
+          <PulseBar {...pulseBarCounts} />
 
-          {/* All caught up empty state */}
-          {allEmpty ? (
+          {/* All caught up or call list */}
+          {actionQueueEmpty && buckets.AI_HANDLED.length === 0 ? (
             <div className="flex-1 flex items-center justify-center bg-[#000000] p-8">
               <p className="text-[#acabaa] text-sm font-medium">All caught up — no callbacks needed</p>
+            </div>
+          ) : actionQueueEmpty ? (
+            <div className="flex-1 flex flex-col bg-[#0e0e0e]">
+              <div className="flex flex-col items-center justify-center p-8 gap-3">
+                <p className="text-[#e7e5e4] text-sm font-medium">All caught up</p>
+                <p className="text-[#acabaa] text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
+              </div>
+              <MailList
+                items={allSectionedCalls}
+                selected={selectedId}
+                onSelect={handleSelect}
+                onOutcomeChange={handleOutcomeChange}
+                triageMap={triageMap}
+                pulsingId={pulsingId}
+                onCallBackTap={handleCallBackTap}
+                onPulseClear={clearPulse}
+                buckets={buckets}
+                bucketMap={bucketMap}
+              />
             </div>
           ) : (
             <MailList
@@ -370,13 +381,14 @@ export function Mail({ initialCalls }: MailProps) {
               pulsingId={pulsingId}
               onCallBackTap={handleCallBackTap}
               onPulseClear={clearPulse}
-              sections={sections}
+              buckets={buckets}
+              bucketMap={bucketMap}
             />
           )}
         </aside>
 
         {/* Detail Panel */}
-        <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} />
+        <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} bucketMap={bucketMap} />
       </main>
     </>
   )

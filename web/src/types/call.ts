@@ -74,6 +74,12 @@ export interface TriageResult {
   callbackWindowValid: boolean
 }
 
+// Classification types — normalized from Supabase via lookup maps in transforms.ts
+export type CallerType = "residential" | "commercial" | "property_manager" | "third_party" | "job_applicant" | "vendor" | "spam" | "unknown"
+export type PrimaryIntent = "service" | "maintenance" | "installation" | "estimate" | "complaint" | "followup" | "sales" | "booking_request" | "active_job_issue" | "solicitation" | "admin_billing" | "new_lead" | "unknown"
+export type Route = "legitimate" | "spam" | "vendor"
+export type RevenueTier = "replacement" | "major_repair" | "standard_repair" | "minor" | "diagnostic" | "unknown"
+
 export type HVACIssueType =
   | "Cooling"
   | "Heating"
@@ -114,6 +120,12 @@ export interface Call {
   callbackOutcomeAt: string | null
   callbackWindowStart: string | null
   callbackWindowEnd: string | null
+  callerType: CallerType | null
+  primaryIntent: PrimaryIntent | null
+  route: Route | null
+  revenueTier: RevenueTier | null
+  extractionStatus: string | null
+  callRecordingUrl: string | null
   createdAt: string
 }
 
@@ -162,6 +174,10 @@ export type CallRecordListRow = Pick<
   | "callback_outcome_at"
   | "callback_scheduled"
   | "booking_id"
+  | "route"
+  | "caller_type"
+  | "primary_intent"
+  | "revenue_tier"
   | "created_at"
   | "updated_at"
 >
