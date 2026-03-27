@@ -69,10 +69,10 @@ export function orderCallsForMail<T extends TriageableCall>(
 ): T[] {
   const sections = partitionMailSections(calls, now)
   return [
-    ...sections.ESCALATED_BY_AI,
     ...sections.NEW_LEADS,
-    ...sections.FOLLOW_UPS,
     ...sections.BOOKED_BY_AI,
+    ...sections.FOLLOW_UPS,
+    ...sections.ESCALATED_BY_AI,
     ...sections.OTHER_AI_HANDLED,
   ]
 }
@@ -83,10 +83,10 @@ export function getDefaultSelectedId<T extends TriageableCall>(
 ): string | null {
   const sections = partitionMailSections(calls, now)
   return (
-    sections.ESCALATED_BY_AI[0]?.id ??
     sections.NEW_LEADS[0]?.id ??
-    sections.FOLLOW_UPS[0]?.id ??
     sections.BOOKED_BY_AI[0]?.id ??
+    sections.FOLLOW_UPS[0]?.id ??
+    sections.ESCALATED_BY_AI[0]?.id ??
     sections.OTHER_AI_HANDLED[0]?.id ??
     null
   )

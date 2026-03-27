@@ -103,6 +103,7 @@ export function MailList({
     outcome: CallbackOutcome
   } | null>(null)
   const [otherHandledExpanded, setOtherHandledExpanded] = useState(false)
+  const [activeTab, setActiveTab] = useState<"active" | "booked">("active")
 
   const handleOutcomeClick = useCallback(
     async (call: Call, outcome: CallbackOutcome) => {
@@ -315,108 +316,156 @@ export function MailList({
 
   // Bucket-based rendering
   if (buckets && bucketMap) {
-    // Other AI Handled sub-count summary (excludes escalated/booked which have own sections)
     const otherCount = buckets.OTHER_AI_HANDLED.length
+    const bookedCount = buckets.BOOKED_BY_AI.length
 
     return (
-      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-cl-bg-canvas">
-        {/* Escalated by AI */}
-        {buckets.ESCALATED_BY_AI.length > 0 && (
-          <>
-            <h3
-              role="heading"
-              aria-level={3}
-              className="font-headline text-[1.75rem] font-bold text-cl-danger tracking-[-0.02em] pt-4 pb-2"
-            >
-              Escalated by AI ({buckets.ESCALATED_BY_AI.length})
-            </h3>
-            <div className="flex flex-col gap-1">
-              {buckets.ESCALATED_BY_AI.map((item) => renderCard(item, "ESCALATED_BY_AI"))}
-            </div>
-          </>
-        )}
-
-        {/* New Leads */}
-        {buckets.NEW_LEADS.length > 0 && (
-          <>
-            <h3
-              role="heading"
-              aria-level={3}
-              className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] pt-4 pb-2"
-            >
-              New Leads ({buckets.NEW_LEADS.length})
-            </h3>
-            <div className="flex flex-col gap-1">
-              {buckets.NEW_LEADS.map((item) => renderCard(item, "NEW_LEADS"))}
-            </div>
-          </>
-        )}
-
-        {/* Follow-ups */}
-        {buckets.FOLLOW_UPS.length > 0 && (
-          <>
-            <h3
-              role="heading"
-              aria-level={3}
-              className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] mt-8 pb-2"
-            >
-              Follow-ups ({buckets.FOLLOW_UPS.length})
-            </h3>
-            <div className="flex flex-col gap-1">
-              {buckets.FOLLOW_UPS.map((item) => renderCard(item, "FOLLOW_UPS"))}
-            </div>
-          </>
-        )}
-
-        {/* Booked by AI */}
-        {buckets.BOOKED_BY_AI.length > 0 && (
-          <>
-            <h3
-              role="heading"
-              aria-level={3}
-              className="font-headline text-[1.75rem] font-bold text-cl-success tracking-[-0.02em] mt-8 pb-2"
-            >
-              Booked by AI ({buckets.BOOKED_BY_AI.length})
-            </h3>
-            <div className="flex flex-col gap-1">
-              {buckets.BOOKED_BY_AI.map((item) => renderCard(item, "BOOKED_BY_AI"))}
-            </div>
-          </>
-        )}
-
-        {/* Other AI Handled (collapsible) */}
-        {otherCount > 0 && (
-          <div className="mt-8">
-            <button
-              onClick={() => setOtherHandledExpanded((prev) => !prev)}
-              aria-expanded={otherHandledExpanded}
-              aria-controls="other-ai-handled-list"
-              className="w-full flex items-center justify-between py-3 px-1 text-left group"
-            >
-              <span className="text-sm font-semibold text-cl-text-muted uppercase tracking-wider">
-                Other AI Handled ({otherCount})
+      <div className="flex-1 flex flex-col overflow-hidden bg-cl-bg-canvas">
+        {/* Tab bar */}
+        <div className="flex shrink-0 px-4 pt-3 gap-1 border-b border-cl-border">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={cn(
+              "px-3 pb-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-px",
+              activeTab === "active"
+                ? "text-cl-text-primary border-cl-accent"
+                : "text-cl-text-muted border-transparent hover:text-cl-text-primary"
+            )}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setActiveTab("booked")}
+            className={cn(
+              "px-3 pb-2.5 text-xs font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+              activeTab === "booked"
+                ? "text-cl-success border-cl-success"
+                : "text-cl-text-muted border-transparent hover:text-cl-text-primary"
+            )}
+          >
+            Booked by AI
+            {bookedCount > 0 && (
+              <span className={cn(
+                "inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold",
+                activeTab === "booked"
+                  ? "bg-cl-success/20 text-cl-success"
+                  : "bg-cl-bg-card text-cl-text-muted"
+              )}>
+                {bookedCount}
               </span>
-              <ChevronRight
-                className={cn(
-                  "h-4 w-4 text-cl-text-muted transition-transform duration-200",
-                  otherHandledExpanded && "rotate-90"
-                )}
-              />
-            </button>
+            )}
+          </button>
+        </div>
 
-            <div
-              id="other-ai-handled-list"
-              className={cn(
-                "overflow-hidden transition-all duration-200",
-                otherHandledExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24">
+          {activeTab === "active" ? (
+            <>
+              {/* New Leads */}
+              {buckets.NEW_LEADS.length > 0 && (
+                <>
+                  <h3
+                    role="heading"
+                    aria-level={3}
+                    className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] pt-4 pb-2"
+                  >
+                    New Leads ({buckets.NEW_LEADS.length})
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {buckets.NEW_LEADS.map((item) => renderCard(item, "NEW_LEADS"))}
+                  </div>
+                </>
               )}
-            >
-              <div className="flex flex-col gap-1">
-                {buckets.OTHER_AI_HANDLED.map((item) => renderCard(item, "OTHER_AI_HANDLED"))}
-              </div>
-            </div>
-          </div>
-        )}
+
+              {/* Follow-ups */}
+              {buckets.FOLLOW_UPS.length > 0 && (
+                <>
+                  <h3
+                    role="heading"
+                    aria-level={3}
+                    className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] mt-8 pb-2"
+                  >
+                    Follow-ups ({buckets.FOLLOW_UPS.length})
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {buckets.FOLLOW_UPS.map((item) => renderCard(item, "FOLLOW_UPS"))}
+                  </div>
+                </>
+              )}
+
+              {/* Escalated by AI */}
+              {buckets.ESCALATED_BY_AI.length > 0 && (
+                <>
+                  <h3
+                    role="heading"
+                    aria-level={3}
+                    className="font-headline text-[1.75rem] font-bold text-cl-danger tracking-[-0.02em] mt-8 pb-2"
+                  >
+                    Escalated by AI ({buckets.ESCALATED_BY_AI.length})
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {buckets.ESCALATED_BY_AI.map((item) => renderCard(item, "ESCALATED_BY_AI"))}
+                  </div>
+                </>
+              )}
+
+              {/* Other AI Handled (collapsible) */}
+              {otherCount > 0 && (
+                <div className="mt-8">
+                  <button
+                    onClick={() => setOtherHandledExpanded((prev) => !prev)}
+                    aria-expanded={otherHandledExpanded}
+                    aria-controls="other-ai-handled-list"
+                    className="w-full flex items-center justify-between py-3 px-1 text-left group"
+                  >
+                    <span className="text-sm font-semibold text-cl-text-muted uppercase tracking-wider">
+                      Other AI Handled ({otherCount})
+                    </span>
+                    <ChevronRight
+                      className={cn(
+                        "h-4 w-4 text-cl-text-muted transition-transform duration-200",
+                        otherHandledExpanded && "rotate-90"
+                      )}
+                    />
+                  </button>
+                  <div
+                    id="other-ai-handled-list"
+                    className={cn(
+                      "overflow-hidden transition-all duration-200",
+                      otherHandledExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+                    )}
+                  >
+                    <div className="flex flex-col gap-1">
+                      {buckets.OTHER_AI_HANDLED.map((item) => renderCard(item, "OTHER_AI_HANDLED"))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Booked by AI tab */}
+              {bookedCount > 0 ? (
+                <>
+                  <h3
+                    role="heading"
+                    aria-level={3}
+                    className="font-headline text-[1.75rem] font-bold text-cl-success tracking-[-0.02em] pt-4 pb-2"
+                  >
+                    Booked by AI ({bookedCount})
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {buckets.BOOKED_BY_AI.map((item) => renderCard(item, "BOOKED_BY_AI"))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center p-8">
+                  <p className="text-cl-text-muted text-sm font-medium">No bookings yet</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     )
   }
