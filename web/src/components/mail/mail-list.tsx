@@ -6,6 +6,7 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarCheck,
+  CheckCircle2,
   ChevronRight,
   CircleCheck,
   Clock,
@@ -19,7 +20,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { formatPhone } from "@/lib/transforms"
 import { isActionable } from "@/lib/triage"
-import type { BucketAssignment, HandledReason } from "@/lib/triage"
+import type { BucketAssignment } from "@/lib/triage"
 import type { Call, CallbackOutcome, TriageResult } from "@/types/call"
 
 interface MailListProps {
@@ -31,7 +32,13 @@ interface MailListProps {
   pulsingId?: string | null
   onCallBackTap?: (callId: string) => void
   onPulseClear?: () => void
-  buckets?: { NEW_LEADS: Call[]; FOLLOW_UPS: Call[]; AI_HANDLED: Call[] }
+  buckets?: {
+    ESCALATED_BY_AI: Call[]
+    NEW_LEADS: Call[]
+    FOLLOW_UPS: Call[]
+    BOOKED_BY_AI: Call[]
+    OTHER_AI_HANDLED: Call[]
+  }
   bucketMap?: Map<string, BucketAssignment>
 }
 
@@ -78,15 +85,7 @@ const OUTCOME_CONFIG = [
   { value: "resolved_elsewhere" as CallbackOutcome, label: "Resolved Elsewhere", Icon: CircleCheck },
 ] as const
 
-const HANDLED_REASON_LABELS: Record<HandledReason, string> = {
-  escalated: "escalated",
-  resolved: "resolved",
-  non_customer: "spam/vendor",
-  wrong_number: "wrong number",
-  booked: "booked",
-}
-
-type CardSection = "NEW_LEADS" | "FOLLOW_UPS" | "AI_HANDLED"
+type CardSection = "ESCALATED_BY_AI" | "NEW_LEADS" | "FOLLOW_UPS" | "BOOKED_BY_AI" | "OTHER_AI_HANDLED"
 
 export function MailList({
   items,
@@ -94,9 +93,7 @@ export function MailList({
   onSelect,
   onOutcomeChange,
   triageMap,
-  pulsingId,
   onCallBackTap,
-  onPulseClear,
   buckets,
   bucketMap,
 }: MailListProps) {
@@ -105,7 +102,7 @@ export function MailList({
     cardId: string
     outcome: CallbackOutcome
   } | null>(null)
-  const [aiHandledExpanded, setAiHandledExpanded] = useState(false)
+  const [otherHandledExpanded, setOtherHandledExpanded] = useState(false)
 
   const handleOutcomeClick = useCallback(
     async (call: Call, outcome: CallbackOutcome) => {
@@ -141,7 +138,6 @@ export function MailList({
     const style = COMMAND_STYLES[triage?.command ?? "Can wait"] ?? COMMAND_STYLES["Can wait"]
     const Icon = COMMAND_ICONS[triage?.command ?? "Can wait"] ?? Minus
     const snippet = item.problemDescription || item.hvacIssueType || "Missed call"
-    const assignment = bucketMap?.get(item.id)
 
     return (
       <div
@@ -151,13 +147,37 @@ export function MailList({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(item.id) } }}
         className={cn(
           "flex items-stretch overflow-hidden rounded-lg cursor-pointer transition-all duration-200 shrink-0",
-          section === "AI_HANDLED" && "opacity-50",
+          section === "OTHER_AI_HANDLED" && "opacity-50",
           isActive
             ? "bg-cl-bg-selected"
             : "bg-cl-bg-canvas hover:bg-cl-bg-subtle"
         )}
         onClick={() => onSelect(item.id)}
       >
+        {/* Escalated panel */}
+        {section === "ESCALATED_BY_AI" && (
+          <div
+            className="w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center bg-cl-danger/80 text-[#5e1b1a]"
+            aria-label="Safety escalation"
+          >
+            <AlertTriangle className="h-4 w-4 mb-1" />
+            <span className="block">ESCA</span>
+            <span className="block">LATED</span>
+          </div>
+        )}
+
+        {/* Booked panel */}
+        {section === "BOOKED_BY_AI" && (
+          <div
+            className="w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center bg-cl-success/20 text-cl-success"
+            aria-label="Booked by AI"
+          >
+            <CheckCircle2 className="h-4 w-4 mb-1" />
+            <span className="block">BOOK</span>
+            <span className="block">ED</span>
+          </div>
+        )}
+
         {/* Triage priority panel — NEW_LEADS only */}
         {section === "NEW_LEADS" && callActionable && triage && (
           <div
@@ -205,6 +225,22 @@ export function MailList({
 
           {/* Line 2: Snippet */}
           <p className="text-cl-text-muted text-sm line-clamp-2 leading-relaxed">{snippet}</p>
+
+          {/* Escalated: safety label */}
+          {section === "ESCALATED_BY_AI" && (
+            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-danger/10 text-cl-danger text-[0.6875rem] font-semibold uppercase">
+              <AlertTriangle className="h-3 w-3" />
+              {item.isSafetyEmergency ? "Safety emergency escalated" : "Urgent issue escalated"}
+            </span>
+          )}
+
+          {/* Booked: appointment time */}
+          {section === "BOOKED_BY_AI" && (
+            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-success/10 text-cl-success text-[0.6875rem] font-semibold uppercase">
+              <CheckCircle2 className="h-3 w-3" />
+              Appointment secured · {formatAppointmentTime(item.appointmentDateTime)}
+            </span>
+          )}
 
           {/* Follow-up: previous outcome chip instead of triage panel */}
           {section === "FOLLOW_UPS" && item.callbackOutcome && (
@@ -264,20 +300,6 @@ export function MailList({
               })}
             </div>
           )}
-
-          {/* AI_HANDLED: show escalation marker or handled reason */}
-          {section === "AI_HANDLED" && assignment && (
-            <span className="inline-flex items-center gap-1 text-[0.6875rem] text-cl-text-muted">
-              {assignment.escalationMarker && (
-                <AlertTriangle className="h-3 w-3 text-cl-danger" />
-              )}
-              {assignment.handledReason && (
-                <span className="capitalize">
-                  {HANDLED_REASON_LABELS[assignment.handledReason]}
-                </span>
-              )}
-            </span>
-          )}
         </div>
       </div>
     )
@@ -293,35 +315,27 @@ export function MailList({
 
   // Bucket-based rendering
   if (buckets && bucketMap) {
-    // Compute AI Handled sub-counts from bucketMap
-    const aiHandledSubCounts = new Map<HandledReason, number>()
-    for (const call of buckets.AI_HANDLED) {
-      const assignment = bucketMap.get(call.id)
-      if (assignment?.handledReason) {
-        aiHandledSubCounts.set(
-          assignment.handledReason,
-          (aiHandledSubCounts.get(assignment.handledReason) ?? 0) + 1
-        )
-      }
-    }
-
-    const subCountParts: string[] = []
-    const escalated = aiHandledSubCounts.get("escalated") ?? 0
-    const resolved = aiHandledSubCounts.get("resolved") ?? 0
-    const nonCustomer = aiHandledSubCounts.get("non_customer") ?? 0
-    const wrongNumber = aiHandledSubCounts.get("wrong_number") ?? 0
-    const booked = aiHandledSubCounts.get("booked") ?? 0
-
-    if (escalated > 0) subCountParts.push(`\u26A0 ${escalated} escalated`)
-    if (resolved > 0) subCountParts.push(`${resolved} resolved`)
-    if (booked > 0) subCountParts.push(`${booked} booked`)
-    if (nonCustomer > 0) subCountParts.push(`${nonCustomer} spam/vendor`)
-    if (wrongNumber > 0) subCountParts.push(`${wrongNumber} wrong number`)
-
-    const subCountSummary = subCountParts.join(" \u00B7 ")
+    // Other AI Handled sub-count summary (excludes escalated/booked which have own sections)
+    const otherCount = buckets.OTHER_AI_HANDLED.length
 
     return (
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-cl-bg-canvas">
+        {/* Escalated by AI */}
+        {buckets.ESCALATED_BY_AI.length > 0 && (
+          <>
+            <h3
+              role="heading"
+              aria-level={3}
+              className="font-headline text-[1.75rem] font-bold text-cl-danger tracking-[-0.02em] pt-4 pb-2"
+            >
+              Escalated by AI ({buckets.ESCALATED_BY_AI.length})
+            </h3>
+            <div className="flex flex-col gap-1">
+              {buckets.ESCALATED_BY_AI.map((item) => renderCard(item, "ESCALATED_BY_AI"))}
+            </div>
+          </>
+        )}
+
         {/* New Leads */}
         {buckets.NEW_LEADS.length > 0 && (
           <>
@@ -354,42 +368,51 @@ export function MailList({
           </>
         )}
 
-        {/* AI Handled (collapsible) */}
-        {buckets.AI_HANDLED.length > 0 && (
+        {/* Booked by AI */}
+        {buckets.BOOKED_BY_AI.length > 0 && (
+          <>
+            <h3
+              role="heading"
+              aria-level={3}
+              className="font-headline text-[1.75rem] font-bold text-cl-success tracking-[-0.02em] mt-8 pb-2"
+            >
+              Booked by AI ({buckets.BOOKED_BY_AI.length})
+            </h3>
+            <div className="flex flex-col gap-1">
+              {buckets.BOOKED_BY_AI.map((item) => renderCard(item, "BOOKED_BY_AI"))}
+            </div>
+          </>
+        )}
+
+        {/* Other AI Handled (collapsible) */}
+        {otherCount > 0 && (
           <div className="mt-8">
             <button
-              onClick={() => setAiHandledExpanded((prev) => !prev)}
-              aria-expanded={aiHandledExpanded}
-              aria-controls="ai-handled-list"
+              onClick={() => setOtherHandledExpanded((prev) => !prev)}
+              aria-expanded={otherHandledExpanded}
+              aria-controls="other-ai-handled-list"
               className="w-full flex items-center justify-between py-3 px-1 text-left group"
             >
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-cl-text-muted uppercase tracking-wider">
-                  AI Handled ({buckets.AI_HANDLED.length})
-                </span>
-                {subCountSummary && (
-                  <span className="text-[0.6875rem] text-cl-text-muted">
-                    {subCountSummary}
-                  </span>
-                )}
-              </div>
+              <span className="text-sm font-semibold text-cl-text-muted uppercase tracking-wider">
+                Other AI Handled ({otherCount})
+              </span>
               <ChevronRight
                 className={cn(
                   "h-4 w-4 text-cl-text-muted transition-transform duration-200",
-                  aiHandledExpanded && "rotate-90"
+                  otherHandledExpanded && "rotate-90"
                 )}
               />
             </button>
 
             <div
-              id="ai-handled-list"
+              id="other-ai-handled-list"
               className={cn(
                 "overflow-hidden transition-all duration-200",
-                aiHandledExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+                otherHandledExpanded ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
               )}
             >
               <div className="flex flex-col gap-1">
-                {buckets.AI_HANDLED.map((item) => renderCard(item, "AI_HANDLED"))}
+                {buckets.OTHER_AI_HANDLED.map((item) => renderCard(item, "OTHER_AI_HANDLED"))}
               </div>
             </div>
           </div>
