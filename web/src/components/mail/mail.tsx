@@ -12,8 +12,9 @@ import {
 } from "lucide-react"
 import type { Call, CallbackOutcome } from "@/types/call"
 import type { TriageResult } from "@/types/call"
-import { triageSort, computeTriage, assignBucket, followUpSort } from "@/lib/triage"
+import { computeTriage, assignBucket } from "@/lib/triage"
 import type { BucketAssignment } from "@/lib/triage"
+import { partitionMailSections, getDefaultSelectedId } from "@/lib/mail-sections"
 import { useRealtimeCalls } from "@/hooks/use-realtime-calls"
 import { useReadState } from "@/hooks/use-read-state"
 import { MailList } from "./mail-list"
@@ -60,47 +61,36 @@ export function Mail({ initialCalls }: MailProps) {
     return map
   }, [mergedCalls, now])
 
-  // Bucket assignment: split calls into ACTION_QUEUE (New Leads + Follow-ups) and AI_HANDLED
+  // Bucket assignment: partition into five display sections
   const { buckets, bucketMap } = React.useMemo(() => {
-    const newLeads: Call[] = []
-    const followUps: Call[] = []
-    const aiHandled: Call[] = []
     const map = new Map<string, BucketAssignment>()
-
     for (const call of mergedCalls) {
-      const assignment = assignBucket(call)
-      map.set(call.id, assignment)
-
-      if (assignment.bucket === "ACTION_QUEUE" && assignment.subGroup === "FOLLOW_UP") {
-        followUps.push(call)
-      } else if (assignment.bucket === "ACTION_QUEUE") {
-        newLeads.push(call)
-      } else {
-        aiHandled.push(call)
-      }
+      map.set(call.id, assignBucket(call))
     }
+
+    const sections = partitionMailSections(mergedCalls, now)
 
     return {
       buckets: {
-        NEW_LEADS: triageSort(newLeads, now),
-        FOLLOW_UPS: followUpSort(followUps),
-        AI_HANDLED: aiHandled.sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        ),
+        ESCALATED_BY_AI: sections.ESCALATED_BY_AI,
+        NEW_LEADS: sections.NEW_LEADS,
+        FOLLOW_UPS: sections.FOLLOW_UPS,
+        BOOKED_BY_AI: sections.BOOKED_BY_AI,
+        OTHER_AI_HANDLED: sections.OTHER_AI_HANDLED,
       },
       bucketMap: map,
     }
   }, [mergedCalls, now])
 
-  // Unified feed: New Leads → Follow-ups → AI Handled
+  // Unified feed: Escalated → New Leads → Follow-ups → Booked → Other Handled
   const allSectionedCalls = React.useMemo(
-    () => [...buckets.NEW_LEADS, ...buckets.FOLLOW_UPS, ...buckets.AI_HANDLED],
-    [buckets]
-  )
-
-  // Actionable calls (for auto-select)
-  const actionableCalls = React.useMemo(
-    () => [...buckets.NEW_LEADS, ...buckets.FOLLOW_UPS],
+    () => [
+      ...buckets.ESCALATED_BY_AI,
+      ...buckets.NEW_LEADS,
+      ...buckets.FOLLOW_UPS,
+      ...buckets.BOOKED_BY_AI,
+      ...buckets.OTHER_AI_HANDLED,
+    ],
     [buckets]
   )
 
@@ -176,19 +166,21 @@ export function Mail({ initialCalls }: MailProps) {
 
   // Pulse bar counts
   const pulseBarCounts = React.useMemo(() => ({
+    escalated: buckets.ESCALATED_BY_AI.length,
     leads: buckets.NEW_LEADS.length,
     followUps: buckets.FOLLOW_UPS.length,
-    aiHandled: buckets.AI_HANDLED.length,
+    booked: buckets.BOOKED_BY_AI.length,
+    otherHandled: buckets.OTHER_AI_HANDLED.length,
   }), [buckets])
 
-  // Auto-select first actionable item (only from Action Queue, not AI Handled)
+  // Auto-select when current selection disappears from the merged call list
   React.useEffect(() => {
-    if (actionableCalls.length > 0 && !actionableCalls.find((c) => c.id === selectedId)) {
-      setSelectedId(actionableCalls[0].id)
-    } else if (actionableCalls.length === 0) {
-      setSelectedId(null)
+    const stillPresent = mergedCalls.some((c) => c.id === selectedId)
+    if (!stillPresent) {
+      const nextId = getDefaultSelectedId(mergedCalls, now)
+      setSelectedId(nextId)
     }
-  }, [actionableCalls, selectedId])
+  }, [mergedCalls, now, selectedId])
 
   const handleSelect = (id: string) => {
     setSelectedId(id)
@@ -199,7 +191,23 @@ export function Mail({ initialCalls }: MailProps) {
 
   const clearPulse = React.useCallback(() => setPulsingId(null), [])
 
-  const actionQueueEmpty = buckets.NEW_LEADS.length === 0 && buckets.FOLLOW_UPS.length === 0
+  const actionQueueEmpty =
+    buckets.ESCALATED_BY_AI.length === 0 &&
+    buckets.NEW_LEADS.length === 0 &&
+    buckets.FOLLOW_UPS.length === 0
+
+  const totalHandled =
+    buckets.BOOKED_BY_AI.length + buckets.OTHER_AI_HANDLED.length
+
+  function buildCaughtUpSubtitle(): string {
+    const bookedCount = buckets.BOOKED_BY_AI.length
+    const escalatedCount = buckets.ESCALATED_BY_AI.length
+    if (bookedCount === 0 && escalatedCount === 0) return ""
+    const parts: string[] = []
+    if (bookedCount > 0) parts.push(`AI booked ${bookedCount} ${bookedCount === 1 ? "call" : "calls"}`)
+    if (escalatedCount > 0) parts.push(`escalated ${escalatedCount} urgent ${escalatedCount === 1 ? "issue" : "issues"}`)
+    return parts.join(" and ")
+  }
 
   return (
     <>
@@ -279,7 +287,7 @@ export function Mail({ initialCalls }: MailProps) {
             <PulseBar {...pulseBarCounts} />
 
             {/* All caught up or call list */}
-            {actionQueueEmpty && buckets.AI_HANDLED.length === 0 ? (
+            {actionQueueEmpty && totalHandled === 0 ? (
               <div className="flex-1 flex items-center justify-center bg-black p-8">
                 <p className="text-cl-text-muted text-sm font-medium">All caught up — no callbacks needed</p>
               </div>
@@ -287,7 +295,9 @@ export function Mail({ initialCalls }: MailProps) {
               <div className="flex-1 flex flex-col bg-cl-bg-canvas">
                 <div className="flex-1 flex flex-col items-center justify-center p-8 gap-3">
                   <p className="text-cl-text-primary text-sm font-medium">All caught up</p>
-                  <p className="text-cl-text-muted text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
+                  {buildCaughtUpSubtitle() && (
+                    <p className="text-cl-text-muted text-xs">{buildCaughtUpSubtitle()}</p>
+                  )}
                 </div>
                 <MailList
                   items={allSectionedCalls}
@@ -357,7 +367,7 @@ export function Mail({ initialCalls }: MailProps) {
           <PulseBar {...pulseBarCounts} />
 
           {/* All caught up or call list */}
-          {actionQueueEmpty && buckets.AI_HANDLED.length === 0 ? (
+          {actionQueueEmpty && totalHandled === 0 ? (
             <div className="flex-1 flex items-center justify-center bg-black p-8">
               <p className="text-cl-text-muted text-sm font-medium">All caught up — no callbacks needed</p>
             </div>
@@ -365,7 +375,9 @@ export function Mail({ initialCalls }: MailProps) {
             <div className="flex-1 flex flex-col bg-cl-bg-canvas">
               <div className="flex flex-col items-center justify-center p-8 gap-3">
                 <p className="text-cl-text-primary text-sm font-medium">All caught up</p>
-                <p className="text-cl-text-muted text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
+                {buildCaughtUpSubtitle() && (
+                  <p className="text-cl-text-muted text-xs">{buildCaughtUpSubtitle()}</p>
+                )}
               </div>
               <MailList
                 items={allSectionedCalls}

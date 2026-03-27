@@ -1,11 +1,14 @@
-interface SelectableCall {
-  id: string
-}
+import { getDefaultSelectedId } from "@/lib/mail-sections"
+import type { TriageableCall } from "@/lib/triage"
 
 export function getInitialSelectedId(
-  calls: ReadonlyArray<SelectableCall>
+  calls: ReadonlyArray<TriageableCall>
 ): string | null {
-  return calls[0]?.id ?? null
+  return getDefaultSelectedId([...calls])
+}
+
+interface SelectableCall {
+  id: string
 }
 
 export function resolveStoredSelectedId(

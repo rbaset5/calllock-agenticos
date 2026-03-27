@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase-server"
 import { transformCallRecord } from "@/lib/transforms"
-import { triageSort, assignBucket, followUpSort } from "@/lib/triage"
+import { orderCallsForMail } from "@/lib/mail-sections"
+import { getMailDevFixtures } from "@/components/mail/dev-fixtures"
 import { Mail } from "@/components/mail/mail"
 import type { Call, CallRecordListRow } from "@/types/call"
 
@@ -8,6 +9,15 @@ export const dynamic = "force-dynamic"
 
 export default async function CallsPage() {
   let calls: Call[] = []
+
+  const fixtureMode =
+    process.env.NODE_ENV === "development" &&
+    process.env.CALLLOCK_MAIL_FIXTURES === "1"
+
+  if (fixtureMode) {
+    calls = orderCallsForMail(getMailDevFixtures())
+    return <Mail initialCalls={calls} />
+  }
 
   try {
     const supabase = createServerClient()
@@ -23,22 +33,7 @@ export default async function CallsPage() {
     if (!error && data) {
       const rows = data as CallRecordListRow[]
       const emptyReadIds = new Set<string>()
-      calls = rows.map((row) => transformCallRecord(row, emptyReadIds))
-      // Sort by bucket: Action Queue (New Leads + Follow-ups) first, then AI Handled
-      const newLeads: typeof calls = []
-      const followUps: typeof calls = []
-      const aiHandled: typeof calls = []
-      for (const c of calls) {
-        const a = assignBucket(c)
-        if (a.bucket === "ACTION_QUEUE" && a.subGroup === "FOLLOW_UP") followUps.push(c)
-        else if (a.bucket === "ACTION_QUEUE") newLeads.push(c)
-        else aiHandled.push(c)
-      }
-      calls = [
-        ...triageSort(newLeads),
-        ...followUpSort(followUps),
-        ...aiHandled.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-      ]
+      calls = orderCallsForMail(rows.map((row) => transformCallRecord(row, emptyReadIds)))
     }
   } catch {
     // Supabase unreachable — render empty state
