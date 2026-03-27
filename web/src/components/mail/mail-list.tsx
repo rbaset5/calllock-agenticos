@@ -36,10 +36,10 @@ interface MailListProps {
 }
 
 const COMMAND_STYLES: Record<string, { text: string; bg: string }> = {
-  "Call now": { text: "text-[#5e1b1a]", bg: "bg-[#fd9791]/80" },
+  "Call now": { text: "text-[#5e1b1a]", bg: "bg-cl-danger/80" },
   "Next up": { text: "text-[#d2d0cf]", bg: "bg-[#474746]" },
   "Today": { text: "text-[#acabab]", bg: "bg-[#474848]" },
-  "Can wait": { text: "text-[#757575]", bg: "bg-[#252626]" },
+  "Can wait": { text: "text-[#757575]", bg: "bg-cl-bg-card" },
 }
 
 const COMMAND_ICONS: Record<string, typeof Phone> = {
@@ -153,8 +153,8 @@ export function MailList({
           "flex items-stretch overflow-hidden rounded-lg cursor-pointer transition-all duration-200 shrink-0",
           section === "AI_HANDLED" && "opacity-50",
           isActive
-            ? "bg-[#2c2c2c]"
-            : "bg-[#0e0e0e] hover:bg-[#191a1a]"
+            ? "bg-cl-bg-selected"
+            : "bg-cl-bg-canvas hover:bg-cl-bg-subtle"
         )}
         onClick={() => onSelect(item.id)}
       >
@@ -186,32 +186,32 @@ export function MailList({
           <div className="flex justify-between items-start gap-2">
             <div className="flex items-baseline gap-1.5 min-w-0 truncate">
               {!item.read && (
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#c6c6c7] shrink-0 mt-1.5 mr-1" aria-label="Unread" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-cl-accent shrink-0 mt-1.5 mr-1" aria-label="Unread" />
               )}
-              <span className={cn("text-sm truncate", item.read ? "text-[#e7e5e4] font-semibold" : "text-[#e7e5e4] font-bold")}>
+              <span className={cn("text-sm truncate", item.read ? "text-cl-text-primary font-semibold" : "text-cl-text-primary font-bold")}>
                 {item.customerName || (item.customerPhone ? formatPhone(item.customerPhone) : "Unknown")}
               </span>
               {triage?.evidence && section === "NEW_LEADS" && (
                 <>
-                  <span className="text-[#acabaa] text-[0.6875rem]">&middot;</span>
-                  <span className="text-[#acabaa] text-[0.6875rem] truncate">{triage.evidence}</span>
+                  <span className="text-cl-text-muted text-[0.6875rem]">&middot;</span>
+                  <span className="text-cl-text-muted text-[0.6875rem] truncate">{triage.evidence}</span>
                 </>
               )}
             </div>
-            <span className="text-[0.6875rem] text-[#acabaa] shrink-0 ml-2">
+            <span className="text-[0.6875rem] text-cl-text-muted shrink-0 ml-2">
               {formatDistanceToNow(new Date(item.createdAt), { addSuffix: false })} ago
             </span>
           </div>
 
           {/* Line 2: Snippet */}
-          <p className="text-[#acabaa] text-sm line-clamp-2 leading-relaxed">{snippet}</p>
+          <p className="text-cl-text-muted text-sm line-clamp-2 leading-relaxed">{snippet}</p>
 
           {/* Follow-up: previous outcome chip instead of triage panel */}
           {section === "FOLLOW_UPS" && item.callbackOutcome && (
-            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-[#3b3b3b] text-[#c1bfbe] text-[0.6875rem] font-semibold uppercase">
+            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-bg-chip text-cl-text-subtle text-[0.6875rem] font-semibold uppercase">
               {item.callbackOutcome.replace(/_/g, " ")}
               {item.callbackOutcomeAt && (
-                <span className="text-[#acabaa] normal-case font-normal">
+                <span className="text-cl-text-muted normal-case font-normal">
                   {" "}{formatOutcomeAge(item)}
                 </span>
               )}
@@ -225,7 +225,7 @@ export function MailList({
               aria-label={`Call back ${item.customerName || "customer"}`}
               className={cn(
                 "mt-1 h-8 text-[0.6875rem] font-bold rounded-md flex items-center justify-center gap-2 uppercase tracking-widest transition-colors no-underline",
-                "bg-[#3b3b3b] text-[#c1bfbe] hover:bg-[#454747]"
+                "bg-cl-bg-chip text-cl-text-subtle hover:bg-cl-bg-chip-hover"
               )}
               onClick={(e) => {
                 e.stopPropagation()
@@ -251,10 +251,10 @@ export function MailList({
                     className={cn(
                       "h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 transition-all",
                       isFlashing
-                        ? "bg-[#10b981] text-white"
+                        ? "bg-cl-success text-white"
                         : isSelected
-                          ? "bg-[#10b981]/20 text-[#10b981]"
-                          : "bg-[#3b3b3b] text-[#c1bfbe] hover:bg-[#454747]"
+                          ? "bg-cl-success/20 text-cl-success"
+                          : "bg-cl-bg-chip text-cl-text-subtle hover:bg-cl-bg-chip-hover"
                     )}
                   >
                     <OutcomeIcon className="h-3 w-3" />
@@ -267,9 +267,9 @@ export function MailList({
 
           {/* AI_HANDLED: show escalation marker or handled reason */}
           {section === "AI_HANDLED" && assignment && (
-            <span className="inline-flex items-center gap-1 text-[0.6875rem] text-[#acabaa]">
+            <span className="inline-flex items-center gap-1 text-[0.6875rem] text-cl-text-muted">
               {assignment.escalationMarker && (
-                <AlertTriangle className="h-3 w-3 text-[#fd9791]" />
+                <AlertTriangle className="h-3 w-3 text-cl-danger" />
               )}
               {assignment.handledReason && (
                 <span className="capitalize">
@@ -285,8 +285,8 @@ export function MailList({
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#000000] p-8">
-        <p className="text-[#acabaa] text-sm font-medium">All caught up — no callbacks needed</p>
+      <div className="flex-1 flex items-center justify-center bg-black p-8">
+        <p className="text-cl-text-muted text-sm font-medium">All caught up — no callbacks needed</p>
       </div>
     )
   }
@@ -321,14 +321,14 @@ export function MailList({
     const subCountSummary = subCountParts.join(" \u00B7 ")
 
     return (
-      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-[#0e0e0e]">
+      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-cl-bg-canvas">
         {/* New Leads */}
         {buckets.NEW_LEADS.length > 0 && (
           <>
             <h3
               role="heading"
               aria-level={3}
-              className="font-headline text-[1.75rem] font-bold text-[#e7e5e4] tracking-[-0.02em] pt-4 pb-2"
+              className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] pt-4 pb-2"
             >
               New Leads ({buckets.NEW_LEADS.length})
             </h3>
@@ -344,7 +344,7 @@ export function MailList({
             <h3
               role="heading"
               aria-level={3}
-              className="font-headline text-[1.75rem] font-bold text-[#e7e5e4] tracking-[-0.02em] mt-8 pb-2"
+              className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] mt-8 pb-2"
             >
               Follow-ups ({buckets.FOLLOW_UPS.length})
             </h3>
@@ -364,18 +364,18 @@ export function MailList({
               className="w-full flex items-center justify-between py-3 px-1 text-left group"
             >
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-[#acabaa] uppercase tracking-wider">
+                <span className="text-sm font-semibold text-cl-text-muted uppercase tracking-wider">
                   AI Handled ({buckets.AI_HANDLED.length})
                 </span>
                 {subCountSummary && (
-                  <span className="text-[0.6875rem] text-[#acabaa]">
+                  <span className="text-[0.6875rem] text-cl-text-muted">
                     {subCountSummary}
                   </span>
                 )}
               </div>
               <ChevronRight
                 className={cn(
-                  "h-4 w-4 text-[#acabaa] transition-transform duration-200",
+                  "h-4 w-4 text-cl-text-muted transition-transform duration-200",
                   aiHandledExpanded && "rotate-90"
                 )}
               />
@@ -400,7 +400,7 @@ export function MailList({
 
   // Fallback: flat list (no buckets)
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-[#0e0e0e]">
+    <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-1 p-4 pb-24 bg-cl-bg-canvas">
       {items.map((item) => renderCard(item, "NEW_LEADS"))}
     </div>
   )

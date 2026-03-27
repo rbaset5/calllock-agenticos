@@ -24,6 +24,13 @@ export type CallbackOutcome =
   | "no_answer"
   | "resolved_elsewhere"
 
+export interface CallbackTouch {
+  id: string
+  callId: string
+  outcome: CallbackOutcome
+  createdAt: string
+}
+
 /** Terminal outcomes that remove a call from the unresolved queue */
 export const TERMINAL_CALLBACK_OUTCOMES: ReadonlySet<CallbackOutcome> = new Set([
   "reached_customer",

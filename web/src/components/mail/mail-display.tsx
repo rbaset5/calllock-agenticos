@@ -1,12 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { format, isToday, isTomorrow } from "date-fns"
 import { Phone } from "lucide-react"
 import { parseTranscript, formatPhone } from "@/lib/transforms"
-import type { Call, TranscriptEntry, CallbackOutcome, TriageResult } from "@/types/call"
+import type {
+  Call,
+  TranscriptEntry,
+  CallbackOutcome,
+  CallbackTouch,
+  TriageResult,
+} from "@/types/call"
 import { cn } from "@/lib/utils"
-import { isActionable, getAssistTemplate } from "@/lib/triage"
+import { getAssistTemplate } from "@/lib/triage"
 import type { BucketAssignment } from "@/lib/triage"
 import { useOutcomeSubmit } from "@/hooks/use-outcome-submit"
 
@@ -44,10 +50,25 @@ function buildAISummary(call: Call): string {
   return parts.join(" ")
 }
 
+function formatTouchTime(value: string): string {
+  try {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return value
+    if (isToday(d)) return `Today · ${format(d, "h:mm a")}`
+    if (isTomorrow(d)) return `Tomorrow · ${format(d, "h:mm a")}`
+    return format(d, "MMM d · h:mm a")
+  } catch {
+    return value
+  }
+}
+
 export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: MailDisplayProps) {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(false)
+  const [touches, setTouches] = useState<CallbackTouch[]>([])
+  const [loadingTouches, setLoadingTouches] = useState(false)
   const [activeTab, setActiveTab] = useState<"summary" | "transcript">("summary")
+  const touchCacheRef = useRef<Map<string, CallbackTouch[]>>(new Map())
 
   const optimisticUpdate = useCallback(
     (callId: string, outcome: CallbackOutcome | null) => onOutcomeChange?.(callId, outcome),
@@ -57,7 +78,19 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
 
   const handleOutcome = async (outcome: CallbackOutcome) => {
     if (!call) return
-    await submitOutcome(call.id, outcome, call.callbackOutcome)
+    const ok = await submitOutcome(call.id, outcome, call.callbackOutcome)
+    if (!ok) return
+    const touch: CallbackTouch = {
+      id: `optimistic-${Date.now()}`,
+      callId: call.id,
+      outcome,
+      createdAt: new Date().toISOString(),
+    }
+    setTouches((prev) => {
+      const next = [touch, ...prev]
+      touchCacheRef.current.set(call.id, next)
+      return next
+    })
   }
 
   useEffect(() => {
@@ -85,10 +118,47 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
     return () => { cancelled = true }
   }, [call])
 
+  useEffect(() => {
+    if (!call) {
+      setTouches([])
+      return
+    }
+
+    const cached = touchCacheRef.current.get(call.id)
+    if (cached) {
+      setTouches(cached)
+      return
+    }
+
+    let cancelled = false
+    setLoadingTouches(true)
+
+    const fetchTouches = async () => {
+      try {
+        const response = await fetch(`/api/calls/${call.id}/touches`, { cache: "no-store" })
+        if (!response.ok) throw new Error("failed")
+        const data = await response.json()
+        const nextTouches = Array.isArray(data?.touches)
+          ? (data.touches as CallbackTouch[])
+          : []
+        if (cancelled) return
+        touchCacheRef.current.set(call.id, nextTouches)
+        setTouches(nextTouches)
+      } catch {
+        if (!cancelled) setTouches([])
+      } finally {
+        if (!cancelled) setLoadingTouches(false)
+      }
+    }
+
+    fetchTouches()
+    return () => { cancelled = true }
+  }, [call])
+
   if (!call) {
     return (
-      <section className="flex-1 bg-[#191a1a] flex items-center justify-center">
-        <p className="text-[#acabaa] text-sm">Select a call to view details</p>
+      <section className="flex-1 bg-cl-bg-subtle flex items-center justify-center">
+        <p className="text-cl-text-muted text-sm">Select a call to view details</p>
       </section>
     )
   }
@@ -107,27 +177,27 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
     : null
 
   return (
-    <section className="flex-1 bg-[#191a1a] flex flex-col overflow-hidden">
+    <section className="flex-1 bg-cl-bg-subtle flex flex-col overflow-hidden">
       {/* Header */}
       <header className="p-8 pb-4 flex-shrink-0">
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-headline font-extrabold tracking-tighter text-[#e7e5e4]">
+          <h1 className="text-2xl font-headline font-extrabold tracking-tighter text-cl-text-primary">
             {call.customerName || (call.customerPhone ? formatPhone(call.customerPhone) : "Unknown Caller")}
           </h1>
           {isEmergency && (
-            <span className="bg-[#ee7d77] text-[#490106] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tight">
+            <span className="bg-cl-danger-soft text-[#490106] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tight">
               Emergency
             </span>
           )}
           {!isEmergency && isUrgent && (
-            <span className="bg-[#3b3b3b] text-[#c1bfbe] text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tight">
+            <span className="bg-cl-bg-chip text-cl-text-subtle text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tight">
               Urgent
             </span>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {call.customerPhone && (
-            <a href={`tel:${call.customerPhone}`} className="text-[#acabaa] text-sm hover:text-[#e7e5e4] transition-colors">
+            <a href={`tel:${call.customerPhone}`} className="text-cl-text-muted text-sm hover:text-cl-text-primary transition-colors">
               {formatPhone(call.customerPhone)}
             </a>
           )}
@@ -136,7 +206,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(call.serviceAddress)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[#acabaa] text-sm hover:text-[#e7e5e4] transition-colors"
+              className="flex items-center gap-1.5 text-cl-text-muted text-sm hover:text-cl-text-primary transition-colors"
             >
               <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -146,7 +216,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
             </a>
           )}
           {callbackWindowEnd && (
-            <span className="text-[0.6875rem] text-[#acabaa] uppercase">
+            <span className="text-[0.6875rem] text-cl-text-muted uppercase">
               {triage?.callbackWindowStart && (
                 <>Available {format(new Date(triage.callbackWindowStart), "h:mm a")} – </>
               )}
@@ -158,7 +228,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
               href={call.callRecordingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[0.6875rem] text-[#acabaa] uppercase hover:text-[#e7e5e4] transition-colors flex items-center gap-1"
+              className="text-[0.6875rem] text-cl-text-muted uppercase hover:text-cl-text-primary transition-colors flex items-center gap-1"
             >
               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -168,7 +238,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
             </a>
           )}
         </div>
-        <p className="text-[#acabaa] text-xs mt-1">
+        <p className="text-cl-text-muted text-xs mt-1">
           {format(new Date(call.createdAt), "PPpp")}
         </p>
       </header>
@@ -177,9 +247,9 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
       <div className="px-8 pb-4 flex-shrink-0 space-y-3">
         {/* AI Action summary for handled calls */}
         {isAiHandled && assignment && (
-          <div className="bg-[#131313] p-4 rounded-md">
-            <p className="text-sm text-[#acabaa]">
-              {assignment.escalationMarker && <span className="text-[#fd9791]">⚠ </span>}
+          <div className="bg-cl-bg-panel p-4 rounded-md">
+            <p className="text-sm text-cl-text-muted">
+              {assignment.escalationMarker && <span className="text-cl-danger">⚠ </span>}
               {assignment.handledReason === "escalated" && "Escalated: safety emergency forwarded to dispatch"}
               {assignment.handledReason === "resolved" && "Resolved: callback completed"}
               {assignment.handledReason === "non_customer" && "Blocked: non-customer call (spam/vendor)"}
@@ -188,7 +258,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
                 <>
                   Booked: appointment scheduled by AI
                   {call.appointmentDateTime && (
-                    <span className="block mt-1 text-[#e7e5e4] font-medium">
+                    <span className="block mt-1 text-cl-text-primary font-medium">
                       {(() => {
                         try {
                           const d = new Date(call.appointmentDateTime)
@@ -205,15 +275,30 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
           </div>
         )}
 
-        {/* Follow-up previous outcome */}
-        {isFollowUp && call.callbackOutcome && (
-          <div className="flex items-center gap-2 mb-1">
-            <span className="bg-[#3b3b3b] text-[#c1bfbe] text-[0.6875rem] px-3 py-1.5 rounded-full uppercase font-semibold">
-              {call.callbackOutcome.replace(/_/g, " ")}
-              {call.callbackOutcomeAt && (
-                <> · {format(new Date(call.callbackOutcomeAt), "h:mm a")}</>
-              )}
-            </span>
+        {/* Follow-up touch timeline */}
+        {(isFollowUp || touches.length > 0) && (
+          <div className="bg-cl-bg-card p-4 rounded-md space-y-2">
+            <h4 className="font-headline font-bold text-cl-text-muted text-xs uppercase tracking-widest">
+              Touch History
+            </h4>
+            {loadingTouches ? (
+              <p className="text-xs text-cl-text-muted">Loading touch history…</p>
+            ) : touches.length === 0 ? (
+              <p className="text-xs text-cl-text-muted">No touch history yet.</p>
+            ) : (
+              <ol className="space-y-1.5">
+                {touches.map((touch, idx) => (
+                  <li key={`${touch.id}-${idx}`} className="flex items-center justify-between gap-3">
+                    <span className="text-[0.6875rem] uppercase font-semibold text-cl-text-subtle">
+                      {touch.outcome.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-[0.6875rem] text-cl-text-muted">
+                      {formatTouchTime(touch.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         )}
 
@@ -224,8 +309,8 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
             className={cn(
               "flex items-center justify-center gap-2 w-full h-12 font-bold rounded-lg transition-all active:scale-[0.98]",
               isFollowUp
-                ? "bg-[#3b3b3b] text-[#c1bfbe] hover:bg-[#454747]"
-                : "bg-gradient-to-r from-[#c6c6c7] to-[#b8b9b9] text-[#3f4041] hover:brightness-110"
+                ? "bg-cl-bg-chip text-cl-text-subtle hover:bg-cl-bg-chip-hover"
+                : "bg-gradient-to-r from-cl-accent to-[#b8b9b9] text-[#3f4041] hover:brightness-110"
             )}
             aria-label={`Call back ${call.customerName}`}
           >
@@ -251,8 +336,8 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
                   className={cn(
                     "px-4 py-2 rounded-full text-[0.6875rem] uppercase font-semibold transition-all duration-200",
                     call.callbackOutcome === value
-                      ? "bg-[#10b981] text-white"
-                      : "bg-[#3b3b3b] text-[#c1bfbe] hover:bg-[#454747] hover:text-[#e7e5e4]",
+                      ? "bg-cl-success text-white"
+                      : "bg-cl-bg-chip text-cl-text-subtle hover:bg-cl-bg-chip-hover hover:text-cl-text-primary",
                     submittingOutcome && "opacity-50 cursor-not-allowed"
                   )}
                 >
@@ -261,8 +346,8 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
               ))}
             </div>
             {call.callbackOutcome && (
-              <p className="text-xs text-[#acabaa] mt-2">
-                Current: <span className="text-[#e7e5e4] font-medium">{call.callbackOutcome.replace(/_/g, " ")}</span>
+              <p className="text-xs text-cl-text-muted mt-2">
+                Current: <span className="text-cl-text-primary font-medium">{call.callbackOutcome.replace(/_/g, " ")}</span>
                 {call.callbackOutcomeAt && (
                   <> at {format(new Date(call.callbackOutcomeAt), "h:mm a")}</>
                 )}
@@ -273,14 +358,14 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
       </div>
 
       {/* Tab toggle */}
-      <div className="px-8 pb-0 flex gap-6 border-b border-[#484848]/10 flex-shrink-0">
+      <div className="px-8 pb-0 flex gap-6 border-b border-cl-border/10 flex-shrink-0">
         <button
           onClick={() => setActiveTab("summary")}
           className={cn(
             "text-sm font-semibold pb-3 border-b-2 transition-colors -mb-px",
             activeTab === "summary"
-              ? "text-[#e7e5e4] border-[#c6c6c7]"
-              : "text-[#acabaa] border-transparent hover:text-[#e7e5e4]"
+              ? "text-cl-text-primary border-cl-accent"
+              : "text-cl-text-muted border-transparent hover:text-cl-text-primary"
           )}
         >
           Summary
@@ -290,8 +375,8 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
           className={cn(
             "text-sm font-semibold pb-3 border-b-2 transition-colors -mb-px",
             activeTab === "transcript"
-              ? "text-[#e7e5e4] border-[#c6c6c7]"
-              : "text-[#acabaa] border-transparent hover:text-[#e7e5e4]"
+              ? "text-cl-text-primary border-cl-accent"
+              : "text-cl-text-muted border-transparent hover:text-cl-text-primary"
           )}
         >
           Transcript
@@ -309,14 +394,14 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
               const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME ?? "our company"
               const template = getAssistTemplate(t.reason, COMPANY_NAME)
               return (
-                <div className="bg-[#252626] p-4 rounded-md">
-                  <h4 className="font-headline font-bold text-[#acabaa] text-xs uppercase tracking-widest mb-2">
+                <div className="bg-cl-bg-card p-4 rounded-md">
+                  <h4 className="font-headline font-bold text-cl-text-muted text-xs uppercase tracking-widest mb-2">
                     Callback Opener
                   </h4>
-                  <p className="text-sm text-[#e7e5e4] leading-relaxed italic">
+                  <p className="text-sm text-cl-text-primary leading-relaxed italic">
                     &ldquo;{template}&rdquo;
                   </p>
-                  <p className="text-[10px] text-[#acabaa] mt-3 uppercase tracking-widest">
+                  <p className="text-[10px] text-cl-text-muted mt-3 uppercase tracking-widest">
                     {t.reason.replace(/_/g, " ")}
                   </p>
                 </div>
@@ -325,27 +410,27 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
 
             {/* AI Summary */}
             <div>
-              <h3 className="font-headline font-bold text-[#acabaa] text-xs uppercase tracking-widest mb-2">
+              <h3 className="font-headline font-bold text-cl-text-muted text-xs uppercase tracking-widest mb-2">
                 AI Receptionist Summary
               </h3>
-              <p className="text-[#acabaa] leading-relaxed italic text-sm">
+              <p className="text-cl-text-muted leading-relaxed italic text-sm">
                 &ldquo;{buildAISummary(call)}&rdquo;
               </p>
             </div>
 
             {/* Equipment Details */}
             {(call.equipmentType || call.equipmentBrand || call.equipmentAge) && (
-              <div className="bg-[#131313] p-5 rounded-xl">
-                <h4 className="font-headline font-bold text-[#acabaa] text-[0.6875rem] uppercase tracking-widest mb-3">
+              <div className="bg-cl-bg-panel p-5 rounded-xl">
+                <h4 className="font-headline font-bold text-cl-text-muted text-[0.6875rem] uppercase tracking-widest mb-3">
                   Equipment Details
                 </h4>
-                <div className="flex flex-wrap gap-3 text-[0.6875rem] text-[#e7e5e4]">
+                <div className="flex flex-wrap gap-3 text-[0.6875rem] text-cl-text-primary">
                   {call.equipmentType && <span>{call.equipmentType}</span>}
                   {call.equipmentBrand && (
-                    <span className="text-[#acabaa]">· {call.equipmentBrand}</span>
+                    <span className="text-cl-text-muted">· {call.equipmentBrand}</span>
                   )}
                   {call.equipmentAge && (
-                    <span className="text-[#acabaa]">· {call.equipmentAge}</span>
+                    <span className="text-cl-text-muted">· {call.equipmentAge}</span>
                   )}
                 </div>
               </div>
@@ -355,24 +440,24 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
           /* Transcript */
           <div className="space-y-2 max-w-3xl">
             {loadingTranscript ? (
-              <p className="text-xs text-[#acabaa]">Loading transcript…</p>
+              <p className="text-xs text-cl-text-muted">Loading transcript…</p>
             ) : transcript.length > 0 ? (
               transcript.map((entry, i) => (
                 <div
                   key={i}
                   className={cn(
                     "rounded-lg px-4 py-3 text-sm",
-                    entry.role === "agent" ? "bg-[#252626]" : "bg-[#131313]"
+                    entry.role === "agent" ? "bg-cl-bg-card" : "bg-cl-bg-panel"
                   )}
                 >
-                  <span className="text-[10px] font-bold text-[#acabaa] uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-cl-text-muted uppercase tracking-wider">
                     {entry.role === "agent" ? "AI Agent" : "Customer"}
                   </span>
-                  <p className="mt-1 text-[#e7e5e4] leading-relaxed">{entry.content}</p>
+                  <p className="mt-1 text-cl-text-primary leading-relaxed">{entry.content}</p>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-[#acabaa]">No transcript available</p>
+              <p className="text-xs text-cl-text-muted">No transcript available</p>
             )}
           </div>
         )}

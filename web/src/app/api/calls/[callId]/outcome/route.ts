@@ -30,12 +30,13 @@ export async function PATCH(
   }
 
   const supabase = createServerClient()
+  const touchedAt = new Date().toISOString()
 
   const { error } = await supabase
     .from("call_records")
     .update({
       callback_outcome: body.outcome,
-      callback_outcome_at: new Date().toISOString(),
+      callback_outcome_at: touchedAt,
     })
     .eq("call_id", callId)
 
@@ -43,5 +44,5 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, outcome: body.outcome })
+  return NextResponse.json({ ok: true, outcome: body.outcome, touchedAt })
 }

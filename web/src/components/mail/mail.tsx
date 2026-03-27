@@ -196,25 +196,25 @@ export function Mail({ initialCalls }: MailProps) {
   return (
     <>
       {/* ── Mobile Top App Bar ── */}
-      <header className="fixed top-0 left-0 w-full z-50 md:hidden flex justify-between items-center px-6 h-16 bg-[#0e0e0e]">
-        <span className="text-xl font-headline font-bold tracking-tighter text-[#e7e5e4]">
+      <header className="fixed top-0 left-0 w-full z-50 md:hidden flex justify-between items-center px-6 h-16 bg-cl-bg-canvas">
+        <span className="text-xl font-headline font-bold tracking-tighter text-cl-text-primary">
           CallLock
         </span>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#10b981]/20 bg-[#10b981]/5">
-            <Phone className="h-3 w-3 text-[#10b981]/70" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-cl-success/20 bg-cl-success/5">
+            <Phone className="h-3 w-3 text-cl-success/70" />
           </div>
-          <button className="p-2 text-[#c6c6c7] hover:bg-[#252626] rounded-[6px] transition-all">
+          <button className="p-2 text-cl-accent hover:bg-cl-bg-card rounded-[6px] transition-all">
             <SettingsIcon className="h-5 w-5" />
           </button>
-          <div className="w-8 h-8 rounded-full bg-[#252626] flex items-center justify-center text-[#c6c6c7] text-xs font-bold font-headline">
+          <div className="w-8 h-8 rounded-full bg-cl-bg-card flex items-center justify-center text-cl-accent text-xs font-bold font-headline">
             R
           </div>
         </div>
       </header>
 
       {/* ── Desktop Left Navigation Rail ── */}
-      <aside className="group/sidebar fixed left-0 top-0 z-50 hidden md:flex h-screen w-14 hover:w-64 flex-col bg-[#0e0e0e] transition-[width] duration-200 ease-out overflow-hidden">
+      <aside className="group/sidebar fixed left-0 top-0 z-50 hidden md:flex h-screen w-14 hover:w-64 flex-col bg-cl-bg-canvas transition-[width] duration-200 ease-out overflow-hidden">
         <div className="h-14 px-1 group-hover/sidebar:px-1 flex items-center justify-center group-hover/sidebar:justify-start transition-all duration-200">
           <div className="h-12 w-12 mt-2 -ml-1 group-hover/sidebar:ml-0 rounded-[8px] flex items-center justify-center transition-all duration-200">
             <Image
@@ -225,7 +225,7 @@ export function Mail({ initialCalls }: MailProps) {
               className="h-12 w-12 object-contain transition-all duration-200"
             />
           </div>
-          <span className="ml-0 mt-2 text-sm font-medium text-[#e7e5e4] whitespace-nowrap max-w-0 opacity-0 transition-all duration-150 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100">
+          <span className="ml-0 mt-2 text-sm font-medium text-cl-text-primary whitespace-nowrap max-w-0 opacity-0 transition-all duration-150 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100">
             CallLock
           </span>
         </div>
@@ -233,7 +233,7 @@ export function Mail({ initialCalls }: MailProps) {
         <nav className="flex-1 p-2">
           <a
             href="/dashboard"
-            className="h-8 w-full rounded-[6px] px-2 text-sm flex items-center justify-center group-hover/sidebar:justify-start gap-2 text-[#acabaa] hover:bg-[#1b1c1c] hover:text-[#e7e5e4] transition-colors"
+            className="h-8 w-full rounded-[6px] px-2 text-sm flex items-center justify-center group-hover/sidebar:justify-start gap-2 text-cl-text-muted hover:bg-cl-bg-hover hover:text-cl-text-primary transition-colors"
           >
             <LayoutDashboard className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap max-w-0 opacity-0 transition-all duration-150 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100">
@@ -241,14 +241,14 @@ export function Mail({ initialCalls }: MailProps) {
             </span>
           </a>
           <button
-            className="h-8 w-full mt-1 text-left px-2 rounded-[6px] text-sm flex items-center justify-center group-hover/sidebar:justify-start gap-2 transition-colors bg-[#252626] text-[#e7e5e4] font-medium"
+            className="h-8 w-full mt-1 text-left px-2 rounded-[6px] text-sm flex items-center justify-center group-hover/sidebar:justify-start gap-2 transition-colors bg-cl-bg-card text-cl-text-primary font-medium"
           >
             <ActivityIcon className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap max-w-0 opacity-0 transition-all duration-150 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100">
               Activity
             </span>
           </button>
-          <span className="h-8 w-full mt-1 px-2 rounded-[6px] text-sm flex items-center justify-center group-hover/sidebar:justify-start gap-2 text-[#acabaa] hover:bg-[#1b1c1c] hover:text-[#e7e5e4] transition-colors cursor-pointer">
+          <span className="h-8 w-full mt-1 px-2 rounded-[6px] text-sm flex items-center justify-center group-hover/sidebar:justify-start gap-2 text-cl-text-muted hover:bg-cl-bg-hover hover:text-cl-text-primary transition-colors cursor-pointer">
             <SettingsIcon className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap max-w-0 opacity-0 transition-all duration-150 group-hover/sidebar:max-w-[160px] group-hover/sidebar:opacity-100">
               Settings
@@ -257,7 +257,7 @@ export function Mail({ initialCalls }: MailProps) {
         </nav>
 
         <div className="p-2 group-hover/sidebar:p-3 transition-all duration-200 flex justify-center group-hover/sidebar:justify-start">
-          <div className="w-8 h-8 rounded-full bg-[#252626] flex items-center justify-center text-[#c6c6c7] text-xs font-semibold">
+          <div className="w-8 h-8 rounded-full bg-cl-bg-card flex items-center justify-center text-cl-accent text-xs font-semibold">
             R
           </div>
         </div>
@@ -272,14 +272,14 @@ export function Mail({ initialCalls }: MailProps) {
 
             {/* All caught up or call list */}
             {actionQueueEmpty && buckets.AI_HANDLED.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center bg-[#000000] p-8">
-                <p className="text-[#acabaa] text-sm font-medium">All caught up — no callbacks needed</p>
+              <div className="flex-1 flex items-center justify-center bg-black p-8">
+                <p className="text-cl-text-muted text-sm font-medium">All caught up — no callbacks needed</p>
               </div>
             ) : actionQueueEmpty ? (
-              <div className="flex-1 flex flex-col bg-[#0e0e0e]">
+              <div className="flex-1 flex flex-col bg-cl-bg-canvas">
                 <div className="flex-1 flex flex-col items-center justify-center p-8 gap-3">
-                  <p className="text-[#e7e5e4] text-sm font-medium">All caught up</p>
-                  <p className="text-[#acabaa] text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
+                  <p className="text-cl-text-primary text-sm font-medium">All caught up</p>
+                  <p className="text-cl-text-muted text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
                 </div>
                 <MailList
                   items={allSectionedCalls}
@@ -311,14 +311,14 @@ export function Mail({ initialCalls }: MailProps) {
           </>
         ) : (
           <div className="flex flex-col h-full">
-            <div className="flex h-12 items-center gap-2 px-4 bg-[#131313] flex-shrink-0">
+            <div className="flex h-12 items-center gap-2 px-4 bg-cl-bg-panel flex-shrink-0">
               <button
                 onClick={() => setMobileView("list")}
-                className="p-2 text-[#c6c6c7] hover:bg-[#252626] rounded-[6px] transition-all"
+                className="p-2 text-cl-accent hover:bg-cl-bg-card rounded-[6px] transition-all"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm font-medium text-[#e7e5e4]">Call Details</span>
+              <span className="text-sm font-medium text-cl-text-primary">Call Details</span>
             </div>
             <div className="flex-1 overflow-hidden flex">
               <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} bucketMap={bucketMap} />
@@ -330,17 +330,17 @@ export function Mail({ initialCalls }: MailProps) {
       {/* ── Desktop layout: 2-panel ── */}
       <main className="h-screen hidden md:flex overflow-hidden pl-14">
         {/* Action Feed */}
-        <aside className="w-[380px] bg-[#0e0e0e] flex flex-col shrink-0">
+        <aside className="w-[380px] bg-cl-bg-canvas flex flex-col shrink-0">
           <div className="h-14 px-5 flex justify-between items-center flex-shrink-0">
-            <h2 className="font-headline text-lg font-bold tracking-tight text-[#e7e5e4]">
+            <h2 className="font-headline text-lg font-bold tracking-tight text-cl-text-primary">
               Activity Feed
             </h2>
-            <span className="text-[10px] font-bold tracking-widest uppercase bg-[#252626] text-[#acabaa] px-2 py-1 rounded flex items-center gap-1.5">
-              <Headset className="h-3 w-3 text-[#c6c6c7]" />
+            <span className="text-[10px] font-bold tracking-widest uppercase bg-cl-bg-card text-cl-text-muted px-2 py-1 rounded flex items-center gap-1.5">
+              <Headset className="h-3 w-3 text-cl-accent" />
               LIVE
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#10b981]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cl-success opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cl-success" />
               </span>
             </span>
           </div>
@@ -350,14 +350,14 @@ export function Mail({ initialCalls }: MailProps) {
 
           {/* All caught up or call list */}
           {actionQueueEmpty && buckets.AI_HANDLED.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center bg-[#000000] p-8">
-              <p className="text-[#acabaa] text-sm font-medium">All caught up — no callbacks needed</p>
+            <div className="flex-1 flex items-center justify-center bg-black p-8">
+              <p className="text-cl-text-muted text-sm font-medium">All caught up — no callbacks needed</p>
             </div>
           ) : actionQueueEmpty ? (
-            <div className="flex-1 flex flex-col bg-[#0e0e0e]">
+            <div className="flex-1 flex flex-col bg-cl-bg-canvas">
               <div className="flex flex-col items-center justify-center p-8 gap-3">
-                <p className="text-[#e7e5e4] text-sm font-medium">All caught up</p>
-                <p className="text-[#acabaa] text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
+                <p className="text-cl-text-primary text-sm font-medium">All caught up</p>
+                <p className="text-cl-text-muted text-xs">AI handled {buckets.AI_HANDLED.length} calls</p>
               </div>
               <MailList
                 items={allSectionedCalls}

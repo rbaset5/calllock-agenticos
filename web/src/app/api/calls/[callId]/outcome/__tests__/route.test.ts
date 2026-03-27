@@ -43,6 +43,7 @@ describe("PATCH /api/calls/[callId]/outcome", () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json).toMatchObject({ ok: true, outcome: "reached_customer" })
+    expect(typeof json.touchedAt).toBe("string")
   })
 
   it("returns 400 for invalid outcome", async () => {

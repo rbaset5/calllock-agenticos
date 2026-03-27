@@ -74,24 +74,24 @@ export function LeadIntel({ call }: LeadIntelProps) {
 
   if (!call) {
     return (
-      <aside className="flex w-[320px] bg-[#131313] flex-col border-l border-[#484848]/20 overflow-y-auto no-scrollbar p-6 shrink-0">
-        <p className="text-[#acabaa] text-sm">No call selected</p>
+      <aside className="flex w-[320px] bg-cl-bg-panel flex-col border-l border-cl-border/20 overflow-y-auto no-scrollbar p-6 shrink-0">
+        <p className="text-cl-text-muted text-sm">No call selected</p>
       </aside>
     )
   }
 
   return (
-    <aside className="hidden md:flex w-[320px] bg-[#131313] flex-col border-l border-[#484848]/20 overflow-y-auto no-scrollbar p-6 space-y-8 shrink-0">
+    <aside className="hidden md:flex w-[320px] bg-cl-bg-panel flex-col border-l border-cl-border/20 overflow-y-auto no-scrollbar p-6 space-y-8 shrink-0">
 
       {/* Lead Intelligence section */}
       <div>
-        <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-[#acabaa] mb-6">
+        <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-cl-text-muted mb-6">
           Lead Intelligence
         </h3>
 
         {/* Map View */}
         {call.serviceAddress ? (
-          <div className="bg-black rounded-[6px] border border-[#484848]/20 mb-8 overflow-hidden">
+          <div className="bg-black rounded-[6px] border border-cl-border/20 mb-8 overflow-hidden">
             <div className="relative h-36">
               {coords ? (
                 <Map3DWrapper lat={coords.lat} lng={coords.lng} className="w-full h-full" />
@@ -102,7 +102,7 @@ export function LeadIntel({ call }: LeadIntelProps) {
                 href={`https://maps.google.com/maps?q=${encodeURIComponent(call.serviceAddress)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm border border-[#484848]/20 text-[#e7e5e4] text-[10px] font-bold tracking-wider px-2 py-1 rounded-[6px] uppercase flex items-center gap-1 hover:bg-black transition-colors"
+                className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm border border-cl-border/20 text-cl-text-primary text-[10px] font-bold tracking-wider px-2 py-1 rounded-[6px] uppercase flex items-center gap-1 hover:bg-black transition-colors"
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -111,15 +111,15 @@ export function LeadIntel({ call }: LeadIntelProps) {
               </a>
             </div>
             <div className="px-4 py-3">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter mb-0.5">Distance to Warehouse</p>
-              <p className="text-[#e7e5e4] text-xs font-medium leading-tight">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter mb-0.5">Distance to Warehouse</p>
+              <p className="text-cl-text-primary text-xs font-medium leading-tight">
                 {coords ? `${Math.round(haversineDistance(coords, HQ_COORDS))} miles` : "Calculating…"}
               </p>
             </div>
           </div>
         ) : (
-          <div className="bg-black rounded-[6px] border border-[#484848]/20 mb-8 flex items-center justify-center h-36">
-            <p className="text-[#acabaa] text-xs">No address on file</p>
+          <div className="bg-black rounded-[6px] border border-cl-border/20 mb-8 flex items-center justify-center h-36">
+            <p className="text-cl-text-muted text-xs">No address on file</p>
           </div>
         )}
 
@@ -127,25 +127,25 @@ export function LeadIntel({ call }: LeadIntelProps) {
         <div className="space-y-6">
           {call.customerName && (
             <div className="space-y-1">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
                 Contact Name
               </p>
-              <p className="text-[#e7e5e4] font-medium">{call.customerName}</p>
+              <p className="text-cl-text-primary font-medium">{call.customerName}</p>
             </div>
           )}
 
           {call.customerPhone && (
             <div className="space-y-1">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
                 Phone Number
               </p>
-              <p className="text-[#e7e5e4] font-medium">{formatPhone(call.customerPhone)}</p>
+              <p className="text-cl-text-primary font-medium">{formatPhone(call.customerPhone)}</p>
             </div>
           )}
 
           {call.serviceAddress && (
             <div className="space-y-1">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
                 Address
               </p>
               <a
@@ -154,10 +154,10 @@ export function LeadIntel({ call }: LeadIntelProps) {
                 rel="noopener noreferrer"
                 className="flex items-start gap-1.5 group"
               >
-                <svg className="shrink-0 mt-0.5 text-[#acabaa] group-hover:text-[#e7e5e4] transition-colors" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <svg className="shrink-0 mt-0.5 text-cl-text-muted group-hover:text-cl-text-primary transition-colors" width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M6 1C4.067 1 2.5 2.567 2.5 4.5C2.5 7 6 11 6 11C6 11 9.5 7 9.5 4.5C9.5 2.567 7.933 1 6 1ZM6 5.75C5.31 5.75 4.75 5.19 4.75 4.5C4.75 3.81 5.31 3.25 6 3.25C6.69 3.25 7.25 3.81 7.25 4.5C7.25 5.19 6.69 5.75 6 5.75Z" fill="currentColor"/>
                 </svg>
-                <span className="text-[#e7e5e4] font-medium leading-tight group-hover:text-white transition-colors">
+                <span className="text-cl-text-primary font-medium leading-tight group-hover:text-white transition-colors">
                   {call.serviceAddress}
                 </span>
               </a>
@@ -165,27 +165,27 @@ export function LeadIntel({ call }: LeadIntelProps) {
           )}
 
           <div className="space-y-1">
-            <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+            <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
               Lead Sentiment
             </p>
-            <p className="text-[#e7e5e4] font-medium">{getSentiment(call)}</p>
+            <p className="text-cl-text-primary font-medium">{getSentiment(call)}</p>
           </div>
 
           {call.hvacIssueType && (
             <div className="space-y-1">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
                 Issue Type
               </p>
-              <p className="text-[#e7e5e4] font-medium">{call.hvacIssueType}</p>
+              <p className="text-cl-text-primary font-medium">{call.hvacIssueType}</p>
             </div>
           )}
 
           {call.revenueTier && call.revenueTier !== "unknown" && (
             <div className="space-y-1">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
                 Estimated Value
               </p>
-              <p className="text-[#e7e5e4] font-medium capitalize">
+              <p className="text-cl-text-primary font-medium capitalize">
                 {call.revenueTier.replace(/_/g, " ")}
               </p>
             </div>
@@ -193,13 +193,13 @@ export function LeadIntel({ call }: LeadIntelProps) {
 
           {(call.equipmentType || call.equipmentBrand || call.equipmentAge) && (
             <div className="space-y-1">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
                 Equipment
               </p>
-              <p className="text-[#e7e5e4] font-medium leading-tight">
+              <p className="text-cl-text-primary font-medium leading-tight">
                 {[call.equipmentBrand, call.equipmentType].filter(Boolean).join(" ")}
                 {call.equipmentAge && (
-                  <span className="text-[#acabaa]"> · {call.equipmentAge}</span>
+                  <span className="text-cl-text-muted"> · {call.equipmentAge}</span>
                 )}
               </p>
             </div>
@@ -207,10 +207,10 @@ export function LeadIntel({ call }: LeadIntelProps) {
 
           {call.callerType && call.callerType !== "unknown" && (
             <div className="space-y-1">
-              <p className="text-[10px] text-[#acabaa] uppercase font-bold tracking-tighter">
+              <p className="text-[10px] text-cl-text-muted uppercase font-bold tracking-tighter">
                 Caller Type
               </p>
-              <p className="text-[#e7e5e4] font-medium capitalize">
+              <p className="text-cl-text-primary font-medium capitalize">
                 {call.callerType.replace(/_/g, " ")}
               </p>
             </div>
@@ -219,16 +219,16 @@ export function LeadIntel({ call }: LeadIntelProps) {
       </div>
 
       {/* Caller History */}
-      <div className="pt-8 border-t border-[#484848]/20">
-        <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-[#acabaa] mb-4">
+      <div className="pt-8 border-t border-cl-border/20">
+        <h3 className="font-headline font-bold text-xs uppercase tracking-widest text-cl-text-muted mb-4">
           Caller History
         </h3>
         <div className="space-y-4">
-          <div className="bg-[#252626] p-3 rounded-[6px] border border-[#484848]/20">
-            <p className="text-xs text-[#e7e5e4] font-bold">
+          <div className="bg-cl-bg-card p-3 rounded-[6px] border border-cl-border/20">
+            <p className="text-xs text-cl-text-primary font-bold">
               {call.appointmentBooked ? "Returning Customer" : "New Prospect"}
             </p>
-            <p className="text-[10px] text-[#acabaa]">
+            <p className="text-[10px] text-cl-text-muted">
               {call.appointmentBooked
                 ? "Appointment previously scheduled with this number."
                 : "No prior records found for this number."}
@@ -236,9 +236,9 @@ export function LeadIntel({ call }: LeadIntelProps) {
           </div>
 
           {call.endCallReason && (
-            <div className="bg-[#252626] p-3 rounded-[6px] border border-[#484848]/20 border-l-2 border-l-[#c6c6c7]">
-              <p className="text-xs text-[#e7e5e4] font-bold">Call Outcome</p>
-              <p className="text-[10px] text-[#acabaa] capitalize">
+            <div className="bg-cl-bg-card p-3 rounded-[6px] border border-cl-border/20 border-l-2 border-l-cl-accent">
+              <p className="text-xs text-cl-text-primary font-bold">Call Outcome</p>
+              <p className="text-[10px] text-cl-text-muted capitalize">
                 {call.endCallReason.replace(/_/g, " ")}
               </p>
             </div>
