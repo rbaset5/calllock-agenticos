@@ -226,12 +226,12 @@ export function LeadIntel({ call }: LeadIntelProps) {
         <div className="space-y-4">
           <div className="bg-cl-bg-card p-3 rounded-[6px] border border-cl-border/20">
             <p className="text-xs text-cl-text-primary font-bold">
-              {call.appointmentBooked ? "Returning Customer" : "New Prospect"}
+              {call.appointmentBooked ? "Appointment Secured" : "Open Lead"}
             </p>
             <p className="text-[10px] text-cl-text-muted">
               {call.appointmentBooked
-                ? "Appointment previously scheduled with this number."
-                : "No prior records found for this number."}
+                ? "This call ended with a confirmed appointment."
+                : "This lead still needs owner review or follow-up."}
             </p>
           </div>
 

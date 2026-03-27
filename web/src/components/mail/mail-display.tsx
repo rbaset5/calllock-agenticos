@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { getAssistTemplate } from "@/lib/triage"
 import type { BucketAssignment } from "@/lib/triage"
 import { useOutcomeSubmit } from "@/hooks/use-outcome-submit"
+import { buildAISummary, getHandledSummary } from "./mail-copy"
 
 interface MailDisplayProps {
   call: Call | null
@@ -23,32 +24,6 @@ interface MailDisplayProps {
   bucketMap?: Map<string, BucketAssignment>
 }
 
-function buildAISummary(call: Call): string {
-  const parts: string[] = []
-
-  const who = call.customerName ? `The caller, ${call.customerName},` : "The caller"
-  parts.push(who)
-
-  if (call.problemDescription) {
-    parts.push(`reported: "${call.problemDescription}"`)
-  } else if (call.hvacIssueType) {
-    parts.push(`requested service for a ${call.hvacIssueType} issue.`)
-  } else {
-    parts.push("reached out for assistance.")
-  }
-
-  if (call.serviceAddress) {
-    parts.push(`Service address: ${call.serviceAddress}.`)
-  }
-
-  if (call.appointmentBooked) {
-    parts.push("An appointment was successfully scheduled.")
-  } else if (call.endCallReason === "callback_later") {
-    parts.push("Customer requested a callback.")
-  }
-
-  return parts.join(" ")
-}
 
 function formatTouchTime(value: string): string {
   try {
@@ -250,26 +225,18 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
           <div className="bg-cl-bg-panel p-4 rounded-md">
             <p className="text-sm text-cl-text-muted">
               {assignment.escalationMarker && <span className="text-cl-danger">⚠ </span>}
-              {assignment.handledReason === "escalated" && "Escalated: safety emergency forwarded to dispatch"}
-              {assignment.handledReason === "resolved" && "Resolved: callback completed"}
-              {assignment.handledReason === "non_customer" && "Blocked: non-customer call (spam/vendor)"}
-              {assignment.handledReason === "wrong_number" && "Dismissed: wrong number or out of service area"}
-              {assignment.handledReason === "booked" && (
-                <>
-                  Booked: appointment scheduled by AI
-                  {call.appointmentDateTime && (
-                    <span className="block mt-1 text-cl-text-primary font-medium">
-                      {(() => {
-                        try {
-                          const d = new Date(call.appointmentDateTime)
-                          if (isToday(d)) return `Today @ ${format(d, "h:mm a")}`
-                          if (isTomorrow(d)) return `Tomorrow @ ${format(d, "h:mm a")}`
-                          return format(d, "MMM d @ h:mm a")
-                        } catch { return call.appointmentDateTime }
-                      })()}
-                    </span>
-                  )}
-                </>
+              {getHandledSummary(call, assignment)}
+              {assignment.handledReason === "booked" && call.appointmentDateTime && (
+                <span className="block mt-1 text-cl-text-primary font-medium">
+                  {(() => {
+                    try {
+                      const d = new Date(call.appointmentDateTime)
+                      if (isToday(d)) return `Today @ ${format(d, "h:mm a")}`
+                      if (isTomorrow(d)) return `Tomorrow @ ${format(d, "h:mm a")}`
+                      return format(d, "MMM d @ h:mm a")
+                    } catch { return call.appointmentDateTime }
+                  })()}
+                </span>
               )}
             </p>
           </div>
