@@ -158,7 +158,7 @@ export function MailList({
         {/* Escalated panel */}
         {section === "ESCALATED_BY_AI" && (
           <div
-            className="w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center bg-cl-danger/80 text-[#5e1b1a]"
+            className="w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center bg-cl-bg-elevated text-cl-text-muted"
             aria-label="Safety escalation"
           >
             <AlertTriangle className="h-4 w-4 mb-1" />
@@ -229,7 +229,7 @@ export function MailList({
 
           {/* Escalated: safety label */}
           {section === "ESCALATED_BY_AI" && (
-            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-danger/10 text-cl-danger text-[0.6875rem] font-semibold uppercase">
+            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-bg-elevated text-cl-text-muted text-[0.6875rem] font-semibold uppercase">
               <AlertTriangle className="h-3 w-3" />
               {item.isSafetyEmergency ? "Safety emergency escalated" : "Urgent issue escalated"}
             </span>
@@ -377,6 +377,22 @@ export function MailList({
                 </>
               )}
 
+              {/* Escalated by AI */}
+              {buckets.ESCALATED_BY_AI.length > 0 && (
+                <>
+                  <h3
+                    role="heading"
+                    aria-level={3}
+                    className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] mt-8 pb-2"
+                  >
+                    Escalated by AI ({buckets.ESCALATED_BY_AI.length})
+                  </h3>
+                  <div className="flex flex-col gap-1">
+                    {buckets.ESCALATED_BY_AI.map((item) => renderCard(item, "ESCALATED_BY_AI"))}
+                  </div>
+                </>
+              )}
+
               {/* Follow-ups */}
               {buckets.FOLLOW_UPS.length > 0 && (
                 <>
@@ -389,22 +405,6 @@ export function MailList({
                   </h3>
                   <div className="flex flex-col gap-1">
                     {buckets.FOLLOW_UPS.map((item) => renderCard(item, "FOLLOW_UPS"))}
-                  </div>
-                </>
-              )}
-
-              {/* Escalated by AI */}
-              {buckets.ESCALATED_BY_AI.length > 0 && (
-                <>
-                  <h3
-                    role="heading"
-                    aria-level={3}
-                    className="font-headline text-[1.75rem] font-bold text-cl-danger tracking-[-0.02em] mt-8 pb-2"
-                  >
-                    Escalated by AI ({buckets.ESCALATED_BY_AI.length})
-                  </h3>
-                  <div className="flex flex-col gap-1">
-                    {buckets.ESCALATED_BY_AI.map((item) => renderCard(item, "ESCALATED_BY_AI"))}
                   </div>
                 </>
               )}

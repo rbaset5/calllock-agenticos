@@ -82,11 +82,11 @@ export function Mail({ initialCalls }: MailProps) {
     }
   }, [mergedCalls, now])
 
-  // Unified feed: Escalated → New Leads → Follow-ups → Booked → Other Handled
+  // Unified feed: New Leads → Escalated → Follow-ups → Booked → Other Handled
   const allSectionedCalls = React.useMemo(
     () => [
-      ...buckets.ESCALATED_BY_AI,
       ...buckets.NEW_LEADS,
+      ...buckets.ESCALATED_BY_AI,
       ...buckets.FOLLOW_UPS,
       ...buckets.BOOKED_BY_AI,
       ...buckets.OTHER_AI_HANDLED,
