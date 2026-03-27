@@ -628,3 +628,21 @@ describe("isActionable", () => {
     expect(isActionable(makeCall({ route: "spam" }))).toBe(false)
   })
 })
+
+// ---------------------------------------------------------------------------
+// assignBucket — mail-section regression cases
+// ---------------------------------------------------------------------------
+
+describe("assignBucket mail-section regressions", () => {
+  it("safety emergency stays AI_HANDLED with handledReason=escalated", () => {
+    const r = assignBucket(makeCall({ isSafetyEmergency: true }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("escalated")
+  })
+
+  it("appointmentBooked stays AI_HANDLED with handledReason=booked", () => {
+    const r = assignBucket(makeCall({ appointmentBooked: true }))
+    expect(r.bucket).toBe("AI_HANDLED")
+    expect(r.handledReason).toBe("booked")
+  })
+})
