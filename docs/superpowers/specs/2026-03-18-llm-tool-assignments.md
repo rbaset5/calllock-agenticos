@@ -60,7 +60,7 @@
 | VP Engineering | `eng-vp` | `claude-sonnet` | Director — escalation gate for engineering |
 | AI/Voice Engineer | `eng-ai-voice` | `minimax` | Voice/audio is core product; see conditional below |
 | Full-Stack Developer | `eng-fullstack` | `codex` | Code generation, batch tasks, APIs |
-| Product QA | `eng-product-qa` | `qwen` | Test scripts, repetitive validation |
+| QA/Automation | `eng-qa` | `qwen` | Test scripts, repetitive validation |
 
 ### Growth Marketing
 
@@ -105,7 +105,7 @@ Instead of hardcoding model names per worker, each department has a default mode
 |---|---|---|---|
 | `exec` | `claude-opus` | Executive Suite | — (never overridden) |
 | `product` | `gemini-flash` | Product Management | `pm-designer` → `claude-sonnet` |
-| `engineering` | `codex` | Engineering | `eng-ai-voice` → `minimax`, `eng-product-qa` → `qwen` |
+| `engineering` | `codex` | Engineering | `eng-ai-voice` → `minimax`, `eng-qa` → `qwen` |
 | `growth` | `zeroclaw` | Growth Marketing | Conditional Claw routing (see below) |
 | `sales` | `openrouter-free` | Sales | — |
 | `cs` | `qwen` | Customer Success | `cs-account-manager` → `gemini-flash` |

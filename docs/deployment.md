@@ -28,6 +28,9 @@
 ## Order of Operations
 
 1. Apply the SQL in `supabase/migrations/` and `supabase/seed.sql`.
+   - `supabase/seed.sql` provides realistic app data (tenant-alpha, `demo-call-*`).
+   - Deterministic CI/guardian fixtures remain migration-based (`055_test_tenant_seed.sql`).
+   - Optional validation queries live in `supabase/seed-checks.sql`.
 2. Deploy `calllock-litellm` and `calllock-redis`.
 3. Deploy `calllock-harness` with Supabase and shared-secret configuration.
 4. Confirm `calllock-harness /health` reports the expected configuration state.

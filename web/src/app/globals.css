@@ -7,8 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --font-headline: var(--font-manrope);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -38,6 +39,22 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-cl-bg-canvas: var(--cl-bg-canvas);
+  --color-cl-bg-panel: var(--cl-bg-panel);
+  --color-cl-bg-subtle: var(--cl-bg-subtle);
+  --color-cl-bg-hover: var(--cl-bg-hover);
+  --color-cl-bg-selected: var(--cl-bg-selected);
+  --color-cl-bg-card: var(--cl-bg-card);
+  --color-cl-bg-chip: var(--cl-bg-chip);
+  --color-cl-bg-chip-hover: var(--cl-bg-chip-hover);
+  --color-cl-text-primary: var(--cl-text-primary);
+  --color-cl-text-muted: var(--cl-text-muted);
+  --color-cl-text-subtle: var(--cl-text-subtle);
+  --color-cl-accent: var(--cl-accent);
+  --color-cl-success: var(--cl-success);
+  --color-cl-danger: var(--cl-danger);
+  --color-cl-danger-soft: var(--cl-danger-soft);
+  --color-cl-border: var(--cl-border);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -80,6 +97,22 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --cl-bg-canvas: #0e0e0e;
+  --cl-bg-panel: #131313;
+  --cl-bg-subtle: #191a1a;
+  --cl-bg-hover: #1b1c1c;
+  --cl-bg-selected: #2c2c2c;
+  --cl-bg-card: #252626;
+  --cl-bg-chip: #3b3b3b;
+  --cl-bg-chip-hover: #454747;
+  --cl-text-primary: #e7e5e4;
+  --cl-text-muted: #acabaa;
+  --cl-text-subtle: #c1bfbe;
+  --cl-accent: #c6c6c7;
+  --cl-success: #10b981;
+  --cl-danger: #fd9791;
+  --cl-danger-soft: #ee7d77;
+  --cl-border: #484848;
 }
 
 .dark {
@@ -123,4 +156,12 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

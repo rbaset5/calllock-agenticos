@@ -3,7 +3,7 @@ import type { Call, CallRecordListRow } from "@/types/call"
 export const CALLS_PAGE_SIZE = 100
 
 export const CALL_RECORD_LIST_COLUMNS =
-  "id, tenant_id, call_id, retell_call_id, phone_number, extracted_fields, extraction_status, urgency_tier, end_call_reason, callback_scheduled, booking_id, created_at, updated_at"
+  "id, tenant_id, call_id, retell_call_id, phone_number, transcript, extracted_fields, extraction_status, urgency_tier, end_call_reason, callback_outcome, callback_outcome_at, callback_scheduled, booking_id, route, caller_type, primary_intent, revenue_tier, created_at, updated_at"
 
 export function trimCallRecordPage(rows: CallRecordListRow[]): {
   rows: CallRecordListRow[]
