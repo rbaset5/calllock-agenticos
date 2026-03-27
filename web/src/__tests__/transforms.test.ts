@@ -98,6 +98,10 @@ describe("transformCallRecord", () => {
       callback_outcome_at: null,
       callback_scheduled: false,
       booking_id: null,
+      route: null,
+      caller_type: null,
+      primary_intent: null,
+      revenue_tier: null,
       created_at: "2026-03-05T10:00:00Z",
       updated_at: "2026-03-05T10:05:00Z",
     }
