@@ -32,6 +32,18 @@ function formatSlotTime(dateStr: string | null): string {
   }
 }
 
+function bookingDotClass(status: BookingStatus | null): string {
+  if (status === "confirmed") return "bg-cl-success"
+  if (status === "rescheduled") return "bg-amber-400"
+  return "ring-2 ring-cl-success bg-transparent"
+}
+
+function bookingSlotAccentClass(status: BookingStatus | null): string {
+  if (status === "confirmed") return "after:bg-cl-success/70"
+  if (status === "rescheduled") return "after:bg-amber-400/80"
+  return "after:bg-transparent after:border after:border-cl-success/80"
+}
+
 export function CalendarWithEventSlots({
   calls,
   selectedCallId,
@@ -134,11 +146,7 @@ export function CalendarWithEventSlots({
                   {dayCalls.length > 0 && (
                     <span className="pointer-events-none absolute bottom-0 start-1/2 flex -translate-x-1/2 items-center gap-0.5">
                       {dayCalls.map((call) => {
-                        const dotClass = call.bookingStatus === "confirmed"
-                          ? "bg-cl-success"
-                          : call.bookingStatus === "rescheduled"
-                            ? "bg-amber-400"
-                            : "ring-2 ring-cl-success bg-transparent"
+                        const dotClass = bookingDotClass(call.bookingStatus)
                         return (
                           <span
                             key={`${dateKey}-${call.id}`}
@@ -179,6 +187,7 @@ export function CalendarWithEventSlots({
             {visibleCalls.map((call) => {
               const isSelected = call.id === selectedCallId
               const hasDateTime = !!call.appointmentDateTime
+              const accentClass = bookingSlotAccentClass(call.bookingStatus)
 
               return (
                 <div
@@ -193,10 +202,11 @@ export function CalendarWithEventSlots({
                     }
                   }}
                   className={cn(
-                    "after:bg-blue-500/70 relative rounded-md p-2 pl-5 text-sm cursor-pointer transition-colors select-none",
+                    "relative rounded-md p-2 pl-5 text-sm cursor-pointer transition-colors select-none",
                     "after:absolute after:inset-y-2 after:left-1.5 after:w-1 after:rounded-full",
+                    accentClass,
                     isSelected
-                      ? "bg-accent"
+                      ? "bg-cl-bg-chip"
                       : "bg-muted hover:bg-accent/50"
                   )}
                 >
@@ -250,7 +260,7 @@ export function CalendarWithEventSlots({
                           <button
                             disabled={!!submittingBookingId}
                             onClick={() => handleBookingAction(call, "confirmed")}
-                            className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 disabled:opacity-50"
+                            className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-success/20 text-cl-success hover:bg-cl-success/30 disabled:opacity-50"
                           >
                             <CheckCircle2 className="h-3 w-3" />
                             Confirm

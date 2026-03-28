@@ -150,7 +150,7 @@ describe("MailList section ordering and rendering", () => {
     )
 
     expect(html).toContain("Bookings")
-    expect(html).toContain("after:bg-blue-500/70")
+    expect(html).toContain("after:bg-cl-success/70")
     const bookedSection = html.slice(
       html.indexOf("Bookings"),
       html.indexOf("Other AI Handled")
