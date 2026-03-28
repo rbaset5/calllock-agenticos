@@ -1,10 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { format, isToday, isTomorrow } from "date-fns"
-import { Phone } from "lucide-react"
+import { format, formatDistanceToNow, isToday, isTomorrow } from "date-fns"
+import { CheckCircle2, Phone, X } from "lucide-react"
+import { toast } from "sonner"
 import { parseTranscript, formatPhone } from "@/lib/transforms"
 import type {
+  BookingStatus,
   Call,
   TranscriptEntry,
   CallbackOutcome,
@@ -14,6 +16,7 @@ import type {
 import { cn } from "@/lib/utils"
 import { getAssistTemplate } from "@/lib/triage"
 import type { BucketAssignment } from "@/lib/triage"
+import { getDisplaySection } from "@/lib/mail-sections"
 import { useOutcomeSubmit } from "@/hooks/use-outcome-submit"
 import { buildAISummary, getHandledSummary } from "./mail-copy"
 
@@ -21,6 +24,7 @@ interface MailDisplayProps {
   call: Call | null
   triageMap?: Map<string, TriageResult>
   onOutcomeChange?: (callId: string, outcome: CallbackOutcome | null) => void
+  onBookingStatusChange?: (callId: string, status: BookingStatus, appointmentDateTime?: string) => void
   bucketMap?: Map<string, BucketAssignment>
 }
 
@@ -37,19 +41,42 @@ function formatTouchTime(value: string): string {
   }
 }
 
-export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: MailDisplayProps) {
+export function MailDisplay({ call, triageMap, onOutcomeChange, onBookingStatusChange, bucketMap }: MailDisplayProps) {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
   const [loadingTranscript, setLoadingTranscript] = useState(false)
   const [touches, setTouches] = useState<CallbackTouch[]>([])
   const [loadingTouches, setLoadingTouches] = useState(false)
   const [activeTab, setActiveTab] = useState<"summary" | "transcript">("summary")
   const touchCacheRef = useRef<Map<string, CallbackTouch[]>>(new Map())
+  const [submittingBooking, setSubmittingBooking] = useState(false)
 
   const optimisticUpdate = useCallback(
     (callId: string, outcome: CallbackOutcome | null) => onOutcomeChange?.(callId, outcome),
     [onOutcomeChange]
   )
   const { submitOutcome, submitting: submittingOutcome } = useOutcomeSubmit(optimisticUpdate)
+
+  const handleBookingAction = async (status: BookingStatus, appointmentDateTime?: string) => {
+    if (!call || submittingBooking) return
+    setSubmittingBooking(true)
+    const prevStatus = call.bookingStatus
+    onBookingStatusChange?.(call.id, status, appointmentDateTime)
+    try {
+      const res = await fetch(`/api/calls/${call.id}/booking-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, ...(appointmentDateTime ? { appointmentDateTime } : {}) }),
+      })
+      if (!res.ok) throw new Error("not-ok")
+    } catch {
+      if (prevStatus !== null) {
+        onBookingStatusChange?.(call.id, prevStatus)
+      }
+      toast.error("Couldn't save — try again")
+    } finally {
+      setSubmittingBooking(false)
+    }
+  }
 
   const handleOutcome = async (outcome: CallbackOutcome) => {
     if (!call) return
@@ -145,6 +172,10 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
   const callIsActionable = assignment?.bucket === "ACTION_QUEUE"
   const isFollowUp = assignment?.subGroup === "FOLLOW_UP"
   const isAiHandled = assignment?.bucket === "AI_HANDLED"
+  const mailSection = assignment ? getDisplaySection(call, assignment) : null
+  const isBooking = mailSection === "BOOKINGS"
+  const isBookingUnconfirmed = isBooking && call.bookingStatus === null
+  const isBookingConfirmed = isBooking && (call.bookingStatus === "confirmed" || call.bookingStatus === "rescheduled")
 
   const triage = triageMap?.get(call.id)
   const callbackWindowEnd = triage && callIsActionable && triage.callbackWindowValid && triage.callbackWindowEnd
@@ -242,6 +273,119 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
           </div>
         )}
 
+        {isBookingUnconfirmed && (
+          <div className="bg-cl-bg-panel p-4 rounded-md space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cl-success opacity-60 motion-reduce:animate-none" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cl-success" />
+              </span>
+              <p className="text-sm text-cl-success font-semibold">AI booked — needs confirmation</p>
+            </div>
+            {call.appointmentDateTime && (
+              <p className="text-sm text-cl-text-primary font-medium">
+                {(() => {
+                  try {
+                    const d = new Date(call.appointmentDateTime)
+                    if (isToday(d)) return `Today @ ${format(d, "h:mm a")}`
+                    if (isTomorrow(d)) return `Tomorrow @ ${format(d, "h:mm a")}`
+                    return format(d, "MMM d @ h:mm a")
+                  } catch { return call.appointmentDateTime }
+                })()}
+              </p>
+            )}
+            <details className="group">
+              <summary className="text-xs text-cl-text-muted cursor-pointer hover:text-cl-text-primary select-none">
+                Add notes (optional)
+              </summary>
+              <textarea
+                placeholder="Gate code, special instructions..."
+                className="mt-2 w-full h-20 px-3 py-2 rounded-md bg-cl-bg-chip text-cl-text-primary text-sm border border-cl-border/20 focus:outline-none focus:border-cl-accent resize-none"
+                id={`booking-notes-${call.id}`}
+              />
+            </details>
+            <div className="flex flex-wrap gap-2">
+              <button
+                disabled={submittingBooking}
+                onClick={async () => {
+                  const notes = (document.getElementById(`booking-notes-${call.id}`) as HTMLTextAreaElement | null)?.value || ""
+                  const body: Record<string, string> = { status: "confirmed" }
+                  if (notes) body.notes = notes
+                  onBookingStatusChange?.(call.id, "confirmed")
+                  setSubmittingBooking(true)
+                  try {
+                    const res = await fetch(`/api/calls/${call.id}/booking-status`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(body),
+                    })
+                    if (!res.ok) throw new Error("not-ok")
+                  } catch {
+                    if (call.bookingStatus !== null) onBookingStatusChange?.(call.id, call.bookingStatus)
+                    toast.error("Couldn't save — try again")
+                  } finally {
+                    setSubmittingBooking(false)
+                  }
+                }}
+                className="px-4 py-2 rounded-full text-[0.6875rem] uppercase font-semibold bg-cl-success/20 text-cl-success hover:bg-cl-success/30 disabled:opacity-50 min-h-[44px]"
+                aria-label={`Confirm booking for ${call.customerName || "caller"}`}
+              >
+                <CheckCircle2 className="h-3 w-3 inline mr-1" />
+                {submittingBooking ? "Saving..." : "Confirm"}
+              </button>
+              <button
+                disabled={submittingBooking}
+                onClick={() => handleBookingAction("cancelled")}
+                className="px-4 py-2 rounded-full text-[0.6875rem] uppercase font-semibold bg-cl-bg-chip text-cl-text-muted hover:bg-cl-bg-chip-hover disabled:opacity-50 min-h-[44px]"
+                aria-label={`Cancel booking for ${call.customerName || "caller"}`}
+              >
+                <X className="h-3 w-3 inline mr-1" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isBookingConfirmed && (
+          <div className="bg-cl-success/10 p-4 rounded-md space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-cl-success" />
+              <p className="text-sm text-cl-success font-semibold">
+                Confirmed
+              </p>
+              {call.bookingStatusAt && (
+                <span className="text-[0.6875rem] text-cl-text-muted">
+                  {formatDistanceToNow(new Date(call.bookingStatusAt), { addSuffix: true })}
+                </span>
+              )}
+            </div>
+            {call.appointmentDateTime && (
+              <p className="text-sm text-cl-text-primary font-medium">
+                {(() => {
+                  try {
+                    const d = new Date(call.appointmentDateTime)
+                    if (isToday(d)) return `Today @ ${format(d, "h:mm a")}`
+                    if (isTomorrow(d)) return `Tomorrow @ ${format(d, "h:mm a")}`
+                    return format(d, "MMM d @ h:mm a")
+                  } catch { return call.appointmentDateTime }
+                })()}
+              </p>
+            )}
+            {call.bookingNotes && (
+              <p className="text-xs text-cl-text-muted mt-1">{call.bookingNotes}</p>
+            )}
+            <button
+              disabled={submittingBooking}
+              onClick={() => handleBookingAction("cancelled")}
+              className="px-3 py-1.5 rounded-full text-[0.625rem] uppercase font-semibold bg-cl-bg-chip text-cl-text-muted hover:bg-cl-bg-chip-hover disabled:opacity-50 min-h-[44px]"
+              aria-label={`Cancel booking for ${call.customerName || "caller"}`}
+            >
+              <X className="h-3 w-3 inline mr-1" />
+              Cancel booking
+            </button>
+          </div>
+        )}
+
         {/* Follow-up touch timeline */}
         {(isFollowUp || touches.length > 0) && (
           <div className="bg-cl-bg-card p-4 rounded-md space-y-2">
@@ -270,7 +414,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
         )}
 
         {/* CALL BACK button — only for actionable calls */}
-        {callIsActionable && call.customerPhone && (
+        {callIsActionable && !isBooking && call.customerPhone && (
           <a
             href={`tel:${call.customerPhone}`}
             className={cn(
@@ -285,7 +429,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, bucketMap }: Mai
             <span>Call Back</span>
           </a>
         )}
-        {call && callIsActionable && (
+        {call && callIsActionable && !isBooking && (
           <div>
             <div className="flex flex-wrap gap-2">
               {([
