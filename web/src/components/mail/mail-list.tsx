@@ -415,7 +415,7 @@ export function MailList({
                   : `Needs confirmation · ${formatAppointmentTime(item.appointmentDateTime)}`
                 }
               </span>
-              {isActive && (
+              {isActive && item.bookingStatus === null && (
                 <div className="flex flex-col gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1.5 flex-wrap">
                     <button
