@@ -122,11 +122,23 @@ export function CalendarWithEventSlots({
         c.appointmentDateTime &&
         isSameDay(new Date(c.appointmentDateTime), selectedDate)
     )
+  const viewingToday = isSameDay(selectedDate, new Date())
 
   return (
     <div className="shrink-0 rounded-lg border border-border bg-card">
       {/* Month calendar */}
       <div className="px-4 pt-4 pb-2">
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setSelectedDate(new Date())}
+            disabled={viewingToday}
+            aria-label="Go to today"
+            className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold bg-cl-bg-chip text-cl-text-subtle hover:bg-cl-bg-chip-hover disabled:opacity-50"
+          >
+            Go to today
+          </button>
+        </div>
         <Calendar
           mode="single"
           selected={selectedDate}

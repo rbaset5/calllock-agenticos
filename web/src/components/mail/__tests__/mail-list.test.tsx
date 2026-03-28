@@ -83,6 +83,7 @@ describe("MailList section ordering and rendering", () => {
     expect(html).toContain("Bookings")
     expect(html).toContain("New Leads")
     expect(html).toContain("Timeline")
+    expect(html).toContain("Go to today")
     expect(html).not.toContain("Scheduled Bookings")
   })
 
