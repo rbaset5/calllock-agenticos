@@ -16,7 +16,8 @@ const mockEq = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockEq.mockResolvedValue({ error: null })
+  const mockEq2 = vi.fn().mockResolvedValue({ error: null })
+  mockEq.mockReturnValue({ eq: mockEq2 })
   mockUpdate.mockReturnValue({ eq: mockEq })
   ;(createServerClient as ReturnType<typeof vi.fn>).mockReturnValue({
     from: vi.fn().mockReturnValue({ update: mockUpdate }),

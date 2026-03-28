@@ -38,6 +38,7 @@ export async function PATCH(
       callback_outcome: body.outcome,
       callback_outcome_at: touchedAt,
     })
+    .eq("tenant_id", "00000000-0000-0000-0000-000000000001")
     .eq("call_id", callId)
 
   if (error) {

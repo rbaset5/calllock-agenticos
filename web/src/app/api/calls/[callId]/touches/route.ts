@@ -15,6 +15,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("callback_touches")
     .select("id, call_id, outcome, created_at")
+    .eq("tenant_id", "00000000-0000-0000-0000-000000000001")
     .eq("call_id", callId)
     .order("created_at", { ascending: false })
 

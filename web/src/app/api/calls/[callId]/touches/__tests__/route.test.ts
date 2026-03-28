@@ -26,7 +26,8 @@ beforeEach(() => {
     ],
     error: null,
   })
-  mockEq.mockReturnValue({ order: mockOrder })
+  const mockEq2 = vi.fn().mockReturnValue({ order: mockOrder })
+  mockEq.mockReturnValue({ eq: mockEq2 })
   mockSelect.mockReturnValue({ eq: mockEq })
   mockFrom.mockReturnValue({ select: mockSelect })
   ;(createServerClient as ReturnType<typeof vi.fn>).mockReturnValue({

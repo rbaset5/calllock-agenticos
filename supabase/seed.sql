@@ -40,14 +40,14 @@ values
   (null, 'global', 'alerts', 'dispatch_emergency', 'allow', 'Emergency dispatch alerts are allowed for life-safety events.', '{}', '{"industry_pack_id":"hvac"}'::jsonb),
   (null, 'global', 'claims', 'marketing_claims', 'deny', 'Do not claim guaranteed savings or guaranteed same-day repair.', '{}', '{"forbidden_claims":["guaranteed savings","guaranteed same-day repair"]}'::jsonb);
 
--- Remove legacy realistic seed rows from prior versions.
+-- Remove realistic seed rows so this script is idempotent.
 -- callback_touches rows cascade via FK on (tenant_id, call_id).
 delete from public.call_records
 where tenant_id in (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002'
 )
-and call_id like 'seed-call-%';
+and (call_id like 'seed-call-%' or call_id like 'demo-call-%');
 
 -- ── Realistic CallLock App seed (tenant-alpha) ───────────────────────────
 -- Purpose: day-to-day app realism, not deterministic CI fixtures.
