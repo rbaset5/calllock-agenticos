@@ -10,7 +10,7 @@ import {
   Phone,
   Settings as SettingsIcon,
 } from "lucide-react"
-import type { Call, CallbackOutcome } from "@/types/call"
+import type { BookingStatus, Call, CallbackOutcome } from "@/types/call"
 import type { TriageResult } from "@/types/call"
 import { computeTriage, assignBucket } from "@/lib/triage"
 import type { BucketAssignment } from "@/lib/triage"
@@ -38,9 +38,9 @@ export function Mail({ initialCalls }: MailProps) {
 
   const [now, setNow] = React.useState(Date.now)
 
-  // Optimistic overlay for callback outcomes
+  // Optimistic overlay for callback outcomes and booking status
   const [optimisticOverrides, setOptimisticOverrides] = React.useState<
-    Record<string, { callbackOutcome: CallbackOutcome | null; callbackOutcomeAt: string | null }>
+    Record<string, Partial<Pick<Call, "callbackOutcome" | "callbackOutcomeAt" | "bookingStatus" | "bookingStatusAt" | "appointmentDateTime">>>
   >({})
 
   // Merge optimistic overrides into calls
@@ -75,20 +75,20 @@ export function Mail({ initialCalls }: MailProps) {
         ESCALATED_BY_AI: sections.ESCALATED_BY_AI,
         NEW_LEADS: sections.NEW_LEADS,
         FOLLOW_UPS: sections.FOLLOW_UPS,
-        BOOKED_BY_AI: sections.BOOKED_BY_AI,
+        BOOKINGS: sections.BOOKINGS,
         OTHER_AI_HANDLED: sections.OTHER_AI_HANDLED,
       },
       bucketMap: map,
     }
   }, [mergedCalls, now])
 
-  // Unified feed: New Leads → Escalated → Follow-ups → Booked → Other Handled
+  // Unified feed: Bookings → New Leads → Escalated → Follow-ups → Other Handled
   const allSectionedCalls = React.useMemo(
     () => [
+      ...buckets.BOOKINGS,
       ...buckets.NEW_LEADS,
       ...buckets.ESCALATED_BY_AI,
       ...buckets.FOLLOW_UPS,
-      ...buckets.BOOKED_BY_AI,
       ...buckets.OTHER_AI_HANDLED,
     ],
     [buckets]
@@ -142,7 +142,23 @@ export function Mail({ initialCalls }: MailProps) {
     (callId: string, outcome: CallbackOutcome | null) => {
       setOptimisticOverrides((prev) => ({
         ...prev,
-        [callId]: { callbackOutcome: outcome, callbackOutcomeAt: new Date().toISOString() },
+        [callId]: { ...prev[callId], callbackOutcome: outcome, callbackOutcomeAt: new Date().toISOString() },
+      }))
+    },
+    []
+  )
+
+  // Optimistic booking status handler
+  const handleBookingStatusChange = React.useCallback(
+    (callId: string, status: BookingStatus, appointmentDateTime?: string) => {
+      setOptimisticOverrides((prev) => ({
+        ...prev,
+        [callId]: {
+          ...prev[callId],
+          bookingStatus: status,
+          bookingStatusAt: new Date().toISOString(),
+          ...(appointmentDateTime ? { appointmentDateTime } : {}),
+        },
       }))
     },
     []
@@ -155,7 +171,10 @@ export function Mail({ initialCalls }: MailProps) {
       let changed = false
       for (const [id, override] of Object.entries(next)) {
         const real = calls.find((c) => c.id === id)
-        if (real && real.callbackOutcome === override.callbackOutcome) {
+        if (!real) continue
+        const callbackMatch = !("callbackOutcome" in override) || real.callbackOutcome === override.callbackOutcome
+        const bookingMatch = !("bookingStatus" in override) || real.bookingStatus === override.bookingStatus
+        if (callbackMatch && bookingMatch) {
           delete next[id]
           changed = true
         }
@@ -169,7 +188,7 @@ export function Mail({ initialCalls }: MailProps) {
     escalated: buckets.ESCALATED_BY_AI.length,
     leads: buckets.NEW_LEADS.length,
     followUps: buckets.FOLLOW_UPS.length,
-    booked: buckets.BOOKED_BY_AI.length,
+    bookings: buckets.BOOKINGS.length,
     otherHandled: buckets.OTHER_AI_HANDLED.length,
   }), [buckets])
 
@@ -194,13 +213,13 @@ export function Mail({ initialCalls }: MailProps) {
   const actionQueueEmpty =
     buckets.ESCALATED_BY_AI.length === 0 &&
     buckets.NEW_LEADS.length === 0 &&
-    buckets.FOLLOW_UPS.length === 0
+    buckets.FOLLOW_UPS.length === 0 &&
+    buckets.BOOKINGS.length === 0
 
-  const totalHandled =
-    buckets.BOOKED_BY_AI.length + buckets.OTHER_AI_HANDLED.length
+  const totalHandled = buckets.OTHER_AI_HANDLED.length
 
   function buildCaughtUpSubtitle(): string {
-    const bookedCount = buckets.BOOKED_BY_AI.length
+    const bookedCount = buckets.BOOKINGS.length
     const escalatedCount = buckets.ESCALATED_BY_AI.length
     if (bookedCount === 0 && escalatedCount === 0) return ""
     const parts: string[] = []
@@ -304,6 +323,7 @@ export function Mail({ initialCalls }: MailProps) {
                   selected={selectedId}
                   onSelect={handleSelect}
                   onOutcomeChange={handleOutcomeChange}
+                  onBookingStatusChange={handleBookingStatusChange}
                   triageMap={triageMap}
                   pulsingId={pulsingId}
                   onCallBackTap={handleCallBackTap}
@@ -318,6 +338,7 @@ export function Mail({ initialCalls }: MailProps) {
                 selected={selectedId}
                 onSelect={handleSelect}
                 onOutcomeChange={handleOutcomeChange}
+                onBookingStatusChange={handleBookingStatusChange}
                 triageMap={triageMap}
                 pulsingId={pulsingId}
                 onCallBackTap={handleCallBackTap}
@@ -339,7 +360,7 @@ export function Mail({ initialCalls }: MailProps) {
               <span className="text-sm font-medium text-cl-text-primary">Call Details</span>
             </div>
             <div className="flex-1 overflow-hidden flex">
-              <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} bucketMap={bucketMap} />
+              <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} onBookingStatusChange={handleBookingStatusChange} bucketMap={bucketMap} />
             </div>
           </div>
         )}
@@ -348,7 +369,7 @@ export function Mail({ initialCalls }: MailProps) {
       {/* ── Desktop layout: 2-panel ── */}
       <main className="h-screen hidden md:flex overflow-hidden pl-14">
         {/* Action Feed */}
-        <aside className="w-[380px] bg-cl-bg-canvas flex flex-col shrink-0">
+        <aside className="w-[420px] bg-cl-bg-canvas flex flex-col shrink-0">
           <div className="h-14 px-5 flex justify-between items-center flex-shrink-0">
             <h2 className="font-headline text-lg font-bold tracking-tight text-cl-text-primary">
               Activity Feed
@@ -384,6 +405,7 @@ export function Mail({ initialCalls }: MailProps) {
                 selected={selectedId}
                 onSelect={handleSelect}
                 onOutcomeChange={handleOutcomeChange}
+                onBookingStatusChange={handleBookingStatusChange}
                 triageMap={triageMap}
                 pulsingId={pulsingId}
                 onCallBackTap={handleCallBackTap}
@@ -398,6 +420,7 @@ export function Mail({ initialCalls }: MailProps) {
               selected={selectedId}
               onSelect={handleSelect}
               onOutcomeChange={handleOutcomeChange}
+              onBookingStatusChange={handleBookingStatusChange}
               triageMap={triageMap}
               pulsingId={pulsingId}
               onCallBackTap={handleCallBackTap}
@@ -409,7 +432,7 @@ export function Mail({ initialCalls }: MailProps) {
         </aside>
 
         {/* Detail Panel */}
-        <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} bucketMap={bucketMap} />
+        <MailDisplay call={selectedCall} triageMap={triageMap} onOutcomeChange={handleOutcomeChange} onBookingStatusChange={handleBookingStatusChange} bucketMap={bucketMap} />
 
         {/* Lead Intel Sidebar — xl (≥1280px) only */}
         <div className="hidden xl:flex">
