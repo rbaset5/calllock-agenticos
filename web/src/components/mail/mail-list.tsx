@@ -291,24 +291,7 @@ export function MailList({
           </div>
         )}
 
-        {/* Booking lifecycle indicator */}
-        {section === "BOOKINGS" && (
-          <div
-            className="h-6 w-6 rounded-full flex items-center justify-center"
-            aria-label={item.bookingStatus === "confirmed" ? "Confirmed" : item.bookingStatus === "rescheduled" ? "Rescheduled" : "Needs confirmation"}
-          >
-            {item.bookingStatus === "confirmed" ? (
-              <CheckCircle2 className="h-4 w-4 text-cl-success" />
-            ) : item.bookingStatus === "rescheduled" ? (
-              <RotateCcw className="h-4 w-4 text-amber-400" />
-            ) : (
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cl-success opacity-60 motion-reduce:animate-none" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cl-success" />
-              </span>
-            )}
-          </div>
-        )}
+        {/* Bookings: no left panel — status communicated via pill badge in card body */}
 
         {/* Triage priority panel — NEW_LEADS only */}
         {section === "NEW_LEADS" && callActionable && triage && (
@@ -409,9 +392,28 @@ export function MailList({
           {/* Bookings: appointment status + action buttons when selected */}
           {section === "BOOKINGS" && (
             <>
-              <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-success/10 text-cl-success text-[0.6875rem] font-semibold uppercase">
-                <CheckCircle2 className="h-3 w-3" />
-                Appointment secured · {formatAppointmentTime(item.appointmentDateTime)}
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold uppercase",
+                  item.bookingStatus === "confirmed"
+                    ? "bg-cl-success/10 text-cl-success"
+                    : "bg-cl-success/10 text-cl-success"
+                )}
+                aria-label={item.bookingStatus === "confirmed" ? "Confirmed" : "Needs confirmation"}
+                role="status"
+              >
+                {item.bookingStatus === "confirmed" ? (
+                  <CheckCircle2 className="h-3 w-3" />
+                ) : (
+                  <span className="relative flex h-2 w-2 mr-0.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cl-success opacity-60 motion-reduce:animate-none" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-cl-success" />
+                  </span>
+                )}
+                {item.bookingStatus === "confirmed"
+                  ? `Confirmed · ${formatAppointmentTime(item.appointmentDateTime)}`
+                  : `Needs confirmation · ${formatAppointmentTime(item.appointmentDateTime)}`
+                }
               </span>
               {isActive && (
                 <div className="flex flex-col gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
