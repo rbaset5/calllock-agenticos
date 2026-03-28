@@ -21,6 +21,7 @@ function makeCall(overrides: Partial<TriageableCall> = {}): TriageableCall {
     callbackWindowStart: null,
     callbackWindowEnd: null,
     callbackOutcomeAt: null,
+    bookingStatus: null,
     callerType: null,
     primaryIntent: null,
     route: null,
@@ -37,9 +38,24 @@ describe("getDisplaySection", () => {
     expect(getDisplaySection(call, assignBucket(call))).toBe("ESCALATED_BY_AI")
   })
 
-  it("maps booked handled calls to BOOKED_BY_AI", () => {
-    const call = makeCall({ appointmentBooked: true })
-    expect(getDisplaySection(call, assignBucket(call))).toBe("BOOKED_BY_AI")
+  it("maps booked handled calls with no bookingStatus to BOOKINGS", () => {
+    const call = makeCall({ appointmentBooked: true, bookingStatus: null })
+    expect(getDisplaySection(call, assignBucket(call))).toBe("BOOKINGS")
+  })
+
+  it("maps booked calls with confirmed status to BOOKINGS", () => {
+    const call = makeCall({ appointmentBooked: true, bookingStatus: "confirmed" })
+    expect(getDisplaySection(call, assignBucket(call))).toBe("BOOKINGS")
+  })
+
+  it("maps booked calls with rescheduled status to BOOKINGS", () => {
+    const call = makeCall({ appointmentBooked: true, bookingStatus: "rescheduled" })
+    expect(getDisplaySection(call, assignBucket(call))).toBe("BOOKINGS")
+  })
+
+  it("maps booked calls with cancelled status to OTHER_AI_HANDLED", () => {
+    const call = makeCall({ appointmentBooked: true, bookingStatus: "cancelled" })
+    expect(getDisplaySection(call, assignBucket(call))).toBe("OTHER_AI_HANDLED")
   })
 
   it("maps wrong-number handled calls to OTHER_AI_HANDLED", () => {
@@ -75,6 +91,7 @@ describe("getDefaultSelectedId", () => {
 
   it("falls back to booked, then other handled, then null", () => {
     expect(getDefaultSelectedId([makeCall({ id: "booked", appointmentBooked: true })])).toBe("booked")
+    expect(getDefaultSelectedId([makeCall({ id: "confirmed", appointmentBooked: true, bookingStatus: "confirmed" })])).toBe("confirmed")
     expect(getDefaultSelectedId([makeCall({ id: "wrong", endCallReason: "wrong_number" })])).toBe("wrong")
     expect(getDefaultSelectedId([])).toBeNull()
   })
@@ -105,10 +122,11 @@ describe("getDefaultSelectedId", () => {
 })
 
 describe("orderCallsForMail", () => {
-  it("orders sections as escalated, new leads, follow-ups, booked, other handled", () => {
+  it("orders sections as escalated, new leads, follow-ups, bookings, other handled", () => {
     const calls = [
       makeCall({ id: "other", endCallReason: "wrong_number" }),
       makeCall({ id: "booked", appointmentBooked: true }),
+      makeCall({ id: "confirmed", appointmentBooked: true, bookingStatus: "confirmed" }),
       makeCall({ id: "follow", endCallReason: "callback_later" }),
       makeCall({ id: "lead" }),
       makeCall({ id: "escalated", isSafetyEmergency: true }),
@@ -119,6 +137,7 @@ describe("orderCallsForMail", () => {
       "lead",
       "follow",
       "booked",
+      "confirmed",
       "other",
     ])
   })
@@ -136,6 +155,24 @@ describe("orderCallsForMail", () => {
       "older-escalated",
       "newer-booked",
       "older-booked",
+    ])
+  })
+
+  it("sorts bookings: unconfirmed first, then confirmed, then rescheduled (newest first within group)", () => {
+    const calls = [
+      makeCall({ id: "confirmed-old", appointmentBooked: true, bookingStatus: "confirmed", createdAt: "2026-03-27T10:00:00.000Z" }),
+      makeCall({ id: "unconfirmed-new", appointmentBooked: true, bookingStatus: null, createdAt: "2026-03-27T12:00:00.000Z" }),
+      makeCall({ id: "confirmed-new", appointmentBooked: true, bookingStatus: "confirmed", createdAt: "2026-03-27T14:00:00.000Z" }),
+      makeCall({ id: "unconfirmed-old", appointmentBooked: true, bookingStatus: null, createdAt: "2026-03-27T08:00:00.000Z" }),
+    ]
+
+    const ordered = orderCallsForMail(calls)
+    const ids = ordered.map((c) => c.id)
+    expect(ids).toEqual([
+      "unconfirmed-new",
+      "unconfirmed-old",
+      "confirmed-new",
+      "confirmed-old",
     ])
   })
 })
