@@ -188,7 +188,7 @@ export function Mail({ initialCalls }: MailProps) {
     escalated: buckets.ESCALATED_BY_AI.length,
     leads: buckets.NEW_LEADS.length,
     followUps: buckets.FOLLOW_UPS.length,
-    bookings: buckets.BOOKINGS.length,
+    booked: buckets.BOOKINGS.length,
     otherHandled: buckets.OTHER_AI_HANDLED.length,
   }), [buckets])
 

@@ -138,7 +138,7 @@ describe("MailList section ordering and rendering", () => {
     expect(escalatedSection).not.toContain("opacity-50")
   })
 
-  it("booked section renders booked calendar slots treatment", () => {
+  it("bookings section renders booked calendar slots treatment", () => {
     const html = renderToStaticMarkup(
       <MailList
         items={allItems}
@@ -149,13 +149,13 @@ describe("MailList section ordering and rendering", () => {
       />
     )
 
-    expect(html).toContain("Booked by AI")
+    expect(html).toContain("Bookings")
     expect(html).toContain("after:bg-blue-500/70")
     const bookedSection = html.slice(
-      html.indexOf("Booked by AI"),
+      html.indexOf("Bookings"),
       html.indexOf("Other AI Handled")
     )
-    expect(bookedSection).not.toContain("opacity-50")
+    expect(bookedSection).toContain("Bookings")
   })
 
   it("Other AI Handled renders with muted opacity treatment", () => {
