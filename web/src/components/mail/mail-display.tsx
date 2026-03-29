@@ -175,7 +175,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, onBookingStatusC
   const mailSection = assignment ? getDisplaySection(call, assignment) : null
   const isBooking = mailSection === "BOOKINGS"
   const isBookingUnconfirmed = isBooking && call.bookingStatus === null
-  const isBookingConfirmed = isBooking && (call.bookingStatus === "confirmed" || call.bookingStatus === "rescheduled")
+  const isBookingConfirmed = isBooking && call.bookingStatus === "confirmed"
 
   const triage = triageMap?.get(call.id)
   const callbackWindowEnd = triage && callIsActionable && triage.callbackWindowValid && triage.callbackWindowEnd
@@ -351,7 +351,7 @@ export function MailDisplay({ call, triageMap, onOutcomeChange, onBookingStatusC
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-cl-success" />
               <p className="text-sm text-cl-success font-semibold">
-                Confirmed
+                Scheduled Booking
               </p>
               {call.bookingStatusAt && (
                 <span className="text-[0.6875rem] text-cl-text-muted">

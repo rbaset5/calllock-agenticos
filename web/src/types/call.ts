@@ -24,6 +24,10 @@ export type CallbackOutcome =
   | "no_answer"
   | "resolved_elsewhere"
 
+export type BookingStatus = "confirmed" | "rescheduled" | "cancelled"
+
+export type ExtractionStatus = "pending" | "completed" | "failed"
+
 export interface CallbackTouch {
   id: string
   callId: string
@@ -125,6 +129,9 @@ export interface Call {
   read: boolean
   callbackOutcome: CallbackOutcome | null
   callbackOutcomeAt: string | null
+  bookingStatus: BookingStatus | null
+  bookingStatusAt: string | null
+  bookingNotes: string | null
   callbackWindowStart: string | null
   callbackWindowEnd: string | null
   callerType: CallerType | null
@@ -160,6 +167,9 @@ export interface CallRecordRow {
   end_call_reason: string | null
   callback_outcome: string | null
   callback_outcome_at: string | null
+  booking_status: string | null
+  booking_status_at: string | null
+  booking_notes: string | null
   call_recording_url: string | null
   created_at: string
   updated_at: string
@@ -179,6 +189,9 @@ export type CallRecordListRow = Pick<
   | "end_call_reason"
   | "callback_outcome"
   | "callback_outcome_at"
+  | "booking_status"
+  | "booking_status_at"
+  | "booking_notes"
   | "callback_scheduled"
   | "booking_id"
   | "route"

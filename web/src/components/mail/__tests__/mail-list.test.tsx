@@ -100,7 +100,7 @@ describe("MailList section ordering and rendering", () => {
     expect(html.indexOf("Bookings")).toBeLessThan(html.indexOf("New Leads"))
     expect(html.indexOf("New Leads")).toBeLessThan(html.indexOf("Escalated by AI"))
     expect(html.indexOf("Escalated by AI")).toBeLessThan(html.indexOf("Follow-ups"))
-    expect(html.indexOf("Follow-ups")).toBeLessThan(html.indexOf("Other AI Handled"))
+    expect(html.indexOf("Follow-ups")).toBeLessThan(html.indexOf("AI Handled ("))
   })
 
   it("keeps Other AI Handled collapsible with correct id", () => {
@@ -150,10 +150,11 @@ describe("MailList section ordering and rendering", () => {
     )
 
     expect(html).toContain("Bookings")
-    expect(html).toContain("after:bg-cl-success/70")
+    expect(html).toContain("bg-cl-success/10")
+    expect(html).toContain("bg-cl-accent/10")
     const bookedSection = html.slice(
       html.indexOf("Bookings"),
-      html.indexOf("Other AI Handled")
+      html.indexOf("AI Handled (")
     )
     expect(bookedSection).toContain("Bookings")
   })
@@ -185,6 +186,53 @@ describe("MailList section ordering and rendering", () => {
     )
 
     expect(html).toContain("Call Back")
+  })
+
+  it("keeps the red Call now panel for urgent concrete new leads", () => {
+    const urgentLead = makeCall("urgent-lead", {
+      urgency: "Urgent",
+      problemDescription: "No cooling and water leak",
+    })
+    const urgentBuckets = {
+      ESCALATED_BY_AI: [],
+      NEW_LEADS: [urgentLead],
+      FOLLOW_UPS: [],
+      BOOKINGS: [],
+      OTHER_AI_HANDLED: [],
+    }
+    const urgentBucketMap = new Map<string, BucketAssignment>([
+      ["urgent-lead", { bucket: "ACTION_QUEUE", subGroup: "NEW_LEAD", escalationMarker: false, handledReason: null }],
+    ])
+
+    const html = renderToStaticMarkup(
+      <MailList
+        items={[urgentLead]}
+        selected={null}
+        onSelect={() => {}}
+        buckets={urgentBuckets}
+        bucketMap={urgentBucketMap}
+      />
+    )
+
+    expect(html).toContain("Priority: Call now.")
+    expect(html).toContain("bg-cl-danger/80")
+  })
+
+  it("shows outcome chips on selected actionable cards", () => {
+    const html = renderToStaticMarkup(
+      <MailList
+        items={allItems}
+        selected="lead-1"
+        onSelect={() => {}}
+        buckets={buckets}
+        bucketMap={bucketMap}
+      />
+    )
+
+    expect(html).toContain("Reached Customer")
+    expect(html).toContain("Scheduled")
+    expect(html).toContain("Left Voicemail")
+    expect(html).toContain("No Answer")
   })
 })
 

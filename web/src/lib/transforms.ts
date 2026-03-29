@@ -1,4 +1,5 @@
 import type {
+  BookingStatus,
   Call,
   CallerType,
   CallRecordListRow,
@@ -161,6 +162,9 @@ export function transformCallRecord(
     read: readIds.has(row.call_id),
     callbackOutcome: (row.callback_outcome as import("@/types/call").CallbackOutcome) ?? null,
     callbackOutcomeAt: row.callback_outcome_at ?? null,
+    bookingStatus: ((row as CallRecordRow).booking_status as BookingStatus) ?? null,
+    bookingStatusAt: (row as CallRecordRow).booking_status_at ?? null,
+    bookingNotes: (row as CallRecordRow).booking_notes ?? null,
     callbackWindowStart: str(field(fields, "callback_window_start", "callbackWindowStart")) || null,
     callbackWindowEnd: str(field(fields, "callback_window_end", "callbackWindowEnd")) || null,
     callerType: CALLER_TYPE_MAP[(row as CallRecordRow).caller_type ?? ""] ?? null,

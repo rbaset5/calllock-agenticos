@@ -6,7 +6,10 @@ import {
   triageSort,
   assignBucket,
   followUpSort,
+  isHotFollowUp,
   isActionable,
+  getCallbackReason,
+  getFollowUpSubtype,
   type TriageableCall,
 } from "../triage"
 
@@ -25,6 +28,7 @@ function makeCall(overrides: Partial<TriageableCall> = {}): TriageableCall {
     callbackWindowStart: null,
     callbackWindowEnd: null,
     callbackOutcomeAt: null,
+    bookingStatus: null,
     callerType: null,
     primaryIntent: null,
     route: null,
@@ -246,6 +250,93 @@ describe("computeTriage", () => {
   })
 })
 
+describe("getCallbackReason", () => {
+  it("returns booking_failed when endCallReason is booking_failed", () => {
+    expect(getCallbackReason(makeCall({ endCallReason: "booking_failed" }))).toBe("Booking failed")
+  })
+
+  it("returns AI promised callback when endCallReason is callback_later", () => {
+    expect(getCallbackReason(makeCall({ endCallReason: "callback_later" }))).toBe("AI promised callback")
+  })
+
+  it("returns AI promised callback when callbackType is set", () => {
+    expect(getCallbackReason(makeCall({ callbackType: "schedule_callback" }))).toBe("AI promised callback")
+  })
+
+  it("returns urgent needs details when urgent call has no concrete details", () => {
+    expect(
+      getCallbackReason(
+        makeCall({
+          urgency: "Urgent",
+          problemDescription: "",
+          hvacIssueType: null,
+        })
+      )
+    ).toBe("Urgent, needs details")
+  })
+
+  it("returns null when no callback reason applies", () => {
+    expect(getCallbackReason(makeCall({ urgency: "Routine", problemDescription: "Capacitor issue" }))).toBeNull()
+  })
+
+  it("uses first-match precedence: booking_failed beats callbackType", () => {
+    expect(
+      getCallbackReason(
+        makeCall({
+          endCallReason: "booking_failed",
+          callbackType: "schedule_callback",
+        })
+      )
+    ).toBe("Booking failed")
+  })
+})
+
+describe("getFollowUpSubtype", () => {
+  it("returns booking_failed for booking_failed endCallReason", () => {
+    expect(getFollowUpSubtype(makeCall({ endCallReason: "booking_failed" }))).toBe("booking_failed")
+  })
+
+  it("returns complaint for complaint intent", () => {
+    expect(getFollowUpSubtype(makeCall({ primaryIntent: "complaint" }))).toBe("complaint")
+  })
+
+  it("returns active_job_issue for active job issue intent", () => {
+    expect(getFollowUpSubtype(makeCall({ primaryIntent: "active_job_issue" }))).toBe("active_job_issue")
+  })
+
+  it("returns promised_callback for callback_later endCallReason", () => {
+    expect(getFollowUpSubtype(makeCall({ endCallReason: "callback_later" }))).toBe("promised_callback")
+  })
+
+  it("returns promised_callback for callbackType", () => {
+    expect(getFollowUpSubtype(makeCall({ callbackType: "schedule_callback" }))).toBe("promised_callback")
+  })
+
+  it("returns retry_voicemail for left_voicemail outcome", () => {
+    expect(getFollowUpSubtype(makeCall({ callbackOutcome: "left_voicemail" }))).toBe("retry_voicemail")
+  })
+
+  it("returns retry_no_answer for no_answer outcome", () => {
+    expect(getFollowUpSubtype(makeCall({ callbackOutcome: "no_answer" }))).toBe("retry_no_answer")
+  })
+
+  it("returns generic_followup when no subtype matches", () => {
+    expect(getFollowUpSubtype(makeCall({ primaryIntent: "followup" }))).toBe("generic_followup")
+  })
+
+  it("uses first-match precedence when multiple follow-up signals exist", () => {
+    expect(
+      getFollowUpSubtype(
+        makeCall({
+          endCallReason: "booking_failed",
+          primaryIntent: "complaint",
+          callbackOutcome: "no_answer",
+        })
+      )
+    ).toBe("booking_failed")
+  })
+})
+
 describe("getAssistTemplate", () => {
   it("known reason contains relevant keyword", () => {
     expect(getAssistTemplate("no_cooling")).toContain("cooling")
@@ -453,7 +544,7 @@ describe("assignBucket", () => {
   })
 
   it("endCallReason=out_of_area → AI_HANDLED wrong_number", () => {
-    const r = assignBucket(makeCall({ endCallReason: "out_of_area" as any }))
+    const r = assignBucket(makeCall({ endCallReason: "out_of_area" }))
     expect(r.bucket).toBe("AI_HANDLED")
     expect(r.handledReason).toBe("wrong_number")
   })
@@ -590,18 +681,57 @@ describe("assignBucket", () => {
 // ---------------------------------------------------------------------------
 
 describe("followUpSort", () => {
-  it("active_job_issue sorts before generic followup", () => {
-    const generic = makeCall({ id: "generic", primaryIntent: "followup" })
+  it("booking_failed sorts first (highest conversion likelihood)", () => {
+    const retry = makeCall({ id: "retry", callbackOutcome: "no_answer" })
+    const booking = makeCall({ id: "booking", endCallReason: "booking_failed" })
+    const complaint = makeCall({ id: "complaint", primaryIntent: "complaint" })
+    const sorted = followUpSort([retry, complaint, booking])
+    expect(sorted[0].id).toBe("booking")
+  })
+
+  it("complaint sorts before AI-promised callback", () => {
+    const promised = makeCall({ id: "promised", callbackType: "schedule_callback" })
+    const complaint = makeCall({ id: "complaint", primaryIntent: "complaint" })
+    const sorted = followUpSort([promised, complaint])
+    expect(sorted[0].id).toBe("complaint")
+  })
+
+  it("active_job_issue sorts before retry", () => {
+    const retry = makeCall({ id: "retry", callbackOutcome: "no_answer" })
     const active = makeCall({ id: "active", primaryIntent: "active_job_issue" })
-    const sorted = followUpSort([generic, active])
+    const sorted = followUpSort([retry, active])
     expect(sorted[0].id).toBe("active")
   })
 
-  it("no_answer sorts before generic followup", () => {
+  it("AI-promised callback sorts before retry", () => {
+    const retry = makeCall({ id: "retry", callbackOutcome: "left_voicemail" })
+    const promised = makeCall({ id: "promised", endCallReason: "callback_later" })
+    const sorted = followUpSort([retry, promised])
+    expect(sorted[0].id).toBe("promised")
+  })
+
+  it("retry sorts before generic followup", () => {
     const generic = makeCall({ id: "generic", primaryIntent: "followup" })
     const retry = makeCall({ id: "retry", callbackOutcome: "no_answer" })
     const sorted = followUpSort([generic, retry])
     expect(sorted[0].id).toBe("retry")
+  })
+
+  it("full ordering: booking_failed > complaint > AI-promised > retry > generic", () => {
+    const generic = makeCall({ id: "generic", primaryIntent: "followup" })
+    const retry = makeCall({ id: "retry", callbackOutcome: "left_voicemail" })
+    const promised = makeCall({ id: "promised", callbackType: "schedule_callback" })
+    const complaint = makeCall({ id: "complaint", primaryIntent: "complaint" })
+    const booking = makeCall({ id: "booking", endCallReason: "booking_failed" })
+    const sorted = followUpSort([generic, retry, promised, complaint, booking])
+    expect(sorted.map(c => c.id)).toEqual(["booking", "complaint", "promised", "retry", "generic"])
+  })
+
+  it("within same tier: newest first", () => {
+    const older = makeCall({ id: "older", endCallReason: "booking_failed", createdAt: "2026-03-27T10:00:00Z" })
+    const newer = makeCall({ id: "newer", endCallReason: "booking_failed", createdAt: "2026-03-27T14:00:00Z" })
+    const sorted = followUpSort([older, newer])
+    expect(sorted[0].id).toBe("newer")
   })
 
   it("handles null primaryIntent without crashing", () => {
@@ -612,6 +742,36 @@ describe("followUpSort", () => {
   it("handles null callbackOutcome without crashing", () => {
     const call = makeCall({ callbackOutcome: null })
     expect(() => followUpSort([call])).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// isHotFollowUp
+// ---------------------------------------------------------------------------
+
+describe("isHotFollowUp", () => {
+  it("booking_failed is hot", () => {
+    expect(isHotFollowUp(makeCall({ endCallReason: "booking_failed" }))).toBe(true)
+  })
+
+  it("complaint is hot", () => {
+    expect(isHotFollowUp(makeCall({ primaryIntent: "complaint" }))).toBe(true)
+  })
+
+  it("active_job_issue is hot", () => {
+    expect(isHotFollowUp(makeCall({ primaryIntent: "active_job_issue" }))).toBe(true)
+  })
+
+  it("left_voicemail is NOT hot", () => {
+    expect(isHotFollowUp(makeCall({ callbackOutcome: "left_voicemail" }))).toBe(false)
+  })
+
+  it("callback_later is NOT hot", () => {
+    expect(isHotFollowUp(makeCall({ endCallReason: "callback_later" }))).toBe(false)
+  })
+
+  it("generic followup is NOT hot", () => {
+    expect(isHotFollowUp(makeCall({ primaryIntent: "followup" }))).toBe(false)
   })
 })
 

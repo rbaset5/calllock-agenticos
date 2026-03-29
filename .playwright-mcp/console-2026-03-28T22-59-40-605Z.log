@@ -1,0 +1,3 @@
+[     882ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/calls/seed-call-001/touches:0
+[     911ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/calls/seed-call-001/touches:0
+[    1734ms] [WARNING] sources.maptiler_attribution: Either "url" or "tiles" is required. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297

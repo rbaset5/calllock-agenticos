@@ -3,15 +3,12 @@
 import { useState, useCallback, useMemo } from "react"
 import { formatDistanceToNow, format, isToday, isTomorrow, isYesterday } from "date-fns"
 import {
-  AlertCircle,
   AlertTriangle,
   CalendarCheck,
   CheckCircle2,
   ChevronRight,
   CircleCheck,
   Clock,
-  MessageSquare,
-  Minus,
   Phone,
   PhoneMissed,
   RotateCcw,
@@ -21,11 +18,18 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 import { formatPhone } from "@/lib/transforms"
-import { isActionable, isHotFollowUp } from "@/lib/triage"
-import type { BucketAssignment } from "@/lib/triage"
+import {
+  computeCommand,
+  getCallbackReason,
+  getFollowUpSubtype,
+  isActionable,
+  isHotFollowUp,
+} from "@/lib/triage"
+import type { BucketAssignment, FollowUpSubtype } from "@/lib/triage"
+import { countHandledReasons } from "@/lib/mail-sections"
 import type { BookingStatus, Call, CallbackOutcome, TriageResult } from "@/types/call"
-import { CalendarWithEventSlots } from "@/components/ui/calendar-with-event-slots"
 
 interface MailListProps {
   items: Call[]
@@ -45,20 +49,6 @@ interface MailListProps {
     OTHER_AI_HANDLED: Call[]
   }
   bucketMap?: Map<string, BucketAssignment>
-}
-
-const COMMAND_STYLES: Record<string, { text: string; bg: string }> = {
-  "Call now": { text: "text-[#5e1b1a]", bg: "bg-cl-danger/80" },
-  "Next up": { text: "text-[#d2d0cf]", bg: "bg-[#474746]" },
-  "Today": { text: "text-[#acabab]", bg: "bg-[#474848]" },
-  "Can wait": { text: "text-[#757575]", bg: "bg-cl-bg-card" },
-}
-
-const COMMAND_ICONS: Record<string, typeof Phone> = {
-  "Call now": Phone,
-  "Next up": AlertCircle,
-  "Today": Clock,
-  "Can wait": Minus,
 }
 
 function formatAppointmentTime(dateStr: string | null): string {
@@ -118,6 +108,228 @@ function buildIntelSegments(item: Call, isPromoted: boolean): string[] {
 
 type CardSection = "ESCALATED_BY_AI" | "NEW_LEADS" | "FOLLOW_UPS" | "BOOKINGS" | "OTHER_AI_HANDLED"
 
+function formatRevenueTier(value: Call["revenueTier"]): string | null {
+  if (!value) return null
+  return value
+    .split("_")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ")
+}
+
+function formatContext(item: Call, max = 36): string | null {
+  const raw = (item.hvacIssueType || item.problemDescription || "").trim()
+  if (!raw) return null
+  return raw.length > max ? `${raw.slice(0, max)}...` : raw
+}
+
+function formatDeadline(value: string | null): string | null {
+  if (!value) return null
+  try {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return null
+    return format(d, "h:mm a")
+  } catch {
+    return null
+  }
+}
+
+interface ReasonChipProps {
+  item: Call
+  section: CardSection
+  assignment?: BucketAssignment
+  triage?: TriageResult
+}
+
+const chipBase = "gap-1 text-[0.6875rem] font-semibold [&>svg]:size-3"
+
+const ISSUE_TYPE_VARIANT: Record<string, React.ComponentProps<typeof Badge>["variant"]> = {
+  "No Cool": "cl-escalation",
+  "No Heat": "cl-escalation",
+  "Not Running": "cl-escalation",
+  Odor: "cl-amber",
+  Leaking: "cl-amber",
+  Cooling: "cl-opportunity",
+  Heating: "cl-opportunity",
+  Maintenance: "cl-opportunity",
+  Thermostat: "cl-opportunity",
+  "Noisy System": "cl-opportunity",
+}
+
+function ChipDetail({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <span className={cn("font-normal opacity-70", className)}>{" \u00b7 "}{children}</span>
+}
+
+function ReasonChip({ item, section, assignment, triage }: ReasonChipProps) {
+  // ── NEW_LEADS ──────────────────────────────────────────────────────
+  if (section === "NEW_LEADS") {
+    if (item.extractionStatus === "pending") {
+      return (
+        <Badge variant="cl-muted" className={cn(chipBase, "animate-pulse")} aria-label="Processing call details">
+          <Clock /> Processing...
+        </Badge>
+      )
+    }
+
+    const command = computeCommand(item)
+    if (command === "Call now" || command === "Can wait") return null
+
+    const callbackReason = getCallbackReason(item)
+    if (callbackReason === "AI promised callback") {
+      return (
+        <Badge variant="cl-commitment" className={chipBase}>
+          <Phone /> AI promised callback
+        </Badge>
+      )
+    }
+    if (callbackReason === "Booking failed") {
+      return (
+        <Badge variant="cl-amber" className={chipBase}>
+          <RotateCcw /> Booking failed
+          <ChipDetail>needs reschedule</ChipDetail>
+        </Badge>
+      )
+    }
+    if (callbackReason === "Urgent, needs details") {
+      return (
+        <Badge variant="cl-escalation" className={chipBase}>
+          <AlertTriangle /> Urgent
+          <ChipDetail>needs details</ChipDetail>
+        </Badge>
+      )
+    }
+    if (item.urgency === "Estimate") {
+      return (
+        <Badge variant="cl-opportunity" className={chipBase}>
+          <CircleCheck /> Estimate
+          {formatRevenueTier(item.revenueTier) && (
+            <ChipDetail>{formatRevenueTier(item.revenueTier)}</ChipDetail>
+          )}
+        </Badge>
+      )
+    }
+    if (item.hvacIssueType) {
+      const issueVariant = ISSUE_TYPE_VARIANT[item.hvacIssueType] ?? "cl-neutral"
+      return (
+        <Badge variant={issueVariant} className={chipBase}>
+          <Phone /> {item.hvacIssueType}
+        </Badge>
+      )
+    }
+    if (item.problemDescription) {
+      return (
+        <Badge variant="cl-neutral" className={chipBase}>
+          <Phone /> Service request
+        </Badge>
+      )
+    }
+    return null
+  }
+
+  // ── FOLLOW_UPS ─────────────────────────────────────────────────────
+  if (section === "FOLLOW_UPS") {
+    const subtype: FollowUpSubtype = getFollowUpSubtype(item)
+
+    if (subtype === "booking_failed") {
+      return (
+        <Badge variant="cl-amber" className={chipBase}>
+          <AlertTriangle /> Booking failed
+          <ChipDetail>needs reschedule</ChipDetail>
+        </Badge>
+      )
+    }
+
+    if (subtype === "complaint") {
+      return (
+        <Badge variant="cl-risk" className={chipBase}>
+          <AlertTriangle /> Complaint
+          {formatContext(item) && <ChipDetail>{formatContext(item)}</ChipDetail>}
+        </Badge>
+      )
+    }
+
+    if (subtype === "active_job_issue") {
+      return (
+        <Badge variant="cl-risk" className={chipBase}>
+          <AlertTriangle /> Active job issue
+          {formatContext(item) && <ChipDetail>{formatContext(item)}</ChipDetail>}
+        </Badge>
+      )
+    }
+
+    if (subtype === "promised_callback") {
+      const deadline = formatDeadline(item.callbackWindowEnd)
+      if (item.callbackWindowEnd && deadline && triage && !triage.callbackWindowValid) {
+        return (
+          <Badge variant="cl-critical" className={chipBase}>
+            <AlertTriangle /> Window expired
+          </Badge>
+        )
+      }
+      return (
+        <Badge variant="cl-commitment" className={chipBase}>
+          <Phone /> Callback promised
+          {deadline && <ChipDetail>by {deadline}</ChipDetail>}
+        </Badge>
+      )
+    }
+
+    if (subtype === "retry_voicemail" || subtype === "retry_no_answer") {
+      return (
+        <Badge variant="cl-retry" className={chipBase}>
+          <RotateCcw /> {subtype === "retry_voicemail" ? "Left voicemail" : "No answer"}
+          {formatOutcomeAge(item) && <ChipDetail>{formatOutcomeAge(item)}</ChipDetail>}
+        </Badge>
+      )
+    }
+
+    return (
+      <Badge variant="cl-neutral" className={chipBase}>
+        <Phone /> Follow-up
+      </Badge>
+    )
+  }
+
+  // ── ESCALATED_BY_AI ────────────────────────────────────────────────
+  if (section === "ESCALATED_BY_AI") {
+    if (item.isSafetyEmergency) {
+      return (
+        <Badge variant="cl-critical" className={chipBase}>
+          <AlertTriangle /> Safety emergency
+          <ChipDetail>AI gave safety instructions</ChipDetail>
+        </Badge>
+      )
+    }
+    if (item.isUrgentEscalation) {
+      return (
+        <Badge variant="cl-escalation" className={chipBase}>
+          <AlertTriangle /> Urgent escalation
+          {formatContext(item) && <ChipDetail>{formatContext(item)}</ChipDetail>}
+        </Badge>
+      )
+    }
+  }
+
+  // ── OTHER_AI_HANDLED ───────────────────────────────────────────────
+  if (section === "OTHER_AI_HANDLED" && assignment?.handledReason) {
+    const label =
+      assignment.handledReason === "booked"
+        ? "Booked by AI"
+        : assignment.handledReason === "resolved"
+          ? "Resolved"
+          : assignment.handledReason === "non_customer" ||
+              assignment.handledReason === "wrong_number"
+            ? "Filtered"
+            : "Other"
+    return (
+      <Badge variant="cl-resolved" className={chipBase}>
+        <CircleCheck /> {label}
+      </Badge>
+    )
+  }
+
+  return null
+}
+
 export function sectionLabel(section: CardSection): string {
   const labels: Record<CardSection, string> = {
     ESCALATED_BY_AI: "Escalated",
@@ -159,6 +371,8 @@ export function MailList({
   const [otherHandledExpanded, setOtherHandledExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState<"timeline" | "active">("active")
   const [submittingBookingId, setSubmittingBookingId] = useState<string | null>(null)
+  const [bookingsPage, setBookingsPage] = useState(0)
+  const BOOKINGS_PER_PAGE = 5
 
   const handleOutcomeClick = useCallback(
     async (call: Call, outcome: CallbackOutcome) => {
@@ -259,9 +473,9 @@ export function MailList({
   const renderCard = (item: Call, section: CardSection) => {
     const isActive = selected === item.id
     const triage = triageMap?.get(item.id)
+    const assignment = bucketMap?.get(item.id)
     const callActionable = isActionable(item)
-    const style = COMMAND_STYLES[triage?.command ?? "Can wait"] ?? COMMAND_STYLES["Can wait"]
-    const Icon = COMMAND_ICONS[triage?.command ?? "Can wait"] ?? Minus
+    const command = computeCommand(item)
     const snippet = item.problemDescription || item.hvacIssueType || "Missed call"
 
     return (
@@ -291,23 +505,49 @@ export function MailList({
           </div>
         )}
 
-        {/* Bookings: no left panel — status communicated via pill badge in card body */}
-
-        {/* Triage priority panel — NEW_LEADS only */}
-        {section === "NEW_LEADS" && callActionable && triage && (
+        {/* Bookings: left panel shows booking lifecycle state */}
+        {section === "BOOKINGS" && (
           <div
             className={cn(
               "w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center",
-              style.bg, style.text
+              item.bookingStatus === "confirmed"
+                ? "bg-cl-accent/10 text-cl-accent"
+                : "bg-cl-success/10 text-cl-success"
             )}
-            suppressHydrationWarning
-            aria-label={`Priority: ${triage.command}. ${triage.evidence}. ${triage.staleMinutes} minutes waiting.`}
+            aria-label={item.bookingStatus === "confirmed" ? "Scheduled booking" : "AI appointment, needs confirmation"}
           >
-            <Icon className="h-4 w-4 mb-1" />
-            {triage.command.split(" ").map((word, i) => (
+            {item.bookingStatus === "confirmed" ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 mb-1" />
+                <span className="block">SCHED</span>
+                <span className="block">ULED</span>
+              </>
+            ) : (
+              <>
+                <CalendarCheck className="h-4 w-4 mb-1" />
+                <span className="block">AI</span>
+                <span className="block">APPT</span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Triage priority panel — keep only Call Now for new leads */}
+        {section === "NEW_LEADS" && callActionable && command === "Call now" && (
+          <div
+            className="w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center bg-cl-danger/80 text-[#5e1b1a]"
+            suppressHydrationWarning
+            aria-label={
+              triage
+                ? `Priority: ${triage.command}. ${triage.evidence}. ${triage.staleMinutes} minutes waiting.`
+                : "Priority: Call now."
+            }
+          >
+            <Phone className="h-4 w-4 mb-1" />
+            {command.split(" ").map((word, i) => (
               <span key={i} className="block">{word}</span>
             ))}
-            {triage.isStale && (
+            {triage?.isStale && (
               <span className="block mt-0.5 text-[8px] font-semibold opacity-80">
                 {triage.staleMinutes}m
               </span>
@@ -345,20 +585,21 @@ export function MailList({
                 </>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0 ml-2">
-              {section === "BOOKINGS" && item.appointmentDateTime && (
-                <span className="text-xs font-mono text-cl-text-primary shrink-0">
-                  {formatAppointmentTime(item.appointmentDateTime)}
-                </span>
-              )}
-              <span className="text-[0.6875rem] text-cl-text-muted shrink-0">
+            {section === "BOOKINGS" ? (
+              <span className="text-xs font-mono text-cl-text-primary shrink-0 ml-2">
+                {item.appointmentDateTime ? formatAppointmentTime(item.appointmentDateTime) : "TBD"}
+              </span>
+            ) : (
+              <span className="text-[0.6875rem] text-cl-text-muted shrink-0 ml-2">
                 {formatDistanceToNow(new Date(item.createdAt), { addSuffix: false })} ago
               </span>
-            </div>
+            )}
           </div>
 
-          {/* Line 2: Snippet */}
+          {/* Line 3: Snippet */}
           <p className="text-cl-text-muted text-sm line-clamp-2 leading-relaxed">{snippet}</p>
+
+          <ReasonChip item={item} section={section} assignment={assignment} triage={triage} />
 
           {/* Line 3: Intel line — hot follow-ups only */}
           {section === "FOLLOW_UPS" && isHotFollowUp(item) && (() => {
@@ -381,116 +622,28 @@ export function MailList({
             )
           })()}
 
-          {/* Escalated: safety label */}
-          {section === "ESCALATED_BY_AI" && (
-            <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-danger/10 text-cl-danger text-[0.6875rem] font-semibold uppercase">
-              <AlertTriangle className="h-3 w-3" />
-              {item.isSafetyEmergency ? "Safety emergency escalated" : "Urgent issue escalated"}
-            </span>
-          )}
-
-          {/* Bookings: appointment status + action buttons when selected */}
-          {section === "BOOKINGS" && (
-            <>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[0.6875rem] font-semibold uppercase",
-                  item.bookingStatus === "confirmed"
-                    ? "bg-cl-success/10 text-cl-success"
-                    : "bg-cl-success/10 text-cl-success"
-                )}
-                aria-label={item.bookingStatus === "confirmed" ? "Confirmed" : "Needs confirmation"}
-                role="status"
+          {/* Bookings: inline confirm/cancel when selected + unconfirmed */}
+          {section === "BOOKINGS" && isActive && item.bookingStatus === null && (
+            <div className="flex gap-1.5 flex-wrap mt-1" onClick={(e) => e.stopPropagation()}>
+              <button
+                disabled={!!submittingBookingId}
+                onClick={() => handleBookingAction(item, "confirmed")}
+                className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-success/20 text-cl-success hover:bg-cl-success/30 disabled:opacity-50"
               >
-                {item.bookingStatus === "confirmed" ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <span className="relative flex h-2 w-2 mr-0.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cl-success opacity-60 motion-reduce:animate-none" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-cl-success" />
-                  </span>
-                )}
-                {item.bookingStatus === "confirmed"
-                  ? `Confirmed · ${formatAppointmentTime(item.appointmentDateTime)}`
-                  : `Needs confirmation · ${formatAppointmentTime(item.appointmentDateTime)}`
-                }
-              </span>
-              {isActive && item.bookingStatus === null && (
-                <div className="flex flex-col gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex gap-1.5 flex-wrap">
-                    <button
-                      disabled={!!submittingBookingId}
-                      onClick={() => handleBookingAction(item, "confirmed")}
-                      className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-success/20 text-cl-success hover:bg-cl-success/30 disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      Confirm
-                    </button>
-                    <button
-                      disabled={!!submittingBookingId}
-                      onClick={() => handleBookingAction(item, "cancelled")}
-                      className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-bg-chip text-cl-text-muted hover:bg-cl-bg-chip-hover disabled:opacity-50"
-                    >
-                      <X className="h-3 w-3" />
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+                <CheckCircle2 className="h-3 w-3" />
+                Confirm
+              </button>
+              <button
+                disabled={!!submittingBookingId}
+                onClick={() => handleBookingAction(item, "cancelled")}
+                className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-bg-chip text-cl-text-muted hover:bg-cl-bg-chip-hover disabled:opacity-50"
+              >
+                <X className="h-3 w-3" />
+                Cancel
+              </button>
+            </div>
           )}
 
-          {/* Follow-up: category-specific reason label */}
-          {section === "FOLLOW_UPS" && (() => {
-            const context = (item.hvacIssueType || item.problemDescription || "").slice(0, 30).toLowerCase()
-            const contextSuffix = context ? ` · re: ${context}` : ""
-
-            if (item.callbackOutcome === "left_voicemail" || item.callbackOutcome === "no_answer") {
-              return (
-                <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-amber-900/30 text-amber-400 text-[0.6875rem] font-semibold">
-                  <RotateCcw className="h-3 w-3" />
-                  {item.callbackOutcome === "left_voicemail" ? "Left voicemail" : "No answer"}
-                  {item.callbackOutcomeAt && (
-                    <span className="text-amber-400/60 font-normal">
-                      {" · "}{formatOutcomeAge(item)}
-                    </span>
-                  )}
-                  {" · try again"}
-                  {contextSuffix && (
-                    <span className="text-amber-400/60 font-normal">{contextSuffix}</span>
-                  )}
-                </span>
-              )
-            }
-            if (item.primaryIntent === "complaint" || item.primaryIntent === "active_job_issue" || item.primaryIntent === "followup") {
-              const intentLabel = item.primaryIntent === "complaint"
-                ? "Complaint about prior service"
-                : item.primaryIntent === "active_job_issue"
-                  ? "Following up on active job"
-                  : "Caller following up"
-              return (
-                <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400 text-[0.6875rem] font-semibold">
-                  <MessageSquare className="h-3 w-3" />
-                  {intentLabel}
-                  {contextSuffix && (
-                    <span className="text-blue-400/60 font-normal">{contextSuffix}</span>
-                  )}
-                </span>
-              )
-            }
-            const reasonLabel = item.endCallReason === "booking_failed"
-              ? "Booking failed · needs reschedule"
-              : "AI promised a callback"
-            return (
-              <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full bg-cl-bg-chip text-cl-text-subtle text-[0.6875rem] font-semibold">
-                <Phone className="h-3 w-3" />
-                {reasonLabel}
-                {contextSuffix && (
-                  <span className="text-cl-text-muted font-normal">{contextSuffix}</span>
-                )}
-              </span>
-            )
-          })()}
 
           {/* CALL BACK — NEW_LEADS and FOLLOW_UPS only */}
           {(section === "NEW_LEADS" || section === "FOLLOW_UPS") && callActionable && item.customerPhone && (
@@ -555,6 +708,7 @@ export function MailList({
   if (buckets && bucketMap) {
     const otherCount = buckets.OTHER_AI_HANDLED.length
     const bookingsCount = buckets.BOOKINGS.length
+    const handledCounts = countHandledReasons(buckets.OTHER_AI_HANDLED, bucketMap)
 
     return (
       <div className="flex-1 flex flex-col overflow-hidden bg-cl-bg-canvas">
@@ -650,25 +804,49 @@ export function MailList({
           ) : (
             <>
               {/* Bookings */}
-              {bookingsCount > 0 && (
-                <>
-                  <h3
-                    role="heading"
-                    aria-level={3}
-                    className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] pt-4 pb-2"
-                  >
-                    Bookings ({bookingsCount})
-                  </h3>
-                  <div className="-ml-4">
-                    <CalendarWithEventSlots
-                      calls={buckets.BOOKINGS}
-                      selectedCallId={selected}
-                      onSelectCall={onSelect}
-                      onBookingStatusChange={onBookingStatusChange}
-                    />
-                  </div>
-                </>
-              )}
+              {bookingsCount > 0 && (() => {
+                const totalPages = Math.ceil(bookingsCount / BOOKINGS_PER_PAGE)
+                const pageStart = bookingsPage * BOOKINGS_PER_PAGE
+                const visibleBookings = buckets.BOOKINGS.slice(pageStart, pageStart + BOOKINGS_PER_PAGE)
+
+                return (
+                  <>
+                    <h3
+                      role="heading"
+                      aria-level={3}
+                      className="font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] pt-4 pb-2"
+                    >
+                      Bookings ({bookingsCount})
+                    </h3>
+                    <div className="flex flex-col gap-1">
+                      {visibleBookings.map((item) => renderCard(item, "BOOKINGS"))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-2 px-1">
+                        <button
+                          type="button"
+                          disabled={bookingsPage === 0}
+                          onClick={() => setBookingsPage((p) => Math.max(0, p - 1))}
+                          className="text-xs font-semibold text-cl-text-muted hover:text-cl-text-primary disabled:opacity-30 disabled:cursor-default"
+                        >
+                          ← Prev
+                        </button>
+                        <span className="text-xs text-cl-text-muted">
+                          {bookingsPage + 1} / {totalPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={bookingsPage >= totalPages - 1}
+                          onClick={() => setBookingsPage((p) => Math.min(totalPages - 1, p + 1))}
+                          className="text-xs font-semibold text-cl-text-muted hover:text-cl-text-primary disabled:opacity-30 disabled:cursor-default"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
 
               {/* New Leads */}
               {buckets.NEW_LEADS.length > 0 && (
@@ -678,7 +856,7 @@ export function MailList({
                     aria-level={3}
                     className={cn(
                       "font-headline text-[1.75rem] font-bold text-cl-text-primary tracking-[-0.02em] pb-2",
-                      bookingsCount > 0 ? "mt-8 pt-0" : "pt-4"
+                      bookingsCount > 0 ? "mt-8" : "pt-4"
                     )}
                   >
                     New Leads ({buckets.NEW_LEADS.length})
@@ -731,7 +909,11 @@ export function MailList({
                     className="w-full flex items-center justify-between py-3 px-1 text-left group"
                   >
                     <span className="text-sm font-semibold text-cl-text-muted uppercase tracking-wider">
-                      Other AI Handled ({otherCount})
+                      AI Handled ({otherCount}){" "}
+                      <span className="normal-case">
+                        {"\u00b7"} {handledCounts.booked} booked {"\u00b7"} {handledCounts.filtered} filtered {"\u00b7"}{" "}
+                        {handledCounts.resolved} resolved {"\u00b7"} {handledCounts.other} other
+                      </span>
                     </span>
                     <ChevronRight
                       className={cn(

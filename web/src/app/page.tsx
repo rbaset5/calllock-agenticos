@@ -25,7 +25,7 @@ export default async function CallsPage() {
     const { data, error } = await supabase
       .from("call_records")
       .select(
-        "id, tenant_id, call_id, retell_call_id, phone_number, transcript, extracted_fields, extraction_status, urgency_tier, end_call_reason, callback_scheduled, booking_id, callback_outcome, callback_outcome_at, route, caller_type, primary_intent, revenue_tier, created_at, updated_at"
+        "id, tenant_id, call_id, retell_call_id, phone_number, transcript, extracted_fields, extraction_status, urgency_tier, end_call_reason, callback_scheduled, booking_id, callback_outcome, callback_outcome_at, booking_status, booking_status_at, booking_notes, route, caller_type, primary_intent, revenue_tier, created_at, updated_at"
       )
       .order("created_at", { ascending: false })
       .limit(100)

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react"
 import { format, isToday, isTomorrow, isSameDay } from "date-fns"
-import { CheckCircle2, CalendarCheck, X } from "lucide-react"
+import { CalendarCheck, CheckCircle2, X } from "lucide-react"
 import type { DayButtonProps } from "react-day-picker"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -34,14 +34,7 @@ function formatSlotTime(dateStr: string | null): string {
 
 function bookingDotClass(status: BookingStatus | null): string {
   if (status === "confirmed") return "bg-cl-success"
-  if (status === "rescheduled") return "bg-amber-400"
   return "ring-2 ring-cl-success bg-transparent"
-}
-
-function bookingSlotAccentClass(status: BookingStatus | null): string {
-  if (status === "confirmed") return "after:bg-cl-success/70"
-  if (status === "rescheduled") return "after:bg-amber-400/80"
-  return "after:bg-transparent after:border after:border-cl-success/80"
 }
 
 export function CalendarWithEventSlots({
@@ -51,8 +44,6 @@ export function CalendarWithEventSlots({
   onBookingStatusChange,
 }: CalendarWithEventSlotsProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [reschedulingId, setReschedulingId] = useState<string | null>(null)
-  const [rescheduleDateTime, setRescheduleDateTime] = useState("")
   const [submittingBookingId, setSubmittingBookingId] = useState<string | null>(null)
 
   const appointmentsByDay = useMemo(
@@ -104,8 +95,6 @@ export function CalendarWithEventSlots({
           }),
         })
         if (!res.ok) throw new Error("not-ok")
-        setReschedulingId(null)
-        setRescheduleDateTime("")
       } catch {
         onBookingStatusChange?.(call.id, currentBookingStatus ?? "cancelled")
         toast.error("Couldn't save — try again")
@@ -115,13 +104,6 @@ export function CalendarWithEventSlots({
     },
     [submittingBookingId, onBookingStatusChange]
   )
-
-  const showingAllLabel =
-    !calls.some(
-      (c) =>
-        c.appointmentDateTime &&
-        isSameDay(new Date(c.appointmentDateTime), selectedDate)
-    )
 
   return (
     <div className="shrink-0 rounded-lg border border-border bg-card">
@@ -169,25 +151,22 @@ export function CalendarWithEventSlots({
           <div className="flex items-center justify-between px-1">
             <div>
               <div className="text-sm font-medium">
-                {showingAllLabel
-                  ? "Bookings"
-                  : selectedDate?.toLocaleDateString("en-US", {
+                {isToday(selectedDate)
+                  ? "Today"
+                  : selectedDate.toLocaleDateString("en-US", {
                       day: "numeric",
                       month: "long",
                       year: "numeric",
                     })}
               </div>
-              {showingAllLabel && selectedDate && isToday(selectedDate) && (
-                <div className="text-xs text-muted-foreground mt-0.5">Today</div>
-              )}
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             {visibleCalls.map((call) => {
               const isSelected = call.id === selectedCallId
               const hasDateTime = !!call.appointmentDateTime
-              const accentClass = bookingSlotAccentClass(call.bookingStatus)
+              const isConfirmed = call.bookingStatus === "confirmed"
 
               return (
                 <div
@@ -202,92 +181,73 @@ export function CalendarWithEventSlots({
                     }
                   }}
                   className={cn(
-                    "relative rounded-md p-2 pl-5 text-sm cursor-pointer transition-colors select-none",
-                    "after:absolute after:inset-y-2 after:left-1.5 after:w-1 after:rounded-full",
-                    accentClass,
+                    "flex items-stretch overflow-hidden rounded-lg text-sm cursor-pointer transition-colors select-none",
                     isSelected
-                      ? "bg-cl-bg-chip"
-                      : "bg-muted hover:bg-accent/50"
+                      ? "bg-cl-bg-selected"
+                      : "bg-cl-bg-canvas hover:bg-cl-bg-subtle"
                   )}
                 >
-                  <div className="font-medium">
-                    {call.customerName || call.customerPhone || "Unknown caller"}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {hasDateTime
-                      ? formatSlotTime(call.appointmentDateTime)
-                      : "Time TBD"}
+                  {/* Left panel — booking lifecycle badge */}
+                  <div
+                    className={cn(
+                      "w-[56px] shrink-0 flex flex-col items-center justify-center text-[10px] font-black tracking-tighter uppercase leading-none px-1 text-center",
+                      isConfirmed
+                        ? "bg-cl-accent/10 text-cl-accent"
+                        : "bg-cl-success/10 text-cl-success"
+                    )}
+                    aria-label={isConfirmed ? "Scheduled booking" : "AI appointment, needs confirmation"}
+                  >
+                    {isConfirmed ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mb-1" />
+                        <span className="block">SCHED</span>
+                        <span className="block">ULED</span>
+                      </>
+                    ) : (
+                      <>
+                        <CalendarCheck className="h-4 w-4 mb-1" />
+                        <span className="block">AI</span>
+                        <span className="block">APPT</span>
+                      </>
+                    )}
                   </div>
 
-                  {/* Confirm / Reschedule / Cancel — selected slot only */}
-                  {isSelected && (
-                    <div
-                      className="flex flex-col gap-2 mt-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {reschedulingId === call.id ? (
-                        <div className="flex flex-col gap-2">
-                          <input
-                            type="datetime-local"
-                            value={rescheduleDateTime}
-                            onChange={(e) => setRescheduleDateTime(e.target.value)}
-                            className="h-8 px-2 rounded-md bg-muted text-sm border border-border focus:outline-none focus:border-ring"
-                          />
-                          <div className="flex gap-1.5">
-                            <button
-                              disabled={!rescheduleDateTime || !!submittingBookingId}
-                              onClick={() =>
-                                handleBookingAction(call, "rescheduled", rescheduleDateTime)
-                              }
-                              className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 disabled:opacity-50"
-                            >
-                              <CalendarCheck className="h-3 w-3" />
-                              Confirm reschedule
-                            </button>
-                            <button
-                              onClick={() => {
-                                setReschedulingId(null)
-                                setRescheduleDateTime("")
-                              }}
-                              className="h-7 px-2 rounded-full text-[0.6875rem] flex items-center gap-1 bg-muted text-muted-foreground hover:bg-accent"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex gap-1.5 flex-wrap">
-                          <button
-                            disabled={!!submittingBookingId}
-                            onClick={() => handleBookingAction(call, "confirmed")}
-                            className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-success/20 text-cl-success hover:bg-cl-success/30 disabled:opacity-50"
-                          >
-                            <CheckCircle2 className="h-3 w-3" />
-                            Confirm
-                          </button>
-                          <button
-                            disabled={!!submittingBookingId}
-                            onClick={() => {
-                              setReschedulingId(call.id)
-                              setRescheduleDateTime("")
-                            }}
-                            className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 disabled:opacity-50"
-                          >
-                            <CalendarCheck className="h-3 w-3" />
-                            Reschedule
-                          </button>
-                          <button
-                            disabled={!!submittingBookingId}
-                            onClick={() => handleBookingAction(call, "cancelled")}
-                            className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-muted text-muted-foreground hover:bg-accent disabled:opacity-50"
-                          >
-                            <X className="h-3 w-3" />
-                            Cancel
-                          </button>
-                        </div>
-                      )}
+                  {/* Card content */}
+                  <div className="flex-1 p-3 flex flex-col gap-1 min-w-0">
+                    <div className="font-semibold text-cl-text-primary truncate">
+                      {call.customerName || call.customerPhone || "Unknown caller"}
                     </div>
-                  )}
+                    <div className="text-cl-text-muted text-xs">
+                      {hasDateTime
+                        ? formatSlotTime(call.appointmentDateTime)
+                        : "Time TBD"}
+                    </div>
+
+                    {/* Confirm / Cancel — selected + unconfirmed only */}
+                    {isSelected && !isConfirmed && (
+                      <div
+                        className="flex gap-1.5 flex-wrap mt-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          disabled={!!submittingBookingId}
+                          onClick={() => handleBookingAction(call, "confirmed")}
+                          className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-success/20 text-cl-success hover:bg-cl-success/30 disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          Confirm
+                        </button>
+                        <button
+                          disabled={!!submittingBookingId}
+                          onClick={() => handleBookingAction(call, "cancelled")}
+                          className="h-7 px-2.5 rounded-full text-[0.6875rem] uppercase font-semibold flex items-center gap-1 bg-cl-bg-chip text-cl-text-muted hover:bg-cl-bg-chip-hover disabled:opacity-50"
+                        >
+                          <X className="h-3 w-3" />
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}

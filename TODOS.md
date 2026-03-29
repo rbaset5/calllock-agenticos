@@ -447,3 +447,31 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 
 ### ~~P2 — Define PII redaction implementation approach~~
 **Resolved by:** Pattern-matching PII redactor in `harness/src/observability/pii_redactor.py` and verification node checks in `harness/src/harness/nodes/verification.py`
+
+## P2 — Founder Call Console (Post-50 Calls)
+
+### Learning Machine Dashboard (Approach B)
+**What:** After 30+ calls with structured data, build a dashboard showing objection frequency, pain patterns by segment, and scoring model feedback loop with manual override on every AI field.
+**Why:** The first 50 calls generate seed data. The dashboard turns that data into actionable patterns (e.g., "shops with X trait respond better", "the #1 objection is Y").
+**Effort:** L (CC: ~6-8 hours)
+**Priority:** P2
+**Depends on:** 30+ completed calls with AI extraction data in outbound_calls.extraction JSONB column.
+**Source:** CEO review, 2026-03-29.
+
+## P3 — Founder Call Console (Future Enhancements)
+
+### Browser WebRTC → CallLock App integration
+**What:** Move the dialer/server.js functionality into the CallLock App (Next.js) so the call console lives alongside the main app instead of a separate Express server on port 3004.
+**Why:** Eliminates the need to run a separate server. Single deployment. Consistent UX with the rest of CallLock.
+**Effort:** M (CC: ~3-4 hours)
+**Priority:** P3
+**Depends on:** Existing dialer validated with 50+ real calls.
+**Source:** CEO review, 2026-03-29.
+
+### AI-generated personalized call openers
+**What:** Use AI extraction data from completed calls + prospect data (reviews, rating, hours) to generate personalized openers. E.g., "I noticed you have 12 reviews and most mention wait times — are missed calls a problem for you?"
+**Why:** Personalized openers convert better than generic pitches. The data is already in the prospect record.
+**Effort:** S (CC: ~1-2 hours)
+**Priority:** P3
+**Depends on:** 10+ completed calls with extraction data to validate which signals matter.
+**Source:** CEO review, 2026-03-29.

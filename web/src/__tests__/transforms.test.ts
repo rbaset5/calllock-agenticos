@@ -45,6 +45,9 @@ function buildCallRecordRow(
     end_call_reason: "completed",
     callback_outcome: null,
     callback_outcome_at: null,
+    booking_status: null,
+    booking_status_at: null,
+    booking_notes: null,
     call_recording_url: "https://example.com/recording.mp3",
     created_at: "2026-03-05T10:00:00Z",
     updated_at: "2026-03-05T10:05:00Z",
@@ -98,6 +101,9 @@ describe("transformCallRecord", () => {
       callback_outcome_at: null,
       callback_scheduled: false,
       booking_id: null,
+      booking_status: null,
+      booking_status_at: null,
+      booking_notes: null,
       route: null,
       caller_type: null,
       primary_intent: null,
@@ -125,6 +131,30 @@ describe("transformCallRecord", () => {
     expect(call.isUrgentEscalation).toBe(false)
     expect(call.callbackType).toBeNull()
     expect(call.transcript).toEqual([])
+  })
+
+  it("maps booking_status fields from row", () => {
+    const row = buildCallRecordRow({
+      booking_status: "confirmed",
+      booking_status_at: "2026-03-27T12:00:00Z",
+      booking_notes: "Customer confirmed via phone",
+    })
+    const call = transformCallRecord(row, new Set())
+    expect(call.bookingStatus).toBe("confirmed")
+    expect(call.bookingStatusAt).toBe("2026-03-27T12:00:00Z")
+    expect(call.bookingNotes).toBe("Customer confirmed via phone")
+  })
+
+  it("returns null for booking fields when not set", () => {
+    const row = buildCallRecordRow({
+      booking_status: null,
+      booking_status_at: null,
+      booking_notes: null,
+    })
+    const call = transformCallRecord(row, new Set())
+    expect(call.bookingStatus).toBeNull()
+    expect(call.bookingStatusAt).toBeNull()
+    expect(call.bookingNotes).toBeNull()
   })
 
   it("respects the readIds state keyed by call_id", () => {

@@ -54,6 +54,8 @@
   --color-cl-success: var(--cl-success);
   --color-cl-danger: var(--cl-danger);
   --color-cl-danger-soft: var(--cl-danger-soft);
+  --color-cl-opportunity: var(--cl-opportunity);
+  --color-cl-opportunity-text: var(--cl-opportunity-text);
   --color-cl-border: var(--cl-border);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -112,7 +114,27 @@
   --cl-success: #10b981;
   --cl-danger: #fd9791;
   --cl-danger-soft: #ee7d77;
+  --cl-opportunity: #c97a3a;
+  --cl-opportunity-text: #c97a3a;
   --cl-border: #484848;
+
+  /* Chip semantic colors — urgency-tiered, unique per parent category */
+  --cl-chip-critical-bg: rgba(253, 151, 145, 0.15);
+  --cl-chip-critical-text: #fd9791;
+  --cl-chip-escalation-bg: rgba(251, 146, 60, 0.15);
+  --cl-chip-escalation-text: #fb923c;
+  --cl-chip-amber-bg: rgba(245, 158, 11, 0.15);
+  --cl-chip-amber-text: #f59e0b;
+  --cl-chip-risk-bg: rgba(244, 114, 182, 0.15);
+  --cl-chip-risk-text: #f472b6;
+  --cl-chip-commitment-bg: rgba(34, 211, 238, 0.12);
+  --cl-chip-commitment-text: #22d3ee;
+  --cl-chip-retry-bg: rgba(148, 163, 184, 0.10);
+  --cl-chip-retry-text: #94a3b8;
+  --cl-chip-opportunity-bg: rgba(96, 165, 250, 0.12);
+  --cl-chip-opportunity-text: #60a5fa;
+  --cl-chip-resolved-bg: rgba(16, 185, 129, 0.10);
+  --cl-chip-resolved-text: rgba(16, 185, 129, 0.6);
 }
 
 .dark {

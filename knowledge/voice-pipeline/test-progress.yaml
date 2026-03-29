@@ -1,0 +1,311 @@
+version: "1.0"
+last_updated: "2026-03-22"
+scenarios:
+  - id: 1
+    name: "Happy path — new caller"
+    category: "critical_path"
+    priority: 1
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Full booking path for a first-time caller."
+  - id: 2
+    name: "Happy path — returning caller"
+    category: "critical_path"
+    priority: 1
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Lookup should prefill known caller details."
+  - id: 3
+    name: "Gas smell emergency"
+    category: "critical_path"
+    priority: 1
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Safety exit must short-circuit booking."
+  - id: 4
+    name: "Out of area"
+    category: "critical_path"
+    priority: 1
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Should decline politely without booking."
+  - id: 5
+    name: "Book from alternatives"
+    category: "critical_path"
+    priority: 1
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Requires both availability lookup and booking."
+  - id: 6
+    name: "Speak to human (welcome)"
+    category: "new_paths"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Immediate callback request at welcome."
+  - id: 7
+    name: "Speak to human (mid-flow)"
+    category: "new_paths"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Callback request after discovery begins."
+  - id: 8
+    name: "ETA check"
+    category: "new_paths"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "No booking tools expected."
+  - id: 9
+    name: "ETA check — no appointment"
+    category: "new_paths"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Should offer scheduling when no appointment exists."
+  - id: 10
+    name: "Return complaint"
+    category: "new_paths"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Fast-track complaint flow with elevated urgency."
+  - id: 11
+    name: "Existing appt + new issue"
+    category: "booking_edge"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Agent should account for an existing appointment."
+  - id: 12
+    name: "Cancel + rebook"
+    category: "booking_edge"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Manage-booking callback path."
+  - id: 13
+    name: "No slots available"
+    category: "booking_edge"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Should offer callback instead of looping."
+  - id: 14
+    name: "Change mind on time"
+    category: "booking_edge"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Expect repeated availability lookup before booking."
+  - id: 15
+    name: "Billing question"
+    category: "non_service"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Billing callback path, no booking."
+  - id: 16
+    name: "Job applicant"
+    category: "non_service"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Job inquiry callback path."
+  - id: 17
+    name: "Vendor pitch"
+    category: "non_service"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Should be routed as vendor."
+  - id: 18
+    name: "Pricing inquiry"
+    category: "non_service"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Pricing callback path, not booking."
+  - id: 19
+    name: "Wrong number"
+    category: "non_service"
+    priority: 2
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Short polite exit with minimal extraction."
+  - id: 20
+    name: "Everything upfront"
+    category: "ux_quality"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Agent should avoid re-asking for already provided details."
+  - id: 21
+    name: "Vague caller"
+    category: "ux_quality"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Agent should gather data without nagging."
+  - id: 22
+    name: "Long silence"
+    category: "ux_quality"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Expect a gentle reprompt after a pause."
+  - id: 23
+    name: "Interruption"
+    category: "ux_quality"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Agent should stop speaking and listen."
+  - id: 24
+    name: "Tool timeout"
+    category: "failure_modes"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Fallback should schedule callback instead of looping."
+  - id: 25
+    name: "Duplicate call"
+    category: "failure_modes"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Second call should acknowledge prior activity."
+  - id: 26
+    name: "0ms silent call"
+    category: "failure_modes"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "P0 regression. Also guarded by /smoke recent-call health checks."
+  - id: 27
+    name: "Webhook down"
+    category: "failure_modes"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "P0 regression. Detect with missing call_records row after a call."
+  - id: 28
+    name: "Tenant missing"
+    category: "failure_modes"
+    priority: 3
+    status: "untested"
+    last_tested: null
+    last_call_id: null
+    pass_count: 0
+    fail_count: 0
+    history: []
+    notes: "Phone-number fallback should resolve tenant_id."

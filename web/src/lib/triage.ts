@@ -1,4 +1,5 @@
 import type {
+  BookingStatus,
   CallerType,
   CallbackOutcome,
   EndCallReason,
@@ -33,6 +34,7 @@ export interface TriageableCall {
   callbackWindowStart: string | null
   callbackWindowEnd: string | null
   callbackOutcomeAt: string | null
+  bookingStatus: BookingStatus | null
   callerType: CallerType | null
   primaryIntent: PrimaryIntent | null
   route: Route | null
@@ -133,7 +135,7 @@ function classifyReason(call: TriageableCall): TriageReason {
 // hasConcrete — does the call have a concrete issue description?
 // ---------------------------------------------------------------------------
 
-function hasConcrete(call: TriageableCall): boolean {
+export function hasConcrete(call: TriageableCall): boolean {
   return !!(call.problemDescription || call.hvacIssueType)
 }
 
@@ -141,7 +143,7 @@ function hasConcrete(call: TriageableCall): boolean {
 // computeCommand
 // ---------------------------------------------------------------------------
 
-function computeCommand(call: TriageableCall): TriageCommand {
+export function computeCommand(call: TriageableCall): TriageCommand {
   // Tier 1: immediate
   if (
     call.isSafetyEmergency ||
@@ -167,6 +169,15 @@ function computeCommand(call: TriageableCall): TriageCommand {
 
   // Tier 4: can wait
   return "Can wait"
+}
+
+export function getCallbackReason(call: TriageableCall): string | null {
+  if (call.endCallReason === "booking_failed") return "Booking failed"
+  if (call.endCallReason === "callback_later") return "AI promised callback"
+  if (call.callbackType) return "AI promised callback"
+  if (call.urgency === "Urgent" && !hasConcrete(call))
+    return "Urgent, needs details"
+  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -337,6 +348,14 @@ export function assignSection(call: TriageableCall): SectionKey {
 export type BucketKey = "ACTION_QUEUE" | "AI_HANDLED"
 export type ActionSubGroup = "NEW_LEAD" | "FOLLOW_UP"
 export type HandledReason = "escalated" | "resolved" | "non_customer" | "wrong_number" | "booked"
+export type FollowUpSubtype =
+  | "booking_failed"
+  | "complaint"
+  | "active_job_issue"
+  | "promised_callback"
+  | "retry_voicemail"
+  | "retry_no_answer"
+  | "generic_followup"
 
 export interface BucketAssignment {
   bucket: BucketKey
@@ -356,6 +375,17 @@ function handled(reason: HandledReason, escalation = false): BucketAssignment {
 
 function actionQueue(subGroup: ActionSubGroup): BucketAssignment {
   return { bucket: "ACTION_QUEUE", subGroup, escalationMarker: false, handledReason: null }
+}
+
+export function getFollowUpSubtype(call: TriageableCall): FollowUpSubtype {
+  if (call.endCallReason === "booking_failed") return "booking_failed"
+  if (call.primaryIntent === "complaint") return "complaint"
+  if (call.primaryIntent === "active_job_issue") return "active_job_issue"
+  if (call.endCallReason === "callback_later" || call.callbackType)
+    return "promised_callback"
+  if (call.callbackOutcome === "left_voicemail") return "retry_voicemail"
+  if (call.callbackOutcome === "no_answer") return "retry_no_answer"
+  return "generic_followup"
 }
 
 /**
@@ -428,20 +458,48 @@ export function isActionable(call: TriageableCall): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// followUpSort — sort follow-up calls by urgency + recency
+// followUpSort — sort follow-up calls by conversion likelihood + recency
 // ---------------------------------------------------------------------------
+
+/**
+ * Conversion-likelihood rank for follow-up sorting.
+ * Lower = higher priority (closer to becoming revenue).
+ *
+ *   0 — booking_failed: customer literally tried to book
+ *   1 — complaint / active_job_issue: existing customer at risk
+ *   2 — AI-promised callback: expectation set, not at decision point
+ *   3 — retry (left_voicemail / no_answer): least urgent
+ *   4 — generic follow-up
+ */
+function followUpRank(call: TriageableCall): number {
+  const subtype = getFollowUpSubtype(call)
+  if (subtype === "booking_failed") return 0
+  if (subtype === "complaint" || subtype === "active_job_issue") return 1
+  if (subtype === "promised_callback") return 2
+  if (subtype === "retry_voicemail" || subtype === "retry_no_answer") return 3
+  return 4
+}
+
+/**
+ * Whether a follow-up is "hot" — high conversion likelihood that deserves
+ * visual priority (bronze panel + intel line) in the UI.
+ */
+export function isHotFollowUp(call: TriageableCall): boolean {
+  return followUpRank(call) <= 1
+}
 
 export function followUpSort<T extends TriageableCall>(calls: T[]): T[] {
   return [...calls].sort((a, b) => {
-    // 1. Active issues first (complaint, active_job_issue)
-    const aActive = FOLLOW_UP_INTENTS.has(a.primaryIntent as PrimaryIntent) && a.primaryIntent !== "followup" ? 0 : 1
-    const bActive = FOLLOW_UP_INTENTS.has(b.primaryIntent as PrimaryIntent) && b.primaryIntent !== "followup" ? 0 : 1
-    if (aActive !== bActive) return aActive - bActive
+    // 1. Conversion-likelihood rank
+    const rankDiff = followUpRank(a) - followUpRank(b)
+    if (rankDiff !== 0) return rankDiff
 
-    // 2. Callback retries before generic followup
-    const aRetry = RETRY_OUTCOMES.has(a.callbackOutcome as CallbackOutcome) ? 0 : 1
-    const bRetry = RETRY_OUTCOMES.has(b.callbackOutcome as CallbackOutcome) ? 0 : 1
-    if (aRetry !== bRetry) return aRetry - bRetry
+    // 2. Within same tier: AI-promised above retries (callback_later before voicemail)
+    if (followUpRank(a) === 2 && followUpRank(b) === 2) {
+      const aPromised = a.endCallReason === "callback_later" ? 0 : 1
+      const bPromised = b.endCallReason === "callback_later" ? 0 : 1
+      if (aPromised !== bPromised) return aPromised - bPromised
+    }
 
     // 3. Recency (newest first, guard against NaN)
     const aTime = new Date(a.createdAt).getTime() || 0

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { assignBucket, type TriageableCall } from "../triage"
 import {
+  countHandledReasons,
   getDisplaySection,
   getDefaultSelectedId,
   orderCallsForMail,
@@ -174,5 +175,84 @@ describe("orderCallsForMail", () => {
       "confirmed-new",
       "confirmed-old",
     ])
+  })
+})
+
+describe("countHandledReasons", () => {
+  it("counts booked, filtered, resolved, and other correctly for mixed handled calls", () => {
+    const booked = makeCall({ id: "booked", appointmentBooked: true })
+    const filteredSpam = makeCall({ id: "filtered-spam", route: "spam" })
+    const filteredWrongRoute = makeCall({ id: "filtered-vendor", route: "vendor" })
+    const resolved = makeCall({ id: "resolved", callbackOutcome: "reached_customer" })
+    const escalated = makeCall({ id: "escalated", isSafetyEmergency: true })
+    const calls = [booked, filteredSpam, filteredWrongRoute, resolved, escalated]
+    const bucketMap = new Map(calls.map((call) => [call.id, assignBucket(call)]))
+
+    expect(countHandledReasons(calls, bucketMap)).toEqual({
+      booked: 1,
+      filtered: 2,
+      resolved: 1,
+      other: 1,
+    })
+  })
+
+  it("returns zeros for empty input", () => {
+    expect(countHandledReasons([], new Map())).toEqual({
+      booked: 0,
+      filtered: 0,
+      resolved: 0,
+      other: 0,
+    })
+  })
+
+  it("treats missing bucket assignment as other", () => {
+    const loneCall = makeCall({ id: "lone" })
+    expect(countHandledReasons([loneCall], new Map())).toEqual({
+      booked: 0,
+      filtered: 0,
+      resolved: 0,
+      other: 1,
+    })
+  })
+
+  it("counts escalated handled calls as other", () => {
+    const escalated = makeCall({ id: "esc", isSafetyEmergency: true })
+    const bucketMap = new Map([[escalated.id, assignBucket(escalated)]])
+    expect(countHandledReasons([escalated], bucketMap)).toEqual({
+      booked: 0,
+      filtered: 0,
+      resolved: 0,
+      other: 1,
+    })
+  })
+
+  it("counts all-same-type sets correctly", () => {
+    const a = makeCall({ id: "a", callbackOutcome: "resolved_elsewhere" })
+    const b = makeCall({ id: "b", callbackOutcome: "scheduled" })
+    const c = makeCall({ id: "c", callbackOutcome: "reached_customer" })
+    const calls = [a, b, c]
+    const bucketMap = new Map(calls.map((call) => [call.id, assignBucket(call)]))
+    expect(countHandledReasons(calls, bucketMap)).toEqual({
+      booked: 0,
+      filtered: 0,
+      resolved: 3,
+      other: 0,
+    })
+  })
+
+  it("handles larger handled sets deterministically", () => {
+    const calls = Array.from({ length: 24 }, (_, idx) => {
+      if (idx < 6) return makeCall({ id: `booked-${idx}`, appointmentBooked: true })
+      if (idx < 12) return makeCall({ id: `filtered-${idx}`, route: idx % 2 === 0 ? "spam" : "vendor" })
+      if (idx < 18) return makeCall({ id: `resolved-${idx}`, callbackOutcome: "scheduled" })
+      return makeCall({ id: `other-${idx}`, isSafetyEmergency: true })
+    })
+    const bucketMap = new Map(calls.map((call) => [call.id, assignBucket(call)]))
+    expect(countHandledReasons(calls, bucketMap)).toEqual({
+      booked: 6,
+      filtered: 6,
+      resolved: 6,
+      other: 6,
+    })
   })
 })

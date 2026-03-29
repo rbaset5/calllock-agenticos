@@ -33,18 +33,61 @@ export interface MailSections<T extends TriageableCall> {
   OTHER_AI_HANDLED: T[]
 }
 
+export interface HandledCounts {
+  booked: number
+  filtered: number
+  resolved: number
+  other: number
+}
+
+export function countHandledReasons<T extends TriageableCall>(
+  calls: T[],
+  bucketMap: Map<string, BucketAssignment>
+): HandledCounts {
+  let booked = 0
+  let filtered = 0
+  let resolved = 0
+  let other = 0
+
+  for (const call of calls) {
+    const assignment = bucketMap.get(call.id)
+    if (!assignment) {
+      other++
+      continue
+    }
+    if (assignment.handledReason === "booked") {
+      booked++
+      continue
+    }
+    if (
+      assignment.handledReason === "non_customer" ||
+      assignment.handledReason === "wrong_number"
+    ) {
+      filtered++
+      continue
+    }
+    if (assignment.handledReason === "resolved") {
+      resolved++
+      continue
+    }
+    other++
+  }
+
+  return { booked, filtered, resolved, other }
+}
+
 function newestFirst<T extends TriageableCall>(calls: T[]): T[] {
   return [...calls].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
 }
 
-/** Sort bookings: unconfirmed (null) first, then confirmed, then rescheduled. Newest first within each group. */
+/** Sort bookings: unconfirmed (null) first, then confirmed. Newest first within each group. */
 function bookingSort<T extends TriageableCall>(calls: T[]): T[] {
-  const priority: Record<string, number> = { confirmed: 1, rescheduled: 2 }
+  const priority: Record<string, number> = { confirmed: 1 }
   return [...calls].sort((a, b) => {
-    const ap = a.bookingStatus === null ? 0 : (priority[a.bookingStatus] ?? 3)
-    const bp = b.bookingStatus === null ? 0 : (priority[b.bookingStatus] ?? 3)
+    const ap = a.bookingStatus === null ? 0 : (priority[a.bookingStatus] ?? 2)
+    const bp = b.bookingStatus === null ? 0 : (priority[b.bookingStatus] ?? 2)
     if (ap !== bp) return ap - bp
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   })
