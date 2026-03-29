@@ -27,6 +27,8 @@ const badgeVariants = cva(
           "bg-[var(--cl-chip-amber-bg)] text-[var(--cl-chip-amber-text)]",
         "cl-risk":
           "bg-[var(--cl-chip-risk-bg)] text-[var(--cl-chip-risk-text)]",
+        "cl-job-issue":
+          "bg-[var(--cl-chip-job-issue-bg)] text-[var(--cl-chip-job-issue-text)]",
         "cl-commitment":
           "bg-[var(--cl-chip-commitment-bg)] text-[var(--cl-chip-commitment-text)]",
         "cl-retry":

@@ -249,7 +249,7 @@ function ReasonChip({ item, section, assignment, triage }: ReasonChipProps) {
 
     if (subtype === "active_job_issue") {
       return (
-        <Badge variant="cl-risk" className={chipBase}>
+        <Badge variant="cl-job-issue" className={chipBase}>
           <AlertTriangle /> Active job issue
           {formatContext(item) && <ChipDetail>{formatContext(item)}</ChipDetail>}
         </Badge>
