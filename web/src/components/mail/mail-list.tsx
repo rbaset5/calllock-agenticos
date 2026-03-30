@@ -99,8 +99,6 @@ function buildIntelSegments(item: Call, isPromoted: boolean): string[] {
     segs.push(item.callerType === "commercial" ? "Commercial" : "Property manager")
   } else if (item.revenueTier === "replacement" || item.revenueTier === "major_repair") {
     segs.push(item.revenueTier === "replacement" ? "Replacement opportunity" : "Major repair")
-  } else if (item.hvacIssueType) {
-    segs.push(item.hvacIssueType)
   }
 
   return segs.slice(0, 3)
@@ -476,7 +474,6 @@ export function MailList({
     const assignment = bucketMap?.get(item.id)
     const callActionable = isActionable(item)
     const command = computeCommand(item)
-    const snippet = item.problemDescription || item.hvacIssueType || "Missed call"
 
     return (
       <div
@@ -485,7 +482,7 @@ export function MailList({
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(item.id) } }}
         className={cn(
-          "flex items-stretch overflow-hidden rounded-lg cursor-pointer transition-all duration-200 shrink-0",
+          "w-full flex items-stretch overflow-hidden rounded-lg cursor-pointer transition-all duration-200",
           section === "OTHER_AI_HANDLED" && "opacity-50",
           isActive
             ? "bg-cl-bg-selected"
@@ -572,18 +569,9 @@ export function MailList({
           {/* Line 1: Name · evidence | time-ago */}
           <div className="flex justify-between items-start gap-2">
             <div className="flex items-baseline gap-1.5 min-w-0 truncate">
-              {!item.read && (
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-cl-accent shrink-0 mt-1.5 mr-1" aria-label="Unread" />
-              )}
-              <span className={cn("text-sm truncate", item.read ? "text-cl-text-primary font-semibold" : "text-cl-text-primary font-bold")}>
+              <span className="text-sm truncate text-cl-text-primary font-semibold">
                 {item.customerName || (item.customerPhone ? formatPhone(item.customerPhone) : "Unknown")}
               </span>
-              {triage?.evidence && section === "NEW_LEADS" && (
-                <>
-                  <span className="text-cl-text-muted text-[0.6875rem]">&middot;</span>
-                  <span className="text-cl-text-muted text-[0.6875rem] truncate">{triage.evidence}</span>
-                </>
-              )}
             </div>
             {section === "BOOKINGS" ? (
               <span className="text-xs font-mono text-cl-text-primary shrink-0 ml-2">
@@ -597,11 +585,13 @@ export function MailList({
           </div>
 
           {/* Line 3: Snippet */}
-          <p className="text-cl-text-muted text-sm line-clamp-2 leading-relaxed">{snippet}</p>
+          <p className="text-cl-text-muted text-sm line-clamp-2 leading-relaxed">
+            {item.problemDescription || item.hvacIssueType || "Missed call"}
+          </p>
 
           <ReasonChip item={item} section={section} assignment={assignment} triage={triage} />
 
-          {/* Line 3: Intel line — hot follow-ups only */}
+          {/* Line 4: Intel line — hot follow-ups only */}
           {section === "FOLLOW_UPS" && isHotFollowUp(item) && (() => {
             if (item.extractionStatus === "pending") {
               return (

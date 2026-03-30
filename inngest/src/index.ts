@@ -18,6 +18,15 @@ import {
   processVoiceCall,
   sendEmergencySms,
 } from "./functions/voice.js";
+import {
+  discordOutboundDiscovery,
+  discordOutboundError,
+  discordOutboundExtraction,
+  discordOutboundTestResults,
+} from "./functions/outbound-projector.js";
+import { outboundMorningPlanner } from "./functions/outbound-morning-planner.js";
+import { outboundFollowupGuardian } from "./functions/outbound-followup-guardian.js";
+import { outboundEodDigest } from "./functions/outbound-eod-digest.js";
 
 export const client = inngest;
 export const functions = [
@@ -38,4 +47,11 @@ export const functions = [
   processVoiceCall,
   sendEmergencySms,
   callRecordsRetention,
+  discordOutboundDiscovery,
+  discordOutboundTestResults,
+  discordOutboundError,
+  discordOutboundExtraction,
+  outboundMorningPlanner,
+  outboundFollowupGuardian,
+  outboundEodDigest,
 ];

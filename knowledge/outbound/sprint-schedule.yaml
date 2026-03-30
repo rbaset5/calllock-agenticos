@@ -1,0 +1,172 @@
+# 7-week progressive cold calling sprint schedule.
+# Read by daily_plan.py to generate timezone-aware sprint plans.
+# Each sprint = 20 min, 10 dials. 5 min recovery between sprints.
+# Callbacks always first in their time block.
+# Metro sequence follows timezone: ET start -> PT end.
+#
+# start_date: the Monday of Week 1. Used to compute current week number.
+# weeks_with_saturday: which weeks include Saturday calling.
+# blocks: AM (morning), MID (midday), EOD (end of day).
+# Each block has a start time (ET) and a list of sprints.
+# Each sprint has a metro filter and optional notes.
+
+start_date: "2026-04-06"
+deadline: "2026-05-16"
+sprint_duration_min: 20
+recovery_min: 5
+dials_per_sprint: 10
+
+metro_timezones:
+  FL: "America/New_York"
+  TX: "America/Chicago"
+  IL: "America/Chicago"
+  AZ: "America/Phoenix"
+
+weeks:
+  1:
+    days: weekdays
+    blocks:
+      AM:
+        start_et: "07:20"
+        sprints:
+          - { metro: FL, note: "Opening week. Test the pitch." }
+          - { metro: FL, note: "Second sprint. Stay on pace." }
+          - { metro: TX, note: "TX opens. Central time." }
+          - { metro: AZ, note: "AZ sweet spot." }
+
+  2:
+    days: weekdays
+    blocks:
+      AM:
+        start_et: "07:20"
+        sprints:
+          - { metro: FL, note: "Updated opener from Week 1 signal." }
+          - { metro: FL, note: "Notice if the update changes how long they stay on." }
+          - { metro: FL, note: "Mid-AM check: are you asking for the demo?" }
+          - { metro: TX_IL, note: "Fourth sprint. You passed last week's limit." }
+          - { metro: TX_IL, note: "Fifth sprint. New territory. Finish clean." }
+
+  3:
+    days: weekdays
+    blocks:
+      AM:
+        start_et: "07:20"
+        sprints:
+          - { metro: FL, note: "Pitch is sharp now. Make the ask on every live conversation." }
+          - { metro: FL, note: "FL segment. Stay on pace." }
+          - { metro: FL, note: "FL complete after this sprint. TX list auto-loads." }
+          - { metro: TX, note: "TX opens. Central time. Same quality window." }
+          - { metro: TX_IL, note: "TX / IL segment. Notice objection differences by market." }
+          - { metro: IL, note: "IL segment. Chicago market." }
+          - { metro: IL, note: "IL complete. AZ loads. Best connect window of the AM." }
+      MID:
+        start_et: "13:00"
+        sprints:
+          - { metro: callbacks, note: "AZ and TX voicemails from AM. Higher intent." }
+          - { metro: callbacks, note: "Fresh dials mixed with callbacks." }
+
+  4:
+    days: weekdays_saturday
+    blocks:
+      AM:
+        start_et: "07:20"
+        sprints:
+          - { metro: FL, note: "FL opens." }
+          - { metro: FL, note: "FL second sprint." }
+          - { metro: FL, note: "FL complete. TX list auto-loads." }
+          - { metro: TX, note: "TX opens. Central time." }
+          - { metro: TX, note: "TX second sprint." }
+          - { metro: IL, note: "IL opens. Chicago market." }
+          - { metro: IL, note: "IL complete. AZ loads. Best connect window." }
+          - { metro: AZ, note: "AZ sweet spot. Highest connect rate." }
+          - { metro: AZ, note: "AZ second sprint." }
+      MID:
+        start_et: "13:00"
+        sprints:
+          - { metro: hot_leads, note: "Warmest leads first. Most likely closes." }
+          - { metro: warm_callbacks, note: "Warm leads who engaged but haven't committed." }
+          - { metro: fresh, note: "Fresh dials on new leads. Keep the volume up." }
+      EOD:
+        start_et: "16:00"
+        sprints:
+          - { metro: AZ, note: "AZ at 1 PM local. Jobs wrapping. Best pickup rate." }
+          - { metro: AZ, note: "Second EOD sprint. Fresh AZ dials plus remaining callbacks." }
+
+  5:
+    days: weekdays_saturday
+    blocks:
+      AM:
+        start_et: "07:20"
+        sprints:
+          - { metro: FL }
+          - { metro: FL }
+          - { metro: FL }
+          - { metro: TX }
+          - { metro: TX }
+          - { metro: IL }
+          - { metro: IL }
+          - { metro: AZ }
+          - { metro: AZ }
+      MID:
+        start_et: "13:00"
+        sprints:
+          - { metro: callbacks }
+          - { metro: warm_callbacks }
+      EOD:
+        start_et: "16:00"
+        sprints:
+          - { metro: AZ }
+          - { metro: AZ }
+
+  6:
+    days: weekdays_saturday
+    blocks:
+      AM:
+        start_et: "07:20"
+        sprints:
+          - { metro: FL }
+          - { metro: FL }
+          - { metro: FL }
+          - { metro: TX }
+          - { metro: TX }
+          - { metro: IL }
+          - { metro: IL }
+          - { metro: AZ }
+          - { metro: AZ }
+      MID:
+        start_et: "13:00"
+        sprints:
+          - { metro: callbacks }
+          - { metro: warm_callbacks }
+      EOD:
+        start_et: "16:00"
+        sprints:
+          - { metro: AZ }
+          - { metro: AZ }
+
+  7:
+    days: weekdays_saturday
+    blocks:
+      AM:
+        start_et: "07:20"
+        sprints:
+          - { metro: FL }
+          - { metro: FL }
+          - { metro: FL }
+          - { metro: TX }
+          - { metro: TX }
+          - { metro: IL }
+          - { metro: IL }
+          - { metro: AZ }
+          - { metro: AZ }
+      MID:
+        start_et: "13:00"
+        sprints:
+          - { metro: hot_leads, note: "Hot leads first." }
+          - { metro: callbacks }
+          - { metro: warm_callbacks }
+      EOD:
+        start_et: "16:00"
+        sprints:
+          - { metro: AZ }
+          - { metro: AZ }

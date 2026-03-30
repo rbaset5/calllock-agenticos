@@ -5,7 +5,6 @@ import Image from "next/image"
 import {
   Activity as ActivityIcon,
   ChevronLeft,
-  Headset,
   LayoutDashboard,
   Phone,
   Settings as SettingsIcon,
@@ -375,7 +374,6 @@ export function Mail({ initialCalls }: MailProps) {
               Activity Feed
             </h2>
             <span className="text-[10px] font-bold tracking-widest uppercase bg-cl-bg-card text-cl-text-muted px-2 py-1 rounded flex items-center gap-1.5">
-              <Headset className="h-3 w-3 text-cl-accent" />
               LIVE
               <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cl-success opacity-60" />

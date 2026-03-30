@@ -127,19 +127,35 @@ def get_outbound_prospect(prospect_id: str, *, tenant_id: str = OUTBOUND_TENANT_
     return rows[0] if rows else None
 
 
-def update_outbound_prospect(prospect_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+def update_outbound_prospect(
+    prospect_id: str,
+    updates: dict[str, Any],
+    *,
+    expected_stage: str | None = None,
+) -> dict[str, Any] | None:
+    """Update a prospect. If expected_stage is set, only update if stage matches (atomic guard).
+
+    Returns the updated row, or None if expected_stage didn't match (no-op).
+    """
     if _using_supabase():
+        params: dict[str, str] = {"id": f"eq.{prospect_id}"}
+        if expected_stage:
+            params["stage"] = f"eq.{expected_stage}"
         data = supabase_repository._request(  # type: ignore[attr-defined]
             "PATCH",
             "outbound_prospects",
-            params={"id": f"eq.{prospect_id}"},
+            params=params,
             json=updates,
             prefer="return=representation",
         )
+        if not data:
+            return None  # expected_stage guard: row didn't match
         return data[0]
 
     for row in _local_state()["outbound_prospects"]:
         if row["id"] == prospect_id:
+            if expected_stage and row.get("stage") != expected_stage:
+                return None
             row.update(deepcopy(updates))
             return row
     raise KeyError(f"Unknown outbound prospect: {prospect_id}")
@@ -350,3 +366,123 @@ def list_ranked_call_ready_prospects(
     prospects = [row for row in list_outbound_prospects(tenant_id=tenant_id, stages=["call_ready"])]
     prospects.sort(key=lambda row: (-int(row.get("total_score", 0)), row.get("business_name", "")))
     return prospects[:limit]
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle RPC wrappers (Phase 1: Sales Assistant daily ops)
+# These call Postgres RPC functions defined in migration 061.
+# ---------------------------------------------------------------------------
+
+def list_due_callbacks(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    today: str | None = None,
+) -> list[dict[str, Any]]:
+    """Callbacks due today or earlier, where prospect is still in 'callback' stage."""
+    if not _using_supabase():
+        return []  # local fallback: no RPC support
+    from datetime import date as _date
+    today_str = today or _date.today().isoformat()
+    return supabase_repository._rpc(  # type: ignore[attr-defined]
+        "list_due_callbacks",
+        {"p_tenant_id": tenant_id, "p_today": today_str},
+    )
+
+
+def list_overdue_callbacks(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    today: str | None = None,
+    grace_days: int = 3,
+) -> list[dict[str, Any]]:
+    """Callbacks overdue by more than grace_days, prospect still in 'callback' stage."""
+    if not _using_supabase():
+        return []
+    from datetime import date as _date
+    today_str = today or _date.today().isoformat()
+    return supabase_repository._rpc(  # type: ignore[attr-defined]
+        "list_overdue_callbacks",
+        {"p_tenant_id": tenant_id, "p_today": today_str, "p_grace_days": grace_days},
+    )
+
+
+def list_recent_no_answer_strikes(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    min_strikes: int = 3,
+) -> list[dict[str, Any]]:
+    """Prospects whose N most recent calls are ALL no_answer (warm-lead protected)."""
+    if not _using_supabase():
+        return []
+    return supabase_repository._rpc(  # type: ignore[attr-defined]
+        "list_recent_no_answer_strikes",
+        {"p_tenant_id": tenant_id, "p_min_strikes": min_strikes},
+    )
+
+
+def list_voicemail_requeue_candidates(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    min_days: int = 3,
+) -> list[dict[str, Any]]:
+    """Prospects who got a voicemail N+ days ago and are still in 'called' stage."""
+    if not _using_supabase():
+        return []
+    return supabase_repository._rpc(  # type: ignore[attr-defined]
+        "list_voicemail_requeue_candidates",
+        {"p_tenant_id": tenant_id, "p_min_days": min_days},
+    )
+
+
+def list_cooling_leads(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    stale_days: int = 5,
+) -> list[dict[str, Any]]:
+    """Prospects in 'interested' stage for N+ days with no demo scheduled."""
+    if not _using_supabase():
+        return []
+    return supabase_repository._rpc(  # type: ignore[attr-defined]
+        "list_cooling_leads",
+        {"p_tenant_id": tenant_id, "p_stale_days": stale_days},
+    )
+
+
+def list_wrong_numbers(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+) -> list[dict[str, Any]]:
+    """Prospects with a wrong_number outcome not yet disqualified."""
+    if _using_supabase():
+        calls = supabase_repository._request(  # type: ignore[attr-defined]
+            "GET",
+            "outbound_calls",
+            params={
+                "tenant_id": f"eq.{tenant_id}",
+                "outcome": "eq.wrong_number",
+                "select": "prospect_id",
+            },
+        )
+        if not calls:
+            return []
+        prospect_ids = list({c["prospect_id"] for c in calls})
+        prospects = list_outbound_prospects(tenant_id=tenant_id, prospect_ids=prospect_ids)
+        return [p for p in prospects if p.get("stage") != "disqualified"]
+    return []
+
+
+def today_call_stats(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    date: str | None = None,
+) -> dict[str, int]:
+    """Aggregate call stats for a given date (defaults to today)."""
+    if not _using_supabase():
+        return {}
+    from datetime import date as _date
+    date_str = date or _date.today().isoformat()
+    rows = supabase_repository._rpc(  # type: ignore[attr-defined]
+        "today_call_stats",
+        {"p_tenant_id": tenant_id, "p_date": date_str},
+    )
+    return rows[0] if rows else {}
