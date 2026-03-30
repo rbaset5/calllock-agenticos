@@ -689,11 +689,10 @@ if FastAPI:
         return {"stats": stats, "funnel": funnel, "date": date}
 
     @app.post("/discord/ask")
-    def discord_ask(request: Request) -> dict[str, Any]:
+    async def discord_ask(request: Request) -> dict[str, Any]:
         """Direct API for testing the Sales Assistant without Discord."""
         validate_event_auth(request)
-        import json as _json
-        body = _json.loads(request._receive.__self__._body)  # type: ignore[attr-defined]
+        body = await request.json()
         question = str(body.get("question", "")).strip()
         if not question:
             return {"error": "missing question"}
