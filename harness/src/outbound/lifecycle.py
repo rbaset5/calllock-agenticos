@@ -10,6 +10,7 @@ All mutations check current stage before updating (idempotency guard).
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 import logging
 from typing import Any
 
@@ -17,6 +18,18 @@ from . import store
 from .constants import OUTBOUND_TENANT_ID
 
 logger = logging.getLogger(__name__)
+
+
+def classify_lead_type(prospect: dict[str, Any]) -> str:
+    """Classify lead as hot, warm, or volume based on stage + next step signals."""
+    stage = str(prospect.get("stage", ""))
+    has_demo = bool(prospect.get("demo_scheduled", False))
+    next_action = str(prospect.get("next_action_type", ""))
+    if stage == "interested" and (has_demo or next_action == "close"):
+        return "hot"
+    if stage in ("callback", "interested"):
+        return "warm"
+    return "volume"
 
 
 def run_lifecycle_sweep(
@@ -33,6 +46,7 @@ def run_lifecycle_sweep(
         "wrong_number_disqualified": 0,
         "errors": [],
     }
+    today_date = date.fromisoformat(today) if today else date.today()
 
     # Rule 1: Overdue callbacks (3+ days past callback_date)
     try:
@@ -43,6 +57,8 @@ def run_lifecycle_sweep(
                 result = store.update_outbound_prospect(pid, {
                     "stage": "call_ready",
                     "disqualification_reason": None,
+                    "next_action_date": None,
+                    "next_action_type": None,
                 }, expected_stage="callback")
                 if result:
                     results["overdue_requeued"] += 1
@@ -107,8 +123,21 @@ def run_lifecycle_sweep(
     try:
         cooling = store.list_cooling_leads(tenant_id=tenant_id, stale_days=5)
         for prospect in cooling:
+            pid = prospect["prospect_id"]
+            # Ensure warm leads have an explicit next action even if they are cooling.
+            try:
+                store.update_outbound_prospect(
+                    pid,
+                    {
+                        "next_action_date": (today_date + timedelta(days=1)).isoformat(),
+                        "next_action_type": "close_attempt",
+                    },
+                    expected_stage="interested",
+                )
+            except Exception:
+                logger.exception("Failed to set next action for cooling lead %s", pid)
             results["cooling_alerts"].append({
-                "prospect_id": prospect["prospect_id"],
+                "prospect_id": pid,
                 "business_name": prospect.get("business_name", "Unknown"),
                 "phone": prospect.get("phone", ""),
                 "metro": prospect.get("metro", ""),

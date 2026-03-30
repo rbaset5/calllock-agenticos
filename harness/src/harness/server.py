@@ -8,7 +8,7 @@ logging.basicConfig(
 )
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 from typing import Any
@@ -588,6 +588,89 @@ if FastAPI:
         validate_event_auth(request)
         from outbound.lifecycle import run_lifecycle_sweep
         return run_lifecycle_sweep()
+
+    @app.get("/outbound/scoreboard")
+    def outbound_scoreboard(request: Request, include_tactical: bool = False) -> dict[str, Any]:
+        validate_event_auth(request)
+        from outbound.scoreboard import sprint_scoreboard, tactical_recommendations
+
+        metrics = sprint_scoreboard()
+        if include_tactical:
+            metrics["tactical_recommendations"] = tactical_recommendations()
+        return metrics
+
+    @app.post("/outbound/dial-started")
+    async def outbound_dial_started(request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        body = await request.json()
+        prospect_id = body.get("prospect_id")
+        if not prospect_id:
+            raise HTTPException(status_code=400, detail="prospect_id is required")
+
+        from outbound import store as outbound_store
+        from outbound.constants import OUTBOUND_TENANT_ID
+
+        twilio_call_sid = f"dial-started-{uuid4()}"
+        result = outbound_store.insert_outbound_call(
+            {
+                "tenant_id": OUTBOUND_TENANT_ID,
+                "prospect_id": prospect_id,
+                "twilio_call_sid": twilio_call_sid,
+                "called_at": datetime.now(timezone.utc).isoformat(),
+                "outcome": "dial_started",
+                "call_outcome_type": "dial_started",
+            }
+        )
+        if not result.get("inserted"):
+            raise HTTPException(status_code=500, detail="failed to insert dial_started event")
+        record = result.get("record") or {}
+        return {"id": record.get("id"), "twilio_call_sid": twilio_call_sid}
+
+    @app.get("/outbound/pipeline-review")
+    def outbound_pipeline_review(request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        from outbound import store as outbound_store
+        from outbound.constants import OUTBOUND_TENANT_ID
+        from outbound.daily_plan import current_week_number, is_calling_day, load_schedule
+        from outbound.scoreboard import sprint_scoreboard
+
+        schedule = load_schedule()
+        today = date.today()
+        week_num = current_week_number(schedule, today) if schedule else 0
+        calling_day = bool(schedule and week_num > 0 and is_calling_day(schedule, week_num, today))
+
+        metrics = sprint_scoreboard(OUTBOUND_TENANT_ID, today)
+        warm_leads = outbound_store.list_outbound_prospects(
+            tenant_id=OUTBOUND_TENANT_ID,
+            stages=["callback", "interested"],
+        )
+        missing_next_step = [
+            {
+                "prospect_id": row.get("id"),
+                "business_name": row.get("business_name"),
+                "stage": row.get("stage"),
+                "metro": row.get("metro"),
+            }
+            for row in warm_leads
+            if not row.get("next_action_date")
+        ]
+
+        return {
+            "date": today.isoformat(),
+            "week": week_num,
+            "calling_day": calling_day,
+            "scoreboard": metrics,
+            "zero_dials_alert": calling_day and int(metrics.get("daily_dials", 0) or 0) == 0,
+            "warm_leads_missing_next_step": missing_next_step,
+            "sections": {
+                "engaged_with_ai_followup": [],
+                "recommended_actions": [
+                    f"Set next action date for {len(missing_next_step)} warm lead(s)"
+                    if missing_next_step
+                    else "Warm leads all have next steps assigned"
+                ],
+            },
+        }
 
     @app.get("/outbound/digest")
     def outbound_digest(request: Request, date: str | None = None) -> dict[str, Any]:
