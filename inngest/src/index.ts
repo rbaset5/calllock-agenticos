@@ -1,19 +1,6 @@
 import { inngest } from "./inngest.js";
 import { evaluateAlerts } from "./functions/evaluate-alerts.js";
-import { dispatchAgentTask, syncAgentOfficeState } from "./functions/office.js";
-import { guardianDispatch } from "./functions/guardian-dispatch.js";
-import { guardianWatchdog } from "./functions/guardian-watchdog.js";
-import {
-  discordAgentState,
-  discordHealthCheck,
-  discordSkillCandidate,
-  discordVerification,
-} from "./functions/discord-projector.js";
-import {
-  discordOutboundDiscovery,
-  discordOutboundError,
-  discordOutboundTestResults,
-} from "./functions/outbound-projector.js";
+import { syncAgentOfficeState } from "./functions/office.js";
 import { processInboundMessage } from "./functions/inbound/process-inbound-message.js";
 import { pollInbound } from "./functions/inbound/poll-inbound.js";
 import { growthAdvisorWeekly } from "./functions/growth/growth-advisor-weekly.js";
@@ -31,6 +18,15 @@ import {
   processVoiceCall,
   sendEmergencySms,
 } from "./functions/voice.js";
+import {
+  discordOutboundDiscovery,
+  discordOutboundError,
+  discordOutboundExtraction,
+  discordOutboundTestResults,
+} from "./functions/outbound-projector.js";
+import { outboundMorningPlanner } from "./functions/outbound-morning-planner.js";
+import { outboundFollowupGuardian } from "./functions/outbound-followup-guardian.js";
+import { outboundEodDigest } from "./functions/outbound-eod-digest.js";
 
 export const client = inngest;
 export const functions = [
@@ -48,17 +44,14 @@ export const functions = [
   pollInbound,
   processInboundMessage,
   syncAgentOfficeState,
-  dispatchAgentTask,
   processVoiceCall,
   sendEmergencySms,
   callRecordsRetention,
-  guardianDispatch,
-  guardianWatchdog,
-  discordAgentState,
-  discordVerification,
-  discordSkillCandidate,
-  discordHealthCheck,
   discordOutboundDiscovery,
   discordOutboundTestResults,
   discordOutboundError,
+  discordOutboundExtraction,
+  outboundMorningPlanner,
+  outboundFollowupGuardian,
+  outboundEodDigest,
 ];

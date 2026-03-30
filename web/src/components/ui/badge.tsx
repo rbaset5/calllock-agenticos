@@ -18,6 +18,29 @@ const badgeVariants = cva(
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
+        // CallLock chip variants — urgency-tiered, unique per parent category
+        "cl-critical":
+          "bg-[var(--cl-chip-critical-bg)] text-[var(--cl-chip-critical-text)]",
+        "cl-escalation":
+          "bg-[var(--cl-chip-escalation-bg)] text-[var(--cl-chip-escalation-text)]",
+        "cl-amber":
+          "bg-[var(--cl-chip-amber-bg)] text-[var(--cl-chip-amber-text)]",
+        "cl-risk":
+          "bg-[var(--cl-chip-risk-bg)] text-[var(--cl-chip-risk-text)]",
+        "cl-job-issue":
+          "bg-[var(--cl-chip-job-issue-bg)] text-[var(--cl-chip-job-issue-text)]",
+        "cl-commitment":
+          "bg-[var(--cl-chip-commitment-bg)] text-[var(--cl-chip-commitment-text)]",
+        "cl-retry":
+          "bg-[var(--cl-chip-retry-bg)] text-[var(--cl-chip-retry-text)]",
+        "cl-opportunity":
+          "bg-[var(--cl-chip-opportunity-bg)] text-[var(--cl-chip-opportunity-text)]",
+        "cl-resolved":
+          "bg-[var(--cl-chip-resolved-bg)] text-[var(--cl-chip-resolved-text)]",
+        "cl-neutral":
+          "bg-[var(--cl-bg-chip)] text-[var(--cl-text-subtle)]",
+        "cl-muted":
+          "bg-[var(--cl-bg-chip)] text-[var(--cl-text-muted)]",
       },
     },
     defaultVariants: {

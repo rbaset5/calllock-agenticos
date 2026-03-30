@@ -1,12 +1,8 @@
 import {
-  AGENT_DISPATCH,
   AGENT_STATE_CHANGED,
-  type AgentDispatchPayload,
   type AgentStateChangedPayload,
-  validateAgentDispatchPayload,
   validateAgentStateChangedPayload,
 } from "../events/schemas.js";
-import { buildHarnessEvent, dispatchHarnessEvent } from "../client.js";
 import { inngest } from "../inngest.js";
 
 export interface AgentOfficeStateRow {
@@ -33,13 +29,6 @@ function getSupabaseConfig() {
 
 function assertValidAgentStateChangedPayload(payload: AgentStateChangedPayload) {
   const errors = validateAgentStateChangedPayload(payload);
-  if (errors.length > 0) {
-    throw new Error(errors.join(", "));
-  }
-}
-
-function assertValidAgentDispatchPayload(payload: AgentDispatchPayload) {
-  const errors = validateAgentDispatchPayload(payload);
   if (errors.length > 0) {
     throw new Error(errors.join(", "));
   }
@@ -89,83 +78,12 @@ export async function syncAgentOfficeStateTask(
   return response.json();
 }
 
-export function agentDispatchToHarnessPayload(payload: AgentDispatchPayload) {
-  return {
-    call_id: `dispatch:${payload.idempotency_key}`,
-    tenant_id: payload.tenant_id,
-    worker_id: payload.worker_id,
-    transcript: "",
-    problem_description: payload.task_type,
-    call_source: "manual",
-    task_context: {
-      ...payload.task_context,
-      dispatch_metadata: {
-        origin_worker_id: payload.origin_worker_id,
-        idempotency_key: payload.idempotency_key,
-        priority: payload.priority ?? "medium",
-      },
-    },
-    job_requests: [],
-  };
-}
-
-export function agentDispatchToIdleEvent(payload: AgentDispatchPayload): AgentStateChangedPayload {
-  return {
-    agent_id: payload.worker_id,
-    tenant_id: payload.tenant_id,
-    department: payload.department,
-    role: payload.role,
-    from_state: "worker",
-    to_state: "idle",
-    description: payload.description ?? payload.task_type,
-  };
-}
-
-export async function dispatchAgentTaskTask(
-  payload: AgentDispatchPayload,
-  fetchImpl: typeof fetch = fetch,
-  sendEventImpl: (event: { name: string; data: AgentStateChangedPayload }) => Promise<unknown> = (event) =>
-    inngest.send(event),
-) {
-  assertValidAgentDispatchPayload(payload);
-  const baseUrl = process.env.HARNESS_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("HARNESS_BASE_URL is required");
-  }
-
-  const result = await dispatchHarnessEvent(
-    {
-      baseUrl,
-      eventSecret: process.env.HARNESS_EVENT_SECRET,
-    },
-    buildHarnessEvent(agentDispatchToHarnessPayload(payload)),
-    fetchImpl,
-  );
-
-  await sendEventImpl({
-    name: AGENT_STATE_CHANGED,
-    data: agentDispatchToIdleEvent(payload),
-  });
-
-  return result;
-}
-
 export const syncAgentOfficeState = inngest.createFunction(
   { id: "sync-agent-office-state" },
   { event: AGENT_STATE_CHANGED },
   async ({ event, step }: any) => {
     return step.run("upsert-agent-office-state", async () =>
       syncAgentOfficeStateTask(event.data as AgentStateChangedPayload),
-    );
-  },
-);
-
-export const dispatchAgentTask = inngest.createFunction(
-  { id: "dispatch-agent-task" },
-  { event: AGENT_DISPATCH },
-  async ({ event, step }: any) => {
-    return step.run("dispatch-agent-task", async () =>
-      dispatchAgentTaskTask(event.data as AgentDispatchPayload),
     );
   },
 );

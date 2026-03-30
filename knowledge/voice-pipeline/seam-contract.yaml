@@ -1,238 +1,427 @@
-version: "2.0"
-owner: eng-product-qa
-field_mappings:
-  - voice_field: customer_name
-    supabase: jsonb
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: customer_phone
-    supabase: column
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: service_address
-    supabase: jsonb
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: urgency_tier
-    supabase: column
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: dashboard_urgency
-    supabase: jsonb
-    app_element: null
+# CallLock Voice Pipeline Seam Contract
+#
+# This file is the single source of truth for what the voice pipeline produces,
+# what gets persisted to Supabase, and what the customer app (hong-kong-v1) displays.
+#
+# Both Product Guardian agents (eng-ai-voice, eng-qa) validate against this contract.
+#
+# Field status:
+#   extraction: required | optional | reserved (scaffolded but not yet populated)
+#   supabase:   column | jsonb (inside extracted_fields) | not_stored
+#   app_display: card | detail | not_shown
+#
+# Last validated: 2026-03-17
+# Version: 1.0
+
+version: "1.0"
+last_validated: "2026-03-17"
+industry_pack: hvac
+
+# ============================================================================
+# CUSTOMER IDENTIFICATION
+# ============================================================================
+fields:
+
+  - name: customer_name
+    description: Name of the caller extracted from transcript
+    extraction: required
+    supabase: jsonb  # extracted_fields.customer_name
+    app_display: card  # primary label on call card
+    type: string
+    fallback: "Unknown"
+
+  - name: customer_phone
+    description: Caller phone number from Retell from_number
+    extraction: required
+    supabase: column  # call_records.phone_number
+    app_display: card  # shown below name, fallback label if no name
+    type: string
+
+  - name: service_address
+    description: Service location extracted from transcript
+    extraction: optional
+    supabase: jsonb  # extracted_fields.service_address
+    app_display: detail  # header section of detail view
+    type: string
+
+# ============================================================================
+# CALL CLASSIFICATION
+# ============================================================================
+
+  - name: urgency_tier
+    description: Urgency classification for routing and prioritization
+    extraction: required
+    supabase: column  # call_records.urgency_tier
+    app_display: card  # colored urgency badge
+    type: string
+    enum: [emergency, urgent, routine, estimate]
+
+  - name: dashboard_urgency
+    description: UI-friendly urgency mapping for display
+    extraction: required
+    supabase: jsonb  # extracted_fields.dashboard_urgency
+    app_display: not_shown  # urgency_tier is used for display instead
+    type: string
+    enum: [emergency, high, medium, low]
+
+  - name: caller_type
+    description: Type of caller for routing decisions
+    extraction: required
+    supabase: column  # call_records.caller_type
     app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: caller_type
-    supabase: column
-    app_element: null
+    type: string
+    enum: [residential, commercial, unknown, vendor, job_applicant, spam]
+
+  - name: primary_intent
+    description: What the caller wants
+    extraction: required
+    supabase: column  # call_records.primary_intent
     app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: primary_intent
-    supabase: column
-    app_element: null
+    type: string
+    enum: [service, maintenance, unknown, estimate, installation, booking_request, active_job_issue, solicitation, admin_billing, new_lead]
+
+  - name: route
+    description: High-level routing decision
+    extraction: required
+    supabase: column  # call_records.route
     app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: route
-    supabase: column
-    app_element: null
+    type: string
+    enum: [legitimate, spam, vendor]
+
+  - name: end_call_reason
+    description: Why the call ended (mapped from Retell disconnection_reason)
+    extraction: required
+    supabase: column  # call_records.end_call_reason
+    app_display: detail  # call outcome section
+    type: string
+
+# ============================================================================
+# PROBLEM DESCRIPTION
+# ============================================================================
+
+  - name: problem_description
+    description: Natural language description of the customer's issue
+    extraction: required
+    supabase: jsonb  # extracted_fields.problem_description
+    app_display: card  # first 80 chars shown on card; full text on detail
+    type: string
+
+  - name: hvac_issue_type
+    description: HVAC-specific issue classification
+    extraction: optional
+    supabase: jsonb  # extracted_fields.hvac_issue_type
+    app_display: detail  # badge in problem section
+    type: string
+
+  - name: safety_emergency
+    description: Whether the call involves a safety hazard (gas leak, CO, etc.)
+    extraction: required
+    supabase: jsonb  # extracted_fields.safety_emergency
+    app_display: card  # red "Safety" badge on card
+    type: boolean
+    default: false
+
+# ============================================================================
+# EQUIPMENT
+# ============================================================================
+
+  - name: equipment_type
+    description: Type of equipment (furnace, AC unit, heat pump, etc.)
+    extraction: optional
+    supabase: jsonb  # extracted_fields.equipment_type
+    app_display: detail  # equipment section
+    type: string
+
+  - name: equipment_brand
+    description: Brand/manufacturer of equipment
+    extraction: optional
+    supabase: jsonb  # extracted_fields.equipment_brand
+    app_display: detail  # equipment section
+    type: string
+
+  - name: equipment_age
+    description: Age of equipment from caller/dynamic variables
+    extraction: optional
+    supabase: jsonb  # extracted_fields.equipment_age
+    app_display: detail  # equipment section
+    type: string
+
+# ============================================================================
+# BOOKING
+# ============================================================================
+
+  - name: appointment_booked
+    description: Whether an appointment was successfully booked during the call
+    extraction: required
+    supabase: jsonb  # extracted_fields.appointment_booked
+    app_display: card  # green "Booked" badge
+    type: boolean
+    default: false
+
+  - name: appointment_date_time
+    description: When the booked appointment is scheduled
+    extraction: optional  # only present if appointment_booked is true
+    supabase: jsonb  # extracted_fields.appointment_date_time
+    app_display: detail  # booking section
+    type: string  # ISO datetime
+
+  - name: callback_type
+    description: Type of callback requested (if any)
+    extraction: optional
+    supabase: jsonb  # extracted_fields.callback_type
+    app_display: card  # "Callback" badge if end_call_reason == callback_later
+    type: string
+
+# ============================================================================
+# PROBLEM DURATION (nested object in extracted_fields)
+# ============================================================================
+
+  - name: problem_duration
+    description: How long the problem has been occurring
+    extraction: optional
+    supabase: jsonb  # extracted_fields.problem_duration (nested object)
     app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: end_call_reason
-    supabase: column
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: problem_description
-    supabase: jsonb
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: hvac_issue_type
-    supabase: jsonb
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: safety_emergency
-    supabase: jsonb
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: equipment_type
-    supabase: jsonb
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: equipment_brand
-    supabase: jsonb
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: equipment_age
-    supabase: jsonb
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: appointment_booked
-    supabase: jsonb
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: appointment_date_time
-    supabase: jsonb
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: callback_type
-    supabase: jsonb
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - extraction
-      - app_sync
-      - render
-  - voice_field: problem_duration
-    supabase: jsonb
-    app_element: null
+    type: object
+    properties:
+      raw: { type: string, description: "Raw duration text from transcript" }
+      category: { type: string, description: "Duration category" }
+      onset: { type: string, description: "When the problem started" }
+      pattern: { type: string, description: "Intermittent, constant, etc." }
+      attempted_fixes: { type: string, description: "What customer tried" }
+
+# ============================================================================
+# REVENUE ESTIMATION
+# ============================================================================
+
+  - name: revenue_tier
+    description: Estimated revenue tier for lead scoring
+    extraction: required
+    supabase: column  # call_records.revenue_tier
+    app_display: not_shown  # not displayed to customers in v1
+    type: string
+    enum: [replacement, major_repair, standard_repair, minor, diagnostic]
+
+  - name: revenue_estimate
+    description: Detailed revenue estimation with confidence and signals
+    extraction: required
+    supabase: jsonb  # extracted_fields.revenue_estimate
+    app_display: not_shown  # not displayed to customers in v1
+    type: object
+    properties:
+      tier: { type: string }
+      tier_label: { type: string }
+      tier_description: { type: string }
+      estimated_range: { type: string }
+      confidence: { type: string }
+      signals: { type: array }
+      potential_replacement: { type: boolean }
+
+# ============================================================================
+# TAGS & QUALITY
+# ============================================================================
+
+  - name: tag_categories
+    description: Categorized tags from extraction taxonomy
+    extraction: required
+    supabase: jsonb  # extracted_fields.tag_categories
+    app_display: not_shown  # not displayed in v1
+    type: object
+    properties:
+      CUSTOMER: { type: array }
+      SERVICE_TYPE: { type: array }
+      EQUIPMENT: { type: array }
+      CONDITION: { type: array }
+      RECOVERY: { type: array }
+      NON_CUSTOMER: { type: array }
+
+  - name: tags
+    description: Flattened tag list from tag_categories
+    extraction: required
+    supabase: column  # call_records.tags (text[])
+    app_display: not_shown  # not displayed in v1
+    type: array
+    items: string
+
+  - name: quality_score
+    description: Call quality score (0-100)
+    extraction: required
+    supabase: column  # call_records.quality_score (numeric)
+    app_display: not_shown  # not displayed in v1
+    type: number
+    range: [0, 100]
+
+  - name: scorecard_warnings
+    description: Warnings from call scorecard evaluation
+    extraction: required
+    supabase: jsonb  # extracted_fields.scorecard_warnings
+    app_display: not_shown  # used by Product Guardian, not customer-facing
+    type: array
+    items: string
+
+  - name: sales_lead_notes
+    description: Notes for sales follow-up from dynamic variables
+    extraction: optional
+    supabase: jsonb  # extracted_fields.sales_lead_notes
     app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: revenue_tier
-    supabase: column
-    app_element: null
+    type: string
+
+# ============================================================================
+# TRANSCRIPT
+# ============================================================================
+
+  - name: transcript
+    description: Full call transcript text
+    extraction: not_applicable  # comes from Retell directly, not extraction
+    supabase: column  # call_records.transcript
+    app_display: detail  # parsed into AI Agent / Customer messages
+    type: string
+    source: retell_raw_payload
+
+  - name: call_summary
+    description: AI-generated call summary from Retell
+    extraction: not_applicable  # comes from Retell directly
+    supabase: jsonb  # raw_retell_payload.call_summary
+    app_display: not_shown  # could be displayed, currently not
+    type: string
+    source: retell_raw_payload
+
+# ============================================================================
+# METADATA (not from extraction)
+# ============================================================================
+
+  - name: call_id
+    description: Unique call identifier
+    extraction: not_applicable
+    supabase: column  # call_records.call_id
+    app_display: not_shown  # used internally
+    type: string
+    source: retell_webhook
+
+  - name: retell_call_id
+    description: Retell's internal call ID
+    extraction: not_applicable
+    supabase: column  # call_records.retell_call_id
     app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: revenue_estimate
-    supabase: jsonb
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: tag_categories
-    supabase: jsonb
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: tags
-    supabase: column
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: quality_score
-    supabase: column
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: scorecard_warnings
-    supabase: jsonb
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: sales_lead_notes
-    supabase: jsonb
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - extraction
-      - app_sync
-  - voice_field: transcript
-    supabase: column
-    app_element: call-detail
-    app_display: detail
-    required_chain:
-      - app_sync
-      - render
-  - voice_field: call_summary
-    supabase: jsonb
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - app_sync
-  - voice_field: call_duration_seconds
-    supabase: column
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - app_sync
-  - voice_field: call_recording_url
-    supabase: column
-    app_element: null
-    app_display: not_shown
-    required_chain:
-      - app_sync
-  - voice_field: created_at
-    supabase: column
-    app_element: call-card
-    app_display: card
-    required_chain:
-      - app_sync
-      - render
-invariants:
-  - name: no-orphan-extraction
-    rule: "every field in voice-contract with extraction:required must appear in at least one field_mapping"
-  - name: no-orphan-display
-    rule: "every field in app-contract must_render must have a source in field_mappings"
-  - name: no-broken-chain
-    rule: "every field_mapping must have all links in required_chain passing"
+    type: string
+    source: retell_webhook
+
+  - name: call_duration_seconds
+    description: Call duration in seconds
+    extraction: not_applicable
+    supabase: column  # call_records.call_duration_seconds
+    app_display: not_shown  # could be displayed
+    type: integer
+    source: retell_webhook
+
+  - name: call_recording_url
+    description: URL to call recording audio
+    extraction: not_applicable
+    supabase: column  # call_records.call_recording_url
+    app_display: not_shown  # could be displayed
+    type: string
+    source: retell_webhook
+
+  - name: created_at
+    description: When the call record was created
+    extraction: not_applicable
+    supabase: column  # call_records.created_at
+    app_display: card  # relative timestamp on card, absolute on detail
+    type: timestamp
+    source: supabase_default
+
+# ============================================================================
+# RESERVED FIELDS (scaffolded in extraction, not yet populated)
+# ============================================================================
+# These fields exist in the extraction result dict but are never set.
+# They represent future capabilities. eng-ai-voice should NOT test for these
+# until they are moved to the active fields section above.
+
+reserved_fields:
+  - name: priority_color
+    description: "Future: color-coded priority for dashboard"
+  - name: priority_reason
+    description: "Future: human-readable priority explanation"
+  - name: property_type
+    description: "Future: residential vs commercial property classification"
+  - name: system_status
+    description: "Future: HVAC system operational status"
+  - name: equipment_age_bracket
+    description: "Future: categorized equipment age range"
+  - name: is_decision_maker
+    description: "Future: whether caller is the property owner/decision maker"
+  - name: decision_maker_contact
+    description: "Future: contact info for decision maker if different from caller"
+  - name: site_contact_name
+    description: "Future: on-site contact name"
+  - name: site_contact_phone
+    description: "Future: on-site contact phone"
+  - name: is_third_party
+    description: "Future: whether caller is a third party (property manager, tenant)"
+  - name: third_party_type
+    description: "Future: type of third party"
+  - name: call_type
+    description: "Future: high-level call classification"
+  - name: call_subtype
+    description: "Future: detailed call sub-classification"
+  - name: call_type_confidence
+    description: "Future: confidence score for call type classification"
+  - name: is_commercial
+    description: "Future: boolean commercial flag"
+  - name: sentiment_score
+    description: "Future: caller sentiment analysis score"
+  - name: work_type
+    description: "Future: type of work requested"
+  - name: card_headline
+    description: "Future: pre-computed headline for dashboard card"
+  - name: card_summary
+    description: "Future: pre-computed summary for dashboard card"
+  - name: slot_changed
+    description: "Future: whether booking slot was changed during call"
+  - name: urgency_mismatch
+    description: "Future: flag if urgency changed during booking"
+  - name: booking_requested_time
+    description: "Future: time customer originally requested"
+  - name: booking_booked_slot
+    description: "Future: actual slot booked"
+  - name: booking_urgency_transition
+    description: "Future: urgency level change during booking flow"
+
+# ============================================================================
+# VALIDATION RULES
+# ============================================================================
+validation_rules:
+
+  extraction_completeness:
+    description: "Required extraction fields must be present in 95%+ of calls"
+    threshold: 0.95
+    applies_to: fields where extraction == "required"
+
+  type_consistency:
+    description: "Field types must match between extraction output and app transform"
+    check: "extraction output type matches seam contract type definition"
+
+  enum_coverage:
+    description: "Enum fields must only contain declared values"
+    check: "all values in extraction output exist in enum list"
+
+  display_coverage:
+    description: "All fields with app_display != not_shown must render in hong-kong-v1"
+    check: "transformCallRecord() maps field AND component renders it"
+
+  orphan_detection:
+    description: "Flag fields extracted but never stored or displayed"
+    check: "field has extraction != not_applicable but app_display == not_shown AND supabase == not_stored"
+
+# ============================================================================
+# SEAM HEALTH SUMMARY
+# ============================================================================
+# Active fields: 31 (extraction produces or passes through)
+# Displayed on card: 7 (name, phone, problem, urgency, booked, safety, callback, timestamp)
+# Displayed on detail: 6 additional (address, issue type, equipment x3, booking datetime, call outcome)
+# Extracted but not displayed: 12 (revenue x2, tags x2, quality, scorecard, caller_type, primary_intent, route, dashboard_urgency, problem_duration, sales_lead_notes)
+# Metadata (not from extraction): 5 (call_id, retell_call_id, duration, recording_url, created_at)
+# Reserved (scaffolded, not populated): 25 fields
+#
+# Key gap: Revenue estimation (tier, range, signals) is extracted and stored
+# but never shown to customers. This is intentional for v1 — revenue data
+# is used internally by the SDR/Lead Router agent for call prioritization.

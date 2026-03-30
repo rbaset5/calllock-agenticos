@@ -6,6 +6,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const OUTBOUND_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const OUTBOUND_CALL_OUTCOME_EVENT = 'outbound/call.outcome-logged';
+const OUTBOUND_EXTRACTION_COMPLETE_EVENT = 'outbound/call.extraction-complete';
 
 const app = express();
 app.use(cors());
@@ -26,6 +27,9 @@ const {
   INNGEST_EVENT_URL,
   INNGEST_EVENT_KEY,
   OUTBOUND_SOURCE_VERSION = 'dialer-v1',
+  HARNESS_BASE_URL = 'http://localhost:8000',
+  HARNESS_EVENT_SECRET = '',
+  NODE_ENV = 'development',
   PORT = '3004',
 } = process.env;
 
@@ -41,6 +45,96 @@ const callStore = new Map();
 function storeCall(callSid, data) {
   const existing = callStore.get(callSid) || {};
   callStore.set(callSid, { ...existing, ...data, updatedAt: Date.now() });
+}
+
+// Twilio webhook signature validation middleware
+function validateTwilioSignature(req, res, next) {
+  if (!CALL_SERVER_BASE_URL || !TWILIO_AUTH_TOKEN) {
+    if (NODE_ENV === 'production') {
+      console.error('[security] Twilio validation env vars missing in production');
+      return res.sendStatus(500);
+    }
+    return next(); // skip validation in dev only
+  }
+  const signature = req.headers['x-twilio-signature'];
+  if (!signature) {
+    console.warn('[security] Missing Twilio signature on', req.originalUrl);
+    return res.sendStatus(403);
+  }
+  const url = `${CALL_SERVER_BASE_URL}${req.originalUrl}`;
+  const valid = twilio.validateRequest(TWILIO_AUTH_TOKEN, signature, url, req.body);
+  if (!valid) {
+    console.warn('[security] Invalid Twilio signature on', req.originalUrl);
+    return res.sendStatus(403);
+  }
+  next();
+}
+
+// Async LLM extraction: POST transcript to harness, update outbound_calls with result
+async function runExtractionAsync(callSid, transcript, callData) {
+  const prospectContext = {
+    business_name: callData.businessName || '',
+    metro: callData.metro || '',
+    reviews: callData.reviews || '',
+  };
+
+  let result;
+  try {
+    const response = await fetch(`${HARNESS_BASE_URL}/outbound/extract`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(HARNESS_EVENT_SECRET && { Authorization: `Bearer ${HARNESS_EVENT_SECRET}` }),
+      },
+      body: JSON.stringify({ transcript, prospect_context: prospectContext }),
+      signal: AbortSignal.timeout(60000), // 60s timeout for LLM extraction
+    });
+    if (!response.ok) {
+      throw new Error(`Harness returned ${response.status}`);
+    }
+    result = await response.json();
+  } catch (error) {
+    console.error(`[extraction] Harness call failed for ${callSid}:`, error.message);
+    if (supabase) {
+      await supabase.from('outbound_calls')
+        .update({ extraction_status: 'failed', extraction_raw_response: error.message })
+        .eq('twilio_call_sid', callSid)
+        .eq('tenant_id', OUTBOUND_TENANT_ID);
+    }
+    return;
+  }
+
+  if (!supabase) return;
+
+  const patch = {
+    extraction: result.extraction || null,
+    extraction_status: result.status || 'failed',
+    extraction_raw_response: result.raw_response || null,
+  };
+
+  const { error } = await supabase.from('outbound_calls')
+    .update(patch)
+    .eq('twilio_call_sid', callSid)
+    .eq('tenant_id', OUTBOUND_TENANT_ID);
+
+  if (error) {
+    console.error(`[extraction] Supabase update failed for ${callSid}:`, error.message);
+    return;
+  }
+
+  console.log(`[extraction] ${result.status} for ${callSid}`);
+
+  // Emit extraction-complete event for Discord notification
+  if (result.status === 'complete' && result.extraction) {
+    await emitInngestEvent(OUTBOUND_EXTRACTION_COMPLETE_EVENT, {
+      tenant_id: OUTBOUND_TENANT_ID,
+      prospect_id: callData.prospectId,
+      twilio_call_sid: callSid,
+      business_name: callData.businessName || '',
+      extraction: result.extraction,
+      source_version: OUTBOUND_SOURCE_VERSION,
+    });
+  }
 }
 
 setInterval(() => {
@@ -285,7 +379,7 @@ app.get('/prospects', async (_req, res) => {
   res.json({ prospects: (data || []).map(toFrontendProspect) });
 });
 
-app.post('/twiml', (req, res) => {
+app.post('/twiml', validateTwilioSignature, (req, res) => {
   const to = req.body.To;
   if (!to) {
     res.status(400).send('Missing To parameter');
@@ -329,7 +423,7 @@ app.post('/calls/:callSid/metadata', (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/callbacks/recording', (req, res) => {
+app.post('/callbacks/recording', validateTwilioSignature, (req, res) => {
   const { CallSid, RecordingSid, RecordingUrl, RecordingDuration, RecordingStatus } = req.body;
 
   if (RecordingStatus !== 'completed') {
@@ -357,7 +451,7 @@ app.post('/callbacks/recording', (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/callbacks/transcription', (req, res) => {
+app.post('/callbacks/transcription', validateTwilioSignature, (req, res) => {
   const { CallSid, TranscriptionText, TranscriptionStatus } = req.body;
   console.log(`[transcription] CallSid=${CallSid} status=${TranscriptionStatus} length=${TranscriptionText?.length || 0}`);
 
@@ -366,11 +460,63 @@ app.post('/callbacks/transcription', (req, res) => {
   }
 
   const data = callStore.get(CallSid);
-  if (data?.prospectId && data?.recordingUrl) {
-    writeOutcomeRecord(CallSid).catch((error) => console.error('[outbound] write failed:', error.message));
-  }
+
+  // Sequence: write outcome row first, THEN trigger extraction.
+  // Extraction does an UPDATE by twilio_call_sid — the row must exist.
+  (async () => {
+    if (data?.prospectId && data?.recordingUrl) {
+      try {
+        await writeOutcomeRecord(CallSid);
+      } catch (error) {
+        console.error('[outbound] write failed:', error.message);
+      }
+    }
+
+    if (TranscriptionText && TranscriptionText.length >= 50) {
+      try {
+        await runExtractionAsync(CallSid, TranscriptionText, data || {});
+      } catch (error) {
+        console.error('[extraction] async failed:', error.message);
+      }
+    }
+  })();
 
   res.sendStatus(200);
+});
+
+// Daily plan proxy — calls harness with 3s timeout, falls back to ranked list
+app.get('/daily-plan', async (_req, res) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (HARNESS_EVENT_SECRET) headers['Authorization'] = `Bearer ${HARNESS_EVENT_SECRET}`;
+    const response = await fetch(`${HARNESS_BASE_URL}/outbound/daily-plan`, {
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) throw new Error(`Harness returned ${response.status}`);
+    const plan = await response.json();
+    res.json(plan);
+  } catch (err) {
+    clearTimeout(timeout);
+    console.warn('[daily-plan] Harness unavailable, falling back to ranked list:', err.message);
+    // Fallback: return basic ranked list without sprint structure
+    try {
+      if (!supabase) return res.json({ fallback: true, blocks: [], callbacks: [], fresh_leads: [] });
+      const { data } = await supabase
+        .from('outbound_prospects')
+        .select('id, business_name, phone, phone_normalized, metro, timezone, total_score, score_tier')
+        .eq('tenant_id', OUTBOUND_TENANT_ID)
+        .eq('stage', 'call_ready')
+        .order('total_score', { ascending: false })
+        .limit(50);
+      res.json({ fallback: true, blocks: [], callbacks: [], fresh_leads: data || [] });
+    } catch (fallbackErr) {
+      res.status(503).json({ error: 'Plan unavailable', fallback_error: fallbackErr.message });
+    }
+  }
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

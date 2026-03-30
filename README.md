@@ -15,6 +15,12 @@ If you are starting cold, read [plans/start-here-no-context.md](/Users/rashidbas
 - `tests/`: integration coverage for repository-level checks
 - `plans/`: execution plans for Phases 1-4
 
+## Seed Strategy
+
+- `supabase/seed.sql`: realistic, day-to-day CallLock App data for tenant-alpha (`demo-call-*` namespace).
+- `supabase/migrations/055_test_tenant_seed.sql`: deterministic fixture data for automated Product Guardian checks.
+- `supabase/seed-checks.sql`: optional post-seed verification queries (counts, bucket coverage, callback windows, touch history).
+
 ## Phase Scope
 
 This repository now contains an implemented Phase 1-4 backend foundation:

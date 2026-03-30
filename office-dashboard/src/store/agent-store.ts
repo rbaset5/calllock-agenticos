@@ -43,33 +43,14 @@ export type QuestLogEntry = {
   resolved_at: string | null;
 };
 
-export type AgentHandoffEntry = {
-  id: string;
-  workspace_id?: string | null;
-  tenant_id: string | null;
-  from_agent_id: string;
-  to_agent_id: string;
-  from_department: string;
-  to_department: string;
-  context_type: string;
-  context_id?: string | null;
-  customer_id?: string | null;
-  call_id?: string | null;
-  context_summary?: string | null;
-  created_at: string;
-};
-
 type AgentStore = {
   agents: Map<string, AgentState>;
   quests: QuestLogEntry[];
-  handoffs: AgentHandoffEntry[];
   connectionStatus: ConnectionStatus;
   upsertAgent: (row: AgentOfficeStateRow) => void;
   removeAgent: (agentId: string) => void;
   upsertQuest: (quest: QuestLogEntry) => void;
   removeQuest: (questId: string) => void;
-  addHandoff: (handoff: AgentHandoffEntry) => void;
-  removeHandoff: (handoffId: string) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   reset: () => void;
 };
@@ -83,7 +64,6 @@ function sortQuests(quests: QuestLogEntry[]) {
 export const useAgentStore = create<AgentStore>((set) => ({
   agents: new Map<string, AgentState>(),
   quests: [],
-  handoffs: [],
   connectionStatus: "disconnected",
   upsertAgent: (row) =>
     set((state) => {
@@ -116,28 +96,11 @@ export const useAgentStore = create<AgentStore>((set) => ({
     set((state) => ({
       quests: state.quests.filter((quest) => quest.id !== questId),
     })),
-  addHandoff: (handoff) =>
-    set((state) => {
-      if (state.handoffs.some((entry) => entry.id === handoff.id)) {
-        return state;
-      }
-
-      return {
-        handoffs: [handoff, ...state.handoffs].sort((left, right) =>
-          right.created_at.localeCompare(left.created_at)
-        ),
-      };
-    }),
-  removeHandoff: (handoffId) =>
-    set((state) => ({
-      handoffs: state.handoffs.filter((handoff) => handoff.id !== handoffId),
-    })),
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
   reset: () =>
     set({
       agents: new Map<string, AgentState>(),
       quests: [],
-      handoffs: [],
       connectionStatus: "disconnected",
     }),
 }));

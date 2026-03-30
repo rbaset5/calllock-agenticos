@@ -9,15 +9,13 @@ except Exception:  # pragma: no cover
     StateGraph = None  # type: ignore[assignment]
 
 from harness.nodes.context_assembly import assemble_context, context_assembly_node
-from harness.dispatch import RunTaskRequest, dispatch_job_requests
-from harness.nodes.guardian_gate import evaluate_guardian_gate, guardian_gate_node
+from harness.jobs.dispatch import dispatch_job_requests
 from harness.nodes.persist import build_persist_record, persist_node
 from harness.nodes.policy_gate import evaluate_policy, policy_gate_node
 from harness.nodes.verification import verify_output, verification_node
 from harness.tool_registry import resolve_granted_tools
 from harness.graphs.workers import get_worker
 from harness.state import HarnessState
-from harness.streaming import publish_run_status
 from observability.inngest_emitter import InngestEventEmitter
 
 
@@ -47,34 +45,11 @@ def _emit_node_entry(state: HarnessState, to_state: str) -> None:
     )
 
 
-# Map graph node names to the explicit run_status lifecycle phases.
-# Inspired by Antspace's NDJSON status progression:
-#   packaging → uploading → building → deploying → deployed
-_NODE_TO_RUN_STATUS: dict[str, str] = {
-    "context_assembly": "context_assembly",
-    "policy_gate": "policy_check",
-    "worker": "executing",
-    "blocked": "failed",
-    "verification": "verifying",
-    "guardian_gate": "gate_check",
-    "job_dispatch": "dispatching",
-    "persist": "persisting",
-}
-
-
 def _instrument_node(node_name: str, node_fn: Any) -> Any:
     def _wrapped(state: HarnessState) -> dict[str, Any]:
         _emit_node_entry(state, node_name)
-        run_status = _NODE_TO_RUN_STATUS.get(node_name, node_name)
-        # NDJSON streaming: broadcast status change to any subscribers
-        run_id = state.get("run_id")
-        if run_id:
-            publish_run_status(run_id, run_status, extra={
-                "worker_id": state.get("worker_id"),
-                "node": node_name,
-            })
         result = node_fn(state)
-        return {"current_state": node_name, "run_status": run_status, **result}
+        return {"current_state": node_name, **result}
 
     return _wrapped
 
@@ -82,10 +57,9 @@ def _instrument_node(node_name: str, node_fn: Any) -> Any:
 def _worker_node(state: HarnessState) -> dict[str, Any]:
     worker = get_worker(state["worker_id"])
     output = worker(state["task"])
-    worker_role = state["task"].get("worker_spec", {}).get("role")
     return {
         "worker_output": output,
-        "job_requests": output.get("job_requests", []) if worker_role == "director" else [],
+        "job_requests": state["task"].get("job_requests", []) + output.get("job_requests", []),
     }
 
 
@@ -103,61 +77,36 @@ def _policy_route(state: HarnessState) -> str:
 def _job_dispatch_node(state: HarnessState) -> dict[str, Any]:
     if state.get("verification", {}).get("verdict") != "pass":
         return {"jobs": []}
-    raw_requests = state.get("worker_output", {}).get("job_requests", [])
-    if not raw_requests:
-        raw_requests = state["task"].get("job_requests", [])
-    if not raw_requests:
-        return {"jobs": []}
-    dispatch_result = dispatch_job_requests(
-        [RunTaskRequest.from_mapping(request) for request in raw_requests],
-        tenant_id=state["tenant_id"],
-        origin_worker_id=state["worker_id"],
-        inngest_client=state["task"].get("inngest_client"),
-        supabase_client=state["task"].get("supabase_client"),
-    )
     return {
-        "jobs": [
-            *[
-                {"worker_id": worker_id, "status": "dispatched"}
-                for worker_id in dispatch_result.dispatched
-            ],
-            *[
-                {"worker_id": worker_id, "status": "queued"}
-                for worker_id in dispatch_result.queued
-            ],
-            *[
-                {"worker_id": worker_id, "status": "blocked"}
-                for worker_id in dispatch_result.blocked
-            ],
-        ]
+        "jobs": dispatch_job_requests(
+            state.get("job_requests", []),
+            tenant_id=state["tenant_id"],
+            origin_worker_id=state["worker_id"],
+            origin_run_id=state["run_id"],
+        )
     }
 
 
-def _guardian_gate_route(state: HarnessState) -> str:
-    gate = state.get("guardian_gate", {})
-    if gate.get("gate_passed"):
-        return "job_dispatch"
-    return "persist"  # quarantined — persist with quarantine flag for audit trail
+def _verification_route(state: HarnessState) -> str:
+    return "job_dispatch" if state.get("verification", {}).get("verdict") == "pass" else "persist"
 
 
 def compile_supervisor_graph() -> Any:
     if StateGraph is None:
-        return "context_assembly -> policy_gate -> worker -> verification -> guardian_gate -> persist"
+        return "context_assembly -> policy_gate -> worker -> verification -> persist"
     graph = StateGraph(HarnessState)
     graph.add_node("context_assembly", _instrument_node("context_assembly", context_assembly_node))
     graph.add_node("policy_gate", _instrument_node("policy_gate", policy_gate_node))
     graph.add_node("worker", _instrument_node("worker", _worker_node))
     graph.add_node("blocked", _instrument_node("blocked", _blocked_node))
     graph.add_node("verification", _instrument_node("verification", verification_node))
-    graph.add_node("guardian_gate", _instrument_node("guardian_gate", guardian_gate_node))
     graph.add_node("job_dispatch", _instrument_node("job_dispatch", _job_dispatch_node))
     graph.add_node("persist", _instrument_node("persist", persist_node))
     graph.set_entry_point("context_assembly")
     graph.add_edge("context_assembly", "policy_gate")
     graph.add_conditional_edges("policy_gate", _policy_route, {"worker": "worker", "blocked": "blocked"})
     graph.add_edge("worker", "verification")
-    graph.add_edge("verification", "guardian_gate")
-    graph.add_conditional_edges("guardian_gate", _guardian_gate_route, {"job_dispatch": "job_dispatch", "persist": "persist"})
+    graph.add_conditional_edges("verification", _verification_route, {"job_dispatch": "job_dispatch", "persist": "persist"})
     graph.add_edge("job_dispatch", "persist")
     graph.add_edge("blocked", "persist")
     graph.add_edge("persist", END)
@@ -175,22 +124,14 @@ def run_supervisor(state: HarnessState) -> HarnessState:
         environment_allowed=state["task"].get("environment_allowed_tools"),
         runtime_denied=tenant_config.get("runtime_denied_tools"),
     )
-    state["run_status"] = "queued"
-
     compiled = compile_supervisor_graph()
     if hasattr(compiled, "invoke"):
         result = compiled.invoke(state)
         state.update(result)
-        # Set terminal run_status based on gate result
-        gate = state.get("guardian_gate", {})
-        state["run_status"] = "quarantined" if gate.get("quarantine") else "completed"
         return state
-
-    # --- Fallback: manual node execution when LangGraph is unavailable ---
 
     assembled = assemble_context(
         worker_spec=worker_spec,
-        worker_skills=state["task"].get("worker_skills", []),
         task_context=state["task"],
         tenant_config=tenant_config,
         industry_pack=state["task"].get("industry_pack", {}),
@@ -201,13 +142,10 @@ def run_supervisor(state: HarnessState) -> HarnessState:
     )
     _emit_node_entry(state, "context_assembly")
     state["current_state"] = "context_assembly"
-    state["run_status"] = "context_assembly"
     state["context_items"] = assembled["items"]
     state["context_budget_remaining"] = assembled["budget_remaining"]
-
     _emit_node_entry(state, "policy_gate")
     state["current_state"] = "policy_gate"
-    state["run_status"] = "policy_check"
     state["policy_decision"] = evaluate_policy(
         tool_name=state.get("tool_name"),
         worker_id=state.get("worker_id"),
@@ -221,29 +159,19 @@ def run_supervisor(state: HarnessState) -> HarnessState:
     if state["policy_decision"]["verdict"] != "allow":
         _emit_node_entry(state, "blocked")
         state["current_state"] = "blocked"
-        state["run_status"] = "failed"
         state["worker_output"] = {"status": "blocked"}
         state["verification"] = {"passed": False, "verdict": "block", "reasons": state["policy_decision"]["reasons"], "findings": []}
-        state["guardian_gate"] = {"gate_passed": False, "quarantine": True, "gate_failures": ["policy_blocked"]}
         _emit_node_entry(state, "persist")
         state["current_state"] = "persist"
-        state["run_status"] = "persisting"
         state.update(persist_node(state))
-        state["run_status"] = "quarantined"
         return state
 
     _emit_node_entry(state, "worker")
     state["current_state"] = "worker"
-    state["run_status"] = "executing"
     state["worker_output"] = get_worker(state["worker_id"])(state["task"])
-    if worker_spec.get("role") == "director":
-        state["job_requests"] = state["worker_output"].get("job_requests", [])
-    else:
-        state["job_requests"] = []
-
+    state["job_requests"] = state["task"].get("job_requests", []) + state["worker_output"].get("job_requests", [])
     _emit_node_entry(state, "verification")
     state["current_state"] = "verification"
-    state["run_status"] = "verifying"
     state["verification"] = verify_output(
         state["worker_output"],
         worker_id=state["worker_id"],
@@ -252,51 +180,18 @@ def run_supervisor(state: HarnessState) -> HarnessState:
         context_items=state["context_items"],
         retry_count=state.get("retry_count", 0),
     )
-
-    # Guardian gate — pre-persist checkpoint
-    _emit_node_entry(state, "guardian_gate")
-    state["current_state"] = "guardian_gate"
-    state["run_status"] = "gate_check"
-    state["guardian_gate"] = evaluate_guardian_gate(state)
-
-    if state["guardian_gate"]["gate_passed"] and state["verification"]["verdict"] == "pass":
+    if state["verification"]["verdict"] == "pass":
         _emit_node_entry(state, "job_dispatch")
         state["current_state"] = "job_dispatch"
-        state["run_status"] = "dispatching"
-        raw_requests = state.get("worker_output", {}).get("job_requests", [])
-        if not raw_requests:
-            raw_requests = state["task"].get("job_requests", [])
-        if raw_requests:
-            dispatch_result = dispatch_job_requests(
-                [RunTaskRequest.from_mapping(request) for request in raw_requests],
-                tenant_id=state["tenant_id"],
-                origin_worker_id=state["worker_id"],
-                inngest_client=state["task"].get("inngest_client"),
-                supabase_client=state["task"].get("supabase_client"),
-            )
-            state["jobs"] = [
-                *[
-                    {"worker_id": worker_id, "status": "dispatched"}
-                    for worker_id in dispatch_result.dispatched
-                ],
-                *[
-                    {"worker_id": worker_id, "status": "queued"}
-                    for worker_id in dispatch_result.queued
-                ],
-                *[
-                    {"worker_id": worker_id, "status": "blocked"}
-                    for worker_id in dispatch_result.blocked
-                ],
-            ]
-        else:
-            state["jobs"] = []
+        state["jobs"] = dispatch_job_requests(
+            state.get("job_requests", []),
+            tenant_id=state["tenant_id"],
+            origin_worker_id=state["worker_id"],
+            origin_run_id=state["run_id"],
+        )
     else:
         state["jobs"] = []
-
     _emit_node_entry(state, "persist")
     state["current_state"] = "persist"
-    state["run_status"] = "persisting"
     state.update(persist_node(state))
-
-    state["run_status"] = "quarantined" if state["guardian_gate"].get("quarantine") else "completed"
     return state

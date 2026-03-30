@@ -33,7 +33,37 @@ export interface OutboundPipelineErrorPayload {
 export const OUTBOUND_BATCH_COMPLETE = "outbound/scout.batch-complete";
 export const OUTBOUND_TEST_COMPLETE = "outbound/scout.test-batch-complete";
 export const OUTBOUND_CALL_OUTCOME = "outbound/call.outcome-logged";
+export const OUTBOUND_EXTRACTION_COMPLETE = "outbound/call.extraction-complete";
 export const OUTBOUND_PIPELINE_ERROR = "outbound/pipeline.error";
+
+export interface OutboundExtractionCompletePayload {
+  tenant_id: string;
+  prospect_id: string;
+  twilio_call_sid: string;
+  business_name: string;
+  extraction: {
+    reached_decision_maker?: boolean;
+    current_call_handling?: string;
+    missed_call_pain?: string;
+    after_hours_workflow?: string;
+    objection_type?: string;
+    objection_verbatim?: string;
+    buying_temperature?: string;
+    follow_up_action?: string;
+    follow_up_date?: string | null;
+    status_quo_details?: string;
+  };
+  source_version: string;
+}
+
+export function validateOutboundExtractionCompletePayload(payload: OutboundExtractionCompletePayload): string[] {
+  const errors: string[] = [];
+  if (!payload.tenant_id) errors.push("tenant_id is required");
+  if (!payload.twilio_call_sid) errors.push("twilio_call_sid is required");
+  if (!payload.extraction) errors.push("extraction is required");
+  if (!payload.source_version) errors.push("source_version is required");
+  return errors;
+}
 
 export function validateOutboundBatchCompletePayload(payload: OutboundBatchCompletePayload): string[] {
   const errors: string[] = [];

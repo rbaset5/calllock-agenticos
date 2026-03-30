@@ -153,7 +153,6 @@ def test_run_supervisor_emits_on_each_node_entry(monkeypatch) -> None:
         "policy_gate",
         "worker",
         "verification",
-        "guardian_gate",
         "job_dispatch",
         "persist",
     ]

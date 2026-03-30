@@ -561,7 +561,43 @@ if FastAPI:
             escalated=result.get("escalated", False),
             auto_archived=result.get("auto_archived", False),
         )
- 
+
+    @app.post("/outbound/extract")
+    async def outbound_extract(request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        body = await request.json()
+        transcript = body.get("transcript", "")
+        prospect_context = body.get("prospect_context", {})
+
+        from outbound.extraction import extract_from_transcript
+
+        import asyncio
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, extract_from_transcript, transcript, prospect_context
+        )
+        return result
+
+    @app.get("/outbound/daily-plan")
+    def outbound_daily_plan(request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        from outbound.daily_plan import build_daily_plan
+        return build_daily_plan()
+
+    @app.post("/outbound/lifecycle-run")
+    def outbound_lifecycle_run(request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        from outbound.lifecycle import run_lifecycle_sweep
+        return run_lifecycle_sweep()
+
+    @app.get("/outbound/digest")
+    def outbound_digest(request: Request, date: str | None = None) -> dict[str, Any]:
+        validate_event_auth(request)
+        from outbound import store as outbound_store
+        from outbound.ceo_tools import outbound_funnel_summary
+        stats = outbound_store.today_call_stats(date=date)
+        funnel = outbound_funnel_summary(days=1)
+        return {"stats": stats, "funnel": funnel, "date": date}
+
     @app.post("/onboard-tenant")
     def onboard_tenant_endpoint(request: OnboardTenantRequest, http_request: Request) -> dict[str, Any]:
         return onboard_tenant({**request.model_dump(), "actor_id": actor_id_for(http_request, "operator")})
