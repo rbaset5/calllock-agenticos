@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager
 import logging
 logging.basicConfig(
     level=logging.INFO,
@@ -209,10 +211,24 @@ def validate_event_auth(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Invalid event secret")
 
 
+def validate_internal_event_auth(request: Request, *, route_name: str) -> None:
+    expected = os.getenv("HARNESS_EVENT_SECRET")
+    if not expected:
+        raise HTTPException(status_code=503, detail=f"HARNESS_EVENT_SECRET must be configured for {route_name}")
+    authorization = request.headers.get("authorization", "")
+    if authorization != f"Bearer {expected}":
+        raise HTTPException(status_code=401, detail="Invalid event secret")
+
+
 def actor_id_for(request: Request | None, fallback: str = "system") -> str:
     if request is None:
         return fallback
     return request.headers.get("x-actor-id") or fallback
+
+
+def _discord_bot_enabled() -> bool:
+    enabled = os.getenv("DISCORD_BOT_ENABLED", "").strip().lower()
+    return enabled in {"1", "true", "yes", "on"} and bool(os.getenv("DISCORD_BOT_TOKEN", "").strip())
 
 
 def _tenant_lookup_values(tenant_id: str | None) -> list[str]:
@@ -251,7 +267,18 @@ def _get_incident_or_404(incident_id: str) -> dict[str, Any]:
 
 
 if FastAPI:
-    app = FastAPI(title="CallLock Harness")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if not app.state.discord_bot_started and _discord_bot_enabled():
+            try:
+                from outbound.assistant import start_bot_background
+                start_bot_background()
+                app.state.discord_bot_started = True
+            except Exception:
+                logging.getLogger(__name__).info("Discord bot not started (missing deps or token)")
+        yield
+
+    app = FastAPI(title="CallLock Harness", lifespan=lifespan)
 
     from voice.router import voice_router
     from voice.post_call_router import post_call_router
@@ -260,6 +287,8 @@ if FastAPI:
     app.include_router(voice_router, prefix="/webhook/retell")
     app.include_router(post_call_router, prefix="/webhook/retell")
     app.include_router(booking_router, prefix="/api/bookings")
+
+    app.state.discord_bot_started = False
 
     @app.get("/health")
     def health() -> dict[str, Any]:
@@ -680,6 +709,18 @@ if FastAPI:
         stats = outbound_store.today_call_stats(date=date)
         funnel = outbound_funnel_summary(days=1)
         return {"stats": stats, "funnel": funnel, "date": date}
+
+    @app.post("/discord/ask")
+    async def discord_ask(request: Request) -> dict[str, Any]:
+        """Direct API for testing the Sales Assistant without Discord."""
+        validate_internal_event_auth(request, route_name="/discord/ask")
+        body = await request.json()
+        question = str(body.get("question", "")).strip()
+        if not question:
+            raise HTTPException(status_code=400, detail="question is required")
+        from outbound.assistant import answer_question
+        answer = await asyncio.to_thread(answer_question, question)
+        return {"answer": answer}
 
     @app.post("/onboard-tenant")
     def onboard_tenant_endpoint(request: OnboardTenantRequest, http_request: Request) -> dict[str, Any]:
