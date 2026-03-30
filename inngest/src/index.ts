@@ -27,6 +27,7 @@ import {
 import { outboundMorningPlanner } from "./functions/outbound-morning-planner.js";
 import { outboundFollowupGuardian } from "./functions/outbound-followup-guardian.js";
 import { outboundEodDigest } from "./functions/outbound-eod-digest.js";
+import { outboundPipelineReview } from "./functions/outbound-pipeline-review.js";
 
 export const client = inngest;
 export const functions = [
@@ -53,5 +54,6 @@ export const functions = [
   discordOutboundExtraction,
   outboundMorningPlanner,
   outboundFollowupGuardian,
+  outboundPipelineReview,
   outboundEodDigest,
 ];
