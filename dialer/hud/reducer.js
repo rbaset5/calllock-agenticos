@@ -123,8 +123,8 @@ export function createInitialState(playbook) {
  * Every action must carry `callSid`. The reducer rejects events when
  * `action.callSid !== state.callId` (except INIT_CALL which sets it).
  *
- * LLM_RESULT carries `utteranceId`. Rejected if that utterance has been
- * superseded (seq <= lastProcessedUtteranceSeq).
+ * LLM_RESULT carries `seq` (or numeric `utteranceId` for backwards compatibility).
+ * Rejected if that utterance has been superseded.
  */
 export function hudReducer(state, action, playbook) {
   // ── Guard: reject stale callSid (except INIT_CALL) ──
@@ -405,17 +405,20 @@ export function hudReducer(state, action, playbook) {
       // Reject if manual override suppression is active (adversarial finding #12)
       if (shouldSuppressAuto(state, action.atMs)) return state;
 
-      // Reject stale LLM results: compare numeric seq (not UUID string)
-      if (
-        typeof action.seq === 'number' &&
-        action.seq <= state.lastProcessedUtteranceSeq
-      ) {
+      const incomingSeq =
+        typeof action.seq === 'number'
+          ? action.seq
+          : typeof action.utteranceId === 'number'
+            ? action.utteranceId
+            : null;
+
+      if (typeof incomingSeq === 'number' && incomingSeq <= state.lastProcessedUtteranceSeq) {
         return state;
       }
 
       const nextSeq =
-        typeof action.seq === 'number'
-          ? action.seq
+        typeof incomingSeq === 'number'
+          ? incomingSeq
           : state.lastProcessedUtteranceSeq;
 
       // LLM only refines BRIDGE / QUALIFIER / OBJECTION

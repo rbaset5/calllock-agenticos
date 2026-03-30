@@ -462,8 +462,8 @@ describe('hudReducer', () => {
     assert.deepEqual(stale, s);
   });
 
-  // 22. Stale utteranceId rejection on LLM_RESULT
-  it('rejects LLM_RESULT with stale utteranceId', () => {
+  // 22. Stale sequence rejection on LLM_RESULT
+  it('rejects LLM_RESULT with stale sequence', () => {
     let s = connect(init());
     s = hudReducer(s, {
       type: 'MANUAL_SET_STAGE',
@@ -472,7 +472,7 @@ describe('hudReducer', () => {
       atMs: T + 100,
     }, PLAYBOOK);
 
-    // Process an LLM result with utteranceId=5
+    // Process an LLM result with seq=5
     s = hudReducer(s, {
       type: 'LLM_RESULT',
       callSid: SID,
@@ -482,12 +482,13 @@ describe('hudReducer', () => {
         utterance: 'voicemail',
         why: 'coverage',
       },
-      utteranceId: 5,
+      utteranceId: 'utt-5',
+      seq: 5,
       atMs: T + 5000,
     }, PLAYBOOK);
     assert.equal(s.lastProcessedUtteranceSeq, 5);
 
-    // Now send a stale result with utteranceId=3 — should be rejected
+    // Now send a stale result with seq=3 — should be rejected
     const stale = hudReducer(s, {
       type: 'LLM_RESULT',
       callSid: SID,
@@ -497,7 +498,8 @@ describe('hudReducer', () => {
         utterance: 'losing bids',
         why: 'competition',
       },
-      utteranceId: 3,
+      utteranceId: 'utt-3',
+      seq: 3,
       atMs: T + 5500,
     }, PLAYBOOK);
 

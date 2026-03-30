@@ -33,7 +33,7 @@ export function logDecision(action, prevState, newState) {
 /**
  * Serialize the full session payload for POST to /hud/session-log.
  */
-export function serializeSession(state) {
+export function serializeSession(state, trail = auditTrail) {
   return {
     callId: state.callId,
     stage: state.stage,
@@ -42,26 +42,30 @@ export function serializeSession(state) {
     qualifierRead: state.qualifierRead,
     objectionHistory: state.objectionHistory,
     metrics: state.metrics,
-    auditTrail,
+    auditTrail: trail,
     transcriptLength: state.transcript.length,
     endedAt: Date.now(),
   };
 }
 
+export function captureSession(state) {
+  return serializeSession(state, auditTrail.slice());
+}
+
 /**
  * Save session data to the server.
  */
-export async function saveSession(state, prospectId) {
-  if (!state.callId) return;
-
-  const hudSession = serializeSession(state);
+export async function saveSession(state, prospectId, hudSessionOverride = null) {
+  const hudSession = hudSessionOverride ?? serializeSession(state);
+  const callId = hudSession.callId || state.callId;
+  if (!callId) return;
 
   try {
     const res = await fetch('/hud/session-log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        twilio_call_sid: state.callId,
+        twilio_call_sid: callId,
         prospect_id: prospectId ?? null,
         hud_session: hudSession,
       }),
@@ -70,7 +74,7 @@ export async function saveSession(state, prospectId) {
     if (!res.ok) {
       console.error('[hud/session] Save failed:', res.status);
     } else {
-      console.log('[hud/session] Session saved for', state.callId);
+      console.log('[hud/session] Session saved for', callId);
     }
   } catch (err) {
     console.error('[hud/session] Save error:', err.message);

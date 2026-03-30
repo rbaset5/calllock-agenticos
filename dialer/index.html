@@ -579,6 +579,7 @@
       }
 
       const lead = leads[currentIndex];
+      const websiteHref = safeExternalUrl(lead.website);
       main.innerHTML = `
         <div class="lead-card">
           <div class="lead-number">Lead ${currentIndex + 1} of ${leads.length}</div>
@@ -589,7 +590,7 @@
             <span class="badge score">Score ${lead.total_score || 0}</span>
             <span class="badge tier">${escapeHtml(lead.tier || 'unscored')}</span>
             ${lead.metro ? `<span class="badge metro">${escapeHtml(lead.metro)}</span>` : ''}
-            ${lead.website ? `<span class="badge"><a href="${escapeHtml(lead.website)}" target="_blank" style="color:#a3a3a3;text-decoration:none">website</a></span>` : ''}
+            ${websiteHref ? `<span class="badge"><a href="${escapeHtml(websiteHref)}" target="_blank" rel="noopener noreferrer" style="color:#a3a3a3;text-decoration:none">website</a></span>` : ''}
           </div>
           <div class="signal-summary">${escapeHtml(lead.signal_summary || '')}</div>
           <div class="call-hook"><strong>Hook:</strong> ${escapeHtml(lead.call_hook || '')}</div>
@@ -684,6 +685,17 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    function safeExternalUrl(value) {
+      if (!value) return null;
+      const candidate = /^[a-z]+:\/\//i.test(value) ? value : `https://${value}`;
+      try {
+        const url = new URL(candidate);
+        return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null;
+      } catch {
+        return null;
+      }
     }
 
     function updateCallStatus(text) {
@@ -1254,7 +1266,7 @@
       processor.connect(silentGain);
       silentGain.connect(ctx.destination);
 
-      return { ctx, source, processor };
+      return { ctx, source, processor, mediaStream };
     }
 
     let repAudioPipeline = null;
@@ -1296,12 +1308,14 @@
 
     function stopAudioCapture() {
       if (repAudioPipeline) {
+        repAudioPipeline.mediaStream.getTracks().forEach((track) => track.stop());
         repAudioPipeline.processor.disconnect();
         repAudioPipeline.source.disconnect();
         repAudioPipeline.ctx.close().catch(() => {});
         repAudioPipeline = null;
       }
       if (prospectAudioPipeline) {
+        prospectAudioPipeline.mediaStream.getTracks().forEach((track) => track.stop());
         prospectAudioPipeline.processor.disconnect();
         prospectAudioPipeline.source.disconnect();
         prospectAudioPipeline.ctx.close().catch(() => {});
@@ -1336,6 +1350,7 @@
         callSid: lastCallSid,
         seq: hudNextSeq(),
         prospectId: lead?.id,
+        prospectName: lead?.business_name,
         businessName: lead?.business_name,
         metro: lead?.metro,
         signals: lead?.signal_details || [],

@@ -12,7 +12,7 @@ const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { index: false }));
 
 const {
   TWILIO_ACCOUNT_SID,
@@ -149,6 +149,7 @@ setInterval(() => {
 
 // HUD session store — holds hud_session data for calls that arrive before writeOutcomeRecord
 const hudSessionStore = new Map();
+const HUD_SESSION_STAGING_TABLE = 'outbound_call_hud_sessions';
 
 // Clean up stale HUD sessions after 30 minutes (same pattern as callStore)
 setInterval(() => {
@@ -158,13 +159,119 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+function readCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return undefined;
+  for (const part of header.split(';')) {
+    const [rawKey, ...rest] = part.trim().split('=');
+    if (rawKey === name) {
+      return decodeURIComponent(rest.join('='));
+    }
+  }
+  return undefined;
+}
+
 function validateHudToken(req, res, next) {
-  if (!HUD_INTERNAL_TOKEN) return next(); // skip check in dev if not set
-  const token = req.headers['x-hud-token'];
+  if (!HUD_INTERNAL_TOKEN) {
+    if (NODE_ENV === 'production') {
+      return res.status(500).json({ error: 'HUD auth is not configured' });
+    }
+    return next();
+  }
+  const token = req.headers['x-hud-token'] || readCookie(req, 'calllock_hud_token');
   if (token !== HUD_INTERNAL_TOKEN) {
     return res.status(403).json({ error: 'Invalid HUD token' });
   }
   next();
+}
+
+function setHudCookie(res) {
+  if (!HUD_INTERNAL_TOKEN) return;
+  res.cookie('calllock_hud_token', HUD_INTERNAL_TOKEN, {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: NODE_ENV === 'production',
+    path: '/',
+  });
+}
+
+async function stageHudSession(twilioCallSid, prospectId, hudSession) {
+  if (supabase) {
+    const { error } = await supabase
+      .from(HUD_SESSION_STAGING_TABLE)
+      .upsert(
+        {
+          tenant_id: OUTBOUND_TENANT_ID,
+          twilio_call_sid: twilioCallSid,
+          prospect_id: prospectId || null,
+          hud_session: hudSession,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id,twilio_call_sid' },
+      );
+    if (error) throw error;
+    return;
+  }
+
+  hudSessionStore.set(twilioCallSid, {
+    hudSession,
+    prospectId: prospectId || null,
+    _storedAt: Date.now(),
+  });
+}
+
+async function deleteStagedHudSession(twilioCallSid) {
+  if (supabase) {
+    const { error } = await supabase
+      .from(HUD_SESSION_STAGING_TABLE)
+      .delete()
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .eq('twilio_call_sid', twilioCallSid);
+    if (error) {
+      console.error('[hud/session] Failed to clear staged session:', error.message);
+    }
+    return;
+  }
+  hudSessionStore.delete(twilioCallSid);
+}
+
+async function mergePendingHudSession(callSid) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from(HUD_SESSION_STAGING_TABLE)
+      .select('hud_session')
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .eq('twilio_call_sid', callSid)
+      .limit(1);
+
+    if (error) {
+      console.error('[hud/session] Failed to load staged session:', error.message);
+      return false;
+    }
+
+    const pendingHud = data?.[0]?.hud_session;
+    if (!pendingHud) return false;
+
+    const { error: updateError } = await supabase
+      .from('outbound_calls')
+      .update({ hud_session: pendingHud })
+      .eq('twilio_call_sid', callSid)
+      .eq('tenant_id', OUTBOUND_TENANT_ID);
+
+    if (updateError) {
+      console.error('[hud/session] Failed to merge staged session:', updateError.message);
+      return false;
+    }
+
+    await deleteStagedHudSession(callSid);
+    console.log(`[hud/session] Merged staged hud_session for ${callSid}`);
+    return true;
+  }
+
+  const pendingHud = hudSessionStore.get(callSid);
+  if (!pendingHud || !pendingHud.hudSession) return false;
+  hudSessionStore.delete(callSid);
+  return false;
 }
 
 function topSignals(signals = []) {
@@ -330,16 +437,7 @@ async function writeOutcomeRecord(callSid) {
   }
 
   if (inserted && inserted.length > 0) {
-    // Merge pending HUD session data if it arrived before the outcome record
-    const pendingHud = hudSessionStore.get(callSid);
-    if (pendingHud && supabase) {
-      await supabase.from('outbound_calls')
-        .update({ hud_session: pendingHud })
-        .eq('twilio_call_sid', callSid)
-        .eq('tenant_id', OUTBOUND_TENANT_ID);
-      hudSessionStore.delete(callSid);
-      console.log(`[hud/session] Merged pending hud_session for ${callSid}`);
-    }
+    await mergePendingHudSession(callSid);
 
     await updateProspectStage(data.prospectId, mapped.outcome, mapped.demoScheduled);
     await emitInngestEvent(OUTBOUND_CALL_OUTCOME_EVENT, {
@@ -353,10 +451,12 @@ async function writeOutcomeRecord(callSid) {
 }
 
 app.get('/', (_req, res) => {
+  setHudCookie(res);
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/hud', (_req, res) => {
+  setHudCookie(res);
   res.sendFile(path.join(__dirname, 'hud', 'index.html'));
 });
 
@@ -725,8 +825,14 @@ app.post('/hud/session-log', validateHudToken, async (req, res) => {
     return res.status(400).json({ error: 'twilio_call_sid and hud_session are required' });
   }
 
+  try {
+    await stageHudSession(twilio_call_sid, prospect_id, hud_session);
+  } catch (error) {
+    console.error('[hud/session-log] Failed to stage session:', error.message);
+    return res.status(503).json({ error: 'Could not persist hud_session' });
+  }
+
   if (supabase) {
-    // Try to update existing outbound_calls row
     const { data: updated, error } = await supabase
       .from('outbound_calls')
       .update({ hud_session })
@@ -739,14 +845,13 @@ app.post('/hud/session-log', validateHudToken, async (req, res) => {
     }
 
     if (updated && updated.length > 0) {
+      await deleteStagedHudSession(twilio_call_sid);
       console.log('[hud/session-log] Updated hud_session for', twilio_call_sid);
       return res.json({ ok: true, merged: true });
     }
   }
 
-  // No row yet — store in hudSessionStore for later merge
-  hudSessionStore.set(twilio_call_sid, hud_session);
-  console.log('[hud/session-log] Stored pending hud_session for', twilio_call_sid);
+  console.log('[hud/session-log] Staged pending hud_session for', twilio_call_sid);
   res.json({ ok: true, merged: false });
 });
 

@@ -4,7 +4,7 @@
 import { PLAYBOOK } from './playbook.js';
 import { createInitialState, hudReducer, bandFromScore } from './reducer.js';
 import { classifyUtterance, shouldCallLlmFallback, isUsableDeterministicResult } from './classifier.js';
-import { resetAuditTrail, logDecision, saveSession } from './session.js';
+import { captureSession, resetAuditTrail, logDecision, saveSession } from './session.js';
 import { classifyWithLlm } from './llm.js';
 
 // ── State ──────────────────────────────────────────────────────
@@ -76,6 +76,11 @@ channel.addEventListener('message', (event) => {
         prospect: { name: prospectName, business: prospectBusiness },
         atMs: Date.now(),
       });
+      dispatch({
+        type: 'CALL_CONNECTED',
+        callSid: msg.callSid,
+        atMs: Date.now(),
+      });
 
       startCallTimer();
       break;
@@ -113,9 +118,12 @@ channel.addEventListener('message', (event) => {
         callSid: state.callId,
         atMs: Date.now(),
       });
+      const endedState = state;
+      const endedProspectId = prospectId;
+      const endedSession = captureSession(endedState);
       stopCallTimer();
       // Delay session save briefly to allow OUTCOME to arrive first
-      setTimeout(() => saveSession(state, prospectId), 500);
+      setTimeout(() => saveSession(endedState, endedProspectId, endedSession), 500);
       break;
     }
 
@@ -184,12 +192,12 @@ function handleFinalProspectTranscript(msg) {
 
     // Try LLM fallback
     if (shouldCallLlmFallback(result)) {
-      triggerLlmFallback(msg.text, msg.utteranceId);
+      triggerLlmFallback(msg.text, msg.utteranceId, msg.seq);
     }
   }
 }
 
-async function triggerLlmFallback(utterance, utteranceId) {
+async function triggerLlmFallback(utterance, utteranceId, seq) {
   const result = await classifyWithLlm(
     utterance,
     state.stage,
@@ -205,7 +213,7 @@ async function triggerLlmFallback(utterance, utteranceId) {
       type: 'LLM_RESULT',
       callSid: state.callId,
       utteranceId,
-      seq: state.lastProcessedUtteranceSeq || 0,
+      seq,
       result: {
         ...result,
         band: bandFromScore(result.confidence ?? 0.7),
