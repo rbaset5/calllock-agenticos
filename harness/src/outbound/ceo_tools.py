@@ -17,10 +17,9 @@ def outbound_funnel_summary(*, days: int = 7) -> dict[str, Any]:
     Example: "How did outbound do this week?"
     """
     prospects = store.list_outbound_prospects()
-    calls = store.list_outbound_calls()
-
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     cutoff_iso = cutoff.isoformat()
+    calls = store.list_outbound_calls(start_date=cutoff.date().isoformat())
 
     recent_calls = [c for c in calls if (c.get("called_at") or "") >= cutoff_iso]
     recent_prospects = [p for p in prospects if (p.get("discovered_at") or "") >= cutoff_iso]
