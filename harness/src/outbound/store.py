@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -19,6 +19,15 @@ def _now_iso() -> str:
 
 def _using_supabase() -> bool:
     return supabase_repository.is_configured()
+
+
+def _parse_iso_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+    except Exception:
+        return None
 
 
 def _local_state() -> dict[str, Any]:
@@ -311,6 +320,7 @@ def insert_outbound_call(payload: dict[str, Any]) -> dict[str, Any]:
         "twilio_call_sid": payload["twilio_call_sid"],
         "called_at": payload.get("called_at", now),
         "outcome": payload["outcome"],
+        "call_outcome_type": payload.get("call_outcome_type"),
         "notes": payload.get("notes"),
         "call_hook_used": payload.get("call_hook_used"),
         "demo_scheduled": bool(payload.get("demo_scheduled", False)),
@@ -345,16 +355,35 @@ def list_outbound_calls(
     *,
     tenant_id: str = OUTBOUND_TENANT_ID,
     prospect_id: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> list[dict[str, Any]]:
     if _using_supabase():
         params: dict[str, str] = {"tenant_id": f"eq.{tenant_id}", "order": "called_at.asc"}
         if prospect_id:
             params["prospect_id"] = f"eq.{prospect_id}"
+        if start_date:
+            params["called_at"] = f"gte.{start_date}"
+        if end_date:
+            params["called_at"] = params.get("called_at", "") and f"gte.{start_date}"
+            # Supabase doesn't natively support AND on the same column via params,
+            # but we can use the range filter
+            if start_date and end_date:
+                del params["called_at"]
+                params["and"] = f"(called_at.gte.{start_date},called_at.lte.{end_date}T23:59:59)"
+            elif start_date:
+                params["called_at"] = f"gte.{start_date}"
+            elif end_date:
+                params["called_at"] = f"lte.{end_date}T23:59:59"
         return supabase_repository._request("GET", "outbound_calls", params=params)  # type: ignore[attr-defined]
 
     rows = [row for row in _local_state()["outbound_calls"] if _matches_tenant(row["tenant_id"], tenant_id)]
     if prospect_id:
         rows = [row for row in rows if row["prospect_id"] == prospect_id]
+    if start_date:
+        rows = [row for row in rows if (row.get("called_at") or "") >= start_date]
+    if end_date:
+        rows = [row for row in rows if (row.get("called_at") or "")[:10] <= end_date]
     return sorted(rows, key=lambda row: row.get("called_at", ""))
 
 
@@ -486,3 +515,71 @@ def today_call_stats(
         {"p_tenant_id": tenant_id, "p_date": date_str},
     )
     return rows[0] if rows else {}
+
+
+def sprint_scoreboard(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    start_date: str,
+    today: str | None = None,
+) -> dict[str, Any]:
+    """Aggregate scoreboard metrics from RPC (or local fallback)."""
+    today_str = today or date.today().isoformat()
+
+    if _using_supabase():
+        rows = supabase_repository._rpc(  # type: ignore[attr-defined]
+            "sprint_scoreboard",
+            {
+                "p_tenant_id": tenant_id,
+                "p_start_date": start_date,
+                "p_today": today_str,
+            },
+        )
+        return (rows or [{}])[0]
+
+    start_day = date.fromisoformat(start_date)
+    today_day = date.fromisoformat(today_str)
+    week_start = today_day - timedelta(days=today_day.weekday())
+    calls = list_outbound_calls(tenant_id=tenant_id)
+
+    def _is_completed_call(row: dict[str, Any]) -> bool:
+        outcome = str(row.get("outcome") or "")
+        call_outcome_type = str(row.get("call_outcome_type") or "")
+        return outcome != "dial_started" and call_outcome_type != "dial_started"
+
+    def _call_day(row: dict[str, Any]) -> date | None:
+        return _parse_iso_date(row.get("called_at"))
+
+    completed_calls = [row for row in calls if _is_completed_call(row)]
+    daily_calls = [row for row in completed_calls if _call_day(row) == today_day]
+    weekly_calls = [row for row in completed_calls if (_call_day(row) or date.min) >= week_start]
+    total_calls = [row for row in completed_calls if (_call_day(row) or date.min) >= start_day]
+
+    def _is_connect(row: dict[str, Any]) -> bool:
+        return str(row.get("outcome") or "").startswith("answered_")
+
+    def _is_demo(row: dict[str, Any]) -> bool:
+        return bool(row.get("demo_scheduled"))
+
+    return {
+        "daily_dials": len(daily_calls),
+        "daily_connects": sum(1 for row in daily_calls if _is_connect(row)),
+        "daily_demos": sum(1 for row in daily_calls if _is_demo(row)),
+        "daily_close_attempts": sum(
+            1
+            for row in daily_calls
+            if str(row.get("call_outcome_type") or "") == "close_attempted"
+        ),
+        "weekly_dials": len(weekly_calls),
+        "weekly_connects": sum(1 for row in weekly_calls if _is_connect(row)),
+        "total_dials": len(total_calls),
+        "total_connects": sum(1 for row in total_calls if _is_connect(row)),
+        "total_demos": sum(1 for row in total_calls if _is_demo(row)),
+        "customers_signed": len(
+            [
+                row
+                for row in list_outbound_prospects(tenant_id=tenant_id)
+                if row.get("stage") == "converted"
+            ]
+        ),
+    }

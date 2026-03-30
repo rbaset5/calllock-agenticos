@@ -37,8 +37,12 @@ def load_schedule(path: str | Path | None = None) -> dict[str, Any]:
     if not p.exists():
         logger.warning("Sprint schedule not found at %s, using empty schedule", p)
         return {}
-    with open(p) as f:
-        data = yaml.safe_load(f)
+    try:
+        with open(p) as f:
+            data = yaml.safe_load(f)
+    except Exception:
+        logger.exception("Failed to parse sprint schedule at %s", p)
+        return {}
     if not isinstance(data, dict) or "weeks" not in data:
         logger.error("Invalid sprint schedule format at %s", p)
         return {}
@@ -79,6 +83,27 @@ def is_calling_day(schedule: dict[str, Any], week_num: int, today: date | None =
     if days == "weekdays_saturday":
         return today.weekday() < 6
     return today.weekday() < 5
+
+
+def get_daily_sprint_count(schedule: dict[str, Any], week_num: int, today: date | None = None) -> int:
+    """Return today's sprint count for the current week.
+
+    Primary source is weeks.N.daily_targets[weekday_index]. If daily_targets is
+    missing or malformed, fallback to the number of AM sprints configured.
+    """
+    today = today or date.today()
+    week_config = _get_week_config(schedule, week_num) or {}
+    daily_targets = week_config.get("daily_targets")
+    weekday_idx = today.weekday()  # Monday=0
+
+    if isinstance(daily_targets, list) and weekday_idx < len(daily_targets):
+        value = daily_targets[weekday_idx]
+        if isinstance(value, int) and value >= 0:
+            return value
+
+    blocks = week_config.get("blocks", {})
+    am_sprints = blocks.get("AM", {}).get("sprints", [])
+    return len(am_sprints) if isinstance(am_sprints, list) else 0
 
 
 def _metro_list_for_sprint(metro_key: str) -> list[str] | None:
@@ -148,22 +173,28 @@ def build_daily_plan(
     all_fresh = store.list_ranked_call_ready_prospects(tenant_id=tenant_id, limit=200)
 
     # Build sprint blocks from schedule
-    week_config = schedule.get("weeks", {}).get(str(week_num)) or schedule.get("weeks", {}).get(week_num, {})
+    week_config = _get_week_config(schedule, week_num) or {}
     blocks_config = week_config.get("blocks", {})
-    dials_per_sprint = schedule.get("dials_per_sprint", 10)
+    dials_per_sprint = week_config.get("dials_per_sprint", schedule.get("dials_per_sprint", 10))
     sprint_min = schedule.get("sprint_duration_min", 20)
     recovery_min = schedule.get("recovery_min", 5)
+    daily_sprint_count = get_daily_sprint_count(schedule, week_num, today)
 
     blocks = []
     fresh_assigned = set()  # track which prospect IDs have been assigned to sprints
+    remaining_sprints = daily_sprint_count
 
     for block_name in ["AM", "MID", "EOD"]:
+        if remaining_sprints <= 0:
+            break
         block_cfg = blocks_config.get(block_name)
         if not block_cfg:
             continue
 
         start_et = block_cfg.get("start_et", "07:00")
         sprints = block_cfg.get("sprints", [])
+        if isinstance(sprints, list):
+            sprints = sprints[:remaining_sprints]
         block_sprints = []
 
         for i, sprint_cfg in enumerate(sprints):
@@ -214,6 +245,7 @@ def build_daily_plan(
             "start_et": start_et,
             "sprints": block_sprints,
         })
+        remaining_sprints -= len(block_sprints)
 
     return {
         "date": today.isoformat(),
@@ -224,7 +256,12 @@ def build_daily_plan(
         "total_callbacks": len(callbacks),
         "total_fresh": len(all_fresh),
         "total_sprints": sum(len(b["sprints"]) for b in blocks),
+        "daily_sprint_target": daily_sprint_count,
         "dials_per_sprint": dials_per_sprint,
         "sprint_duration_min": sprint_min,
         "recovery_min": recovery_min,
+        "coaching_note": week_config.get("coaching_note", ""),
+        "weekly_goal": week_config.get("weekly_goal", ""),
+        "shutdown_fields": week_config.get("shutdown_fields", []),
+        "phase": week_config.get("phase"),
     }

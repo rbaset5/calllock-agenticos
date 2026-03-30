@@ -475,3 +475,11 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Priority:** P3
 **Depends on:** 10+ completed calls with extraction data to validate which signals matter.
 **Source:** CEO review, 2026-03-29.
+
+### Voice-note quick capture after each call
+**What:** Add a 10-second voice memo button to the dialer UI (browser MediaRecorder API). Whisper transcription on save. Searchable micro-notes become context for pipeline review and coaching logs.
+**Why:** At 200 dials/day, typing notes between calls is a bottleneck. Voice capture is 5x faster. Notes compound into searchable objection and pitch data.
+**Effort:** L (CC: ~45 min)
+**Priority:** P2 (nice-to-have for sprint, critical for scale)
+**Depends on:** Dialer UI refactor, Whisper API key provisioned, audio storage (Supabase or S3).
+**Source:** V2 CEO review, 2026-03-30. Deferred from SELECTIVE EXPANSION cherry-pick ceremony.
