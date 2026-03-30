@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales HUD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Top bar ────────────────────────────────────── */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      padding: 0 20px;
+      background: #111;
+      border-bottom: 1px solid #262626;
+      flex-shrink: 0;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .top-bar-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #525252;
+    }
+
+    .audio-mode-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #1e3a5f;
+      color: #60a5fa;
+    }
+
+    .audio-mode-badge.manual-mode {
+      background: #7f1d1d;
+      color: #fca5a5;
+      animation: pulse-red 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .call-timer {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a3a3a3;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .prospect-info {
+      font-size: 13px;
+      color: #a3a3a3;
+    }
+
+    .prospect-info strong {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* ── Stage bar ──────────────────────────────────── */
+    .stage-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 64px;
+      padding: 0 20px;
+      background: #0f0f0f;
+      border-bottom: 1px solid #1a1a1a;
+      flex-shrink: 0;
+    }
+
+    .stage-pill {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid #333;
+      color: #525252;
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .stage-pill.past {
+      color: #737373;
+      border-color: #404040;
+      background: #1a1a1a;
+    }
+
+    .stage-pill.current {
+      color: #0a0a0a;
+      background: #22c55e;
+      border-color: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+    }
+
+    .stage-pill.future {
+      color: #404040;
+      border-color: #2a2a2a;
+    }
+
+    /* ── Main area ──────────────────────────────────── */
+    .main-area {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* Left panel — NOW card */
+    .now-panel {
+      flex: 7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      position: relative;
+      transition: background 0.4s ease;
+    }
+
+    /* Stage-specific background tints */
+    .now-panel[data-stage="OPENER"]     { background: linear-gradient(135deg, rgba(34,197,94,0.04) 0%, transparent 60%); }
+    .now-panel[data-stage="BRIDGE"]     { background: linear-gradient(135deg, rgba(34,197,94,0.06) 0%, transparent 60%); }
+    .now-panel[data-stage="QUALIFIER"]  { background: linear-gradient(135deg, rgba(59,130,246,0.06) 0%, transparent 60%); }
+    .now-panel[data-stage="CLOSE"]      { background: linear-gradient(135deg, rgba(59,130,246,0.06) 0%, transparent 60%); }
+    .now-panel[data-stage="OBJECTION"]  { background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, transparent 60%); }
+    .now-panel[data-stage="BOOKED"]     { background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, transparent 60%); }
+    .now-panel[data-stage="EXIT"]       { background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, transparent 60%); }
+    .now-panel[data-stage="NON_CONNECT"]{ background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, transparent 60%); }
+
+    .preview-hint {
+      font-size: 16px;
+      color: #e5e5e5;
+      opacity: 0.4;
+      margin-bottom: 16px;
+      min-height: 22px;
+      text-align: center;
+      max-width: 700px;
+    }
+
+    .now-line {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      line-height: 1.35;
+      max-width: 740px;
+      margin-bottom: 20px;
+    }
+
+    .now-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .now-why {
+      font-size: 14px;
+      color: #737373;
+    }
+
+    .confidence-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .confidence-badge.rules    { background: #14532d; color: #4ade80; }
+    .confidence-badge.llm      { background: #1e3a5f; color: #60a5fa; }
+    .confidence-badge.manual   { background: #262626; color: #a3a3a3; }
+    .confidence-badge.fallback { background: #78350f; color: #fbbf24; }
+    .confidence-badge.manual-mode-badge {
+      background: #7f1d1d;
+      color: #fca5a5;
+      animation: pulse-red 1.5s ease-in-out infinite;
+    }
+
+    /* Right panel — Transcript feed */
+    .transcript-panel {
+      flex: 3;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #1a1a1a;
+      background: #0d0d0d;
+    }
+
+    .transcript-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #525252;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1a1a1a;
+      flex-shrink: 0;
+    }
+
+    .transcript-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .transcript-feed::-webkit-scrollbar { width: 4px; }
+    .transcript-feed::-webkit-scrollbar-track { background: transparent; }
+    .transcript-feed::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+    .transcript-turn {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .transcript-turn .speaker {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-right: 6px;
+    }
+
+    .transcript-turn .speaker.rep { color: #737373; }
+    .transcript-turn .speaker.prospect { color: #e5e5e5; }
+
+    .transcript-turn .text {
+      color: #a3a3a3;
+    }
+
+    .transcript-turn .text.prospect-text {
+      color: #e5e5e5;
+    }
+
+    .transcript-turn .ts {
+      font-size: 10px;
+      color: #404040;
+      margin-left: 6px;
+    }
+
+    .transcript-turn.processing {
+      background: rgba(59, 130, 246, 0.08);
+      border-radius: 4px;
+      padding: 4px 6px;
+      margin: -4px -6px;
+    }
+
+    /* ── Hotkey legend ──────────────────────────────── */
+    .hotkey-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      height: 36px;
+      padding: 0 20px;
+      background: #0d0d0d;
+      border-top: 1px solid #1a1a1a;
+      flex-shrink: 0;
+    }
+
+    .hotkey-item {
+      font-size: 11px;
+      color: #525252;
+    }
+
+    .hotkey-item kbd {
+      display: inline-block;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #737373;
+      margin-right: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <span class="top-bar-label">SALES HUD</span>
+      <span class="audio-mode-badge" id="audioModeBadge">DUAL</span>
+      <span class="call-timer" id="callTimer">00:00</span>
+    </div>
+    <div class="top-bar-right">
+      <span class="prospect-info" id="prospectInfo">No active call</span>
+    </div>
+  </div>
+
+  <!-- Stage bar -->
+  <div class="stage-bar" id="stageBar">
+    <span class="stage-pill future" data-stage="IDLE">IDLE</span>
+    <span class="stage-pill future" data-stage="GATEKEEPER">GK</span>
+    <span class="stage-pill future" data-stage="OPENER">OPEN</span>
+    <span class="stage-pill future" data-stage="BRIDGE">BRIDGE</span>
+    <span class="stage-pill future" data-stage="QUALIFIER">QUAL</span>
+    <span class="stage-pill future" data-stage="CLOSE">CLOSE</span>
+    <span class="stage-pill future" data-stage="OBJECTION">OBJ</span>
+  </div>
+
+  <!-- Main area -->
+  <div class="main-area">
+    <div class="now-panel" id="nowPanel" data-stage="IDLE">
+      <div class="preview-hint" id="previewHint"></div>
+      <div class="now-line" id="nowLine">Waiting for call...</div>
+      <div class="now-meta">
+        <span class="now-why" id="nowWhy"></span>
+        <span class="confidence-badge manual" id="confidenceBadge"></span>
+      </div>
+    </div>
+
+    <div class="transcript-panel">
+      <div class="transcript-header">TRANSCRIPT</div>
+      <div class="transcript-feed" id="transcriptFeed"></div>
+    </div>
+  </div>
+
+  <!-- Hotkey legend -->
+  <div class="hotkey-bar">
+    <span class="hotkey-item"><kbd>F4</kbd> Non-connect</span>
+    <span class="hotkey-item"><kbd>F6</kbd> Back</span>
+    <span class="hotkey-item"><kbd>F7</kbd> Fwd</span>
+    <span class="hotkey-item"><kbd>1</kbd>-<kbd>4</kbd> Objection</span>
+    <span class="hotkey-item"><kbd>Shift+F11</kbd> Reset</span>
+    <span class="hotkey-item"><kbd>H</kbd> Hedge</span>
+  </div>
+
+  <script type="module" src="./ui.js"></script>
+</body>
+</html>

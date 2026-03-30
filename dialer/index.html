@@ -452,6 +452,7 @@
     .plan-summary span { color: #fff; font-weight: 600; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2/dist/twilio.min.js"></script>
+  <!-- Deepgram: using raw WebSocket (not SDK) for audio capture -->
 </head>
 <body>
   <header>
@@ -747,11 +748,15 @@
             lastCallSid = activeCall.parameters.CallSid;
             updateCallStatus('Connected');
             startCallTimer();
+            // Sales HUD: notify HUD page + start audio capture
+            hudOnCallAccept();
           });
           activeCall.on('disconnect', () => {
             const duration = callStartTime ? Math.round((Date.now() - callStartTime) / 1000) : 0;
             updateCallStatus(`Ended (${duration}s)`);
             stopCallTimer();
+            // Sales HUD: notify HUD page + stop audio capture
+            hudOnCallDisconnect();
             button.classList.remove('dialing');
             isDialing = false;
             activeCall = null;
@@ -760,6 +765,8 @@
           activeCall.on('error', (error) => {
             console.error('[twilio] call error:', error);
             stopCallTimer();
+            // Sales HUD: clean up audio + notify HUD on error path too
+            hudOnCallDisconnect();
             button.classList.remove('dialing');
             isDialing = false;
             activeCall = null;
@@ -831,6 +838,15 @@
         phone: lead.phone,
         outcome,
         notes,
+      });
+      // Sales HUD: forward outcome to HUD page
+      hudChannel.postMessage({
+        type: 'OUTCOME',
+        callSid: lastCallSid,
+        seq: hudNextSeq(),
+        outcome,
+        notes,
+        atMs: Date.now(),
       });
 
       if (outcome === 'interested') stats.interested += 1;
@@ -1095,6 +1111,296 @@
       }
       container.appendChild(summary);
     }
+
+    // ── Sales HUD: Audio Capture + BroadcastChannel Bridge ──────────
+    // Architecture: Dialer page owns audio capture. HUD page (separate tab)
+    // receives transcript events via BroadcastChannel. See plan for details.
+
+    const hudChannel = new BroadcastChannel('calllock-hud');
+    let hudSeq = 0;
+    let hudDualStream = false;
+    let hudRemoteStream = null;
+    let hudRepDgConn = null;
+    let hudProspectDgConn = null;
+    let hudHeartbeatInterval = null;
+    let hudDeepgramKey = null;
+
+    // Monotonic utterance counter for stale-event rejection
+    function hudNextSeq() { return ++hudSeq; }
+
+    // Simple UUID for utterance IDs
+    function hudUuid() {
+      return 'xxxxxxxx-xxxx-4xxx'.replace(/x/g, () =>
+        ((Math.random() * 16) | 0).toString(16)
+      );
+    }
+
+    // ── RTCPeerConnection monkey-patch ──────────────────────────────
+    // Must run BEFORE Twilio Device init. Captures the remote audio
+    // track from Twilio's internal WebRTC connection.
+    const OriginalRTCPC = window.RTCPeerConnection;
+    window.RTCPeerConnection = function(...args) {
+      const pc = new OriginalRTCPC(...args);
+      pc.addEventListener('track', (event) => {
+        if (event.track.kind === 'audio' && !hudRemoteStream) {
+          console.log('[hud-audio] Captured remote audio track from WebRTC');
+          hudRemoteStream = new MediaStream([event.track]);
+          // If Deepgram is ready, start prospect channel
+          if (hudDeepgramKey && !hudProspectDgConn) {
+            startProspectChannel();
+          }
+        }
+      });
+      return pc;
+    };
+    Object.setPrototypeOf(window.RTCPeerConnection, OriginalRTCPC);
+    Object.setPrototypeOf(window.RTCPeerConnection.prototype, OriginalRTCPC.prototype);
+
+    // ── Deepgram connection helpers ─────────────────────────────────
+    async function fetchDeepgramKey() {
+      try {
+        const resp = await fetch(`${CALL_SERVER}/hud/deepgram-token`);
+        if (!resp.ok) throw new Error(`Token fetch ${resp.status}`);
+        const data = await resp.json();
+        hudDeepgramKey = data.key;
+        return data.key;
+      } catch (e) {
+        console.error('[hud-audio] Failed to fetch Deepgram key:', e.message);
+        return null;
+      }
+    }
+
+    function createDgConnection(key, speaker) {
+      // Use Deepgram's WebSocket directly (SDK may not bundle browser dist)
+      const params = new URLSearchParams({
+        model: 'nova-2',
+        interim_results: 'true',
+        endpointing: '300',
+        vad_events: 'true',
+        encoding: 'linear16',
+        sample_rate: '16000',
+        channels: '1',
+      });
+      const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['token', key]);
+
+      ws.onopen = () => console.log(`[hud-audio] Deepgram ${speaker} channel open`);
+      ws.onclose = (e) => {
+        console.log(`[hud-audio] Deepgram ${speaker} channel closed: ${e.code}`);
+        // Auto-reconnect if call is still active
+        if (isDialing && hudDeepgramKey) {
+          console.log(`[hud-audio] Reconnecting ${speaker} channel in 2s...`);
+          setTimeout(() => {
+            if (isDialing) {
+              if (speaker === 'rep') startRepChannel();
+              else if (speaker === 'prospect' && hudRemoteStream) startProspectChannel();
+            }
+          }, 2000);
+        }
+      };
+      ws.onerror = (e) => console.error(`[hud-audio] Deepgram ${speaker} error:`, e);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'Results' && data.channel) {
+            const alt = data.channel.alternatives[0];
+            if (alt && alt.transcript) {
+              hudChannel.postMessage({
+                type: 'TRANSCRIPT',
+                callSid: lastCallSid,
+                utteranceId: hudUuid(),
+                seq: hudNextSeq(),
+                speaker,
+                text: alt.transcript,
+                isFinal: data.is_final,
+                confidence: alt.confidence || 0,
+                atMs: Date.now(),
+              });
+            }
+          }
+        } catch (e) {
+          // Ignore non-JSON messages (keepalives, metadata)
+        }
+      };
+
+      return ws;
+    }
+
+    // Audio capture via AudioContext + ScriptProcessor (simpler than AudioWorklet for this use case)
+    function captureStreamToWs(mediaStream, ws) {
+      const ctx = new AudioContext({ sampleRate: 16000 });
+      const source = ctx.createMediaStreamSource(mediaStream);
+      // ScriptProcessorNode: 4096 buffer, 1 input channel, 1 output channel
+      const processor = ctx.createScriptProcessor(4096, 1, 1);
+
+      processor.onaudioprocess = (e) => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        const float32 = e.inputBuffer.getChannelData(0);
+        // Convert Float32 to Linear16 (Int16)
+        const int16 = new Int16Array(float32.length);
+        for (let i = 0; i < float32.length; i++) {
+          const s = Math.max(-1, Math.min(1, float32[i]));
+          int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        ws.send(int16.buffer);
+      };
+
+      source.connect(processor);
+      // Do NOT connect to ctx.destination — that would play audio back through speakers
+      // causing echo/feedback. ScriptProcessor needs a connection to stay alive, use a
+      // silent GainNode instead.
+      const silentGain = ctx.createGain();
+      silentGain.gain.value = 0;
+      processor.connect(silentGain);
+      silentGain.connect(ctx.destination);
+
+      return { ctx, source, processor };
+    }
+
+    let repAudioPipeline = null;
+    let prospectAudioPipeline = null;
+
+    async function startRepChannel() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const ws = createDgConnection(hudDeepgramKey, 'rep');
+        // Wait for WS to open before sending audio
+        await new Promise((resolve, reject) => {
+          ws.addEventListener('open', resolve, { once: true });
+          ws.addEventListener('error', reject, { once: true });
+          setTimeout(reject, 5000);
+        });
+        repAudioPipeline = captureStreamToWs(stream, ws);
+        hudRepDgConn = ws;
+        console.log('[hud-audio] Rep channel active');
+      } catch (e) {
+        console.error('[hud-audio] Rep channel failed:', e.message);
+      }
+    }
+
+    function startProspectChannel() {
+      if (!hudRemoteStream || !hudDeepgramKey) return;
+      try {
+        const ws = createDgConnection(hudDeepgramKey, 'prospect');
+        ws.addEventListener('open', () => {
+          prospectAudioPipeline = captureStreamToWs(hudRemoteStream, ws);
+          hudProspectDgConn = ws;
+          hudDualStream = true;
+          hudChannel.postMessage({ type: 'AUDIO_MODE', mode: 'dual' });
+          console.log('[hud-audio] Prospect channel active (dual stream)');
+        }, { once: true });
+      } catch (e) {
+        console.error('[hud-audio] Prospect channel failed:', e.message);
+      }
+    }
+
+    function stopAudioCapture() {
+      if (repAudioPipeline) {
+        repAudioPipeline.processor.disconnect();
+        repAudioPipeline.source.disconnect();
+        repAudioPipeline.ctx.close().catch(() => {});
+        repAudioPipeline = null;
+      }
+      if (prospectAudioPipeline) {
+        prospectAudioPipeline.processor.disconnect();
+        prospectAudioPipeline.source.disconnect();
+        prospectAudioPipeline.ctx.close().catch(() => {});
+        prospectAudioPipeline = null;
+      }
+      if (hudRepDgConn && hudRepDgConn.readyState === WebSocket.OPEN) {
+        hudRepDgConn.close();
+      }
+      if (hudProspectDgConn && hudProspectDgConn.readyState === WebSocket.OPEN) {
+        hudProspectDgConn.close();
+      }
+      hudRepDgConn = null;
+      hudProspectDgConn = null;
+      hudRemoteStream = null;
+      hudDualStream = false;
+      hudSeq = 0;
+    }
+
+    // ── BroadcastChannel call lifecycle events ──────────────────────
+    // Injected into existing call lifecycle (toggleDial, logOutcome, disconnect)
+    const origToggleDial = toggleDial;
+
+    // Wrap the existing toggleDial to add HUD events
+    // We override toggleDial after it's defined above
+    const originalAcceptHandler = null; // We'll patch via call events instead
+
+    // Patch: on call accept, start audio capture + post CALL_STARTED
+    function hudOnCallAccept() {
+      const lead = leads[currentIndex];
+      hudChannel.postMessage({
+        type: 'CALL_STARTED',
+        callSid: lastCallSid,
+        seq: hudNextSeq(),
+        prospectId: lead?.id,
+        businessName: lead?.business_name,
+        metro: lead?.metro,
+        signals: lead?.signal_details || [],
+      });
+      // Start heartbeat so HUD can detect dialer tab death
+      if (hudHeartbeatInterval) clearInterval(hudHeartbeatInterval);
+      hudHeartbeatInterval = setInterval(() => {
+        hudChannel.postMessage({ type: 'HEARTBEAT', callSid: lastCallSid, atMs: Date.now() });
+      }, 2000);
+      // Start audio capture (AudioContext created here = user gesture context from dial click)
+      startAudioCapture();
+    }
+
+    async function startAudioCapture() {
+      if (!hudDeepgramKey) {
+        hudDeepgramKey = await fetchDeepgramKey();
+      }
+      if (!hudDeepgramKey) {
+        console.warn('[hud-audio] No Deepgram key, running manual mode only');
+        hudChannel.postMessage({ type: 'AUDIO_MODE', mode: 'manual' });
+        return;
+      }
+      await startRepChannel();
+      // Check for remote stream (may already be captured by RTCPeerConnection patch)
+      if (hudRemoteStream) {
+        startProspectChannel();
+      } else {
+        // Wait up to 5s for remote track, then fallback to manual mode
+        setTimeout(() => {
+          if (!hudDualStream) {
+            console.warn('[hud-audio] No remote track after 5s, switching to manual mode');
+            hudChannel.postMessage({ type: 'AUDIO_MODE', mode: 'manual' });
+          }
+        }, 5000);
+      }
+    }
+
+    function hudOnCallDisconnect() {
+      hudChannel.postMessage({
+        type: 'CALL_ENDED',
+        callSid: lastCallSid,
+        seq: hudNextSeq(),
+        atMs: Date.now(),
+      });
+      if (hudHeartbeatInterval) {
+        clearInterval(hudHeartbeatInterval);
+        hudHeartbeatInterval = null;
+      }
+      stopAudioCapture();
+    }
+
+    // beforeunload: send CALL_ENDED if dialer tab closes mid-call
+    window.addEventListener('beforeunload', () => {
+      if (isDialing && lastCallSid) {
+        hudChannel.postMessage({
+          type: 'CALL_ENDED',
+          callSid: lastCallSid,
+          seq: hudNextSeq(),
+          atMs: Date.now(),
+          reason: 'dialer_tab_closed',
+        });
+      }
+    });
+
+    // ── End Sales HUD audio bridge ──────────────────────────────────
 
     initTwilioDevice();
     loadLeads();

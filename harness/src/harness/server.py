@@ -261,6 +261,13 @@ if FastAPI:
     app.include_router(post_call_router, prefix="/webhook/retell")
     app.include_router(booking_router, prefix="/api/bookings")
 
+    # Start Discord Sales Assistant bot in background thread
+    try:
+        from outbound.assistant import start_bot_background
+        start_bot_background()
+    except Exception:
+        logging.getLogger(__name__).info("Discord bot not started (missing deps or token)")
+
     @app.get("/health")
     def health() -> dict[str, Any]:
         return health_dependencies()
@@ -680,6 +687,18 @@ if FastAPI:
         stats = outbound_store.today_call_stats(date=date)
         funnel = outbound_funnel_summary(days=1)
         return {"stats": stats, "funnel": funnel, "date": date}
+
+    @app.post("/discord/ask")
+    def discord_ask(request: Request) -> dict[str, Any]:
+        """Direct API for testing the Sales Assistant without Discord."""
+        validate_event_auth(request)
+        import json as _json
+        body = _json.loads(request._receive.__self__._body)  # type: ignore[attr-defined]
+        question = str(body.get("question", "")).strip()
+        if not question:
+            return {"error": "missing question"}
+        from outbound.assistant import answer_question
+        return {"answer": answer_question(question)}
 
     @app.post("/onboard-tenant")
     def onboard_tenant_endpoint(request: OnboardTenantRequest, http_request: Request) -> dict[str, Any]:

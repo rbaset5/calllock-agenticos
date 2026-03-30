@@ -19,6 +19,8 @@ services:
         sync: false
       - key: VOICE_CREDENTIAL_KEY
         sync: false
+      - key: DISCORD_BOT_TOKEN
+        sync: false
   - type: web
     name: calllock-inngest
     runtime: node

@@ -31,6 +31,9 @@ const {
   HARNESS_EVENT_SECRET = '',
   NODE_ENV = 'development',
   PORT = '3004',
+  DEEPGRAM_API_KEY,
+  GROQ_API_KEY,
+  HUD_INTERNAL_TOKEN,
 } = process.env;
 
 const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
@@ -143,6 +146,26 @@ setInterval(() => {
     if (data.updatedAt < cutoff) callStore.delete(sid);
   }
 }, 5 * 60 * 1000);
+
+// HUD session store — holds hud_session data for calls that arrive before writeOutcomeRecord
+const hudSessionStore = new Map();
+
+// Clean up stale HUD sessions after 30 minutes (same pattern as callStore)
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [sid, data] of hudSessionStore) {
+    if (data._storedAt && data._storedAt < cutoff) hudSessionStore.delete(sid);
+  }
+}, 10 * 60 * 1000);
+
+function validateHudToken(req, res, next) {
+  if (!HUD_INTERNAL_TOKEN) return next(); // skip check in dev if not set
+  const token = req.headers['x-hud-token'];
+  if (token !== HUD_INTERNAL_TOKEN) {
+    return res.status(403).json({ error: 'Invalid HUD token' });
+  }
+  next();
+}
 
 function topSignals(signals = []) {
   return [...signals]
@@ -307,6 +330,17 @@ async function writeOutcomeRecord(callSid) {
   }
 
   if (inserted && inserted.length > 0) {
+    // Merge pending HUD session data if it arrived before the outcome record
+    const pendingHud = hudSessionStore.get(callSid);
+    if (pendingHud && supabase) {
+      await supabase.from('outbound_calls')
+        .update({ hud_session: pendingHud })
+        .eq('twilio_call_sid', callSid)
+        .eq('tenant_id', OUTBOUND_TENANT_ID);
+      hudSessionStore.delete(callSid);
+      console.log(`[hud/session] Merged pending hud_session for ${callSid}`);
+    }
+
     await updateProspectStage(data.prospectId, mapped.outcome, mapped.demoScheduled);
     await emitInngestEvent(OUTBOUND_CALL_OUTCOME_EVENT, {
       tenant_id: OUTBOUND_TENANT_ID,
@@ -320,6 +354,10 @@ async function writeOutcomeRecord(callSid) {
 
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/hud', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'hud', 'index.html'));
 });
 
 app.get('/token', (_req, res) => {
@@ -567,6 +605,149 @@ app.post('/dial-started', async (req, res) => {
     console.warn('[dial-started] Harness unavailable:', err.message);
     res.status(503).json({ error: 'Dial start write failed', detail: err.message });
   }
+});
+
+// ── HUD endpoints ──────────────────────────────────────────────
+
+app.get('/hud/deepgram-token', validateHudToken, (_req, res) => {
+  res.json({ key: DEEPGRAM_API_KEY || '' });
+});
+
+app.post('/hud/groq-classify', validateHudToken, async (req, res) => {
+  const { utterance, stage, bridgeAngle, lastObjectionBucket, utteranceId } = req.body;
+
+  if (!GROQ_API_KEY) {
+    return res.json({ error: true, reason: 'GROQ_API_KEY not set' });
+  }
+
+  const VALID_BRIDGE_ANGLES = ['missed_calls', 'competition', 'overwhelmed', 'fallback', 'unknown'];
+  const VALID_OBJECTION_BUCKETS = ['timing', 'interest', 'info', 'authority', 'unknown'];
+  const VALID_QUALIFIER_READS = ['pain', 'no_pain', 'unknown_pain', 'unknown'];
+
+  const systemPrompt = `You are a cold call stage classifier for an HVAC contractor sales call. Given a prospect's utterance and the current call stage, classify the response. Return ONLY a valid JSON object with no other text.
+
+Current stage: ${stage}
+${bridgeAngle ? 'Current bridge angle: ' + bridgeAngle : ''}
+${lastObjectionBucket ? 'Last objection bucket: ' + lastObjectionBucket : ''}
+
+Return JSON with these fields (include only relevant ones):
+- "bridgeAngle": one of [${VALID_BRIDGE_ANGLES.join(', ')}] (only if stage is OPENER or BRIDGE)
+- "objectionBucket": one of [${VALID_OBJECTION_BUCKETS.join(', ')}] (only if stage is CLOSE or OBJECTION)
+- "qualifierRead": one of [${VALID_QUALIFIER_READS.join(', ')}] (only if stage is QUALIFIER)
+- "confidence": number 0-1
+- "why": brief explanation
+
+Example: {"bridgeAngle":"missed_calls","confidence":0.82,"why":"mentions voicemail"}`;
+
+  try {
+    const controller = new AbortController();
+    // 2s timeout (600ms was too aggressive for Groq cold starts)
+    const timeout = setTimeout(() => controller.abort(), 2000);
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: utterance },
+        ],
+        temperature: 0.1,
+        max_tokens: 150,
+        response_format: { type: 'json_object' },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      console.error('[hud/groq] API returned', response.status);
+      return res.json({ error: true });
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      return res.json({ error: true });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      console.error('[hud/groq] Invalid JSON from model:', content);
+      return res.json({ error: true });
+    }
+
+    // Validate enum values
+    if (parsed.bridgeAngle && !VALID_BRIDGE_ANGLES.includes(parsed.bridgeAngle)) {
+      console.warn('[hud/groq] Invalid bridgeAngle:', parsed.bridgeAngle);
+      return res.json({ error: true });
+    }
+    if (parsed.objectionBucket && !VALID_OBJECTION_BUCKETS.includes(parsed.objectionBucket)) {
+      console.warn('[hud/groq] Invalid objectionBucket:', parsed.objectionBucket);
+      return res.json({ error: true });
+    }
+    if (parsed.qualifierRead && !VALID_QUALIFIER_READS.includes(parsed.qualifierRead)) {
+      console.warn('[hud/groq] Invalid qualifierRead:', parsed.qualifierRead);
+      return res.json({ error: true });
+    }
+
+    // Whitelist only expected fields (don't spread arbitrary LLM output)
+    res.json({
+      bridgeAngle: parsed.bridgeAngle || undefined,
+      objectionBucket: parsed.objectionBucket || undefined,
+      qualifierRead: parsed.qualifierRead || undefined,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+      why: typeof parsed.why === 'string' ? parsed.why.slice(0, 200) : undefined,
+      utteranceId,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.warn('[hud/groq] Timeout (600ms)');
+    } else {
+      console.error('[hud/groq] Error:', err.message);
+    }
+    res.json({ error: true });
+  }
+});
+
+app.post('/hud/session-log', validateHudToken, async (req, res) => {
+  const { twilio_call_sid, prospect_id, hud_session } = req.body;
+
+  if (!twilio_call_sid || !hud_session) {
+    return res.status(400).json({ error: 'twilio_call_sid and hud_session are required' });
+  }
+
+  if (supabase) {
+    // Try to update existing outbound_calls row
+    const { data: updated, error } = await supabase
+      .from('outbound_calls')
+      .update({ hud_session })
+      .eq('twilio_call_sid', twilio_call_sid)
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .select('id');
+
+    if (error) {
+      console.error('[hud/session-log] Supabase update error:', error.message);
+    }
+
+    if (updated && updated.length > 0) {
+      console.log('[hud/session-log] Updated hud_session for', twilio_call_sid);
+      return res.json({ ok: true, merged: true });
+    }
+  }
+
+  // No row yet — store in hudSessionStore for later merge
+  hudSessionStore.set(twilio_call_sid, hud_session);
+  console.log('[hud/session-log] Stored pending hud_session for', twilio_call_sid);
+  res.json({ ok: true, merged: false });
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
