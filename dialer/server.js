@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { randomUUID } = require('crypto');
 const twilio = require('twilio');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -406,6 +407,81 @@ async function updateProspectStage(prospectId, outcome, demoScheduled) {
   await supabase.from('outbound_prospects').update(patch).eq('id', prospectId);
 }
 
+async function buildLocalScoreboard(today = new Date()) {
+  if (!supabase) {
+    return {
+      daily_dials: 0,
+      daily_target: 0,
+      day_number: 0,
+      connect_rate: 0,
+      demos_booked_today: 0,
+      weekly_dials: 0,
+      total_dials: 0,
+    };
+  }
+
+  const todayIso = today.toISOString().slice(0, 10);
+  const monthStartIso = `${todayIso.slice(0, 8)}01`;
+  const { data, error } = await supabase.rpc('sprint_scoreboard', {
+    p_tenant_id: OUTBOUND_TENANT_ID,
+    p_start_date: monthStartIso,
+    p_today: todayIso,
+  });
+
+  if (error) throw error;
+
+  const raw = data || {};
+  const dailyDials = Number(raw.daily_dials || 0);
+  const dailyConnects = Number(raw.daily_connects || 0);
+  const dailyDemos = Number(raw.daily_demos || 0);
+
+  return {
+    daily_dials: dailyDials,
+    daily_target: 0,
+    day_number: 0,
+    connect_rate: dailyDials > 0 ? Number(((dailyConnects / dailyDials) * 100).toFixed(1)) : 0,
+    demos_booked_today: dailyDemos,
+    weekly_dials: Number(raw.weekly_dials || 0),
+    total_dials: Number(raw.total_dials || 0),
+    callbacks_completed: Number(raw.callbacks_completed || 0),
+    total_connects: Number(raw.total_connects || 0),
+    total_demos: Number(raw.total_demos || 0),
+    total_closes: Number(raw.total_closes || 0),
+    customers_signed: Number(raw.customers_signed || 0),
+    fallback: true,
+  };
+}
+
+async function insertDialStartedFallback(prospectId) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured');
+  }
+
+  const twilioCallSid = `dial-started-${randomUUID()}`;
+  const payload = {
+    tenant_id: OUTBOUND_TENANT_ID,
+    prospect_id: prospectId,
+    twilio_call_sid: twilioCallSid,
+    called_at: new Date().toISOString(),
+    outcome: 'dial_started',
+    call_outcome_type: 'dial_started',
+  };
+
+  const { data, error } = await supabase
+    .from('outbound_calls')
+    .insert(payload)
+    .select('id')
+    .limit(1);
+
+  if (error) throw error;
+
+  return {
+    id: data?.[0]?.id || null,
+    twilio_call_sid: twilioCallSid,
+    fallback: true,
+  };
+}
+
 async function writeOutcomeRecord(callSid) {
   const data = callStore.get(callSid);
   if (!data || !data.prospectId || !supabase) return;
@@ -673,8 +749,13 @@ app.get('/scoreboard', async (_req, res) => {
     res.json(metrics);
   } catch (err) {
     clearTimeout(timeout);
-    console.warn('[scoreboard] Harness unavailable:', err.message);
-    res.status(503).json({ error: 'Scoreboard unavailable', detail: err.message });
+    console.warn('[scoreboard] Harness unavailable, falling back to Supabase RPC:', err.message);
+    try {
+      const fallback = await buildLocalScoreboard();
+      res.json(fallback);
+    } catch (fallbackErr) {
+      res.status(503).json({ error: 'Scoreboard unavailable', detail: fallbackErr.message });
+    }
   }
 });
 
@@ -702,8 +783,13 @@ app.post('/dial-started', async (req, res) => {
     res.json(payload);
   } catch (err) {
     clearTimeout(timeout);
-    console.warn('[dial-started] Harness unavailable:', err.message);
-    res.status(503).json({ error: 'Dial start write failed', detail: err.message });
+    console.warn('[dial-started] Harness unavailable, falling back to direct insert:', err.message);
+    try {
+      const fallback = await insertDialStartedFallback(prospect_id);
+      res.json(fallback);
+    } catch (fallbackErr) {
+      res.status(503).json({ error: 'Dial start write failed', detail: fallbackErr.message });
+    }
   }
 });
 

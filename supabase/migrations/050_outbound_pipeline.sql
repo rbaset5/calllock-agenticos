@@ -10,7 +10,7 @@ VALUES (
     'hvac',
     'active'
 )
-ON CONFLICT (slug) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.tenant_configs (tenant_id)
 VALUES ('00000000-0000-0000-0000-000000000001')
