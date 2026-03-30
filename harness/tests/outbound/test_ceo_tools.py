@@ -1,6 +1,7 @@
 """Tests for CEO outbound tools."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from outbound.ceo_tools import (
@@ -9,6 +10,11 @@ from outbound.ceo_tools import (
     outbound_signal_effectiveness,
     outbound_metro_performance,
 )
+
+
+NOW = datetime.now(timezone.utc)
+RECENT_DISCOVERED_AT = (NOW - timedelta(days=2)).isoformat().replace("+00:00", "Z")
+RECENT_CALLED_AT = (NOW - timedelta(days=1)).isoformat().replace("+00:00", "Z")
 
 
 MOCK_PROSPECTS = [
@@ -22,7 +28,7 @@ MOCK_PROSPECTS = [
         "stage": "interested",
         "total_score": 92,
         "score_tier": "a_lead",
-        "discovered_at": "2026-03-20T08:00:00Z",
+        "discovered_at": RECENT_DISCOVERED_AT,
     },
     {
         "id": "p2",
@@ -35,7 +41,7 @@ MOCK_PROSPECTS = [
         "total_score": 25,
         "score_tier": "disqualified",
         "disqualification_reason": "Franchise",
-        "discovered_at": "2026-03-20T08:00:00Z",
+        "discovered_at": RECENT_DISCOVERED_AT,
     },
     {
         "id": "p3",
@@ -47,7 +53,7 @@ MOCK_PROSPECTS = [
         "stage": "call_ready",
         "total_score": 71,
         "score_tier": "b_lead",
-        "discovered_at": "2026-03-20T08:00:00Z",
+        "discovered_at": RECENT_DISCOVERED_AT,
     },
 ]
 
@@ -55,14 +61,14 @@ MOCK_CALLS = [
     {
         "prospect_id": "p1",
         "outcome": "answered_interested",
-        "called_at": "2026-03-21T15:00:00Z",
+        "called_at": RECENT_CALLED_AT,
         "demo_scheduled": True,
         "call_hook_used": "after_hours_no_answer",
     },
     {
         "prospect_id": "p2",
         "outcome": "answered_not_interested",
-        "called_at": "2026-03-21T15:30:00Z",
+        "called_at": RECENT_CALLED_AT,
         "notes": "Uses ServiceTitan",
     },
 ]
