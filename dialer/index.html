@@ -43,6 +43,32 @@
 
     .stats span { color: #fff; font-weight: 600; }
 
+    .scoreboard-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 24px;
+      border-bottom: 1px solid #1f2937;
+      background: linear-gradient(90deg, #161d10 0%, #111827 100%);
+      font-size: 13px;
+      color: #d1d5db;
+    }
+
+    .scoreboard-text strong { color: #fff; font-weight: 700; }
+
+    .scoreboard-refresh {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #374151;
+      background: #111827;
+      color: #93c5fd;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .scoreboard-refresh:hover { border-color: #4b5563; }
+
     .twilio-badge {
       display: inline-flex;
       align-items: center;
@@ -441,6 +467,11 @@
     </div>
   </header>
 
+  <div class="scoreboard-banner">
+    <div class="scoreboard-text" id="scoreboard-text">Loading scoreboard...</div>
+    <button class="scoreboard-refresh" id="scoreboard-refresh" onclick="refreshScoreboard()">Refresh</button>
+  </div>
+
   <nav class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('dial')">Speed Dial</button>
     <button class="tab-btn" onclick="switchTab('plan')">Today's Plan</button>
@@ -485,6 +516,7 @@
     let twilioDevice = null;
     let activeCall = null;
     let lastCallSid = null;
+    let lastDialStartedId = null;
     let callStartTime = null;
     let callTimerInterval = null;
 
@@ -596,6 +628,46 @@
       document.getElementById('stat-demos').textContent = stats.demos;
     }
 
+    function renderScoreboard(metrics) {
+      const text = document.getElementById('scoreboard-text');
+      if (!text) return;
+      if (!metrics || metrics.error) {
+        text.textContent = 'Scoreboard unavailable.';
+        return;
+      }
+
+      const daily = Number(metrics.daily_dials || 0);
+      const target = Number(metrics.daily_target || 0);
+      const pct = target > 0 ? Math.round((daily / target) * 100) : 0;
+      const dayNumber = Number(metrics.day_number || 0);
+      const connectRate = Number(metrics.connect_rate || 0).toFixed(1);
+      const demos = Number(metrics.demos_booked_today || 0);
+      text.textContent = `Day ${dayNumber} | ${daily}/${target} dials (${pct}%) | Connect: ${connectRate}% | Demos: ${demos}`;
+    }
+
+    let _scoreboardTimer = null;
+    function refreshScoreboard() {
+      // Debounce: at most one refresh per 10 seconds
+      if (_scoreboardTimer) return;
+      _scoreboardTimer = setTimeout(() => { _scoreboardTimer = null; }, 10000);
+      _refreshScoreboardNow();
+    }
+    async function _refreshScoreboardNow() {
+      const button = document.getElementById('scoreboard-refresh');
+      if (button) button.disabled = true;
+      try {
+        const response = await fetch(`${CALL_SERVER}/scoreboard`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        renderScoreboard(payload);
+      } catch (error) {
+        console.error('[dialer] scoreboard failed:', error);
+        renderScoreboard({ error: error.message });
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+
     function formatPhone(phone) {
       const digits = phone.replace(/\D/g, '');
       if (digits.length === 11 && digits[0] === '1') {
@@ -652,11 +724,21 @@
         }
 
         try {
+          // Fire-and-forget: don't block the call on dial-started logging
+          fetch(`${CALL_SERVER}/dial-started`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prospect_id: lead.id }),
+          }).then(r => r.ok ? r.json() : null).then(p => {
+            if (p) lastDialStartedId = p.id || null;
+          }).catch(() => {});
+
           activeCall = await twilioDevice.connect({ params: { To: lead.phone } });
           button.classList.add('dialing');
           isDialing = true;
           stats.dialed += 1;
           updateStats();
+          refreshScoreboard();
           updateCallStatus('Connecting...');
 
           activeCall.on('ringing', () => updateCallStatus('Ringing...'));
@@ -773,9 +855,11 @@
       localStorage.setItem('calllock-log', JSON.stringify(log));
       sendCallMetadata(lead, outcome, notes);
       lastCallSid = null;
+      lastDialStartedId = null;
       currentIndex += 1;
       localStorage.setItem('calllock-index', currentIndex);
       renderLead();
+      refreshScoreboard();
     }
 
     function restoreSession() {
@@ -1014,6 +1098,7 @@
 
     initTwilioDevice();
     loadLeads();
+    refreshScoreboard();
   </script>
 </body>
 </html>

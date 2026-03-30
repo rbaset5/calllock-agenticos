@@ -519,6 +519,56 @@ app.get('/daily-plan', async (_req, res) => {
   }
 });
 
+app.get('/scoreboard', async (_req, res) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (HARNESS_EVENT_SECRET) headers.Authorization = `Bearer ${HARNESS_EVENT_SECRET}`;
+    const response = await fetch(`${HARNESS_BASE_URL}/outbound/scoreboard`, {
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) throw new Error(`Harness returned ${response.status}`);
+    const metrics = await response.json();
+    res.json(metrics);
+  } catch (err) {
+    clearTimeout(timeout);
+    console.warn('[scoreboard] Harness unavailable:', err.message);
+    res.status(503).json({ error: 'Scoreboard unavailable', detail: err.message });
+  }
+});
+
+app.post('/dial-started', async (req, res) => {
+  const { prospect_id } = req.body || {};
+  if (!prospect_id) {
+    res.status(400).json({ error: 'prospect_id is required' });
+    return;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (HARNESS_EVENT_SECRET) headers.Authorization = `Bearer ${HARNESS_EVENT_SECRET}`;
+    const response = await fetch(`${HARNESS_BASE_URL}/outbound/dial-started`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ prospect_id }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) throw new Error(`Harness returned ${response.status}`);
+    const payload = await response.json();
+    res.json(payload);
+  } catch (err) {
+    clearTimeout(timeout);
+    console.warn('[dial-started] Harness unavailable:', err.message);
+    res.status(503).json({ error: 'Dial start write failed', detail: err.message });
+  }
+});
+
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.listen(parseInt(PORT, 10), () => {
