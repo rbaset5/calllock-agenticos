@@ -76,3 +76,19 @@ def test_answer_question_honors_model_override(monkeypatch) -> None:
     assert answer == "ok"
     assert len(calls) == 1
     assert calls[0]["model"] == "gpt-4.1"
+
+
+def test_execute_tool_get_digest_passes_date_kwarg(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_today_call_stats(**kwargs):
+        calls.append(kwargs)
+        return {"total_calls": 0}
+
+    monkeypatch.setattr(assistant.store, "today_call_stats", fake_today_call_stats)
+
+    result = assistant._execute_tool("get_digest")
+
+    assert result == {"total_calls": 0}
+    assert len(calls) == 1
+    assert "date" in calls[0]

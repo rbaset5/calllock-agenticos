@@ -118,7 +118,7 @@ def _execute_tool(name: str) -> dict[str, Any]:
 
     if name == "get_digest":
         try:
-            stats = store.today_call_stats(tenant_id=tenant, today=today.isoformat())
+            stats = store.today_call_stats(tenant_id=tenant, date=today.isoformat())
             return stats if isinstance(stats, dict) else {"stats": stats}
         except Exception:
             return {"error": "digest_unavailable"}
