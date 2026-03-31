@@ -48,6 +48,7 @@ Key harness endpoints:
 - `POST /process-call`
 - `POST /events/process-call`
 - `POST /events/job-complete`
+- `POST /discord/ask`
 - `POST /onboard-tenant`
 - `GET /jobs`
 - `GET /artifacts?tenant_id=...`
@@ -83,6 +84,8 @@ Key harness endpoints:
 - `POST /content/process`
 - `GET /cockpit/overview`
 - `GET /cockpit/scheduler`
+
+The harness also runs a Discord Gateway bot for the internal Sales Assistant. The live assistant model is controlled by `SALES_ASSISTANT_MODEL` and currently defaults to `gpt-4.1-mini`.
 
 ### Validation scripts
 
