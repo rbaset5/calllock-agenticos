@@ -2,6 +2,7 @@ from db.repository import create_alert, create_job
 from fastapi.testclient import TestClient
 
 from harness.server import app
+import harness.server as server
 
 
 def test_process_call_endpoint_executes_customer_analyst() -> None:
@@ -103,6 +104,19 @@ def test_event_endpoint_requires_secret_when_configured(monkeypatch) -> None:
         },
     )
     assert authorized.status_code == 200
+
+
+def test_health_reports_litellm_configured_with_openai_key(monkeypatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
+    monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    monkeypatch.setattr(server, "build_cache_client", lambda: type("Cache", (), {"ping": lambda self: True})())
+    monkeypatch.setattr(server, "_check_external_connectivity", lambda url, timeout=3.0: {"reachable": True, "status": 200})
+
+    health = server.health_dependencies()
+
+    assert health["litellm"]["configured"] is True
 
 
 def test_onboarding_and_control_plane_endpoints() -> None:
