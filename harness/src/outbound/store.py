@@ -535,6 +535,8 @@ def sprint_scoreboard(
                 "p_today": today_str,
             },
         )
+        if isinstance(rows, dict):
+            return rows
         return (rows or [{}])[0]
 
     start_day = date.fromisoformat(start_date)
