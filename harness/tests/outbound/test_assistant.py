@@ -22,3 +22,31 @@ def test_run_bot_forever_retries_after_failure() -> None:
     assert success is True
     assert client.calls == 2
     assert sleeps == [1.0]
+
+
+def test_answer_question_passes_explicit_anthropic_key(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    class _Message:
+        tool_calls = []
+        content = "ok"
+
+    class _Choice:
+        message = _Message()
+
+    class _Response:
+        choices = [_Choice()]
+
+    def fake_completion(**kwargs):
+        calls.append(kwargs)
+        return _Response()
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setattr(assistant, "completion", fake_completion)
+
+    answer = assistant.answer_question("status?")
+
+    assert answer == "ok"
+    assert len(calls) == 1
+    assert calls[0]["api_key"] == "test-anthropic-key"
