@@ -24,7 +24,7 @@ def test_run_bot_forever_retries_after_failure() -> None:
     assert sleeps == [1.0]
 
 
-def test_answer_question_passes_explicit_anthropic_key(monkeypatch) -> None:
+def test_answer_question_uses_openai_default_model(monkeypatch) -> None:
     calls: list[dict[str, object]] = []
 
     class _Message:
@@ -41,12 +41,38 @@ def test_answer_question_passes_explicit_anthropic_key(monkeypatch) -> None:
         calls.append(kwargs)
         return _Response()
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("SALES_ASSISTANT_MODEL", raising=False)
     monkeypatch.setattr(assistant, "completion", fake_completion)
 
     answer = assistant.answer_question("status?")
 
     assert answer == "ok"
     assert len(calls) == 1
-    assert calls[0]["api_key"] == "test-anthropic-key"
+    assert calls[0]["model"] == "gpt-4.1-mini"
+
+
+def test_answer_question_honors_model_override(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    class _Message:
+        tool_calls = []
+        content = "ok"
+
+    class _Choice:
+        message = _Message()
+
+    class _Response:
+        choices = [_Choice()]
+
+    def fake_completion(**kwargs):
+        calls.append(kwargs)
+        return _Response()
+
+    monkeypatch.setenv("SALES_ASSISTANT_MODEL", "gpt-4.1")
+    monkeypatch.setattr(assistant, "completion", fake_completion)
+
+    answer = assistant.answer_question("status?")
+
+    assert answer == "ok"
+    assert len(calls) == 1
+    assert calls[0]["model"] == "gpt-4.1"

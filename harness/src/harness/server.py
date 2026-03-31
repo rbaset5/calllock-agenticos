@@ -179,6 +179,13 @@ def _check_external_connectivity(url: str, timeout: float = 3.0) -> dict[str, An
         return {"reachable": False, "error": str(exc)[:120]}
 
 
+def _llm_configured() -> bool:
+    return any(
+        bool(os.getenv(name, "").strip())
+        for name in ("LITELLM_BASE_URL", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+    )
+
+
 def health_dependencies() -> dict[str, Any]:
     cache = build_cache_client()
     redis_ok = cache.ping()
@@ -193,7 +200,7 @@ def health_dependencies() -> dict[str, Any]:
     return {
         "status": status,
         "redis": {"ok": redis_ok},
-        "litellm": {"configured": bool(os.getenv("LITELLM_BASE_URL"))},
+        "litellm": {"configured": _llm_configured()},
         "supabase": {"configured": using_supabase()},
         "langsmith": {"configured": bool(os.getenv("LANGSMITH_API_KEY"))},
         "event_secret": {"configured": bool(os.getenv("HARNESS_EVENT_SECRET"))},

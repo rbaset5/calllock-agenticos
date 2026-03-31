@@ -149,28 +149,8 @@ def _execute_tool(name: str) -> dict[str, Any]:
 # LLM Question Answering
 # ---------------------------------------------------------------------------
 
-def _anthropic_api_key() -> str | None:
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    if api_key:
-        return api_key
-    auth_token = os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
-    return auth_token or None
-
-
-def _completion_kwargs() -> dict[str, Any]:
-    kwargs: dict[str, Any] = {}
-    api_key = _anthropic_api_key()
-    if api_key:
-        kwargs["api_key"] = api_key
-        return kwargs
-
-    logger.error(
-        "Anthropic credentials missing for sales assistant "
-        "(ANTHROPIC_API_KEY=%s, ANTHROPIC_AUTH_TOKEN=%s)",
-        bool(os.getenv("ANTHROPIC_API_KEY")),
-        bool(os.getenv("ANTHROPIC_AUTH_TOKEN")),
-    )
-    return kwargs
+def _assistant_model() -> str:
+    return os.getenv("SALES_ASSISTANT_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 
 
 def answer_question(question: str) -> str:
@@ -195,11 +175,10 @@ def answer_question(question: str) -> str:
 
     try:
         response = completion(
-            model="claude-sonnet-4-6",
+            model=_assistant_model(),
             messages=messages,
             tools=TOOL_DEFS,
             temperature=0,
-            **_completion_kwargs(),
         )
     except Exception:
         logger.exception("LLM initial call failed")
@@ -220,10 +199,9 @@ def answer_question(question: str) -> str:
 
         try:
             final = completion(
-                model="claude-sonnet-4-6",
+                model=_assistant_model(),
                 messages=messages,
                 temperature=0,
-                **_completion_kwargs(),
             )
             return str(final.choices[0].message.content)
         except Exception:
