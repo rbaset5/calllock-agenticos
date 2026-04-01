@@ -185,13 +185,17 @@ function readCookie(req, name) {
 
 function validateHudToken(req, res, next) {
   if (!HUD_INTERNAL_TOKEN) {
-    if (NODE_ENV === 'production') {
-      return res.status(500).json({ error: 'HUD auth is not configured' });
-    }
+    console.warn('[auth] HUD_INTERNAL_TOKEN not set — HUD endpoints are unprotected');
     return next();
   }
   const token = req.headers['x-hud-token'] || readCookie(req, 'calllock_hud_token');
-  if (token !== HUD_INTERNAL_TOKEN) {
+  if (!token) {
+    return res.status(403).json({ error: 'Missing HUD token' });
+  }
+  // Constant-time comparison to prevent timing attacks
+  const a = Buffer.from(token);
+  const b = Buffer.from(HUD_INTERNAL_TOKEN);
+  if (a.length !== b.length || !require('crypto').timingSafeEqual(a, b)) {
     return res.status(403).json({ error: 'Invalid HUD token' });
   }
   next();
@@ -539,12 +543,20 @@ async function writeOutcomeRecord(callSid) {
 }
 
 app.get('/', (_req, res) => {
-  setHudCookie(res);
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/hud', (_req, res) => {
-  setHudCookie(res);
+app.get('/hud', (req, res) => {
+  // Only set the cookie if the request provides the token via query param
+  // (from a deep link). Don't stamp it on every unauthenticated page load.
+  const tokenParam = req.query.token;
+  if (tokenParam && HUD_INTERNAL_TOKEN) {
+    const a = Buffer.from(tokenParam);
+    const b = Buffer.from(HUD_INTERNAL_TOKEN);
+    if (a.length === b.length && require('crypto').timingSafeEqual(a, b)) {
+      setHudCookie(res);
+    }
+  }
   res.sendFile(path.join(__dirname, 'hud', 'index.html'));
 });
 
