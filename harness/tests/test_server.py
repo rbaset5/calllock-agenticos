@@ -75,6 +75,37 @@ def test_event_endpoint_rejects_unknown_event_name() -> None:
     assert response.status_code == 422
 
 
+def test_outbound_current_queue_endpoint_returns_state_and_queue(monkeypatch) -> None:
+    from outbound import queue_builder, sprint_state
+
+    monkeypatch.setattr(
+        sprint_state,
+        "get_current_state",
+        lambda **_kwargs: {"current_block": "AM", "active_segment": "TX", "block_active": True},
+    )
+    monkeypatch.setattr(
+        queue_builder,
+        "build_queue",
+        lambda **_kwargs: {"block": "AM", "segment": "TX", "prospects": [], "total": 0},
+    )
+
+    client = TestClient(app)
+    response = client.get("/outbound/current-queue", params={"block": "AM", "segment": "TX"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "state": {"current_block": "AM", "active_segment": "TX", "block_active": True},
+        "queue": {"block": "AM", "segment": "TX", "prospects": [], "total": 0},
+    }
+
+
+def test_outbound_current_queue_endpoint_rejects_invalid_block() -> None:
+    client = TestClient(app)
+    response = client.get("/outbound/current-queue", params={"block": "NOPE"})
+
+    assert response.status_code == 400
+
+
 def test_event_endpoint_requires_secret_when_configured(monkeypatch) -> None:
     monkeypatch.setenv("HARNESS_EVENT_SECRET", "test-secret")
     client = TestClient(app)
@@ -106,10 +137,8 @@ def test_event_endpoint_requires_secret_when_configured(monkeypatch) -> None:
     assert authorized.status_code == 200
 
 
-def test_health_reports_litellm_configured_with_openai_key(monkeypatch) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
-    monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+def test_health_reports_litellm_configured_with_base_url(monkeypatch) -> None:
+    monkeypatch.setenv("LITELLM_BASE_URL", "http://localhost:4000")
 
     monkeypatch.setattr(server, "build_cache_client", lambda: type("Cache", (), {"ping": lambda self: True})())
     monkeypatch.setattr(server, "_check_external_connectivity", lambda url, timeout=3.0: {"reachable": True, "status": 200})

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-from contextlib import asynccontextmanager
 import logging
 logging.basicConfig(
     level=logging.INFO,
@@ -179,13 +177,6 @@ def _check_external_connectivity(url: str, timeout: float = 3.0) -> dict[str, An
         return {"reachable": False, "error": str(exc)[:120]}
 
 
-def _llm_configured() -> bool:
-    return any(
-        bool(os.getenv(name, "").strip())
-        for name in ("LITELLM_BASE_URL", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
-    )
-
-
 def health_dependencies() -> dict[str, Any]:
     cache = build_cache_client()
     redis_ok = cache.ping()
@@ -200,7 +191,7 @@ def health_dependencies() -> dict[str, Any]:
     return {
         "status": status,
         "redis": {"ok": redis_ok},
-        "litellm": {"configured": _llm_configured()},
+        "litellm": {"configured": bool(os.getenv("LITELLM_BASE_URL"))},
         "supabase": {"configured": using_supabase()},
         "langsmith": {"configured": bool(os.getenv("LANGSMITH_API_KEY"))},
         "event_secret": {"configured": bool(os.getenv("HARNESS_EVENT_SECRET"))},
@@ -218,24 +209,10 @@ def validate_event_auth(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Invalid event secret")
 
 
-def validate_internal_event_auth(request: Request, *, route_name: str) -> None:
-    expected = os.getenv("HARNESS_EVENT_SECRET")
-    if not expected:
-        raise HTTPException(status_code=503, detail=f"HARNESS_EVENT_SECRET must be configured for {route_name}")
-    authorization = request.headers.get("authorization", "")
-    if authorization != f"Bearer {expected}":
-        raise HTTPException(status_code=401, detail="Invalid event secret")
-
-
 def actor_id_for(request: Request | None, fallback: str = "system") -> str:
     if request is None:
         return fallback
     return request.headers.get("x-actor-id") or fallback
-
-
-def _discord_bot_enabled() -> bool:
-    enabled = os.getenv("DISCORD_BOT_ENABLED", "").strip().lower()
-    return enabled in {"1", "true", "yes", "on"} and bool(os.getenv("DISCORD_BOT_TOKEN", "").strip())
 
 
 def _tenant_lookup_values(tenant_id: str | None) -> list[str]:
@@ -274,18 +251,7 @@ def _get_incident_or_404(incident_id: str) -> dict[str, Any]:
 
 
 if FastAPI:
-    @asynccontextmanager
-    async def lifespan(app: FastAPI):
-        if not app.state.discord_bot_started and _discord_bot_enabled():
-            try:
-                from outbound.assistant import start_bot_background
-                start_bot_background()
-                app.state.discord_bot_started = True
-            except Exception:
-                logging.getLogger(__name__).info("Discord bot not started (missing deps or token)")
-        yield
-
-    app = FastAPI(title="CallLock Harness", lifespan=lifespan)
+    app = FastAPI(title="CallLock Harness")
 
     from voice.router import voice_router
     from voice.post_call_router import post_call_router
@@ -295,7 +261,15 @@ if FastAPI:
     app.include_router(post_call_router, prefix="/webhook/retell")
     app.include_router(booking_router, prefix="/api/bookings")
 
-    app.state.discord_bot_started = False
+    # Start Discord Sales Assistant bot in background thread (only if token configured)
+    if os.getenv("DISCORD_BOT_TOKEN", "").strip():
+        try:
+            from outbound.assistant import start_bot_background
+            start_bot_background()
+        except Exception:
+            logging.getLogger(__name__).info("Discord bot not started (missing deps)")
+    else:
+        logging.getLogger(__name__).info("Discord bot not started (DISCORD_BOT_TOKEN not set)")
 
     @app.get("/health")
     def health() -> dict[str, Any]:
@@ -619,6 +593,28 @@ if FastAPI:
         from outbound.daily_plan import build_daily_plan
         return build_daily_plan()
 
+    @app.get("/outbound/current-queue")
+    def outbound_current_queue(
+        request: Request,
+        block: str,
+        segment: str | None = None,
+        exclude_dialed: bool = True,
+    ) -> dict[str, Any]:
+        validate_event_auth(request)
+        normalized_block = block.upper()
+        if normalized_block not in {"AM", "MID", "EOD", "ALL"}:
+            raise HTTPException(status_code=400, detail=f"Invalid block: {block}")
+
+        from outbound import queue_builder, sprint_state
+
+        state = sprint_state.get_current_state()
+        queue = queue_builder.build_queue(
+            block=normalized_block,
+            segment=segment or state.get("active_segment"),
+            exclude_dialed=exclude_dialed,
+        )
+        return {"state": state, "queue": queue}
+
     @app.post("/outbound/lifecycle-run")
     def outbound_lifecycle_run(request: Request) -> dict[str, Any]:
         validate_event_auth(request)
@@ -720,14 +716,13 @@ if FastAPI:
     @app.post("/discord/ask")
     async def discord_ask(request: Request) -> dict[str, Any]:
         """Direct API for testing the Sales Assistant without Discord."""
-        validate_internal_event_auth(request, route_name="/discord/ask")
+        validate_event_auth(request)
         body = await request.json()
         question = str(body.get("question", "")).strip()
         if not question:
-            raise HTTPException(status_code=400, detail="question is required")
+            return {"error": "missing question"}
         from outbound.assistant import answer_question
-        answer = await asyncio.to_thread(answer_question, question)
-        return {"answer": answer}
+        return {"answer": answer_question(question)}
 
     @app.post("/onboard-tenant")
     def onboard_tenant_endpoint(request: OnboardTenantRequest, http_request: Request) -> dict[str, Any]:

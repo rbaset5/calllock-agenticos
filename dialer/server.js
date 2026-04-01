@@ -1,6 +1,17 @@
+// Local dev: load parent .env.local so dialer picks up shared credentials
+const _fs = require('fs');
+const _envPath = require('path').join(__dirname, '..', '.env.local');
+if (_fs.existsSync(_envPath)) {
+  _fs.readFileSync(_envPath, 'utf8').split('\n').forEach(line => {
+    const m = line.match(/^([^#=\s]+)\s*=\s*(.*)$/);
+    if (m && !process.env[m[1].trim()]) process.env[m[1].trim()] = m[2].trim();
+  });
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { randomUUID } = require('crypto');
 const twilio = require('twilio');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -12,7 +23,8 @@ const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(express.static(__dirname));
+// Only serve the hud/ subdirectory as static (not the whole dialer/ dir which includes server.js)
+app.use('/hud', express.static(path.join(__dirname, 'hud')));
 
 const {
   TWILIO_ACCOUNT_SID,
@@ -22,7 +34,7 @@ const {
   TWILIO_PHONE_NUMBER,
   TWILIO_TWIML_APP_SID,
   CALL_SERVER_BASE_URL,
-  SUPABASE_URL,
+  SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
   INNGEST_EVENT_URL,
   INNGEST_EVENT_KEY,
@@ -31,6 +43,9 @@ const {
   HARNESS_EVENT_SECRET = '',
   NODE_ENV = 'development',
   PORT = '3004',
+  DEEPGRAM_API_KEY,
+  GROQ_API_KEY,
+  HUD_INTERNAL_TOKEN,
 } = process.env;
 
 const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
@@ -143,6 +158,133 @@ setInterval(() => {
     if (data.updatedAt < cutoff) callStore.delete(sid);
   }
 }, 5 * 60 * 1000);
+
+// HUD session store — holds hud_session data for calls that arrive before writeOutcomeRecord
+const hudSessionStore = new Map();
+const HUD_SESSION_STAGING_TABLE = 'outbound_call_hud_sessions';
+
+// Clean up stale HUD sessions after 30 minutes (same pattern as callStore)
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [sid, data] of hudSessionStore) {
+    if (data._storedAt && data._storedAt < cutoff) hudSessionStore.delete(sid);
+  }
+}, 10 * 60 * 1000);
+
+function readCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return undefined;
+  for (const part of header.split(';')) {
+    const [rawKey, ...rest] = part.trim().split('=');
+    if (rawKey === name) {
+      return decodeURIComponent(rest.join('='));
+    }
+  }
+  return undefined;
+}
+
+function validateHudToken(req, res, next) {
+  if (!HUD_INTERNAL_TOKEN) {
+    if (NODE_ENV === 'production') {
+      return res.status(500).json({ error: 'HUD auth is not configured' });
+    }
+    return next();
+  }
+  const token = req.headers['x-hud-token'] || readCookie(req, 'calllock_hud_token');
+  if (token !== HUD_INTERNAL_TOKEN) {
+    return res.status(403).json({ error: 'Invalid HUD token' });
+  }
+  next();
+}
+
+function setHudCookie(res) {
+  if (!HUD_INTERNAL_TOKEN) return;
+  res.cookie('calllock_hud_token', HUD_INTERNAL_TOKEN, {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: NODE_ENV === 'production',
+    path: '/',
+  });
+}
+
+async function stageHudSession(twilioCallSid, prospectId, hudSession) {
+  if (supabase) {
+    const { error } = await supabase
+      .from(HUD_SESSION_STAGING_TABLE)
+      .upsert(
+        {
+          tenant_id: OUTBOUND_TENANT_ID,
+          twilio_call_sid: twilioCallSid,
+          prospect_id: prospectId || null,
+          hud_session: hudSession,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'tenant_id,twilio_call_sid' },
+      );
+    if (error) throw error;
+    return;
+  }
+
+  hudSessionStore.set(twilioCallSid, {
+    hudSession,
+    prospectId: prospectId || null,
+    _storedAt: Date.now(),
+  });
+}
+
+async function deleteStagedHudSession(twilioCallSid) {
+  if (supabase) {
+    const { error } = await supabase
+      .from(HUD_SESSION_STAGING_TABLE)
+      .delete()
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .eq('twilio_call_sid', twilioCallSid);
+    if (error) {
+      console.error('[hud/session] Failed to clear staged session:', error.message);
+    }
+    return;
+  }
+  hudSessionStore.delete(twilioCallSid);
+}
+
+async function mergePendingHudSession(callSid) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from(HUD_SESSION_STAGING_TABLE)
+      .select('hud_session')
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .eq('twilio_call_sid', callSid)
+      .limit(1);
+
+    if (error) {
+      console.error('[hud/session] Failed to load staged session:', error.message);
+      return false;
+    }
+
+    const pendingHud = data?.[0]?.hud_session;
+    if (!pendingHud) return false;
+
+    const { error: updateError } = await supabase
+      .from('outbound_calls')
+      .update({ hud_session: pendingHud })
+      .eq('twilio_call_sid', callSid)
+      .eq('tenant_id', OUTBOUND_TENANT_ID);
+
+    if (updateError) {
+      console.error('[hud/session] Failed to merge staged session:', updateError.message);
+      return false;
+    }
+
+    await deleteStagedHudSession(callSid);
+    console.log(`[hud/session] Merged staged hud_session for ${callSid}`);
+    return true;
+  }
+
+  const pendingHud = hudSessionStore.get(callSid);
+  if (!pendingHud || !pendingHud.hudSession) return false;
+  hudSessionStore.delete(callSid);
+  return false;
+}
 
 function topSignals(signals = []) {
   return [...signals]
@@ -276,6 +418,82 @@ async function updateProspectStage(prospectId, outcome, demoScheduled) {
   await supabase.from('outbound_prospects').update(patch).eq('id', prospectId);
 }
 
+async function buildLocalScoreboard(today = new Date()) {
+  if (!supabase) {
+    return {
+      daily_dials: 0,
+      daily_target: 0,
+      day_number: 0,
+      connect_rate: 0,
+      demos_booked_today: 0,
+      weekly_dials: 0,
+      total_dials: 0,
+    };
+  }
+
+  const todayIso = today.toISOString().slice(0, 10);
+  // Use sprint start date (Mar 30) instead of month-start to capture all sprint dials
+  const sprintStartIso = '2026-03-30';
+  const { data, error } = await supabase.rpc('sprint_scoreboard', {
+    p_tenant_id: OUTBOUND_TENANT_ID,
+    p_start_date: sprintStartIso,
+    p_today: todayIso,
+  });
+
+  if (error) throw error;
+
+  const raw = data || {};
+  const dailyDials = Number(raw.daily_dials || 0);
+  const dailyConnects = Number(raw.daily_connects || 0);
+  const dailyDemos = Number(raw.daily_demos || 0);
+
+  return {
+    daily_dials: dailyDials,
+    daily_target: 0,
+    day_number: 0,
+    connect_rate: dailyDials > 0 ? Number(((dailyConnects / dailyDials) * 100).toFixed(1)) : 0,
+    demos_booked_today: dailyDemos,
+    weekly_dials: Number(raw.weekly_dials || 0),
+    total_dials: Number(raw.total_dials || 0),
+    callbacks_completed: Number(raw.callbacks_completed || 0),
+    total_connects: Number(raw.total_connects || 0),
+    total_demos: Number(raw.total_demos || 0),
+    total_closes: Number(raw.total_closes || 0),
+    customers_signed: Number(raw.customers_signed || 0),
+    fallback: true,
+  };
+}
+
+async function insertDialStartedFallback(prospectId) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured');
+  }
+
+  const twilioCallSid = `dial-started-${randomUUID()}`;
+  const payload = {
+    tenant_id: OUTBOUND_TENANT_ID,
+    prospect_id: prospectId,
+    twilio_call_sid: twilioCallSid,
+    called_at: new Date().toISOString(),
+    outcome: 'dial_started',
+    call_outcome_type: 'dial_started',
+  };
+
+  const { data, error } = await supabase
+    .from('outbound_calls')
+    .insert(payload)
+    .select('id')
+    .limit(1);
+
+  if (error) throw error;
+
+  return {
+    id: data?.[0]?.id || null,
+    twilio_call_sid: twilioCallSid,
+    fallback: true,
+  };
+}
+
 async function writeOutcomeRecord(callSid) {
   const data = callStore.get(callSid);
   if (!data || !data.prospectId || !supabase) return;
@@ -298,13 +516,15 @@ async function writeOutcomeRecord(callSid) {
 
   const { data: inserted, error } = await supabase
     .from('outbound_calls')
-    .upsert(payload, { onConflict: 'tenant_id,twilio_call_sid', ignoreDuplicates: true })
+    .upsert(payload, { onConflict: 'tenant_id,twilio_call_sid' })
     .select();
 
   if (error) {
     storeCall(callSid, { outcomeWritten: false });
     throw error;
   }
+
+  await mergePendingHudSession(callSid);
 
   if (inserted && inserted.length > 0) {
     await updateProspectStage(data.prospectId, mapped.outcome, mapped.demoScheduled);
@@ -319,10 +539,16 @@ async function writeOutcomeRecord(callSid) {
 }
 
 app.get('/', (_req, res) => {
+  setHudCookie(res);
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/token', (_req, res) => {
+app.get('/hud', (_req, res) => {
+  setHudCookie(res);
+  res.sendFile(path.join(__dirname, 'hud', 'index.html'));
+});
+
+app.get('/token', validateHudToken, (_req, res) => {
   const AccessToken = twilio.jwt.AccessToken;
   const VoiceGrant = AccessToken.VoiceGrant;
 
@@ -342,41 +568,94 @@ app.get('/token', (_req, res) => {
   res.json({ token: token.toJwt() });
 });
 
-app.get('/prospects', async (_req, res) => {
+app.get('/prospects', validateHudToken, async (_req, res) => {
   if (!supabase) {
     res.status(500).json({ error: 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required' });
     return;
   }
 
-  const { data, error } = await supabase
-    .from('outbound_prospects')
-    .select(`
-      id,
-      business_name,
-      phone,
-      phone_normalized,
-      website,
-      address,
-      metro,
-      timezone,
-      total_score,
-      score_tier,
-      raw_source,
-      prospect_signals(signal_type, signal_tier, score, observed_at),
-      call_tests(result, called_at, local_time),
-      prospect_scores(total_score, tier, scored_at)
-    `)
-    .eq('tenant_id', OUTBOUND_TENANT_ID)
-    .eq('stage', 'call_ready')
-    .order('total_score', { ascending: false })
-    .limit(200);
+  try {
+    const { data, error } = await supabase
+      .from('outbound_prospects')
+      .select(`
+        id,
+        business_name,
+        phone,
+        phone_normalized,
+        website,
+        address,
+        metro,
+        timezone,
+        total_score,
+        score_tier,
+        raw_source,
+        prospect_signals(signal_type, signal_tier, score, observed_at),
+        call_tests(result, called_at, local_time),
+        prospect_scores(total_score, tier, scored_at)
+      `)
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .eq('stage', 'call_ready')
+      .order('total_score', { ascending: false })
+      .limit(200);
 
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
+    if (error) {
+      console.error('[prospects] Supabase query error:', error.message, error.code);
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ prospects: (data || []).map(toFrontendProspect) });
+  } catch (err) {
+    console.error('[prospects] Unexpected error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/current-queue', async (req, res) => {
+  const { block, segment = '', exclude_dialed = 'true' } = req.query;
+  if (!block) {
+    return res.status(400).json({ error: 'block is required' });
   }
 
-  res.json({ prospects: (data || []).map(toFrontendProspect) });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (HARNESS_EVENT_SECRET) headers.Authorization = `Bearer ${HARNESS_EVENT_SECRET}`;
+
+    const params = new URLSearchParams({
+      block: String(block),
+      exclude_dialed: String(exclude_dialed),
+    });
+    if (segment) params.set('segment', String(segment));
+
+    const response = await fetch(`${HARNESS_BASE_URL}/outbound/current-queue?${params.toString()}`, {
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      throw new Error(`Harness returned ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const queue = payload.queue || {};
+    if (Array.isArray(queue.prospects)) {
+      queue.prospects = queue.prospects.map(toFrontendProspect);
+    }
+    if (Array.isArray(queue.queues)) {
+      queue.queues = queue.queues.map((entry) => ({
+        ...entry,
+        prospects: Array.isArray(entry.prospects) ? entry.prospects.map(toFrontendProspect) : [],
+      }));
+    }
+
+    res.json({ state: payload.state || null, queue });
+  } catch (err) {
+    clearTimeout(timeout);
+    res.status(503).json({ error: 'Queue unavailable', detail: err.message });
+  }
 });
 
 app.post('/twiml', validateTwilioSignature, (req, res) => {
@@ -535,8 +814,13 @@ app.get('/scoreboard', async (_req, res) => {
     res.json(metrics);
   } catch (err) {
     clearTimeout(timeout);
-    console.warn('[scoreboard] Harness unavailable:', err.message);
-    res.status(503).json({ error: 'Scoreboard unavailable', detail: err.message });
+    console.warn('[scoreboard] Harness unavailable, falling back to Supabase RPC:', err.message);
+    try {
+      const fallback = await buildLocalScoreboard();
+      res.json(fallback);
+    } catch (fallbackErr) {
+      res.status(503).json({ error: 'Scoreboard unavailable', detail: fallbackErr.message });
+    }
   }
 });
 
@@ -564,9 +848,171 @@ app.post('/dial-started', async (req, res) => {
     res.json(payload);
   } catch (err) {
     clearTimeout(timeout);
-    console.warn('[dial-started] Harness unavailable:', err.message);
-    res.status(503).json({ error: 'Dial start write failed', detail: err.message });
+    console.warn('[dial-started] Harness unavailable, falling back to direct insert:', err.message);
+    try {
+      const fallback = await insertDialStartedFallback(prospect_id);
+      res.json(fallback);
+    } catch (fallbackErr) {
+      res.status(503).json({ error: 'Dial start write failed', detail: fallbackErr.message });
+    }
   }
+});
+
+// ── HUD endpoints ──────────────────────────────────────────────
+
+app.get('/hud/deepgram-token', validateHudToken, (_req, res) => {
+  res.json({ key: DEEPGRAM_API_KEY || '' });
+});
+
+app.post('/hud/groq-classify', validateHudToken, async (req, res) => {
+  const { utterance, stage, bridgeAngle, lastObjectionBucket, utteranceId } = req.body;
+
+  if (!GROQ_API_KEY) {
+    return res.status(503).json({ error: true, reason: 'GROQ_API_KEY not set' });
+  }
+
+  // Input validation
+  if (typeof utterance !== 'string' || !utterance.trim() || utterance.length > 500) {
+    return res.status(400).json({ error: true, reason: 'Invalid utterance' });
+  }
+
+  const VALID_STAGES = ['GATEKEEPER', 'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION', 'SEED_EXIT', 'BOOKED', 'EXIT', 'NON_CONNECT'];
+  if (!VALID_STAGES.includes(stage)) {
+    return res.status(400).json({ error: true, reason: 'Invalid stage' });
+  }
+
+  const VALID_BRIDGE_ANGLES = ['missed_calls', 'competition', 'overwhelmed', 'fallback', 'unknown'];
+  const VALID_OBJECTION_BUCKETS = ['timing', 'interest', 'info', 'authority', 'unknown'];
+  const VALID_QUALIFIER_READS = ['pain', 'no_pain', 'unknown_pain', 'unknown'];
+
+  const systemPrompt = `You are a cold call stage classifier for an HVAC contractor sales call. Given a prospect's utterance and the current call stage, classify the response. Return ONLY a valid JSON object with no other text.
+
+Current stage: ${stage}
+${bridgeAngle ? 'Current bridge angle: ' + bridgeAngle : ''}
+${lastObjectionBucket ? 'Last objection bucket: ' + lastObjectionBucket : ''}
+
+Return JSON with these fields (include only relevant ones):
+- "bridgeAngle": one of [${VALID_BRIDGE_ANGLES.join(', ')}] (only if stage is OPENER or BRIDGE)
+- "objectionBucket": one of [${VALID_OBJECTION_BUCKETS.join(', ')}] (only if stage is CLOSE or OBJECTION)
+- "qualifierRead": one of [${VALID_QUALIFIER_READS.join(', ')}] (only if stage is QUALIFIER)
+- "confidence": number 0-1
+- "why": brief explanation
+
+Example: {"bridgeAngle":"missed_calls","confidence":0.82,"why":"mentions voicemail"}`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: utterance },
+        ],
+        temperature: 0.1,
+        max_tokens: 150,
+        response_format: { type: 'json_object' },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      console.error('[hud/groq] API returned', response.status);
+      return res.json({ error: true });
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      return res.json({ error: true });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      console.error('[hud/groq] Invalid JSON from model:', content);
+      return res.json({ error: true });
+    }
+
+    // Validate enum values
+    if (parsed.bridgeAngle && !VALID_BRIDGE_ANGLES.includes(parsed.bridgeAngle)) {
+      console.warn('[hud/groq] Invalid bridgeAngle:', parsed.bridgeAngle);
+      return res.json({ error: true });
+    }
+    if (parsed.objectionBucket && !VALID_OBJECTION_BUCKETS.includes(parsed.objectionBucket)) {
+      console.warn('[hud/groq] Invalid objectionBucket:', parsed.objectionBucket);
+      return res.json({ error: true });
+    }
+    if (parsed.qualifierRead && !VALID_QUALIFIER_READS.includes(parsed.qualifierRead)) {
+      console.warn('[hud/groq] Invalid qualifierRead:', parsed.qualifierRead);
+      return res.json({ error: true });
+    }
+
+    // Whitelist only expected fields (don't spread arbitrary LLM output)
+    res.json({
+      bridgeAngle: parsed.bridgeAngle || undefined,
+      objectionBucket: parsed.objectionBucket || undefined,
+      qualifierRead: parsed.qualifierRead || undefined,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+      why: typeof parsed.why === 'string' ? parsed.why.slice(0, 200) : undefined,
+      utteranceId,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.warn('[hud/groq] Timeout (1500ms)');
+    } else {
+      console.error('[hud/groq] Error:', err.message);
+    }
+    res.json({ error: true });
+  }
+});
+
+app.post('/hud/session-log', validateHudToken, async (req, res) => {
+  const { twilio_call_sid, prospect_id, hud_session } = req.body;
+
+  if (!twilio_call_sid || !hud_session) {
+    return res.status(400).json({ error: 'twilio_call_sid and hud_session are required' });
+  }
+
+  try {
+    await stageHudSession(twilio_call_sid, prospect_id, hud_session);
+  } catch (error) {
+    console.error('[hud/session-log] Failed to stage session:', error.message);
+    return res.status(503).json({ error: 'Could not persist hud_session' });
+  }
+
+  if (supabase) {
+    const { data: updated, error } = await supabase
+      .from('outbound_calls')
+      .update({ hud_session })
+      .eq('twilio_call_sid', twilio_call_sid)
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .select('id');
+
+    if (error) {
+      console.error('[hud/session-log] Supabase update error:', error.message);
+    }
+
+    if (updated && updated.length > 0) {
+      await deleteStagedHudSession(twilio_call_sid);
+      console.log('[hud/session-log] Updated hud_session for', twilio_call_sid);
+      return res.json({ ok: true, merged: true });
+    }
+  }
+
+  console.log('[hud/session-log] Staged pending hud_session for', twilio_call_sid);
+  res.json({ ok: true, merged: false });
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

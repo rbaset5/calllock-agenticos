@@ -21,8 +21,6 @@ services:
         sync: false
       - key: DISCORD_BOT_TOKEN
         sync: false
-      - key: DISCORD_BOT_ENABLED
-        sync: false
   - type: web
     name: calllock-inngest
     runtime: node
