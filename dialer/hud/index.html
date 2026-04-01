@@ -445,6 +445,69 @@
       line-height: 1.4;
     }
 
+    /* ── Quick-pick strip (always visible below NOW) ── */
+    .quick-pick-strip {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      flex-shrink: 0;
+    }
+
+    .quick-pick-strip:empty {
+      display: none;
+    }
+
+    .quick-pick {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #141414;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .quick-pick:hover {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+      color: #fff;
+    }
+
+    .quick-pick-key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 4px;
+      border: 1px solid #555;
+      color: #999;
+      background: #1a1a1a;
+      flex-shrink: 0;
+    }
+
+    .quick-pick:hover .quick-pick-key {
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .quick-pick-label {
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .quick-pick-cue {
+      color: #525252;
+      font-size: 11px;
+    }
+
     /* ── Hotkey legend ──────────────────────────────── */
     .hotkey-bar {
       display: flex;
@@ -522,19 +585,8 @@
   </div>
 
   <!-- Hotkey legend -->
-  <div class="hotkey-bar">
-    <span class="hotkey-item"><kbd>F4</kbd> Non-connect</span>
-    <span class="hotkey-item"><kbd>F6</kbd> Back</span>
-    <span class="hotkey-item"><kbd>F7</kbd> Next</span>
-    <span class="hotkey-item"><kbd>F8</kbd> Alt path</span>
-    <span id="hk1" class="hotkey-item"><kbd>1</kbd> Timing</span>
-    <span id="hk2" class="hotkey-item"><kbd>2</kbd> Interest</span>
-    <span id="hk3" class="hotkey-item"><kbd>3</kbd> Info</span>
-    <span id="hk4" class="hotkey-item"><kbd>4</kbd> Authority</span>
-    <span class="hotkey-item"><kbd>H</kbd> Hedge</span>
-    <span class="hotkey-item"><kbd>Tab</kbd> Lines</span>
-    <span class="hotkey-item"><kbd>⇧F11</kbd> Reset</span>
-  </div>
+  <div id="quick-pick-strip" class="quick-pick-strip"></div>
+  <div id="hotkey-bar" class="hotkey-bar"></div>
 
   <script type="module" src="./ui.js"></script>
 </body>

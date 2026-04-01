@@ -32,8 +32,8 @@ let sprintContextTimer = null;
 const STAGE_TRANSITIONS = {
   IDLE:        { f7: 'OPENER',    f8: null },
   GATEKEEPER:  { f7: 'OPENER',    f8: 'EXIT' },
-  OPENER:      { f7: 'BRIDGE',    f8: 'EXIT' },
-  BRIDGE:      { f7: 'QUALIFIER', f8: 'SEED_EXIT' },
+  OPENER:      { f7: 'BRIDGE',    f8: null },
+  BRIDGE:      { f7: 'QUALIFIER', f8: null },
   QUALIFIER:   { f7: 'CLOSE',     f8: 'SEED_EXIT' },
   CLOSE:       { f7: 'BOOKED',    f8: 'OBJECTION' },
   OBJECTION:   { f7: 'CLOSE',     f8: 'EXIT' },
@@ -41,21 +41,6 @@ const STAGE_TRANSITIONS = {
   BOOKED:      { f7: 'EXIT',      f8: null },
   NON_CONNECT: { f7: 'EXIT',      f8: null },
   EXIT:        { f7: null,         f8: null },
-};
-
-// Stage hints shown in the why text after manual navigation
-const STAGE_HINTS = {
-  IDLE:        'F7 to start call',
-  GATEKEEPER:  'F7 got owner · F8 not available',
-  OPENER:      'F7 when they respond · F8 dead end',
-  BRIDGE:      'F7 after bridge line · F8 no pain → seed exit',
-  QUALIFIER:   'F7 pain → close · F8 no pain → exit',
-  CLOSE:       'F7 yes! → booked · F8 objection · H hedge',
-  OBJECTION:   'F7 try close · F8 give up · 1-4 new objection',
-  SEED_EXIT:   'F7 wrap up',
-  BOOKED:      'F7 call done',
-  NON_CONNECT: 'F7 after voicemail',
-  EXIT:        'Call complete',
 };
 
 // Linear ordering for F6 (back) only — IDLE excluded (F7 from IDLE → OPENER is one-way)
@@ -657,16 +642,130 @@ function render() {
   // Confidence badge
   renderConfidenceBadge();
 
-  // Dynamic hotkey labels: 1-3 change meaning at BRIDGE/OPENER vs CLOSE/OBJECTION
-  const isBridge = state.stage === 'BRIDGE' || state.stage === 'OPENER';
-  const $hk1 = document.getElementById('hk1');
-  const $hk2 = document.getElementById('hk2');
-  const $hk3 = document.getElementById('hk3');
-  const $hk4 = document.getElementById('hk4');
-  if ($hk1) $hk1.innerHTML = `<kbd>1</kbd> ${isBridge ? 'Missed' : 'Timing'}`;
-  if ($hk2) $hk2.innerHTML = `<kbd>2</kbd> ${isBridge ? 'Comp' : 'Interest'}`;
-  if ($hk3) $hk3.innerHTML = `<kbd>3</kbd> ${isBridge ? 'Overwhelm' : 'Info'}`;
-  if ($hk4) $hk4.style.opacity = isBridge ? '0.3' : '1';
+  // Context-sensitive hotkey bar
+  renderHotkeyBar();
+}
+
+function renderHotkeyBar() {
+  const $bar = document.getElementById('hotkey-bar');
+  if (!$bar) return;
+
+  const hk = (key, label) => `<span class="hotkey-item"><kbd>${key}</kbd> ${label}</span>`;
+
+  const HOTKEYS_BY_STAGE = {
+    IDLE: [
+      hk('F7', 'Start call'),
+      hk('F4', 'Voicemail'),
+      hk('⇧F11', 'Reset'),
+    ],
+    GATEKEEPER: [
+      hk('F7', 'Got owner'),
+      hk('F8', 'Not available'),
+      hk('F4', 'Voicemail'),
+      hk('F6', 'Back'),
+    ],
+    OPENER: [
+      hk('F7', 'They responded'),
+      hk('1', 'Missed'),
+      hk('2', 'Comp'),
+      hk('3', 'Overwhelm'),
+      hk('F4', 'Voicemail'),
+      hk('F6', 'Back'),
+    ],
+    BRIDGE: [
+      hk('F7', 'Next → Qualify'),
+      hk('1', 'Missed'),
+      hk('2', 'Comp'),
+      hk('3', 'Overwhelm'),
+      hk('Tab', 'Lines'),
+      hk('F6', 'Back'),
+    ],
+    QUALIFIER: [
+      hk('F7', 'Pain → Close'),
+      hk('F8', 'No pain → Exit'),
+      hk('Tab', 'Lines'),
+      hk('F6', 'Back'),
+    ],
+    CLOSE: [
+      hk('F7', 'Yes! → Booked'),
+      hk('F8', 'Objection'),
+      hk('H', 'Hedge'),
+      hk('1', 'Timing'),
+      hk('2', 'Interest'),
+      hk('3', 'Info'),
+      hk('4', 'Authority'),
+      hk('F6', 'Back'),
+    ],
+    OBJECTION: [
+      hk('1', 'Timing'),
+      hk('2', 'Interest'),
+      hk('3', 'Info'),
+      hk('4', 'Authority'),
+      hk('F7', 'Try close'),
+      hk('F8', 'Give up'),
+      hk('H', 'Hedge'),
+      hk('F6', 'Back'),
+    ],
+    SEED_EXIT: [
+      hk('F7', 'Done'),
+      hk('F6', 'Back'),
+    ],
+    BOOKED: [
+      hk('F7', 'Call done'),
+      hk('⇧F11', 'Reset'),
+    ],
+    NON_CONNECT: [
+      hk('F7', 'Done'),
+      hk('Tab', 'Lines'),
+    ],
+    EXIT: [
+      hk('⇧F11', 'Reset'),
+    ],
+    ENDED: [
+      hk('⇧F11', 'Reset'),
+    ],
+  };
+
+  const items = HOTKEYS_BY_STAGE[state.stage] || HOTKEYS_BY_STAGE.IDLE;
+  $bar.innerHTML = items.join('');
+}
+
+function renderQuickPickStrip() {
+  const $strip = document.getElementById('quick-pick-strip');
+  if (!$strip) return;
+
+  const inactiveStages = ['IDLE', 'ENDED', 'EXIT', 'BOOKED', 'SEED_EXIT', 'NON_CONNECT'];
+  if (inactiveStages.includes(state.stage)) {
+    $strip.innerHTML = '';
+    return;
+  }
+
+  const isBridgeStage = state.stage === 'OPENER' || state.stage === 'BRIDGE';
+  const cards = isBridgeStage ? BRIDGE_CARDS : OBJECTION_CARDS;
+
+  const html = cards.map(card => {
+    const action = isBridgeStage ? card.action : card.bucket;
+    return `<div class="quick-pick" data-action="${action}" data-bridge="${isBridgeStage}">` +
+      `<span class="quick-pick-key">${card.key}</span>` +
+      `<span class="quick-pick-label">${card.name}</span>` +
+      `<span class="quick-pick-cue">${card.cues}</span>` +
+    `</div>`;
+  }).join('');
+
+  $strip.innerHTML = html;
+
+  // Click handlers
+  $strip.querySelectorAll('.quick-pick').forEach(el => {
+    el.addEventListener('click', () => {
+      const action = el.dataset.action;
+      const bridge = el.dataset.bridge === 'true';
+      if (bridge) {
+        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: action, atMs: Date.now() });
+      } else {
+        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: action, atMs: Date.now() });
+      }
+    });
+  });
 }
 
 function renderContextStrip() {
@@ -728,6 +827,12 @@ const OBJECTION_CARDS = [
   { key: '2', bucket: 'interest', name: 'Interest', cues: '"not interested, we\'re set, don\'t need"' },
   { key: '3', bucket: 'info', name: 'Info', cues: '"send me info, email me, website"' },
   { key: '4', bucket: 'authority', name: 'Authority', cues: '"not my decision, wife handles, partner"' },
+];
+
+const BRIDGE_CARDS = [
+  { key: '1', action: 'missed_calls', name: 'Missed', cues: 'voicemail, callback, wife, office' },
+  { key: '2', action: 'competition', name: 'Comp', cues: 'slow, growth, competitor, losing' },
+  { key: '3', action: 'overwhelmed', name: 'Overwhelm', cues: 'busy, stretched, do it all, rushed' },
 ];
 
 let $objectionPicker = null;
