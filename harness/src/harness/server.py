@@ -261,12 +261,15 @@ if FastAPI:
     app.include_router(post_call_router, prefix="/webhook/retell")
     app.include_router(booking_router, prefix="/api/bookings")
 
-    # Start Discord Sales Assistant bot in background thread
-    try:
-        from outbound.assistant import start_bot_background
-        start_bot_background()
-    except Exception:
-        logging.getLogger(__name__).info("Discord bot not started (missing deps or token)")
+    # Start Discord Sales Assistant bot in background thread (only if token configured)
+    if os.getenv("DISCORD_BOT_TOKEN", "").strip():
+        try:
+            from outbound.assistant import start_bot_background
+            start_bot_background()
+        except Exception:
+            logging.getLogger(__name__).info("Discord bot not started (missing deps)")
+    else:
+        logging.getLogger(__name__).info("Discord bot not started (DISCORD_BOT_TOKEN not set)")
 
     @app.get("/health")
     def health() -> dict[str, Any]:
@@ -589,6 +592,28 @@ if FastAPI:
         validate_event_auth(request)
         from outbound.daily_plan import build_daily_plan
         return build_daily_plan()
+
+    @app.get("/outbound/current-queue")
+    def outbound_current_queue(
+        request: Request,
+        block: str,
+        segment: str | None = None,
+        exclude_dialed: bool = True,
+    ) -> dict[str, Any]:
+        validate_event_auth(request)
+        normalized_block = block.upper()
+        if normalized_block not in {"AM", "MID", "EOD", "ALL"}:
+            raise HTTPException(status_code=400, detail=f"Invalid block: {block}")
+
+        from outbound import queue_builder, sprint_state
+
+        state = sprint_state.get_current_state()
+        queue = queue_builder.build_queue(
+            block=normalized_block,
+            segment=segment or state.get("active_segment"),
+            exclude_dialed=exclude_dialed,
+        )
+        return {"state": state, "queue": queue}
 
     @app.post("/outbound/lifecycle-run")
     def outbound_lifecycle_run(request: Request) -> dict[str, Any]:

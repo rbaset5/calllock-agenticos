@@ -1,3 +1,13 @@
+// Local dev: load parent .env.local so dialer picks up shared credentials
+const _fs = require('fs');
+const _envPath = require('path').join(__dirname, '..', '.env.local');
+if (_fs.existsSync(_envPath)) {
+  _fs.readFileSync(_envPath, 'utf8').split('\n').forEach(line => {
+    const m = line.match(/^([^#=\s]+)\s*=\s*(.*)$/);
+    if (m && !process.env[m[1].trim()]) process.env[m[1].trim()] = m[2].trim();
+  });
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -13,7 +23,8 @@ const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(express.static(__dirname, { index: false }));
+// Only serve the hud/ subdirectory as static (not the whole dialer/ dir which includes server.js)
+app.use('/hud', express.static(path.join(__dirname, 'hud')));
 
 const {
   TWILIO_ACCOUNT_SID,
@@ -23,7 +34,7 @@ const {
   TWILIO_PHONE_NUMBER,
   TWILIO_TWIML_APP_SID,
   CALL_SERVER_BASE_URL,
-  SUPABASE_URL,
+  SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
   INNGEST_EVENT_URL,
   INNGEST_EVENT_KEY,
@@ -421,10 +432,11 @@ async function buildLocalScoreboard(today = new Date()) {
   }
 
   const todayIso = today.toISOString().slice(0, 10);
-  const monthStartIso = `${todayIso.slice(0, 8)}01`;
+  // Use sprint start date (Mar 30) instead of month-start to capture all sprint dials
+  const sprintStartIso = '2026-03-30';
   const { data, error } = await supabase.rpc('sprint_scoreboard', {
     p_tenant_id: OUTBOUND_TENANT_ID,
-    p_start_date: monthStartIso,
+    p_start_date: sprintStartIso,
     p_today: todayIso,
   });
 
@@ -504,7 +516,7 @@ async function writeOutcomeRecord(callSid) {
 
   const { data: inserted, error } = await supabase
     .from('outbound_calls')
-    .upsert(payload, { onConflict: 'tenant_id,twilio_call_sid', ignoreDuplicates: true })
+    .upsert(payload, { onConflict: 'tenant_id,twilio_call_sid' })
     .select();
 
   if (error) {
@@ -512,9 +524,9 @@ async function writeOutcomeRecord(callSid) {
     throw error;
   }
 
-  if (inserted && inserted.length > 0) {
-    await mergePendingHudSession(callSid);
+  await mergePendingHudSession(callSid);
 
+  if (inserted && inserted.length > 0) {
     await updateProspectStage(data.prospectId, mapped.outcome, mapped.demoScheduled);
     await emitInngestEvent(OUTBOUND_CALL_OUTCOME_EVENT, {
       tenant_id: OUTBOUND_TENANT_ID,
@@ -536,7 +548,7 @@ app.get('/hud', (_req, res) => {
   res.sendFile(path.join(__dirname, 'hud', 'index.html'));
 });
 
-app.get('/token', (_req, res) => {
+app.get('/token', validateHudToken, (_req, res) => {
   const AccessToken = twilio.jwt.AccessToken;
   const VoiceGrant = AccessToken.VoiceGrant;
 
@@ -556,41 +568,94 @@ app.get('/token', (_req, res) => {
   res.json({ token: token.toJwt() });
 });
 
-app.get('/prospects', async (_req, res) => {
+app.get('/prospects', validateHudToken, async (_req, res) => {
   if (!supabase) {
     res.status(500).json({ error: 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required' });
     return;
   }
 
-  const { data, error } = await supabase
-    .from('outbound_prospects')
-    .select(`
-      id,
-      business_name,
-      phone,
-      phone_normalized,
-      website,
-      address,
-      metro,
-      timezone,
-      total_score,
-      score_tier,
-      raw_source,
-      prospect_signals(signal_type, signal_tier, score, observed_at),
-      call_tests(result, called_at, local_time),
-      prospect_scores(total_score, tier, scored_at)
-    `)
-    .eq('tenant_id', OUTBOUND_TENANT_ID)
-    .eq('stage', 'call_ready')
-    .order('total_score', { ascending: false })
-    .limit(200);
+  try {
+    const { data, error } = await supabase
+      .from('outbound_prospects')
+      .select(`
+        id,
+        business_name,
+        phone,
+        phone_normalized,
+        website,
+        address,
+        metro,
+        timezone,
+        total_score,
+        score_tier,
+        raw_source,
+        prospect_signals(signal_type, signal_tier, score, observed_at),
+        call_tests(result, called_at, local_time),
+        prospect_scores(total_score, tier, scored_at)
+      `)
+      .eq('tenant_id', OUTBOUND_TENANT_ID)
+      .eq('stage', 'call_ready')
+      .order('total_score', { ascending: false })
+      .limit(200);
 
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
+    if (error) {
+      console.error('[prospects] Supabase query error:', error.message, error.code);
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ prospects: (data || []).map(toFrontendProspect) });
+  } catch (err) {
+    console.error('[prospects] Unexpected error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/current-queue', async (req, res) => {
+  const { block, segment = '', exclude_dialed = 'true' } = req.query;
+  if (!block) {
+    return res.status(400).json({ error: 'block is required' });
   }
 
-  res.json({ prospects: (data || []).map(toFrontendProspect) });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (HARNESS_EVENT_SECRET) headers.Authorization = `Bearer ${HARNESS_EVENT_SECRET}`;
+
+    const params = new URLSearchParams({
+      block: String(block),
+      exclude_dialed: String(exclude_dialed),
+    });
+    if (segment) params.set('segment', String(segment));
+
+    const response = await fetch(`${HARNESS_BASE_URL}/outbound/current-queue?${params.toString()}`, {
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      throw new Error(`Harness returned ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const queue = payload.queue || {};
+    if (Array.isArray(queue.prospects)) {
+      queue.prospects = queue.prospects.map(toFrontendProspect);
+    }
+    if (Array.isArray(queue.queues)) {
+      queue.queues = queue.queues.map((entry) => ({
+        ...entry,
+        prospects: Array.isArray(entry.prospects) ? entry.prospects.map(toFrontendProspect) : [],
+      }));
+    }
+
+    res.json({ state: payload.state || null, queue });
+  } catch (err) {
+    clearTimeout(timeout);
+    res.status(503).json({ error: 'Queue unavailable', detail: err.message });
+  }
 });
 
 app.post('/twiml', validateTwilioSignature, (req, res) => {
@@ -803,7 +868,17 @@ app.post('/hud/groq-classify', validateHudToken, async (req, res) => {
   const { utterance, stage, bridgeAngle, lastObjectionBucket, utteranceId } = req.body;
 
   if (!GROQ_API_KEY) {
-    return res.json({ error: true, reason: 'GROQ_API_KEY not set' });
+    return res.status(503).json({ error: true, reason: 'GROQ_API_KEY not set' });
+  }
+
+  // Input validation
+  if (typeof utterance !== 'string' || !utterance.trim() || utterance.length > 500) {
+    return res.status(400).json({ error: true, reason: 'Invalid utterance' });
+  }
+
+  const VALID_STAGES = ['GATEKEEPER', 'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION', 'SEED_EXIT', 'BOOKED', 'EXIT', 'NON_CONNECT'];
+  if (!VALID_STAGES.includes(stage)) {
+    return res.status(400).json({ error: true, reason: 'Invalid stage' });
   }
 
   const VALID_BRIDGE_ANGLES = ['missed_calls', 'competition', 'overwhelmed', 'fallback', 'unknown'];
@@ -827,8 +902,7 @@ Example: {"bridgeAngle":"missed_calls","confidence":0.82,"why":"mentions voicema
 
   try {
     const controller = new AbortController();
-    // 2s timeout (600ms was too aggressive for Groq cold starts)
-    const timeout = setTimeout(() => controller.abort(), 2000);
+    const timeout = setTimeout(() => controller.abort(), 1500);
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -896,7 +970,7 @@ Example: {"bridgeAngle":"missed_calls","confidence":0.82,"why":"mentions voicema
     });
   } catch (err) {
     if (err.name === 'AbortError') {
-      console.warn('[hud/groq] Timeout (600ms)');
+      console.warn('[hud/groq] Timeout (1500ms)');
     } else {
       console.error('[hud/groq] Error:', err.message);
     }

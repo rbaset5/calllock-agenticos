@@ -85,7 +85,7 @@ export function createInitialState(playbook) {
   return {
     callId: '',
     stage: 'IDLE',
-    now: makeNow('IDLE', playbook.opener, 'low', 'Waiting for call', 'none'),
+    now: makeNow('IDLE', 'Press F7 to start call', 'low', 'F7 → opener script', 'none'),
     prospect: null,
 
     transcript: [],
@@ -110,6 +110,7 @@ export function createInitialState(playbook) {
 
     autoClassifySuppressedUntilMs: 0,
     lastCommittedAtMs: 0,
+    latestTranscriptSeq: 0,
     lastProcessedUtteranceSeq: 0,
     ended: false,
   };
@@ -189,16 +190,22 @@ export function hudReducer(state, action, playbook) {
     // ────────────────────────────────────────────────────
     case 'TRANSCRIPT_FINAL': {
       if (state.ended) return state;
+      const nextTranscriptSeq =
+        typeof action.seq === 'number'
+          ? Math.max(state.latestTranscriptSeq, action.seq)
+          : state.latestTranscriptSeq;
       if (shouldSuppressAuto(state, action.atMs)) {
         return {
           ...state,
           transcript: [...state.transcript, action.turn],
+          latestTranscriptSeq: nextTranscriptSeq,
         };
       }
 
       const nextState = {
         ...state,
         transcript: [...state.transcript, action.turn],
+        latestTranscriptSeq: nextTranscriptSeq,
       };
 
       const rule = action.rule;
@@ -337,6 +344,88 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
+      // OBJECTION → handle follow-up objections via rules
+      if (state.stage === 'OBJECTION' && rule.objectionBucket) {
+        const bucket =
+          rule.objectionBucket === 'unknown' ? 'interest' : rule.objectionBucket;
+        const historyItem = {
+          bucket: rule.objectionBucket,
+          atMs: action.atMs,
+          utterance: action.turn.text,
+        };
+        const updatedHistory = [...nextState.objectionHistory, historyItem];
+        const countSame = objectionCountForBucket(updatedHistory, rule.objectionBucket);
+
+        // same bucket twice → qualifier
+        if (countSame >= 2) {
+          return {
+            ...nextState,
+            stage: 'QUALIFIER',
+            objectionHistory: updatedHistory,
+            lastObjectionBucket: rule.objectionBucket,
+            now: makeNow(
+              'QUALIFIER',
+              playbook.qualifier,
+              rule.band,
+              'Same objection bucket twice',
+              'rules',
+            ),
+            metrics: {
+              ...nextState.metrics,
+              objectionCount: nextState.metrics.objectionCount + 1,
+              stageChanges: nextState.metrics.stageChanges + 1,
+            },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
+
+        // 3rd objection + no engagement → exit
+        if (
+          nextState.metrics.objectionCount + 1 >= 3 &&
+          !prospectHasEngagement(nextState.transcript)
+        ) {
+          return {
+            ...nextState,
+            stage: 'EXIT',
+            outcome: 'not_booked',
+            objectionHistory: updatedHistory,
+            lastObjectionBucket: rule.objectionBucket,
+            now: makeNow(
+              'EXIT',
+              playbook.exit,
+              rule.band,
+              'Third objection with no engagement',
+              'rules',
+            ),
+            metrics: {
+              ...nextState.metrics,
+              objectionCount: nextState.metrics.objectionCount + 1,
+              stageChanges: nextState.metrics.stageChanges + 1,
+            },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
+
+        // different bucket → show reset line
+        return {
+          ...nextState,
+          objectionHistory: updatedHistory,
+          lastObjectionBucket: rule.objectionBucket,
+          now: makeNow(
+            'OBJECTION',
+            playbook.objections[bucket].reset,
+            rule.band,
+            `Objection: ${rule.objectionBucket}`,
+            'rules',
+          ),
+          metrics: {
+            ...nextState.metrics,
+            objectionCount: nextState.metrics.objectionCount + 1,
+          },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
       return nextState;
     }
 
@@ -411,6 +500,14 @@ export function hudReducer(state, action, playbook) {
           : typeof action.utteranceId === 'number'
             ? action.utteranceId
             : null;
+
+      if (
+        typeof incomingSeq === 'number' &&
+        state.latestTranscriptSeq > 0 &&
+        incomingSeq < state.latestTranscriptSeq
+      ) {
+        return state;
+      }
 
       if (typeof incomingSeq === 'number' && incomingSeq <= state.lastProcessedUtteranceSeq) {
         return state;
@@ -496,8 +593,14 @@ export function hudReducer(state, action, playbook) {
           action.result.objectionBucket === 'unknown'
             ? 'interest'
             : action.result.objectionBucket;
+        const historyItem = {
+          bucket: action.result.objectionBucket,
+          atMs: action.atMs,
+          utterance: action.result.utterance ?? '',
+        };
+        const updatedHistory = [...state.objectionHistory, historyItem];
         const countSame = objectionCountForBucket(
-          state.objectionHistory,
+          updatedHistory,
           action.result.objectionBucket,
         );
 
@@ -506,6 +609,7 @@ export function hudReducer(state, action, playbook) {
           return {
             ...state,
             stage: 'QUALIFIER',
+            objectionHistory: updatedHistory,
             lastObjectionBucket: action.result.objectionBucket,
             now: makeNow(
               'QUALIFIER',
@@ -514,6 +618,10 @@ export function hudReducer(state, action, playbook) {
               'Same objection bucket twice',
               'llm',
             ),
+            metrics: {
+              ...state.metrics,
+              objectionCount: state.metrics.objectionCount + 1,
+            },
             lastCommittedAtMs: action.atMs,
             lastProcessedUtteranceSeq: nextSeq,
           };
@@ -521,13 +629,15 @@ export function hudReducer(state, action, playbook) {
 
         // 3rd objection + no engagement → exit
         if (
-          state.metrics.objectionCount >= 3 &&
+          state.metrics.objectionCount + 1 >= 3 &&
           !prospectHasEngagement(state.transcript)
         ) {
           return {
             ...state,
             stage: 'EXIT',
             outcome: 'not_booked',
+            objectionHistory: updatedHistory,
+            lastObjectionBucket: action.result.objectionBucket,
             now: makeNow(
               'EXIT',
               playbook.exit,
@@ -535,6 +645,10 @@ export function hudReducer(state, action, playbook) {
               'Third objection with no engagement',
               'llm',
             ),
+            metrics: {
+              ...state.metrics,
+              objectionCount: state.metrics.objectionCount + 1,
+            },
             lastCommittedAtMs: action.atMs,
             lastProcessedUtteranceSeq: nextSeq,
           };
@@ -543,14 +657,19 @@ export function hudReducer(state, action, playbook) {
         // different bucket → reset then close
         return {
           ...state,
+          objectionHistory: updatedHistory,
           lastObjectionBucket: action.result.objectionBucket,
           now: makeNow(
             'OBJECTION',
-            `${playbook.objections[bucket].reset} ${playbook.close}`,
+            playbook.objections[bucket].reset,
             action.result.band,
-            `Reset: ${action.result.objectionBucket}`,
+            `Objection: ${action.result.objectionBucket}`,
             'llm',
           ),
+          metrics: {
+            ...state.metrics,
+            objectionCount: state.metrics.objectionCount + 1,
+          },
           lastCommittedAtMs: action.atMs,
           lastProcessedUtteranceSeq: nextSeq,
         };
@@ -572,10 +691,11 @@ export function hudReducer(state, action, playbook) {
 
     // ────────────────────────────────────────────────────
     case 'HEDGE_REQUESTED': {
-      if (state.stage !== 'CLOSE') return state;
+      if (state.stage !== 'CLOSE' && state.stage !== 'OBJECTION') return state;
       return {
         ...state,
-        now: makeNow('CLOSE', playbook.hedge, 'high', 'Use hedge close', 'manual'),
+        stage: 'CLOSE',
+        now: makeNow('CLOSE', playbook.hedge, 'high', 'F7 yes! → booked · F8 objection', 'manual'),
         lastCommittedAtMs: action.atMs,
       };
     }
@@ -604,14 +724,29 @@ export function hudReducer(state, action, playbook) {
 
     // ────────────────────────────────────────────────────
     case 'MANUAL_SET_STAGE': {
+      const stageHints = {
+        GATEKEEPER:  'F7 got owner · F8 not available',
+        OPENER:      'F7 when they respond',
+        BRIDGE:      'F7 after bridge line',
+        QUALIFIER:   'F7 pain → close · F8 no pain → exit',
+        CLOSE:       'F7 yes! → booked · F8 objection · H hedge',
+        OBJECTION:   'F7 try close · F8 give up · 1-4 new objection',
+        SEED_EXIT:   'F7 wrap up',
+        BOOKED:      'F7 call done',
+        NON_CONNECT: 'F7 after voicemail',
+        EXIT:        'Call complete',
+      };
       return {
         ...state,
         stage: action.stage,
+        // Clear objection bucket when navigating to OBJECTION so the picker shows
+        lastObjectionBucket:
+          action.stage === 'OBJECTION' ? null : state.lastObjectionBucket,
         now: makeNow(
           action.stage,
           lineForStage(action.stage, playbook),
           'high',
-          'Manual override',
+          stageHints[action.stage] || 'Manual override',
           'manual',
         ),
         autoClassifySuppressedUntilMs: action.atMs + 4000,
@@ -619,6 +754,31 @@ export function hudReducer(state, action, playbook) {
           ...state.metrics,
           manualOverrideCount: state.metrics.manualOverrideCount + 1,
           stageChanges: state.metrics.stageChanges + 1,
+        },
+        lastCommittedAtMs: action.atMs,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'MANUAL_SET_BRIDGE_ANGLE': {
+      if (state.stage !== 'BRIDGE' && state.stage !== 'OPENER') return state;
+      const angle = action.angle;
+      const line = resolveBridgeLine({ bridgeAngle: angle }, playbook);
+      return {
+        ...state,
+        stage: 'BRIDGE',
+        bridgeAngle: angle,
+        now: makeNow(
+          'BRIDGE',
+          line,
+          'high',
+          `Bridge: ${angle} · F7 after delivering line`,
+          'manual',
+        ),
+        autoClassifySuppressedUntilMs: action.atMs + 4000,
+        metrics: {
+          ...state.metrics,
+          manualOverrideCount: state.metrics.manualOverrideCount + 1,
         },
         lastCommittedAtMs: action.atMs,
       };
@@ -644,7 +804,7 @@ export function hudReducer(state, action, playbook) {
           'OBJECTION',
           playbook.objections[bucket].reset,
           'high',
-          'Manual objection override',
+          'Say this → F7 try close · F8 give up · 1-4 new objection',
           'manual',
         ),
         autoClassifySuppressedUntilMs: action.atMs + 4000,
@@ -654,6 +814,35 @@ export function hudReducer(state, action, playbook) {
           objectionCount: state.metrics.objectionCount + 1,
         },
         lastCommittedAtMs: action.atMs,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'LINE_BANK_SELECT': {
+      return {
+        ...state,
+        now: makeNow(
+          state.stage,
+          action.line,
+          'high',
+          'Line bank pick',
+          'manual',
+        ),
+        autoClassifySuppressedUntilMs: action.atMs + 4000,
+        metrics: {
+          ...state.metrics,
+          manualOverrideCount: state.metrics.manualOverrideCount + 1,
+        },
+        lastCommittedAtMs: action.atMs,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'OUTCOME_RECEIVED': {
+      if (!action.outcome) return state;
+      return {
+        ...state,
+        outcome: action.outcome,
       };
     }
 

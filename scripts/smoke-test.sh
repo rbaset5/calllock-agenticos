@@ -3,10 +3,11 @@
 # Each check maps to a real incident. When a new class of bug burns you, add a check here.
 #
 # Usage:
-#   RETELL_API_KEY=key_xxx HARNESS_URL=https://calllock-harness.onrender.com ./scripts/smoke-test.sh
+#   RETELL_API_KEY=key_xxx HARNESS_URL=https://harness.example.com ./scripts/smoke-test.sh
 #
 # Env vars (reads from .env.local if present):
-#   HARNESS_URL           — Render harness base URL (default: https://calllock-harness.onrender.com)
+#   HARNESS_URL           — Harness base URL (falls back to HARNESS_BASE_URL if set)
+#   EXPECTED_TOOL_HOSTS   — Optional comma-separated additional hosts allowed in Retell tool URLs
 #   RETELL_API_KEY        — Retell API key for HMAC signing and agent config check
 #   RETELL_AGENT_ID       — Retell agent ID (default: agent_4fb753a447e714064e71fadc6d)
 #   RETELL_PHONE_NUMBER   — Retell phone number (default: +13126463816)
@@ -31,7 +32,8 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-HARNESS_URL="${HARNESS_URL:-https://calllock-harness.onrender.com}"
+HARNESS_URL="${HARNESS_URL:-${HARNESS_BASE_URL:-}}"
+EXPECTED_TOOL_HOSTS="${EXPECTED_TOOL_HOSTS:-}"
 RETELL_API_KEY="${RETELL_API_KEY:-}"
 RETELL_AGENT_ID="${RETELL_AGENT_ID:-agent_4fb753a447e714064e71fadc6d}"
 RETELL_PHONE="${RETELL_PHONE_NUMBER:-+13126463816}"
@@ -43,6 +45,11 @@ WARN=0
 pass() { echo "  PASS  $1"; PASS=$((PASS + 1)); }
 fail() { echo "  FAIL  $1"; FAIL=$((FAIL + 1)); }
 warn() { echo "  WARN  $1"; WARN=$((WARN + 1)); }
+
+if [[ -z "$HARNESS_URL" ]]; then
+  echo "HARNESS_URL or HARNESS_BASE_URL is required"
+  exit 1
+fi
 
 echo "=== CallLock Smoke Test ==="
 echo "Harness: $HARNESS_URL"
@@ -124,14 +131,24 @@ else
   if echo "$AGENT_JSON" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
     # Check if any tool URLs point to unexpected domains
     BAD_URLS=$(echo "$AGENT_JSON" | python3 -c "
-import sys, json
+import os, sys, json
+from urllib.parse import urlparse
 data = json.load(sys.stdin)
 raw = json.dumps(data)
-# Known good domains
-good = ['calllock-harness.onrender.com', 'calllock-server.onrender.com']
+good = set()
+harness_url = os.environ.get('HARNESS_URL', '')
+if harness_url:
+    parsed = urlparse(harness_url)
+    if parsed.hostname:
+        good.add(parsed.hostname)
+extra = os.environ.get('EXPECTED_TOOL_HOSTS', '')
+for host in extra.split(','):
+    host = host.strip()
+    if host:
+        good.add(host)
 import re
 urls = re.findall(r'https?://([^/\"]+)', raw)
-bad = [u for u in set(urls) if 'retellai.com' not in u and 'api.retellai.com' not in u and not any(g in u for g in good)]
+bad = [u for u in set(urls) if 'retellai.com' not in u and 'api.retellai.com' not in u and u not in good]
 for u in bad:
     print(u)
 " 2>/dev/null || echo "PARSE_ERROR")

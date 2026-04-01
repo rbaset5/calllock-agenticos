@@ -226,6 +226,23 @@ def test_classify_lead_type_hot() -> None:
     assert lifecycle.classify_lead_type({"stage": "interested", "demo_scheduled": True}) == "hot"
 
 
+def test_classify_lead_type_treats_close_attempt_as_hot() -> None:
+    assert lifecycle.classify_lead_type({"stage": "interested", "next_action_type": "close_attempt"}) == "hot"
+
+
+def test_classify_lead_type_uses_latest_outbound_call_demo_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        lifecycle.store,
+        "list_outbound_calls",
+        lambda **_kwargs: [
+            {"called_at": "2026-03-30T10:00:00+00:00", "demo_scheduled": False},
+            {"called_at": "2026-03-30T11:00:00+00:00", "demo_scheduled": True},
+        ],
+    )
+
+    assert lifecycle.classify_lead_type({"id": "p-1", "stage": "interested"}) == "hot"
+
+
 def test_classify_lead_type_warm() -> None:
     assert lifecycle.classify_lead_type({"stage": "callback"}) == "warm"
 

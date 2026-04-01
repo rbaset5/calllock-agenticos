@@ -122,6 +122,20 @@ export const PLAYBOOK = {
     notAvailable:
       'No worries. When\'s a good time to catch him?',
   },
+
+  powerLines: [
+    { tag: 'silence', line: '(pause — let them fill the silence)' },
+    {
+      tag: 'reframe',
+      line: 'Let me ask it differently — if you lost two jobs this week because nobody picked up, would you know?',
+    },
+    { tag: 'pattern-interrupt', line: 'Can I be honest with you for a second?' },
+    { tag: 'validate', line: 'That makes total sense.' },
+    {
+      tag: 'curiosity',
+      line: 'What would have to be true for this to be worth 15 minutes?',
+    },
+  ],
 };
 
 // ── Line resolution helpers ─────────────────────────────────────
@@ -175,4 +189,86 @@ export function lineForStage(stage, playbook) {
     case 'NON_CONNECT': return playbook.voicemail;
     default:            return '';
   }
+}
+
+/**
+ * Return all quick-access lines for a stage.
+ * @param {string} stage
+ * @param {object} playbook
+ * @returns {Array<{label: string, line: string}>}
+ */
+export function linesForStage(stage, playbook) {
+  switch (stage) {
+    case 'GATEKEEPER':
+      return [
+        { label: 'reach', line: playbook.gatekeeper.reach },
+        { label: 'whatsThisAbout', line: playbook.gatekeeper.whatsThisAbout },
+        { label: 'notAvailable', line: playbook.gatekeeper.notAvailable },
+      ];
+    case 'OPENER':
+      return [{ label: 'opener', line: playbook.opener }];
+    case 'BRIDGE':
+      return [
+        { label: 'missed_calls/voicemail', line: playbook.bridge.missed_calls.voicemail },
+        { label: 'missed_calls/staff', line: playbook.bridge.missed_calls.staff },
+        { label: 'missed_calls/covered', line: playbook.bridge.missed_calls.covered },
+        { label: 'competition/slow', line: playbook.bridge.competition.slow },
+        { label: 'competition/competitor', line: playbook.bridge.competition.competitor },
+        { label: 'overwhelmed/everything', line: playbook.bridge.overwhelmed.everything },
+        { label: 'overwhelmed/cantKeepUp', line: playbook.bridge.overwhelmed.cantKeepUp },
+        { label: 'fallback', line: playbook.bridge.fallback },
+      ];
+    case 'QUALIFIER':
+      return [
+        { label: 'qualifier', line: playbook.qualifier },
+        {
+          label: 'unknown_pain/bridge_line',
+          line: playbook.qualifierReads.unknown_pain.bridge_line,
+        },
+      ];
+    case 'CLOSE':
+      return [
+        { label: 'close', line: playbook.close },
+        { label: 'hedge', line: playbook.hedge },
+        { label: 'yesFollowup', line: playbook.yesFollowup },
+      ];
+    case 'SEED_EXIT':
+      return [{ label: 'seedExit', line: playbook.seedExit }];
+    case 'OBJECTION':
+      return [
+        { label: 'timing', line: playbook.objections.timing.reset },
+        { label: 'interest', line: playbook.objections.interest.reset },
+        { label: 'info', line: playbook.objections.info.reset },
+        { label: 'authority', line: playbook.objections.authority.reset },
+      ];
+    case 'NON_CONNECT':
+      return [
+        { label: 'voicemail', line: playbook.voicemail },
+        { label: 'textA', line: playbook.textA },
+        { label: 'textB', line: playbook.textB },
+      ];
+    case 'BOOKED':
+      return [{ label: 'booked', line: playbook.booked }];
+    case 'EXIT':
+      return [{ label: 'exit', line: playbook.exit }];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Fill playbook template placeholders with available prospect context.
+ * @param {string} line
+ * @param {object} context
+ * @returns {string}
+ */
+export function fillLineTemplate(line, context = {}) {
+  const replacements = {
+    NAME: context.name || context.business || 'there',
+    NUMBER: context.number || context.phone || 'the number you have for me',
+    DAY: context.day || 'later this week',
+    TRADE: context.trade || 'HVAC',
+  };
+
+  return line.replace(/\{([A-Z]+)\}/g, (match, token) => replacements[token] || match);
 }

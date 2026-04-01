@@ -1,11 +1,32 @@
 import { NextResponse } from "next/server";
 
-const SERVICES = [
-  { name: "harness", url: "https://calllock-harness.onrender.com/health" },
-  { name: "server", url: "https://calllock-server.onrender.com/health" },
-];
-
 const TIMEOUT_MS = 8_000;
+
+function healthUrlFromBase(baseUrl: string | undefined): string | null {
+  if (!baseUrl) return null;
+  return `${baseUrl.replace(/\/$/, "")}/health`;
+}
+
+function configuredServices() {
+  const services = [
+    {
+      name: "harness",
+      url:
+        process.env.KEEPALIVE_HARNESS_HEALTH_URL ??
+        healthUrlFromBase(process.env.HARNESS_BASE_URL) ??
+        "https://calllock-harness.onrender.com/health",
+    },
+    {
+      name: "server",
+      url:
+        process.env.KEEPALIVE_SERVER_HEALTH_URL ??
+        healthUrlFromBase(process.env.CALLLOCK_SERVER_BASE_URL) ??
+        "https://calllock-server.onrender.com/health",
+    },
+  ];
+
+  return services.filter((svc) => Boolean(svc.url));
+}
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -15,8 +36,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const services = configuredServices();
+  if (services.length === 0) {
+    return NextResponse.json({ error: "No keep-alive targets configured" }, { status: 500 });
+  }
+
   const results = await Promise.allSettled(
-    SERVICES.map(async (svc) => {
+    services.map(async (svc) => {
       const start = Date.now();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);

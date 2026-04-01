@@ -119,6 +119,11 @@ const BRIDGE_KEYWORDS = {
       "we figure it out",
       "answering service",
       "receptionist gets it",
+      "miss some calls",
+      "miss calls",
+      "miss them",
+      "dispatcher gets it",
+      "dispatcher handles",
     ],
     words: [
       "voicemail",
@@ -130,6 +135,8 @@ const BRIDGE_KEYWORDS = {
       "receptionist",
       "covered",
       "manage",
+      "dispatcher",
+      "miss",
     ],
   },
   competition: {
@@ -235,8 +242,11 @@ const OBJECTION_BUCKETS = {
       "no thanks",
       "we're fine",
       "we are fine",
+      "we're good",
+      "we are good",
+      "we already handle",
     ],
-    words: ["interested", "fine", "set"],
+    words: ["interested", "fine", "set", "good"],
   },
   info: {
     phrases: [
@@ -357,6 +367,17 @@ export function classifyBridge(utterance) {
   const text = normalize(utterance);
   const toks = tokens(text);
 
+  // Mixed-signal priority (from operator manual Part 8):
+  // 1. Blocking objection  2. Pain/engagement  3. Soft maybe  4. Dead end
+  // Check for objections first — a prospect saying "not interested" during BRIDGE
+  // is an objection, not a bridge angle.
+  const objScores = { timing: 0, interest: 0, info: 0, authority: 0 };
+  for (const [bucket, config] of Object.entries(OBJECTION_BUCKETS)) {
+    objScores[bucket] += countPhraseMatches(text, config.phrases) * 3;
+    objScores[bucket] += countTokenMatches(toks, config.words) * 1.25;
+  }
+  const { winner: objWinner, winnerScore: objWinnerScore } = bestScoredKey(objScores);
+
   const scores = {
     missed_calls: 0,
     competition: 0,
@@ -381,6 +402,18 @@ export function classifyBridge(utterance) {
   }
 
   const { winner, winnerScore, runnerUpScore } = bestScoredKey(scores);
+
+  // Mixed-signal rule: if both pain and objection present, objection wins
+  // (handle the blocker first, pain is noted but doesn't advance the stage).
+  // If objection signal is present and at least as strong as bridge, return objection.
+  if (objWinnerScore > 0 && objWinnerScore >= winnerScore) {
+    const confidence = objWinnerScore >= 5 ? 0.9 : objWinnerScore >= 3 ? 0.78 : 0.64;
+    return makeResult(utterance, {
+      confidence,
+      objectionBucket: objWinner,
+      why: `Objection during bridge: ${objWinner}`,
+    });
+  }
 
   if (winnerScore <= 0) {
     return makeResult(utterance, {

@@ -16,6 +16,7 @@ export async function classifyWithLlm(utterance, stage, context, utteranceId) {
   try {
     const res = await fetch('/hud/groq-classify', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         utterance,

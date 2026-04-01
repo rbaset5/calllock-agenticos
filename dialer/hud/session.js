@@ -63,6 +63,7 @@ export async function saveSession(state, prospectId, hudSessionOverride = null) 
   try {
     const res = await fetch('/hud/session-log', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         twilio_call_sid: callId,

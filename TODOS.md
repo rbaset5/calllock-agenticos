@@ -458,6 +458,64 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Depends on:** 30+ completed calls with AI extraction data in outbound_calls.extraction JSONB column.
 **Source:** CEO review, 2026-03-29.
 
+## P1 — Security & Data Integrity (Adversarial Review, 2026-03-31)
+
+### Deepgram API key exposed to browser
+**What:** `/hud/deepgram-token` returns the full Deepgram API key directly. Should mint a short-lived key via Deepgram's `/v1/keys` endpoint with a TTL instead.
+**Why:** Anyone hitting that endpoint gets permanent Deepgram access. The HUD auth middleware is the only barrier.
+**Effort:** S (CC: ~15 min)
+**Source:** Claude adversarial review, 2026-03-31.
+
+### HUD auth bypass when HUD_INTERNAL_TOKEN unset
+**What:** `validateHudToken` in `dialer/server.js` skips all auth when `HUD_INTERNAL_TOKEN` is unset and `NODE_ENV !== 'production'`. Since NODE_ENV defaults to `development`, forgetting that env var opens everything.
+**Why:** Deployment footgun. Deepgram key, Groq key, Twilio token, and Supabase data all exposed.
+**Effort:** S (CC: ~10 min)
+**Source:** Claude adversarial review, 2026-03-31.
+
+### HUD token stamped on every page load
+**What:** `setHudCookie(res)` called on `GET /` and `GET /hud`. Anyone visiting the dialer URL gets the HUD secret token set in their browser cookie.
+**Why:** The token should only be set after explicit authentication, not on page load.
+**Effort:** S (CC: ~10 min)
+**Source:** Claude adversarial review, 2026-03-31.
+
+### Constant-time token comparison missing
+**What:** `validateHudToken` uses `!==` for token comparison instead of `crypto.timingSafeEqual`. Enables timing attacks.
+**Why:** Low risk for localhost/internal tool but violates security best practices.
+**Effort:** S (CC: ~5 min)
+**Source:** Claude adversarial review, 2026-03-31.
+
+## P2 — Data Integrity & Performance (Adversarial Review, 2026-03-31)
+
+### Double session save race condition
+**What:** OUTCOME handler and CALL_ENDED handler both call `saveSession` within 500ms in `dialer/hud/ui.js`. Last-write-wins can overwrite outcome data with stale state.
+**Why:** Could lose call outcome data if the CALL_ENDED delayed save overwrites the OUTCOME save.
+**Effort:** S (CC: ~15 min). Fix: cancel the delayed save if OUTCOME fires first.
+**Source:** Claude adversarial review, 2026-03-31.
+
+### Groq classify prompt injection
+**What:** `bridgeAngle` and `lastObjectionBucket` from client request body interpolated directly into LLM system prompt in `dialer/server.js`. Response whitelist limits damage but LLM could return valid-but-wrong classification.
+**Why:** Trust boundary violation. Client-supplied strings should be sanitized before prompt injection.
+**Effort:** S (CC: ~10 min)
+**Source:** Claude adversarial review, 2026-03-31.
+
+### list_outbound_calls in ceo_tools.py loads ALL calls
+**What:** `store.list_outbound_calls()` in `ceo_tools.py` was changed to load all calls without a date filter, then filter in Python. Performance degrades as call table grows.
+**Why:** With 1000+ calls over a 7-week sprint, this becomes a slow query.
+**Effort:** S (CC: ~5 min). Fix: restore date filter.
+**Source:** Claude adversarial review, 2026-03-31.
+
+### Deepgram reconnect loop has no backoff
+**What:** Deepgram WebSocket `onclose` handler in `dialer/index.html` schedules reconnect after 2s with no backoff and no max retries. Outage during call creates infinite loop leaking AudioContext instances.
+**Why:** Resource leak during Deepgram outages.
+**Effort:** S (CC: ~10 min). Fix: add exponential backoff + max 5 retries.
+**Source:** Claude adversarial review, 2026-03-31.
+
+### upsert changed from ignoreDuplicates to overwrite
+**What:** `writeOutcomeRecord` in `dialer/server.js` changed upsert from `ignoreDuplicates: true` to default (overwrite). Double calls can corrupt outcome records.
+**Why:** Retry or race condition could overwrite valid data with stale data.
+**Effort:** S (CC: ~5 min). Fix: restore `ignoreDuplicates: true` or add idempotency check.
+**Source:** Claude adversarial review, 2026-03-31.
+
 ## P3 — Founder Call Console (Future Enhancements)
 
 ### Browser WebRTC → CallLock App integration

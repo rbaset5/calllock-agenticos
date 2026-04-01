@@ -69,6 +69,88 @@
 
     .scoreboard-refresh:hover { border-color: #4b5563; }
 
+    .session-header {
+      display: none;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 24px;
+      border-bottom: 1px solid #1f2937;
+      background: linear-gradient(90deg, #101820 0%, #111827 100%);
+      flex-wrap: wrap;
+    }
+
+    .session-header.visible { display: flex; }
+
+    .session-header-main {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      min-width: 320px;
+    }
+
+    .session-header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .session-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .session-badge.am { background: #14532d; color: #4ade80; }
+    .session-badge.mid { background: #1e3a5f; color: #60a5fa; }
+    .session-badge.eod { background: #78350f; color: #fbbf24; }
+    .session-badge.break { background: #262626; color: #d4d4d4; }
+    .session-badge.segment { background: #2d1b69; color: #c4b5fd; }
+
+    .session-composition {
+      font-size: 13px;
+      color: #d1d5db;
+    }
+
+    .session-header-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .session-instruction {
+      color: #a3a3a3;
+      font-style: italic;
+    }
+
+    .session-countdown {
+      color: #fbbf24;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .session-banner {
+      display: none;
+      padding: 10px 24px;
+      border-bottom: 1px solid #5b3a00;
+      background: #2a1f00;
+      color: #fbbf24;
+      font-size: 13px;
+    }
+
+    .session-banner.visible { display: block; }
+
     .twilio-badge {
       display: inline-flex;
       align-items: center;
@@ -335,6 +417,30 @@
 
     .modal textarea:focus { outline: none; border-color: #404040; }
 
+    .modal label {
+      display: block;
+      font-size: 12px;
+      color: #a3a3a3;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .modal input[type="date"] {
+      width: 100%;
+      background: #0a0a0a;
+      border: 1px solid #262626;
+      border-radius: 8px;
+      color: #e5e5e5;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .modal input[type="date"]:focus { outline: none; border-color: #404040; }
+
+    .modal-field.hidden { display: none; }
+
     .modal-actions {
       display: flex;
       justify-content: flex-end;
@@ -473,6 +579,9 @@
     <button class="scoreboard-refresh" id="scoreboard-refresh" onclick="refreshScoreboard()">Refresh</button>
   </div>
 
+  <div class="session-header" id="session-header"></div>
+  <div class="session-banner" id="session-banner"></div>
+
   <nav class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('dial')">Speed Dial</button>
     <button class="tab-btn" onclick="switchTab('plan')">Today's Plan</button>
@@ -499,6 +608,10 @@
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
       <h2 id="modal-title">Notes</h2>
+      <div class="modal-field hidden" id="modal-callback-field">
+        <label for="modal-callback-date">Callback date</label>
+        <input id="modal-callback-date" type="date" />
+      </div>
       <textarea id="modal-notes" placeholder="Add notes about this lead..."></textarea>
       <div class="modal-actions">
         <button onclick="closeModal()">Cancel</button>
@@ -520,10 +633,153 @@
     let lastDialStartedId = null;
     let callStartTime = null;
     let callTimerInterval = null;
+    let sessionRestored = false;
+    let queueContext = null;
+    let queueCountdownInterval = null;
 
     const CALL_SERVER = window.location.origin;
     const stats = { dialed: 0, interested: 0, demos: 0 };
     const log = [];
+    const queueParams = new URLSearchParams(window.location.search);
+
+    function currentQueueRequest() {
+      const block = (queueParams.get('block') || '').toUpperCase();
+      const segment = queueParams.get('segment') || '';
+      return block ? { block, segment } : null;
+    }
+
+    function queueCacheKey(block, date) {
+      return `lastQueue-${block}-${date}`;
+    }
+
+    function formatEtTime(value) {
+      if (!value) return '';
+      try {
+        return new Date(value).toLocaleTimeString('en-US', {
+          timeZone: 'America/Detroit',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+      } catch {
+        return value;
+      }
+    }
+
+    function queueCountdownText(state, stale = false) {
+      if (!state) return '—';
+      if (!state.block_active && state.next_block) {
+        return `Next: ${state.next_block} at ${formatEtTime(state.next_block_at)} ET${stale ? ' (stale)' : ''}`;
+      }
+      if (!state.next_segment_at || !state.next_segment_name) {
+        return stale ? 'Last known queue (stale)' : 'Queue live';
+      }
+      const minutes = Math.max(Math.floor((new Date(state.next_segment_at).getTime() - Date.now()) / 60000), 0);
+      return `Next: ${state.next_segment_name} at ${formatEtTime(state.next_segment_at)} ET (${minutes} min)${stale ? ' (stale)' : ''}`;
+    }
+
+    function renderSessionBanner(message = '') {
+      const banner = document.getElementById('session-banner');
+      if (!banner) return;
+      if (!message) {
+        banner.classList.remove('visible');
+        banner.textContent = '';
+        return;
+      }
+      banner.textContent = message;
+      banner.classList.add('visible');
+    }
+
+    function renderSessionHeader() {
+      const header = document.getElementById('session-header');
+      if (!header) return;
+      if (queueCountdownInterval) {
+        clearInterval(queueCountdownInterval);
+        queueCountdownInterval = null;
+      }
+
+      if (!queueContext || !currentQueueRequest()) {
+        header.classList.remove('visible');
+        header.innerHTML = '';
+        renderSessionBanner('');
+        return;
+      }
+
+      const { state, queue, stale, cachedAt } = queueContext;
+      const block = state?.block_active ? (state.current_block || queue.block || 'AM') : 'BREAK';
+      const blockClass = String(block).toLowerCase();
+      const segment = state?.active_segment || queue.segment || '—';
+      const composition = queue?.summary || '0 callbacks, 0 interested, 0 follow-up, 0 fresh';
+      const instruction = state?.instruction || (stale ? 'Showing last known queue.' : '');
+      const dialProgress = `${state?.dials_completed_today || 0}/${state?.dials_target_today || 0} dials`;
+      const countdown = queueCountdownText(state, stale);
+
+      header.innerHTML = `
+        <div class="session-header-main">
+          <div class="session-header-top">
+            <span class="session-badge ${escapeHtml(blockClass)}">${escapeHtml(block)}${state?.sprint_index ? ` Sprint ${escapeHtml(String(state.sprint_index))}` : ''}</span>
+            ${segment ? `<span class="session-badge segment">${escapeHtml(segment)}</span>` : ''}
+            <span class="session-composition">${escapeHtml(composition)}</span>
+            <span class="session-composition">${escapeHtml(dialProgress)}</span>
+          </div>
+          <div class="session-header-bottom">
+            <span class="session-instruction">${escapeHtml(instruction)}</span>
+            <span class="session-countdown" id="session-countdown">${escapeHtml(countdown)}</span>
+          </div>
+        </div>
+        <button class="scoreboard-refresh" id="queue-refresh" onclick="refreshQueue()">⟳ Refresh Queue</button>
+      `;
+      header.classList.add('visible');
+
+      if (stale && cachedAt) {
+        const ageMinutes = Math.max(Math.floor((Date.now() - cachedAt) / 60000), 0);
+        renderSessionBanner(`Using cached queue from ${ageMinutes} min ago. Harness may be down.`);
+      } else {
+        renderSessionBanner('');
+      }
+
+      if (state?.next_segment_at || state?.next_block_at) {
+        queueCountdownInterval = setInterval(() => {
+          const countdownEl = document.getElementById('session-countdown');
+          if (countdownEl && queueContext) {
+            countdownEl.textContent = queueCountdownText(queueContext.state, queueContext.stale);
+          }
+        }, 60000);
+      }
+    }
+
+    function showEmptyState(title, message) {
+      document.getElementById('main-content').innerHTML = `
+        <div class="empty-state">
+          <h2>${escapeHtml(title)}</h2>
+          <p>${escapeHtml(message)}</p>
+        </div>
+      `;
+    }
+
+    function writeQueueCache(block, payload) {
+      const cacheDate = payload?.state?.date || new Date().toISOString().slice(0, 10);
+      try {
+        localStorage.setItem(queueCacheKey(block, cacheDate), JSON.stringify({
+          cachedAt: Date.now(),
+          payload,
+        }));
+      } catch (error) {
+        console.warn('[dialer] queue cache skipped:', error.message);
+      }
+    }
+
+    function readQueueCache(block) {
+      const prefix = `lastQueue-${block}-`;
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith(prefix)) continue;
+        try {
+          const parsed = JSON.parse(localStorage.getItem(key));
+          if (parsed?.payload) return parsed;
+        } catch {}
+      }
+      return null;
+    }
 
     async function initTwilioDevice() {
       updateTwilioBadge('connecting');
@@ -615,6 +871,7 @@
           <div class="shortcut" onclick="logOutcome('voicemail')"><kbd>2</kbd> Voicemail</div>
           <div class="shortcut" onclick="logOutcome('not_interested')"><kbd>3</kbd> Not Interested</div>
           <div class="shortcut" onclick="logOutcome('wrong_number')"><kbd>4</kbd> Wrong Number</div>
+          <div class="shortcut" onclick="logOutcome('callback')"><kbd>C</kbd> Callback</div>
           <div class="shortcut" onclick="logOutcome('interested')"><kbd>I</kbd> Interested</div>
           <div class="shortcut" onclick="logOutcome('demo')"><kbd>D</kbd> Demo</div>
         </div>
@@ -793,7 +1050,7 @@
       }
     }
 
-    function sendCallMetadata(lead, outcome, notes) {
+    function sendCallMetadata(lead, outcome, notes, callbackDate = '') {
       if (!lastCallSid) return;
       fetch(`${CALL_SERVER}/calls/${lastCallSid}/metadata`, {
         method: 'POST',
@@ -803,6 +1060,7 @@
           businessName: lead.business_name,
           outcome,
           notes,
+          callbackDate: callbackDate || null,
           callHookUsed: lead.call_hook,
         }),
       }).catch((error) => console.error('[call-server] metadata failed:', error));
@@ -810,27 +1068,36 @@
 
     function logOutcome(outcome) {
       if (currentIndex >= leads.length) return;
-      if (outcome === 'interested' || outcome === 'demo') {
+      if (outcome === 'interested' || outcome === 'demo' || outcome === 'callback') {
         modalOutcome = outcome;
         document.getElementById('modal-title').textContent =
-          outcome === 'interested' ? 'Interested — Add Notes' : 'Demo Scheduled — Add Notes';
+          outcome === 'interested'
+            ? 'Interested — Add Notes'
+            : outcome === 'demo'
+              ? 'Demo Scheduled — Add Notes'
+              : 'Callback — Add Notes';
         document.getElementById('modal-notes').value = '';
+        document.getElementById('modal-callback-date').value = '';
+        document.getElementById('modal-callback-field').classList.toggle('hidden', outcome !== 'callback');
         document.getElementById('modal-overlay').classList.add('active');
         setTimeout(() => document.getElementById('modal-notes').focus(), 100);
         return;
       }
-      saveOutcome(outcome, '');
+      saveOutcome(outcome, '', '');
     }
 
     function closeModal() {
       document.getElementById('modal-overlay').classList.remove('active');
+      document.getElementById('modal-callback-field').classList.add('hidden');
       modalOutcome = null;
     }
 
     function submitModal() {
       const notes = document.getElementById('modal-notes').value;
+      const callbackDate = document.getElementById('modal-callback-date').value;
       document.getElementById('modal-overlay').classList.remove('active');
-      saveOutcome(modalOutcome, notes);
+      document.getElementById('modal-callback-field').classList.add('hidden');
+      saveOutcome(modalOutcome, notes, callbackDate);
       modalOutcome = null;
     }
 
@@ -841,7 +1108,7 @@
       setTimeout(() => toast.classList.remove('visible'), 2500);
     }
 
-    function saveOutcome(outcome, notes) {
+    function saveOutcome(outcome, notes, callbackDate = '') {
       const lead = leads[currentIndex];
       log.push({
         timestamp: new Date().toISOString(),
@@ -850,6 +1117,7 @@
         phone: lead.phone,
         outcome,
         notes,
+        callbackDate,
       });
       // Sales HUD: forward outcome to HUD page
       hudChannel.postMessage({
@@ -861,6 +1129,7 @@
         atMs: Date.now(),
       });
 
+      if (outcome === 'callback') stats.interested += 1;
       if (outcome === 'interested') stats.interested += 1;
       if (outcome === 'demo') {
         stats.interested += 1;
@@ -872,6 +1141,7 @@
         voicemail: 'Voicemail Left',
         not_interested: 'Not Interested',
         wrong_number: 'Wrong Number',
+        callback: 'Callback Scheduled',
         interested: 'Interested',
         demo: 'Demo Scheduled',
       };
@@ -881,7 +1151,7 @@
       isDialing = false;
       updateCallStatus('');
       localStorage.setItem('calllock-log', JSON.stringify(log));
-      sendCallMetadata(lead, outcome, notes);
+      sendCallMetadata(lead, outcome, notes, callbackDate);
       lastCallSid = null;
       lastDialStartedId = null;
       currentIndex += 1;
@@ -890,9 +1160,11 @@
       refreshScoreboard();
     }
 
-    function restoreSession() {
+    function restoreSession(preserveIndex = true) {
+      if (sessionRestored) return;
+      sessionRestored = true;
       const savedIndex = localStorage.getItem('calllock-index');
-      if (savedIndex) currentIndex = parseInt(savedIndex, 10);
+      if (preserveIndex && savedIndex) currentIndex = parseInt(savedIndex, 10);
 
       const savedLog = localStorage.getItem('calllock-log');
       if (savedLog) {
@@ -900,7 +1172,7 @@
         log.push(...parsed);
         parsed.forEach((entry) => {
           stats.dialed += 1;
-          if (entry.outcome === 'interested') stats.interested += 1;
+          if (entry.outcome === 'interested' || entry.outcome === 'callback') stats.interested += 1;
           if (entry.outcome === 'demo') {
             stats.interested += 1;
             stats.demos += 1;
@@ -909,31 +1181,107 @@
       }
     }
 
-    async function loadLeads() {
+    async function loadDefaultLeads() {
       try {
-        document.getElementById('empty-state').innerHTML = `
-          <h2>Loading ranked prospects</h2>
-          <p>Fetching call-ready leads from Supabase.</p>
-        `;
+        showEmptyState('Loading ranked prospects', 'Fetching call-ready leads from Supabase.');
         const response = await fetch(`${CALL_SERVER}/prospects`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         leads = payload.prospects || [];
         if (leads.length === 0) {
-          document.getElementById('empty-state').innerHTML = `
-            <h2>No call-ready prospects</h2>
-            <p>Score and probe leads first, then reload the dialer.</p>
-          `;
+          showEmptyState('No call-ready prospects', 'Score and probe leads first, then reload the dialer.');
           return;
         }
-        restoreSession();
+        restoreSession(true);
         renderLead();
       } catch (error) {
         console.error('[dialer] load failed:', error);
-        document.getElementById('empty-state').innerHTML = `
-          <h2>Could not load prospects</h2>
-          <p>${escapeHtml(error.message)}</p>
-        `;
+        showEmptyState('Could not load prospects', error.message);
+      }
+    }
+
+    async function loadQueueLeads({ block, segment }, { allowCache = true } = {}) {
+      try {
+        queueContext = {
+          state: { current_block: block, active_segment: segment, instruction: 'Loading queue...' },
+          queue: { block, segment, summary: 'Loading queue...' },
+          stale: false,
+        };
+        renderSessionHeader();
+
+        const params = new URLSearchParams({ block, exclude_dialed: 'true' });
+        if (segment) params.set('segment', segment);
+        const response = await fetch(`${CALL_SERVER}/current-queue?${params.toString()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+
+        leads = payload?.queue?.prospects || [];
+        queueContext = { state: payload.state || {}, queue: payload.queue || {}, stale: false, cachedAt: Date.now() };
+        writeQueueCache(block, payload);
+        currentIndex = 0;
+        restoreSession(false);
+        renderSessionHeader();
+
+        if (leads.length === 0) {
+          showEmptyState(`0 leads for ${segment || block}`, 'Harness returned an empty queue for this block.');
+          return true;
+        }
+        renderLead();
+        return true;
+      } catch (error) {
+        console.error('[dialer] queue load failed:', error);
+        if (!allowCache) throw error;
+
+        const cached = readQueueCache(block);
+        if (cached?.payload) {
+          leads = cached.payload?.queue?.prospects || [];
+          queueContext = {
+            state: cached.payload.state || {},
+            queue: cached.payload.queue || {},
+            stale: true,
+            cachedAt: cached.cachedAt || Date.now(),
+          };
+          currentIndex = 0;
+          restoreSession(false);
+          renderSessionHeader();
+          if (leads.length === 0) {
+            showEmptyState(`0 leads for ${segment || block}`, 'Using cached queue but no leads were available.');
+          } else {
+            renderLead();
+          }
+          return true;
+        }
+        return false;
+      }
+    }
+
+    async function refreshQueue() {
+      const request = currentQueueRequest();
+      if (!request) return;
+      const button = document.getElementById('queue-refresh');
+      if (button) button.disabled = true;
+      try {
+        await loadQueueLeads(request, { allowCache: false });
+      } catch (error) {
+        showToast(`Refresh failed: ${error.message}`);
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+
+    async function loadLeads() {
+      const request = currentQueueRequest();
+      if (!request) {
+        queueContext = null;
+        renderSessionHeader();
+        return loadDefaultLeads();
+      }
+      const loaded = await loadQueueLeads(request);
+      if (!loaded) {
+        queueContext = null;
+        renderSessionHeader();
+        showEmptyState('Could not load queue', 'Falling back to default ranked prospects.');
+        await loadDefaultLeads();
       }
     }
 
@@ -966,6 +1314,10 @@
           break;
         case '4':
           logOutcome('wrong_number');
+          break;
+        case 'c':
+        case 'C':
+          logOutcome('callback');
           break;
         case 'i':
         case 'I':
@@ -1171,7 +1523,9 @@
     // ── Deepgram connection helpers ─────────────────────────────────
     async function fetchDeepgramKey() {
       try {
-        const resp = await fetch(`${CALL_SERVER}/hud/deepgram-token`);
+        const resp = await fetch(`${CALL_SERVER}/hud/deepgram-token`, {
+          credentials: 'same-origin',
+        });
         if (!resp.ok) throw new Error(`Token fetch ${resp.status}`);
         const data = await resp.json();
         hudDeepgramKey = data.key;
@@ -1380,7 +1734,7 @@
       } else {
         // Wait up to 5s for remote track, then fallback to manual mode
         setTimeout(() => {
-          if (!hudDualStream) {
+          if (!hudRemoteStream) {
             console.warn('[hud-audio] No remote track after 5s, switching to manual mode');
             hudChannel.postMessage({ type: 'AUDIO_MODE', mode: 'manual' });
           }

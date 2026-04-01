@@ -65,7 +65,7 @@ def current_week_number(schedule: dict[str, Any], today: date | None = None) -> 
     return min(week, max_week)
 
 
-def _get_week_config(schedule: dict[str, Any], week_num: int) -> dict[str, Any] | None:
+def get_week_config(schedule: dict[str, Any], week_num: int) -> dict[str, Any] | None:
     """Get week config handling YAML int-key vs str-key ambiguity."""
     weeks = schedule.get("weeks", {})
     return weeks.get(week_num) or weeks.get(str(week_num))
@@ -74,7 +74,7 @@ def _get_week_config(schedule: dict[str, Any], week_num: int) -> dict[str, Any] 
 def is_calling_day(schedule: dict[str, Any], week_num: int, today: date | None = None) -> bool:
     """Check if today is a calling day for the given week."""
     today = today or date.today()
-    week_config = _get_week_config(schedule, week_num)
+    week_config = get_week_config(schedule, week_num)
     if not week_config:
         return today.weekday() < 5  # default: weekdays only
     days = week_config.get("days", "weekdays")
@@ -92,7 +92,7 @@ def get_daily_sprint_count(schedule: dict[str, Any], week_num: int, today: date 
     missing or malformed, fallback to the number of AM sprints configured.
     """
     today = today or date.today()
-    week_config = _get_week_config(schedule, week_num) or {}
+    week_config = get_week_config(schedule, week_num) or {}
     daily_targets = week_config.get("daily_targets")
     weekday_idx = today.weekday()  # Monday=0
 
@@ -173,7 +173,7 @@ def build_daily_plan(
     all_fresh = store.list_ranked_call_ready_prospects(tenant_id=tenant_id, limit=200)
 
     # Build sprint blocks from schedule
-    week_config = _get_week_config(schedule, week_num) or {}
+    week_config = get_week_config(schedule, week_num) or {}
     blocks_config = week_config.get("blocks", {})
     dials_per_sprint = week_config.get("dials_per_sprint", schedule.get("dials_per_sprint", 10))
     sprint_min = schedule.get("sprint_duration_min", 20)

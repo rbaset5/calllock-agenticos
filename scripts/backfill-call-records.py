@@ -7,7 +7,7 @@ The harness runs the full extraction pipeline and writes to Supabase.
 
 Usage:
     RETELL_API_KEY=key_xxx python3 scripts/backfill-call-records.py [--limit 10] [--dry-run]
-    RETELL_API_KEY=key_xxx python3 scripts/backfill-call-records.py --harness-url https://calllock-harness.onrender.com
+    RETELL_API_KEY=key_xxx python3 scripts/backfill-call-records.py --harness-url https://harness.example.com
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ except ImportError:
     sys.exit(1)
 
 RETELL_API = "https://api.retellai.com"
-DEFAULT_HARNESS_URL = "https://calllock-harness.onrender.com"
+DEFAULT_HARNESS_URL = os.environ.get("HARNESS_BASE_URL") or os.environ.get("HARNESS_URL") or ""
 DEFAULT_AGENT_ID = "agent_4fb753a447e714064e71fadc6d"
 
 
@@ -153,6 +153,9 @@ def main() -> None:
     if not api_key:
         print("Error: RETELL_API_KEY env var is required", file=sys.stderr)
         sys.exit(1)
+    if not args.harness_url:
+        print("Error: --harness-url or HARNESS_BASE_URL/HARNESS_URL is required", file=sys.stderr)
+        sys.exit(1)
 
     print(f"Fetching last {args.limit} ended calls for agent {args.agent_id}...")
     calls = fetch_calls(api_key, args.agent_id, args.limit)
@@ -187,7 +190,7 @@ def main() -> None:
         else:
             failed += 1
 
-        # small delay to avoid overwhelming Render cold-start
+        # Small delay to avoid overwhelming the live harness.
         if i < len(calls):
             time.sleep(0.5)
 

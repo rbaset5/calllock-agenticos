@@ -74,6 +74,37 @@ def test_event_endpoint_rejects_unknown_event_name() -> None:
     assert response.status_code == 422
 
 
+def test_outbound_current_queue_endpoint_returns_state_and_queue(monkeypatch) -> None:
+    from outbound import queue_builder, sprint_state
+
+    monkeypatch.setattr(
+        sprint_state,
+        "get_current_state",
+        lambda **_kwargs: {"current_block": "AM", "active_segment": "TX", "block_active": True},
+    )
+    monkeypatch.setattr(
+        queue_builder,
+        "build_queue",
+        lambda **_kwargs: {"block": "AM", "segment": "TX", "prospects": [], "total": 0},
+    )
+
+    client = TestClient(app)
+    response = client.get("/outbound/current-queue", params={"block": "AM", "segment": "TX"})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "state": {"current_block": "AM", "active_segment": "TX", "block_active": True},
+        "queue": {"block": "AM", "segment": "TX", "prospects": [], "total": 0},
+    }
+
+
+def test_outbound_current_queue_endpoint_rejects_invalid_block() -> None:
+    client = TestClient(app)
+    response = client.get("/outbound/current-queue", params={"block": "NOPE"})
+
+    assert response.status_code == 400
+
+
 def test_event_endpoint_requires_secret_when_configured(monkeypatch) -> None:
     monkeypatch.setenv("HARNESS_EVENT_SECRET", "test-secret")
     client = TestClient(app)

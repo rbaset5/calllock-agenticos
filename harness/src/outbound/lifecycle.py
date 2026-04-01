@@ -24,8 +24,18 @@ def classify_lead_type(prospect: dict[str, Any]) -> str:
     """Classify lead as hot, warm, or volume based on stage + next step signals."""
     stage = str(prospect.get("stage", ""))
     has_demo = bool(prospect.get("demo_scheduled", False))
+    if not has_demo:
+        outbound_calls = prospect.get("outbound_calls")
+        if isinstance(outbound_calls, list) and outbound_calls:
+            latest = max(outbound_calls, key=lambda row: str(row.get("called_at") or ""))
+            has_demo = bool(latest.get("demo_scheduled", False))
+        elif prospect.get("id"):
+            calls = store.list_outbound_calls(prospect_id=str(prospect["id"]))
+            if calls:
+                latest = max(calls, key=lambda row: str(row.get("called_at") or ""))
+                has_demo = bool(latest.get("demo_scheduled", False))
     next_action = str(prospect.get("next_action_type", ""))
-    if stage == "interested" and (has_demo or next_action == "close"):
+    if stage == "interested" and (has_demo or next_action in ("close", "close_attempt")):
         return "hot"
     if stage in ("callback", "interested"):
         return "warm"

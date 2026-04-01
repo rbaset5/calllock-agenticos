@@ -50,6 +50,7 @@ function transcriptFinal(state, text, rule, atMs) {
     callSid: SID,
     turn: makeTurn(text),
     rule,
+    seq: Math.floor((atMs ?? T + 300) / 100),
     atMs: atMs ?? T + 300,
   }, PLAYBOOK);
 }
@@ -505,5 +506,74 @@ describe('hudReducer', () => {
 
     assert.equal(stale.bridgeAngle, 'missed_calls'); // unchanged
     assert.deepEqual(stale, s);
+  });
+
+  it('rejects an older LLM result once a newer transcript has arrived', () => {
+    let s = connect(init());
+    s = hudReducer(s, {
+      type: 'MANUAL_SET_STAGE',
+      callSid: SID,
+      stage: 'QUALIFIER',
+      atMs: T + 100,
+    }, PLAYBOOK);
+
+    s = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL',
+      callSid: SID,
+      turn: makeTurn('depends on the week'),
+      rule: { band: 'low', qualifierRead: 'unknown_pain', why: 'ambiguous' },
+      seq: 5,
+      atMs: T + 5000,
+    }, PLAYBOOK);
+
+    s = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL',
+      callSid: SID,
+      turn: makeTurn('probably 5 or 6'),
+      rule: { band: 'high', qualifierRead: 'pain', why: 'number' },
+      seq: 6,
+      atMs: T + 5200,
+    }, PLAYBOOK);
+
+    const stale = hudReducer(s, {
+      type: 'LLM_RESULT',
+      callSid: SID,
+      result: {
+        band: 'medium',
+        qualifierRead: 'unknown_pain',
+        utterance: 'depends on the week',
+        why: 'late llm',
+      },
+      utteranceId: 'utt-5',
+      seq: 5,
+      atMs: T + 5400,
+    }, PLAYBOOK);
+
+    assert.equal(stale.stage, 'CLOSE');
+    assert.equal(stale.qualifierRead, 'pain');
+    assert.deepEqual(stale, s);
+  });
+
+  it('LINE_BANK_SELECT keeps the stage but swaps the line', () => {
+    let s = connect(init());
+    s = hudReducer(s, {
+      type: 'MANUAL_SET_STAGE',
+      callSid: SID,
+      stage: 'BRIDGE',
+      atMs: T + 100,
+    }, PLAYBOOK);
+
+    const next = hudReducer(s, {
+      type: 'LINE_BANK_SELECT',
+      callSid: SID,
+      line: 'Custom bridge line',
+      atMs: T + 200,
+    }, PLAYBOOK);
+
+    assert.equal(next.stage, 'BRIDGE');
+    assert.equal(next.now.line, 'Custom bridge line');
+    assert.equal(next.now.classificationSource, 'manual');
+    assert.equal(next.metrics.manualOverrideCount, s.metrics.manualOverrideCount + 1);
+    assert.ok(next.autoClassifySuppressedUntilMs > T + 200);
   });
 });

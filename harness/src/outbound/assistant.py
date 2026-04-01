@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import threading
 from datetime import date
 from typing import Any
@@ -27,11 +28,130 @@ except Exception:  # pragma: no cover
 
 from . import store
 from .constants import OUTBOUND_TENANT_ID
-from .daily_plan import build_daily_plan
+from .daily_plan import build_daily_plan, get_week_config, load_schedule
+from . import queue_builder, sprint_state
 from .lifecycle import classify_lead_type
 from .scoreboard import sprint_scoreboard
 
 logger = logging.getLogger(__name__)
+
+DIALER_BASE_URL = os.getenv("DIALER_BASE_URL", "http://localhost:3004")
+
+INTENT_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
+    ("WHAT_NEXT", (r"\bwhat('?s| is)? next\b", r"\bwhat should i do\b", r"^next$")),
+    ("OPEN_DIALER", (r"\bopen dialer\b", r"\bstart dialing\b")),
+    ("OPEN_HUD", (r"\bopen hud\b", r"\bcoaching\b")),
+    ("SHOW_CALLBACKS", (r"\bcallbacks?\b", r"\bcallbacks due\b")),
+    ("SHOW_FOUNDER_TOUCH", (r"\bfounder touch\b", r"\bhot leads\b", r"\bwho needs attention\b")),
+    ("SHOW_DIGEST", (r"\bstats\b", r"\bscoreboard\b", r"\bhow am i doing\b")),
+    ("SHOW_FULL_DAY", (r"\bfull day\b", r"\bshow all blocks\b", r"\btoday'?s plan\b")),
+    ("END_MY_DAY", (r"\bend my day\b", r"\bshutdown\b", r"\bdone for today\b")),
+]
+
+
+def route_intent(message_text: str) -> str | None:
+    text = message_text.strip().lower()
+    for intent, patterns in INTENT_PATTERNS:
+        if any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns):
+            return intent
+    return None
+
+
+def _dialer_link(block: str | None, segment: str | None, view: str) -> str:
+    query = []
+    if block:
+        query.append(f"block={block}")
+    if segment:
+        query.append(f"segment={segment}")
+    query.append(f"view={view}")
+    suffix = "&".join(query)
+    path = "/hud" if view == "hud" else "/"
+    return f"{DIALER_BASE_URL}{path}?{suffix}"
+
+
+def _build_shutdown_log() -> str:
+    schedule = load_schedule()
+    today = date.today()
+    metrics = sprint_scoreboard(OUTBOUND_TENANT_ID, today)
+    week_config = get_week_config(schedule, metrics.get("week", 0)) or {}
+    fields = week_config.get("shutdown_fields", [])
+    mapping = {
+        "dials": metrics.get("daily_dials", 0),
+        "connects": metrics.get("live_conversations", 0),
+        "demos": metrics.get("demos_booked_today", 0),
+        "close_attempts": metrics.get("close_attempts_today", 0),
+        "customers_signed": metrics.get("customers_signed", 0),
+        "top_objection": (metrics.get("objection_summary") or [{}])[0].get("type", "---") if metrics.get("objection_summary") else "---",
+    }
+    lines = [f"- {field}: {mapping.get(field, '---')}" for field in fields]
+    return "\n".join(lines) if lines else "- dials: 0"
+
+
+def _answer_intent(intent: str) -> str:
+    state = sprint_state.get_current_state()
+    block = str(state.get("current_block") or state.get("next_block") or "AM")
+    segment = str(state.get("active_segment") or "")
+
+    if intent in {"WHAT_NEXT", "OPEN_DIALER", "OPEN_HUD", "SHOW_CALLBACKS"} and not state.get("block_active"):
+        if state.get("next_block"):
+            return f"Sprint not active. Next block: {state['next_block']} at {state.get('next_block_at', '')}."
+        return str(state.get("message") or "Sprint not active.")
+
+    if intent in {"WHAT_NEXT", "OPEN_DIALER", "OPEN_HUD", "SHOW_CALLBACKS"}:
+        queue = queue_builder.build_queue(block=block, segment=segment)
+        dialer_link = _dialer_link(block, segment, "dialer")
+        hud_link = _dialer_link(block, segment, "hud")
+        if intent == "OPEN_DIALER":
+            return dialer_link
+        if intent == "OPEN_HUD":
+            return hud_link
+        if intent == "SHOW_CALLBACKS":
+            callbacks = [prospect for prospect in queue.get("prospects", []) if prospect.get("stage") == "callback"][:10]
+            if not callbacks:
+                return "No callbacks due right now."
+            return "\n".join([f"{prospect.get('business_name', 'Unknown')} · {prospect.get('metro', '')}" for prospect in callbacks])
+        return (
+            f"{block} Sprint {state.get('sprint_index', 0)} of {state.get('sprints_target_today', 0)}\n"
+            f"Segment: {segment}\n"
+            f"Queue: {queue.get('total', 0)} leads ({queue.get('summary', '0 callbacks, 0 interested, 0 follow-up, 0 fresh')})\n"
+            f"Target: {state.get('dials_target_today', 0)} dials today\n"
+            f"Next segment: {state.get('next_segment_name') or '—'} ({state.get('minutes_until_next', '—')} min)\n\n"
+            f"[Dialer]({dialer_link})\n"
+            f"[HUD]({hud_link})\n\n"
+            f"Instruction: {state.get('instruction', '')}"
+        )
+
+    if intent == "SHOW_FOUNDER_TOUCH":
+        prospects = store.list_prospects_by_stages(["interested", "callback"], include_signals=True)
+        flagged = [prospect for prospect in prospects if queue_builder.compute_needs_attention(prospect)]
+        if not flagged:
+            return "No founder-touch leads need attention right now."
+        return "\n".join(
+            [
+                f"{prospect.get('business_name', 'Unknown')} · {prospect.get('stage')} · {prospect.get('metro', '')}"
+                for prospect in flagged[:10]
+            ]
+        )
+
+    if intent == "SHOW_DIGEST":
+        metrics = sprint_scoreboard(OUTBOUND_TENANT_ID, date.today())
+        return (
+            f"Dials: {metrics.get('daily_dials', 0)}/{metrics.get('daily_target', 0)}\n"
+            f"Connects: {metrics.get('live_conversations', 0)}\n"
+            f"Demos: {metrics.get('demos_booked_today', 0)}\n"
+            f"Weekly: {metrics.get('weekly_dials', 0)}/{metrics.get('weekly_target', 0)}"
+        )
+
+    if intent == "SHOW_FULL_DAY":
+        queues = queue_builder.build_queue(block="all").get("queues", [])
+        if not queues:
+            return "No blocks configured for today."
+        return "\n".join([f"{entry['block']}: {entry.get('summary', '0 callbacks, 0 interested, 0 follow-up, 0 fresh')}" for entry in queues])
+
+    if intent == "END_MY_DAY":
+        return _build_shutdown_log()
+
+    return "I don't have a deterministic answer for that yet."
 
 # ---------------------------------------------------------------------------
 # LLM Tool Definitions
@@ -148,8 +268,16 @@ def _execute_tool(name: str) -> dict[str, Any]:
 # LLM Question Answering
 # ---------------------------------------------------------------------------
 
+def _assistant_model() -> str:
+    return os.getenv("SALES_ASSISTANT_MODEL", "claude-sonnet-4-6").strip() or "claude-sonnet-4-6"
+
+
 def answer_question(question: str) -> str:
     """Use LLM tool-calling to answer a natural language question about the sales sprint."""
+    intent = route_intent(question)
+    if intent is not None:
+        return _answer_intent(intent)
+
     if completion is None:
         return "LLM not available (litellm not installed)."
 
@@ -170,7 +298,7 @@ def answer_question(question: str) -> str:
 
     try:
         response = completion(
-            model="claude-sonnet-4-6",
+            model=_assistant_model(),
             messages=messages,
             tools=TOOL_DEFS,
             temperature=0,
@@ -194,7 +322,7 @@ def answer_question(question: str) -> str:
 
         try:
             final = completion(
-                model="claude-sonnet-4-6",
+                model=_assistant_model(),
                 messages=messages,
                 temperature=0,
             )
@@ -235,7 +363,6 @@ def _create_bot() -> Any:
             return
 
         # Strip the mention to get the question
-        import re
         question = re.sub(r"<@!?\d+>\s*", "", message.content).strip()
 
         if not question:

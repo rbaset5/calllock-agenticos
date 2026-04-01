@@ -397,6 +397,82 @@ def list_ranked_call_ready_prospects(
     return prospects[:limit]
 
 
+def list_prospects_by_stages(
+    stages: list[str],
+    metro_filter: list[str] | None = None,
+    include_signals: bool = True,
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+) -> list[dict[str, Any]]:
+    if _using_supabase():
+        select = (
+            "id,business_name,phone,phone_normalized,website,address,metro,timezone,total_score,"
+            "score_tier,raw_source,stage,next_action_date,next_action_type,last_touched_at"
+        )
+        if include_signals:
+            select += ",prospect_signals(signal_type,signal_tier,score,observed_at),call_tests(result,called_at,local_time)"
+        params: dict[str, str] = {
+            "tenant_id": f"eq.{tenant_id}",
+            "stage": f"in.({','.join(stages)})",
+            "select": select,
+            "order": "total_score.desc,business_name.asc",
+        }
+        if metro_filter:
+            params["metro"] = f"in.({','.join(metro_filter)})"
+        return supabase_repository._request("GET", "outbound_prospects", params=params)  # type: ignore[attr-defined]
+
+    prospects = list_outbound_prospects(tenant_id=tenant_id, stages=stages)
+    if metro_filter:
+        allowed = {metro.lower() for metro in metro_filter}
+        prospects = [row for row in prospects if str(row.get("metro") or "").lower() in allowed]
+    if include_signals:
+        signals = list_prospect_signals(tenant_id=tenant_id)
+        tests = list_call_tests(tenant_id=tenant_id)
+        signals_by_prospect: dict[str, list[dict[str, Any]]] = {}
+        tests_by_prospect: dict[str, list[dict[str, Any]]] = {}
+        for signal in signals:
+            signals_by_prospect.setdefault(signal["prospect_id"], []).append(signal)
+        for test in tests:
+            tests_by_prospect.setdefault(test["prospect_id"], []).append(test)
+        prospects = [
+            {
+                **row,
+                "prospect_signals": signals_by_prospect.get(row["id"], []),
+                "call_tests": tests_by_prospect.get(row["id"], []),
+            }
+            for row in prospects
+        ]
+    prospects.sort(key=lambda row: (-int(row.get("total_score", 0) or 0), str(row.get("business_name") or "")))
+    return prospects
+
+
+def list_today_dial_prospect_ids(
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    *,
+    today: date | None = None,
+) -> set[str]:
+    today = today or date.today()
+    if _using_supabase():
+        start = f"{today.isoformat()}T00:00:00"
+        end = f"{(today + timedelta(days=1)).isoformat()}T00:00:00"
+        rows = supabase_repository._request(  # type: ignore[attr-defined]
+            "GET",
+            "outbound_calls",
+            params={
+                "tenant_id": f"eq.{tenant_id}",
+                "select": "prospect_id",
+                "and": f"(called_at.gte.{start},called_at.lt.{end})",
+            },
+        )
+        return {str(row.get("prospect_id")) for row in rows or [] if row.get("prospect_id")}
+
+    return {
+        str(row.get("prospect_id"))
+        for row in list_outbound_calls(tenant_id=tenant_id, start_date=today.isoformat(), end_date=today.isoformat())
+        if row.get("prospect_id")
+    }
+
+
 # ---------------------------------------------------------------------------
 # Lifecycle RPC wrappers (Phase 1: Sales Assistant daily ops)
 # These call Postgres RPC functions defined in migration 061.
@@ -535,6 +611,8 @@ def sprint_scoreboard(
                 "p_today": today_str,
             },
         )
+        if isinstance(rows, dict):
+            return rows
         return (rows or [{}])[0]
 
     start_day = date.fromisoformat(start_date)
