@@ -9,6 +9,7 @@ import {
   makeEmptyCard,
   normalizeCard,
   NATIVE_STAGE_CARDS,
+  NATIVE_OBJECTION_CARDS,
 } from "../cards.js";
 import { PLAYBOOK } from "../playbook.js";
 
@@ -261,6 +262,139 @@ describe("NATIVE_STAGE_CARDS", () => {
       assert.ok(c.clarifyingQuestion.length > 0, 'clarifyingQuestion must be non-empty');
       assert.ok('annoyed' in c.toneVariants, 'missing annoyed variant');
       assert.ok(Object.keys(c.branchPreview).length === 2, 'branchPreview must have 2 routes');
+    });
+  });
+});
+
+// -------------------------
+// NATIVE_OBJECTION_CARDS
+// -------------------------
+
+const ALL_OBJECTION_KEYS = [
+  'timing', 'interest', 'info', 'authority', 'existing_coverage', 'answering_service',
+];
+
+describe("NATIVE_OBJECTION_CARDS", () => {
+  it("exports all 6 objection cards", () => {
+    for (const key of ALL_OBJECTION_KEYS) {
+      assert.ok(key in NATIVE_OBJECTION_CARDS, `missing objection card: ${key}`);
+    }
+    assert.equal(Object.keys(NATIVE_OBJECTION_CARDS).length, 6);
+  });
+
+  it("every card has id matching its key", () => {
+    for (const [key, card] of Object.entries(NATIVE_OBJECTION_CARDS)) {
+      assert.equal(card.id, key, `id mismatch for ${key}`);
+    }
+  });
+
+  it("every card has all 14 CARD_FIELDS", () => {
+    for (const [key, card] of Object.entries(NATIVE_OBJECTION_CARDS)) {
+      for (const field of CARD_FIELDS) {
+        assert.ok(field in card, `${key} missing field: ${field}`);
+      }
+    }
+  });
+
+  it("every card has primaryLine, backupLine, and clarifyingQuestion", () => {
+    for (const [key, card] of Object.entries(NATIVE_OBJECTION_CARDS)) {
+      assert.ok(
+        typeof card.primaryLine === 'string' && card.primaryLine.length > 0,
+        `${key} must have non-empty primaryLine`
+      );
+      assert.ok(
+        typeof card.backupLine === 'string' && card.backupLine.length > 0,
+        `${key} must have non-empty backupLine`
+      );
+      assert.ok(
+        typeof card.clarifyingQuestion === 'string' && card.clarifyingQuestion.length > 0,
+        `${key} must have non-empty clarifyingQuestion`
+      );
+    }
+  });
+
+  it("every card has stage 'OBJECTION'", () => {
+    for (const [key, card] of Object.entries(NATIVE_OBJECTION_CARDS)) {
+      assert.equal(card.stage, 'OBJECTION', `${key} stage must be OBJECTION`);
+    }
+  });
+
+  it("every card has ≤4 listenFor items", () => {
+    for (const [key, card] of Object.entries(NATIVE_OBJECTION_CARDS)) {
+      assert.ok(
+        Array.isArray(card.listenFor) && card.listenFor.length <= 4,
+        `${key} listenFor must be array with ≤4 items`
+      );
+    }
+  });
+
+  it("every card has ≤3 branchPreview routes", () => {
+    for (const [key, card] of Object.entries(NATIVE_OBJECTION_CARDS)) {
+      assert.ok(
+        typeof card.branchPreview === 'object' && card.branchPreview !== null,
+        `${key} branchPreview must be an object`
+      );
+      assert.ok(
+        Object.keys(card.branchPreview).length <= 3,
+        `${key} branchPreview must have ≤3 routes`
+      );
+    }
+  });
+
+  // timing-specific
+  describe("timing", () => {
+    it("has moveType 'reframe', deliveryModifier 'compress', toneVariants.annoyed", () => {
+      const c = NATIVE_OBJECTION_CARDS.timing;
+      assert.equal(c.moveType, 'reframe');
+      assert.equal(c.deliveryModifier, 'compress');
+      assert.ok('annoyed' in c.toneVariants, 'missing annoyed variant');
+    });
+  });
+
+  // interest-specific
+  describe("interest", () => {
+    it("has moveType 'probe', valueProp, and proofPoint", () => {
+      const c = NATIVE_OBJECTION_CARDS.interest;
+      assert.equal(c.moveType, 'probe');
+      assert.ok(c.valueProp.length > 0, 'valueProp must be non-empty');
+      assert.ok(c.proofPoint.length > 0, 'proofPoint must be non-empty');
+    });
+  });
+
+  // existing_coverage-specific
+  describe("existing_coverage", () => {
+    it("has moveType 'probe', valueProp, proofPoint, toneVariants.curious", () => {
+      const c = NATIVE_OBJECTION_CARDS.existing_coverage;
+      assert.equal(c.moveType, 'probe');
+      assert.ok(c.valueProp.length > 0, 'valueProp must be non-empty');
+      assert.ok(c.proofPoint.length > 0, 'proofPoint must be non-empty');
+      assert.ok('curious' in c.toneVariants, 'missing curious variant');
+    });
+  });
+
+  // answering_service-specific
+  describe("answering_service", () => {
+    it("has moveType 'probe', valueProp, and proofPoint", () => {
+      const c = NATIVE_OBJECTION_CARDS.answering_service;
+      assert.equal(c.moveType, 'probe');
+      assert.ok(c.valueProp.length > 0, 'valueProp must be non-empty');
+      assert.ok(c.proofPoint.length > 0, 'proofPoint must be non-empty');
+    });
+  });
+
+  // authority-specific
+  describe("authority", () => {
+    it("has moveType 'clarify'", () => {
+      const c = NATIVE_OBJECTION_CARDS.authority;
+      assert.equal(c.moveType, 'clarify');
+    });
+  });
+
+  // info-specific
+  describe("info", () => {
+    it("has moveType 'probe'", () => {
+      const c = NATIVE_OBJECTION_CARDS.info;
+      assert.equal(c.moveType, 'probe');
     });
   });
 });

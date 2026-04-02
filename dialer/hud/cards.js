@@ -379,6 +379,112 @@ export const NATIVE_STAGE_CARDS = {
   },
 };
 
+// ── Native v2 objection cards ─────────────────────────────────
+
+export const NATIVE_OBJECTION_CARDS = {
+  timing: {
+    id: 'timing',
+    stage: 'OBJECTION',
+    moveType: 'reframe',
+    deliveryModifier: 'compress',
+    goal: 'Respect pressure while preserving a path.',
+    primaryLine: "Totally fair. Quick question — when a call comes in while you're on a job, what happens to it?",
+    backupLine: "I'll keep it brief — is missed-call coverage something you feel great about right now, or is it still a little messy?",
+    why: 'Acknowledges time pressure, redirects to discovery.',
+    listenFor: ['workflow answer', 'continued resistance', 'softening'],
+    branchPreview: { engaged: { next: 'BRIDGE' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: 'When a call comes in during peak time, is it always answered live?',
+    valueProp: null,
+    proofPoint: null,
+    toneVariants: { annoyed: { primaryLine: "Totally get it — one quick thing before I let you go: what happens when a call comes in and nobody can answer?" } },
+  },
+
+  interest: {
+    id: 'interest',
+    stage: 'OBJECTION',
+    moveType: 'probe',
+    deliveryModifier: '',
+    goal: 'Earn one last diagnostic beat.',
+    primaryLine: 'Got it. What happens when two calls come in at once?',
+    backupLine: "Understood — before I let you go, do you feel missed-call coverage is completely solved there, or does it still get a little messy when things get busy?",
+    why: 'Tests for real coverage gap beneath the dismissal.',
+    listenFor: ['engagement', 'repeated rejection', 'gap admission'],
+    branchPreview: { engaged: { next: 'QUALIFIER' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: 'After hours or during peak time, are inbound calls always answered live?',
+    valueProp: 'Covers missed calls after hours and during busy jobs.',
+    proofPoint: "Even a small number of missed high-intent calls can matter if they're good jobs.",
+    toneVariants: null,
+  },
+
+  info: {
+    id: 'info',
+    stage: 'OBJECTION',
+    moveType: 'probe',
+    deliveryModifier: '',
+    goal: 'Earn context before sending generic info.',
+    primaryLine: "Happy to. What's your email? ... Quick question while I have you — when a call comes in while you're on a job, what happens to it?",
+    backupLine: "I can definitely send something. What I don't want to do is send generic info if this isn't even the right fit.",
+    why: 'Collects email and redirects to discovery.',
+    listenFor: ['email given', 'curiosity', 'continued deflection'],
+    branchPreview: { engaged: { next: 'BRIDGE' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: "Just so I send the right thing — what are you doing today when new calls come in and no one can answer?",
+    valueProp: null,
+    proofPoint: null,
+    toneVariants: null,
+  },
+
+  authority: {
+    id: 'authority',
+    stage: 'OBJECTION',
+    moveType: 'clarify',
+    deliveryModifier: '',
+    goal: 'Get referral path to decision-maker.',
+    primaryLine: "Makes sense. What's the best way to loop them in?",
+    backupLine: "No worries — is there a good time to catch the person who handles this?",
+    why: 'Routes to referral instead of arguing.',
+    listenFor: ['referral given', 'callback offered', 'hard refusal'],
+    branchPreview: { engaged: { next: 'GATEKEEPER' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: "When's a good time to reach them?",
+    valueProp: null,
+    proofPoint: null,
+    toneVariants: null,
+  },
+
+  existing_coverage: {
+    id: 'existing_coverage',
+    stage: 'OBJECTION',
+    moveType: 'probe',
+    deliveryModifier: '',
+    goal: 'Test for coverage gaps, not argue.',
+    primaryLine: "Makes sense — usually this isn't about replacing whoever answers now. It's about what happens when they're tied up or it's after hours.",
+    backupLine: "Totally. The real question is whether coverage still holds when things get busy, someone's at lunch, or the call comes in after hours.",
+    why: 'Shifts from claimed solution to failure mode.',
+    listenFor: ['gap revealed', 'defensive answer', 'no gap claimed'],
+    branchPreview: { engaged: { next: 'QUALIFIER' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: 'What happens in those moments?',
+    valueProp: "Works as backup when staff can't answer.",
+    proofPoint: "Usually this isn't about replacing staff — it's about covering the moments they can't answer.",
+    toneVariants: { curious: { primaryLine: "Got it — the part I'd be curious about is what happens when coverage breaks, like after hours or during overflow." } },
+  },
+
+  answering_service: {
+    id: 'answering_service',
+    stage: 'OBJECTION',
+    moveType: 'probe',
+    deliveryModifier: '',
+    goal: 'Separate message-taking from real handling.',
+    primaryLine: "Got it — and are they actually qualifying and booking those calls live, or mostly just taking messages?",
+    backupLine: "Totally fair. A lot of shops I talk to have coverage, but it still turns into message-taking instead of real job capture.",
+    why: 'Exposes the gap between answering and actually booking.',
+    listenFor: ['message-taking admitted', 'full handling claimed', 'curiosity'],
+    branchPreview: { engaged: { next: 'QUALIFIER' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: 'When a high-intent caller reaches them, does that usually end in a booked job or a callback task?',
+    valueProp: 'Books instead of just taking messages.',
+    proofPoint: "This works best where ads are already generating inbound demand.",
+    toneVariants: null,
+  },
+};
+
 // ── Factory functions ───────────────────────────────────────────
 
 /**
