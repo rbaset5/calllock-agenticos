@@ -608,6 +608,19 @@
       text-transform: uppercase;
       margin-bottom: 2px;
     }
+    /* v2 left rail: prospect context */
+    .v2-context-rail { padding: 8px 12px; }
+    .v2-ctx-section { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #27272a; }
+    .v2-ctx-section:empty { display: none; }
+    .v2-ctx-label { color: #52525b; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .v2-ctx-value { color: #e5e5e5; font-size: 13px; }
+    .v2-ctx-inferred { color: #71717a; font-style: italic; font-size: 12px; }
+    /* v2 right rail: tactical support card */
+    .v2-tactical { padding: 8px 12px; }
+    .v2-tac-section { margin-bottom: 10px; }
+    .v2-tac-section:empty { display: none; }
+    .v2-tac-label { color: #52525b; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+    .v2-tac-value { color: #d4d4d8; font-size: 12px; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -643,6 +656,13 @@
   <!-- Main area: 3-column layout -->
   <div class="main-area">
     <div class="side-panel lines-panel" id="linesPanel">
+      <!-- v2 left rail: prospect context -->
+      <div id="v2-prospect-context" class="v2-context-rail">
+        <div id="v2-prospect-identity" class="v2-ctx-section"></div>
+        <div id="v2-prospect-why" class="v2-ctx-section"></div>
+        <div id="v2-prospect-outreach" class="v2-ctx-section"></div>
+        <div id="v2-prospect-fit" class="v2-ctx-section"></div>
+      </div>
       <div class="side-panel-header">LINES</div>
       <div class="side-panel-feed" id="linesFeed"></div>
     </div>
@@ -663,6 +683,14 @@
       <div id="v2-do-not" class="v2-donot" style="display:none"></div>
     </div>
     <div class="side-panel objections-panel" id="objectionsPanel">
+      <!-- v2 right rail: tactical support card -->
+      <div id="v2-tactical-card" class="v2-tactical">
+        <div id="v2-tac-ask" class="v2-tac-section"></div>
+        <div id="v2-tac-rebuttal" class="v2-tac-section"></div>
+        <div id="v2-tac-value" class="v2-tac-section"></div>
+        <div id="v2-tac-proof" class="v2-tac-section"></div>
+        <div id="v2-tac-ifthen" class="v2-tac-section"></div>
+      </div>
       <div class="side-panel-header">OBJECTIONS</div>
       <div class="side-panel-feed" id="objectionsFeed"></div>
     </div>

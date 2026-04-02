@@ -129,6 +129,213 @@ export function renderConditionalDoNot(warning) {
   }
 }
 
+// ── Left Rail: Prospect Context ─────────────────────────────────
+
+/**
+ * Render prospect context in the left rail.
+ * Gracefully degrades — hides sections with missing fields.
+ */
+export function renderProspectContext(ctx) {
+  const identity = document.getElementById('v2-prospect-identity');
+  const why = document.getElementById('v2-prospect-why');
+  const outreach = document.getElementById('v2-prospect-outreach');
+  const fit = document.getElementById('v2-prospect-fit');
+
+  if (!ctx) {
+    [identity, why, outreach, fit].forEach(el => { if (el) el.textContent = ''; });
+    return;
+  }
+
+  if (identity) {
+    identity.textContent = '';
+    if (ctx.name) {
+      const nameEl = document.createElement('div');
+      nameEl.className = 'v2-ctx-value';
+      nameEl.style.fontSize = '16px';
+      nameEl.style.fontWeight = '600';
+      nameEl.textContent = ctx.name;
+      identity.appendChild(nameEl);
+    }
+    if (ctx.title || ctx.company) {
+      const metaEl = document.createElement('div');
+      metaEl.className = 'v2-ctx-value';
+      metaEl.textContent = [ctx.title, ctx.company].filter(Boolean).join(' \u00B7 ');
+      identity.appendChild(metaEl);
+    }
+    if (ctx.location) {
+      const locEl = document.createElement('div');
+      locEl.className = 'v2-ctx-value';
+      locEl.style.color = '#71717a';
+      locEl.textContent = ctx.location;
+      identity.appendChild(locEl);
+    }
+  }
+
+  if (why) {
+    why.textContent = '';
+    if (ctx.fit_reason || ctx.trigger_reason) {
+      const label = document.createElement('div');
+      label.className = 'v2-ctx-label';
+      label.textContent = 'Why this account';
+      why.appendChild(label);
+      if (ctx.fit_reason) {
+        const el = document.createElement('div');
+        el.className = 'v2-ctx-value';
+        el.textContent = ctx.fit_reason;
+        why.appendChild(el);
+      }
+      if (ctx.trigger_reason) {
+        const el = document.createElement('div');
+        el.className = 'v2-ctx-inferred';
+        el.textContent = ctx.trigger_reason;
+        why.appendChild(el);
+      }
+    }
+  }
+
+  if (outreach) {
+    outreach.textContent = '';
+    const meta = [];
+    if (ctx.sequence_step != null) meta.push('Step ' + ctx.sequence_step);
+    if (ctx.calls_made != null) meta.push(ctx.calls_made + ' calls');
+    if (ctx.emails_sent != null) meta.push(ctx.emails_sent + ' emails');
+    const signals = [];
+    if (ctx.email_opens) signals.push('Opened ' + ctx.email_opens + 'x');
+    if (ctx.link_clicks) signals.push('Clicked ' + ctx.link_clicks + 'x');
+    if (ctx.last_touch_date) signals.push('Last: ' + ctx.last_touch_date);
+    if (meta.length || signals.length) {
+      const label = document.createElement('div');
+      label.className = 'v2-ctx-label';
+      label.textContent = 'Outreach';
+      outreach.appendChild(label);
+      if (meta.length) {
+        const el = document.createElement('div');
+        el.className = 'v2-ctx-value';
+        el.textContent = meta.join(' \u00B7 ');
+        outreach.appendChild(el);
+      }
+      if (signals.length) {
+        const el = document.createElement('div');
+        el.className = 'v2-ctx-inferred';
+        el.textContent = signals.join(' \u00B7 ');
+        outreach.appendChild(el);
+      }
+    }
+  }
+
+  if (fit) {
+    fit.textContent = '';
+    const parts = [];
+    if (ctx.priority_score != null) parts.push('Priority: ' + ctx.priority_score);
+    if (ctx.paid_demand) parts.push('Paid demand: \u2713');
+    if (ctx.coverage_gap_likely) parts.push('Coverage gap likely: \u2713');
+    if (parts.length) {
+      const label = document.createElement('div');
+      label.className = 'v2-ctx-label';
+      label.textContent = 'Fit';
+      fit.appendChild(label);
+      parts.forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'v2-ctx-value';
+        el.style.fontSize = '11px';
+        el.textContent = p;
+        fit.appendChild(el);
+      });
+    }
+  }
+}
+
+// ── Right Rail: Tactical Support Card ───────────────────────────
+
+/**
+ * Render tactical support card in the right rail.
+ * Order: ASK → REBUTTAL → VALUE → PROOF → IF/THEN
+ * Hides empty sections. IF/THEN capped at 3.
+ */
+export function renderTacticalCard(card) {
+  const ask = document.getElementById('v2-tac-ask');
+  const rebuttal = document.getElementById('v2-tac-rebuttal');
+  const value = document.getElementById('v2-tac-value');
+  const proof = document.getElementById('v2-tac-proof');
+  const ifthen = document.getElementById('v2-tac-ifthen');
+
+  if (ask) {
+    ask.textContent = '';
+    if (card.clarifyingQuestion) {
+      const label = document.createElement('div');
+      label.className = 'v2-tac-label';
+      label.textContent = 'Ask';
+      const val = document.createElement('div');
+      val.className = 'v2-tac-value';
+      val.textContent = card.clarifyingQuestion;
+      ask.appendChild(label);
+      ask.appendChild(val);
+    }
+  }
+
+  if (rebuttal) {
+    rebuttal.textContent = '';
+    const rebText = card.why && card.stage === 'OBJECTION' ? card.why : null;
+    if (rebText) {
+      const label = document.createElement('div');
+      label.className = 'v2-tac-label';
+      label.textContent = 'Rebuttal';
+      const val = document.createElement('div');
+      val.className = 'v2-tac-value';
+      val.textContent = rebText;
+      rebuttal.appendChild(label);
+      rebuttal.appendChild(val);
+    }
+  }
+
+  if (value) {
+    value.textContent = '';
+    if (card.valueProp) {
+      const label = document.createElement('div');
+      label.className = 'v2-tac-label';
+      label.textContent = 'Value';
+      const val = document.createElement('div');
+      val.className = 'v2-tac-value';
+      val.textContent = card.valueProp;
+      value.appendChild(label);
+      value.appendChild(val);
+    }
+  }
+
+  if (proof) {
+    proof.textContent = '';
+    if (card.proofPoint) {
+      const label = document.createElement('div');
+      label.className = 'v2-tac-label';
+      label.textContent = 'Proof';
+      const val = document.createElement('div');
+      val.className = 'v2-tac-value';
+      val.textContent = card.proofPoint;
+      proof.appendChild(label);
+      proof.appendChild(val);
+    }
+  }
+
+  if (ifthen) {
+    ifthen.textContent = '';
+    const entries = Object.entries(card.branchPreview || {}).slice(0, 3);
+    if (entries.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'v2-tac-label';
+      label.textContent = 'If / Then';
+      ifthen.appendChild(label);
+      entries.forEach(([c, r]) => {
+        const el = document.createElement('div');
+        el.className = 'v2-tac-value';
+        el.textContent = c + ' \u2192 ' + (r.next || r.action || '');
+        ifthen.appendChild(el);
+      });
+    }
+  }
+}
+
+// ── Center Panel Orchestrator ───────────────────────────────────
+
 /**
  * Render the full v2 center panel from a composed active card and state.
  */

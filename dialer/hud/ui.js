@@ -11,7 +11,7 @@ import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
 import { INTENT_STAGE_MAP } from './taxonomy.js';
-import { renderV2CenterPanel } from './render-v2.js';
+import { renderV2CenterPanel, renderProspectContext, renderTacticalCard } from './render-v2.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -133,6 +133,12 @@ channel.addEventListener('message', (event) => {
       });
 
       startCallTimer();
+
+      // v2: populate prospect context if available
+      if (msg.prospectContext) {
+        dispatch({ type: 'SET_PROSPECT_CONTEXT', callSid: msg.callSid, prospectContext: msg.prospectContext });
+      }
+      renderProspectContext(msg.prospectContext || null);
       break;
     }
 
@@ -732,6 +738,7 @@ function render() {
     objectionCards: NATIVE_OBJECTION_CARDS,
   });
   renderV2CenterPanel(activeCard, state);
+  renderTacticalCard(activeCard);
 
 }
 
