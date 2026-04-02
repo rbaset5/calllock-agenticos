@@ -116,6 +116,34 @@ function deactivatePauseStrip() {
   if (el) el.classList.add('dimmed');
 }
 
+// ── Transcript health ─────────────────────────────────────────
+
+let transcriptHealthTimer = null;
+
+function startTranscriptHealthWatch() {
+  clearTimeout(transcriptHealthTimer);
+  transcriptHealthTimer = setTimeout(() => {
+    const el = document.getElementById('v2-transcript-health');
+    if (el) {
+      el.textContent = 'TRANSCRIPT LAG';
+      el.className = 'v2-transcript-health stale';
+    }
+  }, 3000);
+}
+
+function resetTranscriptHealth() {
+  clearTimeout(transcriptHealthTimer);
+  const el = document.getElementById('v2-transcript-health');
+  if (el) {
+    el.textContent = '';
+    el.className = 'v2-transcript-health';
+  }
+  // Restart the watch if call is active
+  if (state.callId && !state.ended) {
+    startTranscriptHealthWatch();
+  }
+}
+
 // ── Dispatch ───────────────────────────────────────────────────
 
 function dispatch(action) {
@@ -164,6 +192,7 @@ channel.addEventListener('message', (event) => {
       });
 
       startCallTimer();
+      startTranscriptHealthWatch();
 
       // v2: populate prospect context if available
       if (msg.prospectContext) {
@@ -176,6 +205,7 @@ channel.addEventListener('message', (event) => {
     case 'TRANSCRIPT': {
       // Validate callSid to prevent cross-call bleed
       if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
+      resetTranscriptHealth();
       if (!msg.isFinal) {
         handleInterimTranscript(msg);
       } else if (msg.speaker === 'prospect') {
@@ -198,6 +228,7 @@ channel.addEventListener('message', (event) => {
 
     case 'CALL_ENDED': {
       if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
+      clearTimeout(transcriptHealthTimer);
       dispatch({
         type: 'END_CALL',
         callSid: state.callId,

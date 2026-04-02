@@ -621,6 +621,19 @@
     .v2-tac-section:empty { display: none; }
     .v2-tac-label { color: #52525b; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
     .v2-tac-value { color: #d4d4d8; font-size: 12px; line-height: 1.4; }
+    .v2-transcript-health {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      display: none;
+    }
+    .v2-transcript-health.stale {
+      display: inline-block;
+      background: #78350f33;
+      color: #fbbf24;
+    }
   </style>
 </head>
 <body>
@@ -672,6 +685,7 @@
       <div class="now-meta">
         <span class="now-why" id="nowWhy"></span>
         <span class="confidence-badge manual" id="confidenceBadge"></span>
+        <span id="v2-transcript-health" class="v2-transcript-health"></span>
       </div>
       <!-- v2 center stack -->
       <div id="v2-move-type" class="v2-move-pill"></div>

@@ -345,6 +345,7 @@ export function hudReducer(state, action, playbook) {
           bucket: rule.objectionBucket,
           atMs: action.atMs,
           utterance: action.turn.text,
+          ...(action.secondaryIntent ? { secondary: action.secondaryIntent } : {}),
         };
 
         return {
@@ -352,6 +353,7 @@ export function hudReducer(state, action, playbook) {
           stage: 'OBJECTION',
           objectionHistory: [...nextState.objectionHistory, historyItem],
           lastObjectionBucket: rule.objectionBucket,
+          activeObjection: rule.objectionBucket,
           now: makeNow(
             'OBJECTION',
             playbook.objections[bucket].reset,
@@ -376,6 +378,7 @@ export function hudReducer(state, action, playbook) {
           bucket: rule.objectionBucket,
           atMs: action.atMs,
           utterance: action.turn.text,
+          ...(action.secondaryIntent ? { secondary: action.secondaryIntent } : {}),
         };
         const updatedHistory = [...nextState.objectionHistory, historyItem];
         const countSame = objectionCountForBucket(updatedHistory, rule.objectionBucket);
@@ -387,6 +390,7 @@ export function hudReducer(state, action, playbook) {
             stage: 'QUALIFIER',
             objectionHistory: updatedHistory,
             lastObjectionBucket: rule.objectionBucket,
+            activeObjection: rule.objectionBucket,
             now: makeNow(
               'QUALIFIER',
               playbook.qualifier,
@@ -414,6 +418,7 @@ export function hudReducer(state, action, playbook) {
             outcome: 'not_booked',
             objectionHistory: updatedHistory,
             lastObjectionBucket: rule.objectionBucket,
+            activeObjection: rule.objectionBucket,
             now: makeNow(
               'EXIT',
               playbook.exit,
@@ -435,6 +440,7 @@ export function hudReducer(state, action, playbook) {
           ...nextState,
           objectionHistory: updatedHistory,
           lastObjectionBucket: rule.objectionBucket,
+          activeObjection: rule.objectionBucket,
           now: makeNow(
             'OBJECTION',
             playbook.objections[bucket].reset,
@@ -941,6 +947,17 @@ export function hudReducer(state, action, playbook) {
         ...state,
         stage: returnStage,
         previousStage: null,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_COMPOUND': {
+      return {
+        ...state,
+        compound: action.compound || false,
+        signalCount: action.signalCount || 0,
+        recommendedActionBias: action.recommendedActionBias || null,
+        activeObjection: action.activeObjection || state.activeObjection,
       };
     }
 

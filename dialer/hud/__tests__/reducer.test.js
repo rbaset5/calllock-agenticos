@@ -639,6 +639,50 @@ describe('v2 reducer actions', () => {
     assert.equal(next.previousStage, null);
   });
 
+  it('SET_COMPOUND updates compound fields', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1' };
+    const next = hudReducer(s, {
+      type: 'SET_COMPOUND', callSid: 'test-1',
+      compound: true, signalCount: 2,
+      recommendedActionBias: 'compress',
+      activeObjection: 'timing',
+    }, PLAYBOOK);
+    assert.equal(next.compound, true);
+    assert.equal(next.signalCount, 2);
+    assert.equal(next.recommendedActionBias, 'compress');
+    assert.equal(next.activeObjection, 'timing');
+  });
+
+  it('SET_COMPOUND with no compound resets fields', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', compound: true, signalCount: 2 };
+    const next = hudReducer(s, {
+      type: 'SET_COMPOUND', callSid: 'test-1',
+      compound: false, signalCount: 0,
+    }, PLAYBOOK);
+    assert.equal(next.compound, false);
+    assert.equal(next.signalCount, 0);
+  });
+
+  it('activeObjection is set when objection detected via TRANSCRIPT_FINAL', () => {
+    let s = connect(init());
+    s = hudReducer(s, {
+      type: 'MANUAL_SET_STAGE',
+      callSid: SID,
+      stage: 'CLOSE',
+      atMs: T + 100,
+    }, PLAYBOOK);
+
+    s = transcriptFinal(s, 'not right now', {
+      band: 'high',
+      objectionBucket: 'timing',
+      utterance: 'not right now',
+      why: 'timing objection',
+    }, T + 5000);
+
+    assert.equal(s.stage, 'OBJECTION');
+    assert.equal(s.activeObjection, 'timing');
+  });
+
   it('createInitialState has v2 fields', () => {
     const s = createInitialState(PLAYBOOK);
     assert.equal(s.tone, 'neutral');
