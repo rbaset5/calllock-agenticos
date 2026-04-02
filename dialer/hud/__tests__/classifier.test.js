@@ -1,11 +1,12 @@
 // dialer/hud/__tests__/classifier.test.js
 // Uses Node.js built-in test runner: node --test
 
-import { describe, it } from "node:test";
+import { describe, it, test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
   classifyUtterance,
+  detectNewIntents,
   shouldCallLlmFallback,
   isUsableDeterministicResult,
 } from "../classifier.js";
@@ -131,5 +132,51 @@ describe("edge cases", () => {
     assert.equal(r.band, "low");
     assert.ok(shouldCallLlmFallback(r));
     assert.ok(!isUsableDeterministicResult(r));
+  });
+});
+
+// -------------------------
+// detectNewIntents
+// -------------------------
+
+describe('detectNewIntents', () => {
+  test('detects confusion for "what is this about" in OPENER', () => {
+    const result = detectNewIntents('what is this about', 'OPENER');
+    assert.equal(result.intent, 'confusion');
+    assert.ok(result.confidence >= 0.65);
+  });
+
+  test('detects pricing_question for "how much is it" in QUALIFIER', () => {
+    const result = detectNewIntents('how much is it', 'QUALIFIER');
+    assert.equal(result.intent, 'pricing_question');
+  });
+
+  test('detects authority_mismatch for "talk to my wife"', () => {
+    const result = detectNewIntents('you need to talk to my wife she handles that', 'OPENER');
+    assert.equal(result.intent, 'authority_mismatch');
+  });
+
+  test('detects pricing_resistance for "too expensive"', () => {
+    const result = detectNewIntents('that sounds too expensive', 'CLOSE');
+    assert.equal(result.intent, 'pricing_resistance');
+  });
+
+  test('returns null when no new intents match', () => {
+    const result = detectNewIntents('yeah we get some calls', 'BRIDGE');
+    assert.equal(result, null);
+  });
+
+  test('stage-aware: confusion higher confidence in OPENER than QUALIFIER', () => {
+    const openerResult = detectNewIntents('what is this about', 'OPENER');
+    const qualResult = detectNewIntents('what is this about', 'QUALIFIER');
+    assert.ok(openerResult.confidence > qualResult.confidence);
+  });
+});
+
+describe('classifyUtterance integration with new intents', () => {
+  test('"what is this about" in OPENER routes through classifyUtterance', () => {
+    const result = classifyUtterance('what is this about', { stage: 'OPENER' });
+    // Should detect the new intent via the pre-check
+    assert.ok(result.confidence >= 0.6);
   });
 });

@@ -272,6 +272,29 @@ const OBJECTION_BUCKETS = {
   },
 };
 
+// ── New intent dictionaries (spec Section 11) ──────────────────
+
+const MINI_PITCH_PHRASES = [
+  'what is this', 'what do you do', "what's this about", 'who are you',
+  'what company', 'what are you selling', 'what is this about',
+];
+
+const WRONG_PERSON_PHRASES = [
+  "i don't handle that", 'talk to my wife', 'talk to my partner',
+  'talk to dispatcher', 'wrong person', "i'm the tech", "i'm the helper",
+  'not my decision', "owner isn't here", "he's not here", "she's not here",
+];
+
+const PRICING_QUESTION_PHRASES = [
+  'how much', "what's the cost", 'pricing', 'what do you charge', 'price range',
+  'how much does it cost', 'what does it cost',
+];
+
+const PRICING_RESISTANCE_PHRASES = [
+  'expensive', "can't afford", 'too much', 'not worth it', 'out of budget',
+  'costs too much', "don't have the budget",
+];
+
 const YES_PHRASES = [
   "yeah",
   "yes",
@@ -296,8 +319,64 @@ const HEDGE_PHRASES = [
 // Public API
 // -------------------------
 
+/**
+ * Detect new v2 intents (confusion, wrong_person, pricing).
+ * Returns { intent, confidence } or null if no match.
+ * Stage-aware: same keyword weighted differently by current stage.
+ */
+export function detectNewIntents(utterance, stage) {
+  const text = normalize(utterance);
+
+  // Check confusion / mini-pitch
+  const confusionHits = countPhraseMatches(text, MINI_PITCH_PHRASES);
+  if (confusionHits > 0) {
+    const stageBoost = ['OPENER', 'GATEKEEPER', 'PERMISSION_MOMENT'].includes(stage) ? 0.15 : 0;
+    return { intent: 'confusion', confidence: clamp01(0.65 + stageBoost + (confusionHits - 1) * 0.1) };
+  }
+
+  // Check wrong person
+  const wpHits = countPhraseMatches(text, WRONG_PERSON_PHRASES);
+  if (wpHits > 0) {
+    return { intent: 'authority_mismatch', confidence: clamp01(0.70 + (wpHits - 1) * 0.1) };
+  }
+
+  // Check pricing question
+  const pqHits = countPhraseMatches(text, PRICING_QUESTION_PHRASES);
+  if (pqHits > 0) {
+    const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
+    return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
+  }
+
+  // Check pricing resistance
+  const prHits = countPhraseMatches(text, PRICING_RESISTANCE_PHRASES);
+  if (prHits > 0) {
+    return { intent: 'pricing_resistance', confidence: clamp01(0.65 + (prHits - 1) * 0.08) };
+  }
+
+  return null;
+}
+
 export function classifyUtterance(utterance, { stage } = {}) {
   const text = normalize(utterance);
+
+  // v2 pre-check: detect new intents before stage-specific routing
+  // Skip for GATEKEEPER — its own classifier handles confusion phrases with richer context
+  // Skip authority_mismatch for CLOSE/OBJECTION — their classifier provides richer objectionBucket
+  if (stage !== 'GATEKEEPER') {
+    const newIntent = detectNewIntents(utterance, stage);
+    if (newIntent && newIntent.confidence >= 0.65) {
+      const skipAuthority = newIntent.intent === 'authority_mismatch'
+        && (stage === 'CLOSE' || stage === 'OBJECTION');
+      if (!skipAuthority) {
+        return makeResult(utterance, {
+          confidence: newIntent.confidence,
+          why: `new intent detected: ${newIntent.intent}`,
+          // Pass through the intent for downstream use
+          detectedIntent: newIntent.intent,
+        });
+      }
+    }
+  }
 
   if (!text) {
     return lowConfidenceUnknown(utterance, "Empty utterance");
