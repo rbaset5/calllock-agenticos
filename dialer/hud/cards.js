@@ -465,7 +465,7 @@ export const NATIVE_OBJECTION_CARDS = {
     clarifyingQuestion: 'After hours or during peak time, are inbound calls always answered live?',
     valueProp: 'Covers missed calls after hours and during busy jobs.',
     proofPoint: "Even a small number of missed high-intent calls can matter if they're good jobs.",
-    toneVariants: null,
+    toneVariants: {},
   },
 
   info: {
@@ -482,7 +482,7 @@ export const NATIVE_OBJECTION_CARDS = {
     clarifyingQuestion: "Just so I send the right thing — what are you doing today when new calls come in and no one can answer?",
     valueProp: null,
     proofPoint: null,
-    toneVariants: null,
+    toneVariants: {},
   },
 
   authority: {
@@ -499,7 +499,7 @@ export const NATIVE_OBJECTION_CARDS = {
     clarifyingQuestion: "When's a good time to reach them?",
     valueProp: null,
     proofPoint: null,
-    toneVariants: null,
+    toneVariants: {},
   },
 
   existing_coverage: {
@@ -533,7 +533,7 @@ export const NATIVE_OBJECTION_CARDS = {
     clarifyingQuestion: 'When a high-intent caller reaches them, does that usually end in a booked job or a callback task?',
     valueProp: 'Books instead of just taking messages.',
     proofPoint: "This works best where ads are already generating inbound demand.",
-    toneVariants: null,
+    toneVariants: {},
   },
 };
 
@@ -554,12 +554,12 @@ export function makeEmptyCard(stageId) {
     primaryLine: '',
     backupLine: '',
     why: '',
-    listenFor: '',
-    branchPreview: '',
-    clarifyingQuestion: '',
-    valueProp: '',
-    proofPoint: '',
-    toneVariants: '',
+    listenFor: [],
+    branchPreview: {},
+    clarifyingQuestion: null,
+    valueProp: null,
+    proofPoint: null,
+    toneVariants: {},
   };
 }
 

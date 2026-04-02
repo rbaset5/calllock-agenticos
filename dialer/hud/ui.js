@@ -96,16 +96,15 @@ const $roundStrip = document.getElementById('roundStrip');
 function activatePauseStrip() {
   renderPauseStrip(true, '\u23F8 PAUSE \u00B7 Let them answer \u00B7 Classify their response type');
   clearTimeout(pauseStripTimer);
-  pauseStripTimer = setTimeout(() => {
-    const el = document.getElementById('v2-pause-strip');
-    if (el) el.classList.add('dimmed');
-  }, 5000);
+  // Silence nudge fires at 5s, dim fires at 8s (nudge must come first)
   clearTimeout(pauseStripSilenceTimer);
   pauseStripSilenceTimer = setTimeout(() => {
     const el = document.getElementById('v2-pause-strip');
-    if (el && !el.classList.contains('dimmed')) {
-      el.textContent = '\u23F8 Hold. Let them answer.';
-    }
+    if (el) el.textContent = '\u23F8 Hold. Let them answer.';
+  }, 5000);
+  pauseStripTimer = setTimeout(() => {
+    const el = document.getElementById('v2-pause-strip');
+    if (el) el.classList.add('dimmed');
   }, 8000);
 }
 
