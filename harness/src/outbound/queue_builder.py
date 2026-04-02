@@ -7,6 +7,7 @@ from . import sprint_state, store
 from .constants import OUTBOUND_TENANT_ID
 from .daily_plan import METRO_FILTERS
 from .lifecycle import classify_lead_type
+from .scoreboard import sprint_scoreboard
 
 
 def _now_utc() -> datetime:
@@ -64,6 +65,25 @@ def _summary(breakdown: dict[str, int]) -> str:
     )
 
 
+def compute_learned_score(prospect: dict[str, Any], heat_map: dict[str, Any]) -> float:
+    """Combine static score with metro connect rate boost.
+
+    After 10+ dials in a metro, the metro's connect rate influences ordering.
+    Below that threshold, falls back to static score only.
+    """
+    static_score = int(prospect.get("total_score", 0) or 0)
+    metro = str(prospect.get("metro") or "").upper()
+    metro_data = heat_map.get(metro, {})
+    if not isinstance(metro_data, dict):
+        return float(static_score)
+    total_dials = sum(int(slot.get("dials", 0) or 0) for slot in metro_data.values() if isinstance(slot, dict))
+    total_connects = sum(int(slot.get("connects", 0) or 0) for slot in metro_data.values() if isinstance(slot, dict))
+    if total_dials < 10:
+        return float(static_score)
+    metro_rate = (total_connects / total_dials) * 100
+    return 0.7 * static_score + 0.3 * metro_rate
+
+
 def _fresh_matches_segment(prospect: dict[str, Any], segment: str | None) -> bool:
     if not segment:
         return True
@@ -113,7 +133,14 @@ def _single_queue(
 
     interested.sort(key=lambda prospect: (classify_lead_type(prospect) != "hot", str(prospect.get("business_name") or "")))
     callback_stage.sort(key=lambda prospect: (classify_lead_type(prospect) != "warm", str(prospect.get("business_name") or "")))
-    fresh.sort(key=lambda prospect: (-int(prospect.get("total_score", 0) or 0), str(prospect.get("business_name") or "")))
+
+    # Learned ranking: blend static score with metro connect rate when enough data exists
+    try:
+        from datetime import date as _date
+        heat_map = sprint_scoreboard(tenant_id=tenant_id, today=_date.today()).get("heat_map", {})
+    except Exception:
+        heat_map = {}
+    fresh.sort(key=lambda prospect: (-compute_learned_score(prospect, heat_map), str(prospect.get("business_name") or "")))
 
     ordered = _with_attention(callbacks + interested + callback_stage + fresh)
     breakdown = {

@@ -130,6 +130,7 @@ def get_current_state(at: datetime | None = None) -> dict[str, Any]:
         "week": week_num,
         "phase": week_config.get("phase"),
         "instruction": week_config.get("coaching_note", ""),
+        "schedule_start": str(schedule.get("start_date", "")),
         "sprints_target_today": sprints_target,
         "dials_completed_today": int(raw_scoreboard.get("daily_dials", 0) or 0),
         "dials_target_today": sprints_target * dials_per_sprint,

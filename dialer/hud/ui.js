@@ -22,13 +22,15 @@ let prospectBusiness = '';
 let prospectId = null;
 let callTimerInterval = null;
 let callStartTime = null;
-let lineBankOpen = false;
+let shiftOnlyPressed = false;
+let rounds = [];      // Array of { stage, line, why, source }
+let roundIndex = -1;  // -1 = live/latest
 let sprintContext = null;
 let sprintContextStale = false;
 let sprintContextCachedAt = null;
 let sprintContextTimer = null;
 
-// Decision tree navigation: F7 = primary path, F8 = alternate path
+// Decision tree navigation: → = primary path, F10 = alternate path
 const STAGE_TRANSITIONS = {
   IDLE:        { f7: 'OPENER',    f8: null },
   GATEKEEPER:  { f7: 'OPENER',    f8: 'EXIT' },
@@ -43,7 +45,7 @@ const STAGE_TRANSITIONS = {
   EXIT:        { f7: null,         f8: null },
 };
 
-// Linear ordering for F6 (back) only — IDLE excluded (F7 from IDLE → OPENER is one-way)
+// Linear ordering for ← (back) only — IDLE excluded (→ from IDLE → OPENER is one-way)
 const NAV_STAGES = ['GATEKEEPER', 'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION'];
 
 // Stage display labels for the pill bar
@@ -69,15 +71,18 @@ const $previewHint = document.getElementById('previewHint');
 const $nowLine = document.getElementById('nowLine');
 const $nowWhy = document.getElementById('nowWhy');
 const $confidenceBadge = document.getElementById('confidenceBadge');
-const $transcriptFeed = document.getElementById('transcriptFeed');
+const $linesFeed = document.getElementById('linesFeed');
+const $objectionsFeed = document.getElementById('objectionsFeed');
+const $roundStrip = document.getElementById('roundStrip');
 
 // ── Dispatch ───────────────────────────────────────────────────
 
 function dispatch(action) {
   const prevState = state;
   state = hudReducer(state, action, PLAYBOOK);
-  if (state.stage !== prevState.stage || state.stage === 'IDLE') {
-    lineBankOpen = false;
+  if (state.stage !== prevState.stage && state.stage !== 'IDLE') {
+    // Keep round history across stage changes (Option B from plan)
+    roundIndex = -1;
   }
   logDecision(action, prevState, state);
   render();
@@ -124,8 +129,6 @@ channel.addEventListener('message', (event) => {
         handleInterimTranscript(msg);
       } else if (msg.speaker === 'prospect') {
         handleFinalProspectTranscript(msg);
-      } else {
-        addTranscriptTurn('REP', msg.text, msg.atMs);
       }
       break;
     }
@@ -272,8 +275,6 @@ async function loadSprintContext() {
 }
 
 function handleFinalProspectTranscript(msg) {
-  addTranscriptTurn('PROSPECT', msg.text, msg.atMs);
-
   // Clear preview
   $previewHint.textContent = '';
 
@@ -367,41 +368,6 @@ function formatPreviewHint(result) {
   return parts.length > 0 ? 'likely: ' + parts.join(', ') : '';
 }
 
-// ── Transcript feed ────────────────────────────────────────────
-
-function addTranscriptTurn(speaker, text, atMs) {
-  const el = document.createElement('div');
-  el.className = 'transcript-turn';
-
-  const speakerEl = document.createElement('span');
-  speakerEl.className = 'speaker ' + (speaker === 'PROSPECT' ? 'prospect' : 'rep');
-  speakerEl.textContent = speaker;
-
-  const textEl = document.createElement('span');
-  textEl.className = 'text' + (speaker === 'PROSPECT' ? ' prospect-text' : '');
-  textEl.textContent = text;
-
-  const tsEl = document.createElement('span');
-  tsEl.className = 'ts';
-  tsEl.textContent = atMs ? formatTimestamp(atMs) : '';
-
-  el.appendChild(speakerEl);
-  el.appendChild(document.createTextNode(' '));
-  el.appendChild(textEl);
-  el.appendChild(tsEl);
-
-  $transcriptFeed.appendChild(el);
-  $transcriptFeed.scrollTop = $transcriptFeed.scrollHeight;
-}
-
-function formatTimestamp(atMs) {
-  if (!callStartTime) return '';
-  const elapsed = Math.floor((atMs - callStartTime) / 1000);
-  if (elapsed < 0) return '';
-  const m = Math.floor(elapsed / 60);
-  const s = elapsed % 60;
-  return m + ':' + String(s).padStart(2, '0');
-}
 
 // ── Call timer ─────────────────────────────────────────────────
 
@@ -428,32 +394,14 @@ function stopCallTimer() {
 document.addEventListener('keydown', (e) => {
   const now = Date.now();
 
+  // Track whether Shift is being used solo or as a modifier
+  if (e.key === 'Shift') { shiftOnlyPressed = true; return; }
+  if (e.shiftKey) { shiftOnlyPressed = false; }
+
   switch (true) {
-    // Escape — Close line bank
-    case e.key === 'Escape': {
-      if (!lineBankOpen) return;
+    // F9 — Non-connect
+    case e.key === 'F9': {
       e.preventDefault();
-      lineBankOpen = false;
-      render();
-      break;
-    }
-
-    // Tab — Toggle line bank
-    case e.key === 'Tab': {
-      const pickerVisible = state.stage === 'OBJECTION' && !state.lastObjectionBucket;
-      if (state.stage === 'IDLE' || pickerVisible) return;
-      e.preventDefault();
-      const stageLines = linesForStage(state.stage, PLAYBOOK);
-      if (!stageLines.length) return;
-      lineBankOpen = !lineBankOpen;
-      render();
-      break;
-    }
-
-    // F4 — Non-connect
-    case e.key === 'F4': {
-      e.preventDefault();
-      lineBankOpen = false;
       dispatch({
         type: 'MANUAL_NON_CONNECT',
         callSid: state.callId,
@@ -462,12 +410,27 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // F6 — Stage back (for corrections)
-    case e.key === 'F6': {
+    // Space — Custom round bookmark (off-script response)
+    case e.key === ' ' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      if (['IDLE', 'EXIT', 'ENDED', 'BOOKED'].includes(state.stage)) return;
       e.preventDefault();
-      lineBankOpen = false;
-      // For stages in NAV_STAGES, go to previous index.
-      // For terminal/branch stages, go to their logical parent:
+      recordRound('CUSTOM', 'off-script', 'custom');
+      break;
+    }
+
+    // ← — Step back through rounds, then go back a stage
+    case e.key === 'ArrowLeft': {
+      e.preventDefault();
+      const effectiveIdx = roundIndex === -1 ? rounds.length - 1 : roundIndex;
+      if (rounds.length > 0 && effectiveIdx > 0) {
+        roundIndex = effectiveIdx - 1;
+        const round = rounds[roundIndex];
+        $nowLine.textContent = round.line;
+        $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
+        renderRoundStrip();
+        return;
+      }
+      // No more rounds — go back a stage
       const BACK_MAP = {
         BOOKED:      'CLOSE',
         SEED_EXIT:   'QUALIFIER',
@@ -491,10 +454,22 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // F7 — Primary path forward (follows decision tree)
-    case e.key === 'F7': {
+    // → — Step forward through rounds, then advance stage
+    case e.key === 'ArrowRight': {
       e.preventDefault();
-      lineBankOpen = false;
+      if (roundIndex !== -1 && roundIndex < rounds.length - 1) {
+        roundIndex++;
+        const round = rounds[roundIndex];
+        $nowLine.textContent = round.line;
+        $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
+        renderRoundStrip();
+        return;
+      }
+      if (roundIndex !== -1) {
+        roundIndex = -1; // Return to live
+        render();
+        return;
+      }
       const nextStage = STAGE_TRANSITIONS[state.stage]?.f7;
       if (!nextStage) break;
       dispatch({
@@ -506,10 +481,9 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // F8 — Alternate path (branch in decision tree)
-    case e.key === 'F8': {
+    // F10 — Alternate path (branch in decision tree)
+    case e.key === 'F10': {
       e.preventDefault();
-      lineBankOpen = false;
       const altStage = STAGE_TRANSITIONS[state.stage]?.f8;
       if (!altStage) break;
       dispatch({
@@ -524,7 +498,6 @@ document.addEventListener('keydown', (e) => {
     // 1-3 — Context-sensitive: bridge angles (BRIDGE/OPENER) or objections (CLOSE/OBJECTION)
     case e.key === '1' && !e.ctrlKey && !e.altKey && !e.metaKey: {
       e.preventDefault();
-      lineBankOpen = false;
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'missed_calls', atMs: now });
       } else {
@@ -535,7 +508,6 @@ document.addEventListener('keydown', (e) => {
 
     case e.key === '2' && !e.ctrlKey && !e.altKey && !e.metaKey: {
       e.preventDefault();
-      lineBankOpen = false;
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'competition', atMs: now });
       } else {
@@ -546,7 +518,6 @@ document.addEventListener('keydown', (e) => {
 
     case e.key === '3' && !e.ctrlKey && !e.altKey && !e.metaKey: {
       e.preventDefault();
-      lineBankOpen = false;
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'overwhelmed', atMs: now });
       } else {
@@ -558,15 +529,13 @@ document.addEventListener('keydown', (e) => {
     // 4 — Objection: authority (only in CLOSE/OBJECTION)
     case e.key === '4' && !e.ctrlKey && !e.altKey && !e.metaKey: {
       e.preventDefault();
-      lineBankOpen = false;
       dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
       break;
     }
 
-    // Shift+F11 — Reset
-    case e.key === 'F11' && e.shiftKey: {
+    // Shift+F1 — Reset
+    case (e.key === 'F1' && e.shiftKey): {
       e.preventDefault();
-      lineBankOpen = false;
       dispatch({
         type: 'END_CALL',
         callSid: state.callId,
@@ -577,7 +546,8 @@ document.addEventListener('keydown', (e) => {
       // Reset after brief delay
       setTimeout(() => {
         resetAuditTrail();
-        $transcriptFeed.textContent = '';
+        rounds = [];
+        roundIndex = -1;
         prospectName = '';
         prospectBusiness = '';
         prospectId = null;
@@ -591,19 +561,17 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // H — Hedge (CLOSE or OBJECTION stage)
-    case (e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      if (state.stage !== 'CLOSE' && state.stage !== 'OBJECTION') return;
-      e.preventDefault();
-      lineBankOpen = false;
-      dispatch({
-        type: 'HEDGE_REQUESTED',
-        callSid: state.callId,
-        atMs: now,
-      });
-      break;
-    }
   }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Shift' && shiftOnlyPressed) {
+    shiftOnlyPressed = false;
+    if (state.stage !== 'CLOSE' && state.stage !== 'OBJECTION') return;
+    dispatch({ type: 'HEDGE_REQUESTED', callSid: state.callId, atMs: Date.now() });
+    return;
+  }
+  shiftOnlyPressed = false;
 });
 
 // ── Render ─────────────────────────────────────────────────────
@@ -632,15 +600,24 @@ function render() {
   renderStageBar();
   renderContextStrip();
 
+  // Side panels
+  renderLinesPanel();
+  renderObjectionsPanel();
+  renderRoundStrip();
+
   // NOW panel
   $nowPanel.setAttribute('data-stage', state.stage);
   renderObjectionPicker();
-  $nowLine.textContent = state.now?.line || 'Waiting for call...';
-  $nowWhy.textContent = state.now?.why || '';
-  renderLineBank();
+  if (roundIndex === -1) {
+    $nowLine.textContent = state.now?.line || 'Waiting for call...';
+    $nowWhy.textContent = state.now?.why || '';
+  }
 
   // Confidence badge
   renderConfidenceBadge();
+
+  // Quick-pick strip (bridge angles or objection types)
+  renderQuickPickStrip();
 
   // Context-sensitive hotkey bar
   renderHotkeyBar();
@@ -654,75 +631,79 @@ function renderHotkeyBar() {
 
   const HOTKEYS_BY_STAGE = {
     IDLE: [
-      hk('F7', 'Start call'),
-      hk('F4', 'Voicemail'),
-      hk('⇧F11', 'Reset'),
+      hk('→', 'Start call'),
+      hk('F9', 'Voicemail'),
+      hk('⇧F1', 'Reset'),
     ],
     GATEKEEPER: [
-      hk('F7', 'Got owner'),
-      hk('F8', 'Not available'),
-      hk('F4', 'Voicemail'),
-      hk('F6', 'Back'),
+      hk('→', 'Got owner'),
+      hk('F10', 'Not available'),
+      hk('F9', 'Voicemail'),
+      hk('Space', 'Off-script'),
+      hk('←', 'Back'),
     ],
     OPENER: [
-      hk('F7', 'They responded'),
+      hk('→', 'They responded'),
       hk('1', 'Missed'),
       hk('2', 'Comp'),
       hk('3', 'Overwhelm'),
-      hk('F4', 'Voicemail'),
-      hk('F6', 'Back'),
+      hk('F9', 'Voicemail'),
+      hk('Space', 'Off-script'),
+      hk('←', 'Back'),
     ],
     BRIDGE: [
-      hk('F7', 'Next → Qualify'),
+      hk('→', 'Next → Qualify'),
       hk('1', 'Missed'),
       hk('2', 'Comp'),
       hk('3', 'Overwhelm'),
-      hk('Tab', 'Lines'),
-      hk('F6', 'Back'),
+      hk('Space', 'Off-script'),
+      hk('←', 'Back'),
     ],
     QUALIFIER: [
-      hk('F7', 'Pain → Close'),
-      hk('F8', 'No pain → Exit'),
-      hk('Tab', 'Lines'),
-      hk('F6', 'Back'),
+      hk('→', 'Pain → Close'),
+      hk('F10', 'No pain → Exit'),
+      hk('Space', 'Off-script'),
+      hk('←', 'Back'),
     ],
     CLOSE: [
-      hk('F7', 'Yes! → Booked'),
-      hk('F8', 'Objection'),
-      hk('H', 'Hedge'),
+      hk('→', 'Yes! → Booked'),
+      hk('F10', 'Objection'),
+      hk('⇧', 'Hedge'),
       hk('1', 'Timing'),
       hk('2', 'Interest'),
       hk('3', 'Info'),
       hk('4', 'Authority'),
-      hk('F6', 'Back'),
+      hk('Space', 'Off-script'),
+      hk('←', 'Back'),
     ],
     OBJECTION: [
       hk('1', 'Timing'),
       hk('2', 'Interest'),
       hk('3', 'Info'),
       hk('4', 'Authority'),
-      hk('F7', 'Try close'),
-      hk('F8', 'Give up'),
-      hk('H', 'Hedge'),
-      hk('F6', 'Back'),
+      hk('→', 'Try close'),
+      hk('F10', 'Give up'),
+      hk('⇧', 'Hedge'),
+      hk('Space', 'Off-script'),
+      hk('←', 'Back'),
     ],
     SEED_EXIT: [
-      hk('F7', 'Done'),
-      hk('F6', 'Back'),
+      hk('→', 'Done'),
+      hk('Space', 'Off-script'),
+      hk('←', 'Back'),
     ],
     BOOKED: [
-      hk('F7', 'Call done'),
-      hk('⇧F11', 'Reset'),
+      hk('→', 'Call done'),
+      hk('⇧F1', 'Reset'),
     ],
     NON_CONNECT: [
-      hk('F7', 'Done'),
-      hk('Tab', 'Lines'),
+      hk('→', 'Done'),
     ],
     EXIT: [
-      hk('⇧F11', 'Reset'),
+      hk('⇧F1', 'Reset'),
     ],
     ENDED: [
-      hk('⇧F11', 'Reset'),
+      hk('⇧F1', 'Reset'),
     ],
   };
 
@@ -836,7 +817,6 @@ const BRIDGE_CARDS = [
 ];
 
 let $objectionPicker = null;
-let $lineBank = null;
 
 function renderObjectionPicker() {
   // Show picker when stage is OBJECTION and no bucket selected yet
@@ -882,36 +862,36 @@ function renderObjectionPicker() {
   }
 }
 
-function renderLineBank() {
-  const pickerVisible = state.stage === 'OBJECTION' && !state.lastObjectionBucket;
+// ── Side panel renderers ───────────────────────────────────────
+
+function renderLinesPanel() {
+  if (!$linesFeed) return;
+  $linesFeed.replaceChildren();
+
   const stageLines = linesForStage(state.stage, PLAYBOOK);
-  const showLineBank = lineBankOpen && state.stage !== 'IDLE' && !pickerVisible && stageLines.length > 0;
-
-  if (!showLineBank) {
-    if ($lineBank) {
-      $lineBank.remove();
-      $lineBank = null;
-    }
-    return;
+  if (stageLines.length) {
+    $linesFeed.appendChild(buildSidePanelSection('CURRENT STAGE', stageLines, 'stage', 'lines'));
   }
-
-  if ($lineBank) {
-    $lineBank.remove();
-    $lineBank = null;
-  }
-
-  $lineBank = document.createElement('div');
-  $lineBank.className = 'line-bank';
-
-  $lineBank.appendChild(buildLineBankSection('CURRENT STAGE', stageLines, 'stage'));
   if (PLAYBOOK.powerLines?.length) {
-    $lineBank.appendChild(buildLineBankSection('POWER LINES', PLAYBOOK.powerLines, 'power'));
+    $linesFeed.appendChild(buildSidePanelSection('POWER LINES', PLAYBOOK.powerLines, 'power', 'lines'));
   }
-
-  $nowPanel.appendChild($lineBank);
+  if (PLAYBOOK.recoveryLines?.length) {
+    $linesFeed.appendChild(buildSidePanelSection('RECOVERY', PLAYBOOK.recoveryLines, 'recovery', 'lines'));
+  }
 }
 
-function buildLineBankSection(title, entries, kind) {
+function renderObjectionsPanel() {
+  if (!$objectionsFeed) return;
+  $objectionsFeed.replaceChildren();
+
+  const entries = Object.entries(PLAYBOOK.objections).map(([bucket, data]) => ({
+    label: `${bucket.toUpperCase()} — ${data.keywords.slice(0, 3).join(', ')}`,
+    line: data.reset,
+  }));
+  $objectionsFeed.appendChild(buildSidePanelSection('OBJECTION RESETS', entries, 'objection', 'objection'));
+}
+
+function buildSidePanelSection(title, entries, kind, source) {
   const section = document.createElement('div');
   section.className = 'line-bank-section';
 
@@ -936,11 +916,12 @@ function buildLineBankSection(title, entries, kind) {
     row.appendChild(label);
     row.appendChild(text);
     row.addEventListener('click', () => {
-      lineBankOpen = false;
+      const filledLine = fillLineTemplate(entry.line, currentLineContext());
+      recordRound(filledLine, entry.label || entry.tag, source);
       dispatch({
         type: 'LINE_BANK_SELECT',
         callSid: state.callId,
-        line: fillLineTemplate(entry.line, currentLineContext()),
+        line: filledLine,
         atMs: Date.now(),
       });
     });
@@ -948,6 +929,47 @@ function buildLineBankSection(title, entries, kind) {
   }
 
   return section;
+}
+
+// ── Round history ──────────────────────────────────────────────
+
+function recordRound(line, why, source) {
+  if (roundIndex !== -1) {
+    rounds = rounds.slice(0, roundIndex + 1);
+  }
+  rounds.push({ stage: state.stage, line, why, source });
+  roundIndex = -1;
+  renderRoundStrip();
+}
+
+function renderRoundStrip() {
+  if (!$roundStrip) return;
+  $roundStrip.replaceChildren();
+
+  const effectiveIndex = roundIndex === -1 ? rounds.length - 1 : roundIndex;
+
+  rounds.forEach((round, i) => {
+    const bubble = document.createElement('div');
+    bubble.className = 'round-bubble';
+
+    if (i === effectiveIndex && rounds.length > 0) {
+      bubble.classList.add('current');
+    } else if (i < effectiveIndex) {
+      bubble.classList.add('past');
+    }
+
+    bubble.textContent = round.source === 'custom' ? '\u2726' : String(i + 1);
+    bubble.title = round.line === 'CUSTOM' ? 'Off-script' : round.line;
+
+    bubble.addEventListener('click', () => {
+      roundIndex = i;
+      $nowLine.textContent = round.line;
+      $nowWhy.textContent = `Round ${i + 1} \u2014 ${round.source}`;
+      renderRoundStrip();
+    });
+
+    $roundStrip.appendChild(bubble);
+  });
 }
 
 function currentLineContext() {

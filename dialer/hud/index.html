@@ -177,9 +177,9 @@
       min-height: 0;
     }
 
-    /* Left panel — NOW card */
+    /* Center panel — NOW card */
     .now-panel {
-      flex: 7;
+      flex: 2;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -316,16 +316,18 @@
       color: #f5f5f5;
     }
 
-    /* Right panel — Transcript feed */
-    .transcript-panel {
-      flex: 3;
+    /* Side panels — Lines and Objections */
+    .side-panel {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      border-left: 1px solid #1a1a1a;
       background: #0d0d0d;
+      overflow: hidden;
     }
+    .lines-panel { border-right: 1px solid #1a1a1a; }
+    .objections-panel { border-left: 1px solid #1a1a1a; }
 
-    .transcript-header {
+    .side-panel-header {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -335,54 +337,52 @@
       flex-shrink: 0;
     }
 
-    .transcript-feed {
+    .side-panel-feed {
       flex: 1;
       overflow-y: auto;
-      padding: 12px 16px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
-    .transcript-feed::-webkit-scrollbar { width: 4px; }
-    .transcript-feed::-webkit-scrollbar-track { background: transparent; }
-    .transcript-feed::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    .side-panel-feed::-webkit-scrollbar { width: 4px; }
+    .side-panel-feed::-webkit-scrollbar-track { background: transparent; }
+    .side-panel-feed::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
-    .transcript-turn {
-      font-size: 13px;
-      line-height: 1.45;
+    /* Round history strip */
+    .round-strip {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      padding: 4px 20px;
+      flex-shrink: 0;
+      min-height: 24px;
     }
 
-    .transcript-turn .speaker {
+    .round-bubble {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.5px;
-      margin-right: 6px;
+      cursor: pointer;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #737373;
+      flex-shrink: 0;
     }
 
-    .transcript-turn .speaker.rep { color: #737373; }
-    .transcript-turn .speaker.prospect { color: #e5e5e5; }
-
-    .transcript-turn .text {
-      color: #a3a3a3;
+    .round-bubble.current {
+      border-color: #22c55e;
+      color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
     }
 
-    .transcript-turn .text.prospect-text {
-      color: #e5e5e5;
-    }
-
-    .transcript-turn .ts {
-      font-size: 10px;
-      color: #404040;
-      margin-left: 6px;
-    }
-
-    .transcript-turn.processing {
-      background: rgba(59, 130, 246, 0.08);
-      border-radius: 4px;
-      padding: 4px 6px;
-      margin: -4px -6px;
-    }
+    .round-bubble.past { border-color: #404040; color: #525252; }
 
     /* ── Objection picker grid ─────────────────────── */
     .objection-picker {
@@ -567,8 +567,15 @@
     <span class="stage-pill future" data-stage="OBJECTION">OBJ</span>
   </div>
 
-  <!-- Main area -->
+  <!-- Round history strip -->
+  <div class="round-strip" id="roundStrip"></div>
+
+  <!-- Main area: 3-column layout -->
   <div class="main-area">
+    <div class="side-panel lines-panel" id="linesPanel">
+      <div class="side-panel-header">LINES</div>
+      <div class="side-panel-feed" id="linesFeed"></div>
+    </div>
     <div class="now-panel" id="nowPanel" data-stage="IDLE">
       <div class="preview-hint" id="previewHint"></div>
       <div class="now-line" id="nowLine">Waiting for call...</div>
@@ -577,10 +584,9 @@
         <span class="confidence-badge manual" id="confidenceBadge"></span>
       </div>
     </div>
-
-    <div class="transcript-panel">
-      <div class="transcript-header">TRANSCRIPT</div>
-      <div class="transcript-feed" id="transcriptFeed"></div>
+    <div class="side-panel objections-panel" id="objectionsPanel">
+      <div class="side-panel-header">OBJECTIONS</div>
+      <div class="side-panel-feed" id="objectionsFeed"></div>
     </div>
   </div>
 

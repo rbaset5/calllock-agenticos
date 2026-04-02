@@ -85,7 +85,7 @@ export function createInitialState(playbook) {
   return {
     callId: '',
     stage: 'IDLE',
-    now: makeNow('IDLE', 'Press F7 to start call', 'low', 'F7 → opener script', 'none'),
+    now: makeNow('IDLE', 'Press → to start call', 'low', '→ opener script', 'none'),
     prospect: null,
 
     transcript: [],
@@ -695,7 +695,7 @@ export function hudReducer(state, action, playbook) {
       return {
         ...state,
         stage: 'CLOSE',
-        now: makeNow('CLOSE', playbook.hedge, 'high', 'F7 yes! → booked · F8 objection', 'manual'),
+        now: makeNow('CLOSE', playbook.hedge, 'high', '→ yes! → booked · F10 objection', 'manual'),
         lastCommittedAtMs: action.atMs,
       };
     }
@@ -725,15 +725,15 @@ export function hudReducer(state, action, playbook) {
     // ────────────────────────────────────────────────────
     case 'MANUAL_SET_STAGE': {
       const stageHints = {
-        GATEKEEPER:  'F7 got owner · F8 not available',
-        OPENER:      'F7 when they respond',
-        BRIDGE:      'F7 after bridge line',
-        QUALIFIER:   'F7 pain → close · F8 no pain → exit',
-        CLOSE:       'F7 yes! → booked · F8 objection · H hedge',
-        OBJECTION:   'F7 try close · F8 give up · 1-4 new objection',
-        SEED_EXIT:   'F7 wrap up',
-        BOOKED:      'F7 call done',
-        NON_CONNECT: 'F7 after voicemail',
+        GATEKEEPER:  '→ got owner · F10 not available',
+        OPENER:      '→ when they respond',
+        BRIDGE:      '→ after bridge line',
+        QUALIFIER:   '→ pain → close · F10 no pain → exit',
+        CLOSE:       '→ yes! → booked · F10 objection · ⇧ hedge',
+        OBJECTION:   '→ try close · F10 give up · 1-4 new objection',
+        SEED_EXIT:   '→ wrap up',
+        BOOKED:      '→ call done',
+        NON_CONNECT: '→ after voicemail',
         EXIT:        'Call complete',
       };
       return {
@@ -772,7 +772,7 @@ export function hudReducer(state, action, playbook) {
           'BRIDGE',
           line,
           'high',
-          `Bridge: ${angle} · F7 after delivering line`,
+          `Bridge: ${angle} · → after delivering line`,
           'manual',
         ),
         autoClassifySuppressedUntilMs: action.atMs + 4000,
@@ -804,7 +804,7 @@ export function hudReducer(state, action, playbook) {
           'OBJECTION',
           playbook.objections[bucket].reset,
           'high',
-          'Say this → F7 try close · F8 give up · 1-4 new objection',
+          'Say this, then → try close · F10 give up · 1-4 new objection',
           'manual',
         ),
         autoClassifySuppressedUntilMs: action.atMs + 4000,

@@ -422,6 +422,22 @@ async function updateProspectStage(prospectId, outcome, demoScheduled) {
   await supabase.from('outbound_prospects').update(patch).eq('id', prospectId);
 }
 
+// Sprint start date: fetched from harness on startup, hardcoded fallback
+let _sprintStartIso = '2026-03-30';
+async function _fetchSprintStart() {
+  if (!HARNESS_BASE_URL) return;
+  try {
+    const resp = await fetch(`${HARNESS_BASE_URL}/outbound/current-queue?block=AM`, { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      const start = data?.state?.schedule_start;
+      if (start && /^\d{4}-\d{2}-\d{2}$/.test(start)) _sprintStartIso = start;
+    }
+  } catch { /* harness may not be up yet */ }
+}
+_fetchSprintStart();
+setInterval(_fetchSprintStart, 24 * 60 * 60 * 1000);
+
 async function buildLocalScoreboard(today = new Date()) {
   if (!supabase) {
     return {
@@ -436,8 +452,7 @@ async function buildLocalScoreboard(today = new Date()) {
   }
 
   const todayIso = today.toISOString().slice(0, 10);
-  // Use sprint start date (Mar 30) instead of month-start to capture all sprint dials
-  const sprintStartIso = '2026-03-30';
+  const sprintStartIso = _sprintStartIso;
   const { data, error } = await supabase.rpc('sprint_scoreboard', {
     p_tenant_id: OUTBOUND_TENANT_ID,
     p_start_date: sprintStartIso,
