@@ -11,6 +11,7 @@ import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
 import { INTENT_STAGE_MAP } from './taxonomy.js';
+import { renderV2CenterPanel } from './render-v2.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -720,6 +721,17 @@ function render() {
 
   // Confidence badge
   renderConfidenceBadge();
+
+  // v2 center panel render
+  const activeCard = composeActiveCard({
+    stage: state.stage,
+    activeObjection: state.activeObjection,
+    tone: state.tone,
+    deliveryModifier: state.deliveryModifier,
+    stageCards: NATIVE_STAGE_CARDS,
+    objectionCards: NATIVE_OBJECTION_CARDS,
+  });
+  renderV2CenterPanel(activeCard, state);
 
 }
 
