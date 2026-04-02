@@ -146,6 +146,7 @@ async function runExtractionAsync(callSid, transcript, callData) {
       prospect_id: callData.prospectId,
       twilio_call_sid: callSid,
       business_name: callData.businessName || '',
+      outcome: callData.outcome || 'unknown',
       extraction: result.extraction,
       source_version: OUTBOUND_SOURCE_VERSION,
     });

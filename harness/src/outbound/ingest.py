@@ -200,3 +200,102 @@ def run_batch(db_path: str = DEFAULT_DB_PATH, metros: list[str] | None = None, t
         "skipped_no_phone": skipped_no_phone,
         "skipped_no_metro": skipped_no_metro,
     }
+
+
+def compute_lsa_icp_score(row: dict) -> tuple[int, str, dict[str, int]]:
+    """Score an LSA business. All LSA businesses get paid_demand=25 (confirmed ad spenders).
+    Minimum score is c_lead threshold (30) since all are verified advertisers."""
+    signals: dict[str, int] = {}
+
+    # All LSA businesses are confirmed Google ad spenders
+    signals["paid_demand"] = ICP_WEIGHTS["paid_demand"]
+
+    # Review pain: low rating or few reviews
+    rating = float(row.get("rating") or 0)
+    review_count = int(row.get("review_count") or 0)
+    if review_count > 0 and (rating < 4.2 or review_count < 20):
+        signals["review_pain"] = ICP_WEIGHTS["review_pain"]
+
+    # Small operation: low review count signals 1-3 truck shop
+    if 0 < review_count <= 50:
+        signals["small_operation"] = ICP_WEIGHTS["small_operation"]
+
+    total = min(sum(signals.values()), 100)
+
+    # Floor: all LSA businesses get at least c_lead
+    from .constants import TIER_THRESHOLDS
+    c_lead_min = TIER_THRESHOLDS["c_lead"]
+    total = max(total, c_lead_min)
+
+    if total >= TIER_THRESHOLDS["a_lead"]:
+        tier = "a_lead"
+    elif total >= TIER_THRESHOLDS["b_lead"]:
+        tier = "b_lead"
+    elif total >= TIER_THRESHOLDS["c_lead"]:
+        tier = "c_lead"
+    else:
+        tier = "unscored"
+
+    return total, tier, signals
+
+
+def ingest_from_lsa(
+    lsa_db_path: str | None = None,
+    min_reviews: int = 10,
+    max_reviews: int = 100,
+) -> dict[str, int]:
+    """Ingest LSA-discovered businesses into Supabase outbound_prospects.
+
+    Reads from lsa_discovery.db, filters to review range, computes ICP score
+    with LSA-specific logic, and upserts to Supabase with enrichment on conflict.
+    """
+    import sqlite3 as _sqlite3
+    from pathlib import Path as _Path
+
+    db_path = _Path(lsa_db_path) if lsa_db_path else _Path(__file__).parent / "data" / "lsa_discovery.db"
+    if not db_path.exists():
+        print(f"LSA DB not found at {db_path}")
+        return {"inserted": 0, "enriched": 0, "skipped": 0, "filtered_out": 0}
+
+    conn = _sqlite3.connect(str(db_path))
+    conn.row_factory = _sqlite3.Row
+    rows = conn.execute(
+        """SELECT * FROM lsa_businesses
+           WHERE phone IS NOT NULL
+             AND review_count BETWEEN ? AND ?""",
+        (min_reviews, max_reviews),
+    ).fetchall()
+    conn.close()
+
+    filtered_out = 0
+    batch: list[dict] = []
+
+    for row in rows:
+        row_dict = dict(row)
+        state = row_dict.get("state", "").upper()
+
+        # Only ingest states that have sprint segments
+        if state not in ("FL", "TX", "IL", "AZ"):
+            filtered_out += 1
+            continue
+
+        total_score, score_tier, _signals = compute_lsa_icp_score(row_dict)
+
+        batch.append({
+            "tenant_id": OUTBOUND_TENANT_ID,
+            "business_name": row_dict.get("business_name", "Unknown"),
+            "trade": "hvac",
+            "metro": state,
+            "address": row_dict.get("address"),
+            "phone": row_dict.get("phone"),
+            "phone_normalized": row_dict["phone"],
+            "source": "lsa_discovery",
+            "raw_source": row_dict,
+            "stage": "call_ready",
+            "total_score": total_score,
+            "score_tier": score_tier,
+        })
+
+    result = store.upsert_or_enrich_prospects(batch)
+    result["filtered_out"] = filtered_out
+    return result

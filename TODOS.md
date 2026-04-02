@@ -541,3 +541,11 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Priority:** P2 (nice-to-have for sprint, critical for scale)
 **Depends on:** Dialer UI refactor, Whisper API key provisioned, audio storage (Supabase or S3).
 **Source:** V2 CEO review, 2026-03-30. Deferred from SELECTIVE EXPANSION cherry-pick ceremony.
+
+### Full transcript degradation mode for HUD
+**What:** Implement spec Section 32 fully: amber "TRANSCRIPT LAG" badge after 3s of no events, red "TRANSCRIPT OFFLINE" badge after 15s, lock HUD to manual-only mode, dim stale cards, hide NOW summary. Currently only the pause strip's 5s fallback timer handles lag.
+**Why:** Complete transcript failure (Retell WebSocket drop, transcription service outage) leaves the HUD showing stale data with no visual indicator. The rep needs to know the system is blind.
+**Effort:** M (CC: ~20 min)
+**Priority:** P2 (rare failure mode, but high impact when it happens)
+**Depends on:** HUD v2 upgrade shipped (Task 17 basic degradation as foundation).
+**Source:** Eng review, 2026-04-02. Codex outside voice flagged pause strip's weak event contract.

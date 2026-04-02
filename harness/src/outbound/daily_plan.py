@@ -23,11 +23,11 @@ SCHEDULE_PATH = Path(__file__).resolve().parents[3] / "knowledge" / "outbound" /
 
 # Metro name to Supabase metro column value mapping.
 METRO_FILTERS: dict[str, list[str]] = {
-    "FL": ["Miami", "Tampa", "Orlando", "Jacksonville", "Fort Lauderdale"],
-    "TX": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth"],
-    "IL": ["Chicago"],
-    "AZ": ["Phoenix", "Mesa", "Tucson", "Scottsdale", "Chandler", "Gilbert", "Tempe", "Glendale", "Peoria"],
-    "TX_IL": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "Chicago"],
+    "FL": ["Miami", "Tampa", "Orlando", "Jacksonville", "Fort Lauderdale", "FL"],
+    "TX": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "TX"],
+    "IL": ["Chicago", "IL"],
+    "AZ": ["Phoenix", "Mesa", "Tucson", "Scottsdale", "Chandler", "Gilbert", "Tempe", "Glendale", "Peoria", "AZ"],
+    "TX_IL": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "Chicago", "TX", "IL"],
 }
 
 
