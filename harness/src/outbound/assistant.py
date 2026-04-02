@@ -73,6 +73,7 @@ def _build_shutdown_log() -> str:
     schedule = load_schedule()
     today = date.today()
     metrics = sprint_scoreboard(OUTBOUND_TENANT_ID, today)
+    state = sprint_state.get_current_state()
     week_config = get_week_config(schedule, metrics.get("week", 0)) or {}
     fields = week_config.get("shutdown_fields", [])
     mapping = {
@@ -84,6 +85,23 @@ def _build_shutdown_log() -> str:
         "top_objection": (metrics.get("objection_summary") or [{}])[0].get("type", "---") if metrics.get("objection_summary") else "---",
     }
     lines = [f"- {field}: {mapping.get(field, '---')}" for field in fields]
+
+
+    # Plan-vs-actual: schedule adherence
+    dials_done = int(state.get("dials_completed_today", 0) or 0)
+    dials_target = int(state.get("dials_target_today", 0) or 0)
+    lines.append(f"- progress: {dials_done}/{dials_target} dials")
+
+    try:
+        calls = store.list_outbound_calls(tenant_id=OUTBOUND_TENANT_ID, start_date=today.isoformat())
+        if calls:
+            first_call_at = min(str(c.get("called_at", "")) for c in calls if c.get("called_at"))
+            if first_call_at:
+                lines.append(f"- first_dial: {first_call_at[:16]}")
+    except Exception:
+        pass
+
+
     return "\n".join(lines) if lines else "- dials: 0"
 
 
@@ -114,7 +132,7 @@ def _answer_intent(intent: str) -> str:
             f"{block} Sprint {state.get('sprint_index', 0)} of {state.get('sprints_target_today', 0)}\n"
             f"Segment: {segment}\n"
             f"Queue: {queue.get('total', 0)} leads ({queue.get('summary', '0 callbacks, 0 interested, 0 follow-up, 0 fresh')})\n"
-            f"Target: {state.get('dials_target_today', 0)} dials today\n"
+            f"Progress: {state.get('dials_completed_today', 0)}/{state.get('dials_target_today', 0)} dials today\n"
             f"Next segment: {state.get('next_segment_name') or '—'} ({state.get('minutes_until_next', '—')} min)\n\n"
             f"[Dialer]({dialer_link})\n"
             f"[HUD]({hud_link})\n\n"
@@ -158,6 +176,20 @@ def _answer_intent(intent: str) -> str:
 # ---------------------------------------------------------------------------
 
 TOOL_DEFS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_queue",
+            "description": "Get the current calling queue with deep links to the dialer and HUD. Call this when the user wants to know what to do next, wants to start dialing, or asks about the current block's leads. Returns sprint state, queue breakdown, and clickable links.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "block": {"type": "string", "description": "Optional block override (AM, MID, EOD). Defaults to current block."},
+                },
+                "required": [],
+            },
+        },
+    },
     {
         "type": "function",
         "function": {
@@ -205,10 +237,27 @@ TOOL_DEFS = [
 # Tool Execution
 # ---------------------------------------------------------------------------
 
-def _execute_tool(name: str) -> dict[str, Any]:
+def _execute_tool(name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
     """Execute a tool call and return the result."""
     today = date.today()
     tenant = OUTBOUND_TENANT_ID
+    args = arguments or {}
+
+    if name == "get_current_queue":
+        state = sprint_state.get_current_state()
+        block = args.get("block") or str(state.get("current_block") or state.get("next_block") or "AM")
+        segment = str(state.get("active_segment") or "")
+        queue = queue_builder.build_queue(block=block, segment=segment)
+        dialer_link = _dialer_link(block, segment, "dialer")
+        hud_link = _dialer_link(block, segment, "hud")
+        return {
+            "state": state,
+            "queue_summary": queue.get("summary", ""),
+            "queue_total": queue.get("total", 0),
+            "breakdown": queue.get("breakdown", {}),
+            "dialer_link": dialer_link,
+            "hud_link": hud_link,
+        }
 
     if name == "get_scoreboard":
         return sprint_scoreboard(tenant_id=tenant, today=today)
@@ -313,7 +362,8 @@ def answer_question(question: str) -> str:
     if msg.tool_calls:
         messages.append(msg)
         for tool_call in msg.tool_calls:
-            result = _execute_tool(tool_call.function.name)
+            tool_args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
+            result = _execute_tool(tool_call.function.name, tool_args)
             messages.append({
                 "role": "tool",
                 "tool_call_id": tool_call.id,

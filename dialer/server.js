@@ -146,6 +146,7 @@ async function runExtractionAsync(callSid, transcript, callData) {
       prospect_id: callData.prospectId,
       twilio_call_sid: callSid,
       business_name: callData.businessName || '',
+      outcome: callData.outcome || 'unknown',
       extraction: result.extraction,
       source_version: OUTBOUND_SOURCE_VERSION,
     });
@@ -185,13 +186,17 @@ function readCookie(req, name) {
 
 function validateHudToken(req, res, next) {
   if (!HUD_INTERNAL_TOKEN) {
-    if (NODE_ENV === 'production') {
-      return res.status(500).json({ error: 'HUD auth is not configured' });
-    }
+    console.warn('[auth] HUD_INTERNAL_TOKEN not set — HUD endpoints are unprotected');
     return next();
   }
   const token = req.headers['x-hud-token'] || readCookie(req, 'calllock_hud_token');
-  if (token !== HUD_INTERNAL_TOKEN) {
+  if (!token) {
+    return res.status(403).json({ error: 'Missing HUD token' });
+  }
+  // Constant-time comparison to prevent timing attacks
+  const a = Buffer.from(token);
+  const b = Buffer.from(HUD_INTERNAL_TOKEN);
+  if (a.length !== b.length || !require('crypto').timingSafeEqual(a, b)) {
     return res.status(403).json({ error: 'Invalid HUD token' });
   }
   next();
@@ -418,6 +423,23 @@ async function updateProspectStage(prospectId, outcome, demoScheduled) {
   await supabase.from('outbound_prospects').update(patch).eq('id', prospectId);
 }
 
+// Sprint start date: fetched from harness on startup, hardcoded fallback
+let _sprintStartIso = '2026-03-30';
+async function _fetchSprintStart() {
+  if (!HARNESS_BASE_URL) return;
+  try {
+    const resp = await fetch(`${HARNESS_BASE_URL}/outbound/current-queue?block=AM`, { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      const start = data?.state?.schedule_start;
+      if (start && /^\d{4}-\d{2}-\d{2}$/.test(start)) _sprintStartIso = start;
+    }
+  } catch { /* harness may not be up yet */ }
+}
+_fetchSprintStart();
+setInterval(_fetchSprintStart, 24 * 60 * 60 * 1000);
+
+
 async function buildLocalScoreboard(today = new Date()) {
   if (!supabase) {
     return {
@@ -432,8 +454,7 @@ async function buildLocalScoreboard(today = new Date()) {
   }
 
   const todayIso = today.toISOString().slice(0, 10);
-  // Use sprint start date (Mar 30) instead of month-start to capture all sprint dials
-  const sprintStartIso = '2026-03-30';
+  const sprintStartIso = _sprintStartIso;
   const { data, error } = await supabase.rpc('sprint_scoreboard', {
     p_tenant_id: OUTBOUND_TENANT_ID,
     p_start_date: sprintStartIso,
@@ -543,8 +564,17 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/hud', (_req, res) => {
-  setHudCookie(res);
+app.get('/hud', (req, res) => {
+  // Only set the cookie if the request provides the token via query param
+  // (from a deep link). Don't stamp it on every unauthenticated page load.
+  const tokenParam = req.query.token;
+  if (tokenParam && HUD_INTERNAL_TOKEN) {
+    const a = Buffer.from(tokenParam);
+    const b = Buffer.from(HUD_INTERNAL_TOKEN);
+    if (a.length === b.length && require('crypto').timingSafeEqual(a, b)) {
+      setHudCookie(res);
+    }
+  }
   res.sendFile(path.join(__dirname, 'hud', 'index.html'));
 });
 

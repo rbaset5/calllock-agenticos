@@ -6,6 +6,12 @@ import { createInitialState, hudReducer, bandFromScore } from './reducer.js';
 import { classifyUtterance, shouldCallLlmFallback, isUsableDeterministicResult } from './classifier.js';
 import { captureSession, resetAuditTrail, logDecision, saveSession } from './session.js';
 import { classifyWithLlm } from './llm.js';
+import { assignTone, shouldUpdateTone } from './tone.js';
+import { computeRisk, updateTrajectory } from './risk.js';
+import { composeActiveCard, generateNowSummary } from './composer.js';
+import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
+import { INTENT_STAGE_MAP } from './taxonomy.js';
+import { renderV2CenterPanel, renderProspectContext, renderTacticalCard, renderPauseStrip } from './render-v2.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -22,52 +28,49 @@ let prospectBusiness = '';
 let prospectId = null;
 let callTimerInterval = null;
 let callStartTime = null;
-let lineBankOpen = false;
+let shiftOnlyPressed = false;
+let rounds = [];      // Array of { stage, line, why, source }
+let roundIndex = -1;  // -1 = live/latest
 let sprintContext = null;
 let sprintContextStale = false;
 let sprintContextCachedAt = null;
 let sprintContextTimer = null;
+let pauseStripTimer = null;
+let pauseStripSilenceTimer = null;
 
-// Decision tree navigation: F7 = primary path, F8 = alternate path
+// Decision tree navigation: → = primary path, F10 = alternate path
 const STAGE_TRANSITIONS = {
-  IDLE:        { f7: 'OPENER',    f8: null },
-  GATEKEEPER:  { f7: 'OPENER',    f8: 'EXIT' },
-  OPENER:      { f7: 'BRIDGE',    f8: 'EXIT' },
-  BRIDGE:      { f7: 'QUALIFIER', f8: 'SEED_EXIT' },
-  QUALIFIER:   { f7: 'CLOSE',     f8: 'SEED_EXIT' },
-  CLOSE:       { f7: 'BOOKED',    f8: 'OBJECTION' },
-  OBJECTION:   { f7: 'CLOSE',     f8: 'EXIT' },
-  SEED_EXIT:   { f7: 'EXIT',      f8: null },
-  BOOKED:      { f7: 'EXIT',      f8: null },
-  NON_CONNECT: { f7: 'EXIT',      f8: null },
-  EXIT:        { f7: null,         f8: null },
+  IDLE:              { f7: 'OPENER',    f8: null },
+  GATEKEEPER:        { f7: 'OPENER',    f8: 'EXIT' },
+  OPENER:            { f7: 'BRIDGE',    f8: null },
+  PERMISSION_MOMENT: { f7: 'BRIDGE',    f8: 'EXIT' },
+  MINI_PITCH:        { f7: 'BRIDGE',    f8: 'EXIT' },
+  WRONG_PERSON:      { f7: 'EXIT',      f8: 'GATEKEEPER' },
+  BRIDGE:            { f7: 'QUALIFIER', f8: null },
+  QUALIFIER:         { f7: 'CLOSE',     f8: 'SEED_EXIT' },
+  PRICING:           { f7: 'QUALIFIER', f8: 'EXIT' },
+  CLOSE:             { f7: 'BOOKED',    f8: 'OBJECTION' },
+  OBJECTION:         { f7: 'CLOSE',     f8: 'EXIT' },
+  SEED_EXIT:         { f7: 'EXIT',      f8: null },
+  BOOKED:            { f7: 'EXIT',      f8: null },
+  NON_CONNECT:       { f7: 'EXIT',      f8: null },
+  EXIT:              { f7: null,         f8: null },
 };
 
-// Stage hints shown in the why text after manual navigation
-const STAGE_HINTS = {
-  IDLE:        'F7 to start call',
-  GATEKEEPER:  'F7 got owner · F8 not available',
-  OPENER:      'F7 when they respond · F8 dead end',
-  BRIDGE:      'F7 after bridge line · F8 no pain → seed exit',
-  QUALIFIER:   'F7 pain → close · F8 no pain → exit',
-  CLOSE:       'F7 yes! → booked · F8 objection · H hedge',
-  OBJECTION:   'F7 try close · F8 give up · 1-4 new objection',
-  SEED_EXIT:   'F7 wrap up',
-  BOOKED:      'F7 call done',
-  NON_CONNECT: 'F7 after voicemail',
-  EXIT:        'Call complete',
-};
-
-// Linear ordering for F6 (back) only — IDLE excluded (F7 from IDLE → OPENER is one-way)
-const NAV_STAGES = ['GATEKEEPER', 'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION'];
+// Linear ordering for ← (back) only — IDLE excluded (→ from IDLE → OPENER is one-way)
+const NAV_STAGES = ['GATEKEEPER', 'OPENER', 'PERMISSION_MOMENT', 'MINI_PITCH', 'WRONG_PERSON', 'BRIDGE', 'QUALIFIER', 'PRICING', 'CLOSE', 'OBJECTION'];
 
 // Stage display labels for the pill bar
 const STAGE_DISPLAY = [
   { key: 'IDLE', label: 'IDLE' },
   { key: 'GATEKEEPER', label: 'GK' },
   { key: 'OPENER', label: 'OPEN' },
+  { key: 'PERMISSION_MOMENT', label: 'PERM' },
+  { key: 'MINI_PITCH', label: 'MINI' },
+  { key: 'WRONG_PERSON', label: 'WRONG' },
   { key: 'BRIDGE', label: 'BRIDGE' },
   { key: 'QUALIFIER', label: 'QUAL' },
+  { key: 'PRICING', label: 'PRICE' },
   { key: 'CLOSE', label: 'CLOSE' },
   { key: 'OBJECTION', label: 'OBJ' },
 ];
@@ -84,15 +87,74 @@ const $previewHint = document.getElementById('previewHint');
 const $nowLine = document.getElementById('nowLine');
 const $nowWhy = document.getElementById('nowWhy');
 const $confidenceBadge = document.getElementById('confidenceBadge');
-const $transcriptFeed = document.getElementById('transcriptFeed');
+const $linesFeed = document.getElementById('linesFeed');
+const $objectionsFeed = document.getElementById('objectionsFeed');
+const $roundStrip = document.getElementById('roundStrip');
+
+// ── Pause strip ──────────────────────────────────────────────
+
+function activatePauseStrip() {
+  renderPauseStrip(true, '\u23F8 PAUSE \u00B7 Let them answer \u00B7 Classify their response type');
+  clearTimeout(pauseStripTimer);
+  // Silence nudge fires at 5s, dim fires at 8s (nudge must come first)
+  clearTimeout(pauseStripSilenceTimer);
+  pauseStripSilenceTimer = setTimeout(() => {
+    const el = document.getElementById('v2-pause-strip');
+    if (el) el.textContent = '\u23F8 Hold. Let them answer.';
+  }, 5000);
+  pauseStripTimer = setTimeout(() => {
+    const el = document.getElementById('v2-pause-strip');
+    if (el) el.classList.add('dimmed');
+  }, 8000);
+}
+
+function deactivatePauseStrip() {
+  clearTimeout(pauseStripTimer);
+  clearTimeout(pauseStripSilenceTimer);
+  const el = document.getElementById('v2-pause-strip');
+  if (el) el.classList.add('dimmed');
+}
+
+// ── Transcript health ─────────────────────────────────────────
+
+let transcriptHealthTimer = null;
+
+function startTranscriptHealthWatch() {
+  clearTimeout(transcriptHealthTimer);
+  transcriptHealthTimer = setTimeout(() => {
+    const el = document.getElementById('v2-transcript-health');
+    if (el) {
+      el.textContent = 'TRANSCRIPT LAG';
+      el.className = 'v2-transcript-health stale';
+    }
+  }, 3000);
+}
+
+function resetTranscriptHealth() {
+  clearTimeout(transcriptHealthTimer);
+  const el = document.getElementById('v2-transcript-health');
+  if (el) {
+    el.textContent = '';
+    el.className = 'v2-transcript-health';
+  }
+  // Restart the watch if call is active
+  if (state.callId && !state.ended) {
+    startTranscriptHealthWatch();
+  }
+}
 
 // ── Dispatch ───────────────────────────────────────────────────
 
 function dispatch(action) {
   const prevState = state;
   state = hudReducer(state, action, PLAYBOOK);
-  if (state.stage !== prevState.stage || state.stage === 'IDLE') {
-    lineBankOpen = false;
+  if (state.stage !== prevState.stage && state.stage !== 'IDLE') {
+    // Keep round history across stage changes (Option B from plan)
+    roundIndex = -1;
+    activatePauseStrip();
+  }
+  if (action.type === 'TRANSCRIPT_FINAL') {
+    deactivatePauseStrip();
   }
   logDecision(action, prevState, state);
   render();
@@ -129,18 +191,24 @@ channel.addEventListener('message', (event) => {
       });
 
       startCallTimer();
+      startTranscriptHealthWatch();
+
+      // v2: populate prospect context if available
+      if (msg.prospectContext) {
+        dispatch({ type: 'SET_PROSPECT_CONTEXT', callSid: msg.callSid, prospectContext: msg.prospectContext });
+      }
+      renderProspectContext(msg.prospectContext || null);
       break;
     }
 
     case 'TRANSCRIPT': {
       // Validate callSid to prevent cross-call bleed
       if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
+      resetTranscriptHealth();
       if (!msg.isFinal) {
         handleInterimTranscript(msg);
       } else if (msg.speaker === 'prospect') {
         handleFinalProspectTranscript(msg);
-      } else {
-        addTranscriptTurn('REP', msg.text, msg.atMs);
       }
       break;
     }
@@ -159,6 +227,7 @@ channel.addEventListener('message', (event) => {
 
     case 'CALL_ENDED': {
       if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
+      clearTimeout(transcriptHealthTimer);
       dispatch({
         type: 'END_CALL',
         callSid: state.callId,
@@ -287,8 +356,6 @@ async function loadSprintContext() {
 }
 
 function handleFinalProspectTranscript(msg) {
-  addTranscriptTurn('PROSPECT', msg.text, msg.atMs);
-
   // Clear preview
   $previewHint.textContent = '';
 
@@ -313,6 +380,8 @@ function handleFinalProspectTranscript(msg) {
       seq: msg.seq,
       atMs: msg.atMs || Date.now(),
     });
+    // v2: run turn lifecycle after dispatch updates state
+    processTurn(msg.text, result);
   } else {
     // Low confidence: add transcript but don't change state
     dispatch({
@@ -323,6 +392,8 @@ function handleFinalProspectTranscript(msg) {
       seq: msg.seq,
       atMs: msg.atMs || Date.now(),
     });
+    // v2: run turn lifecycle even for low-confidence (tone/risk still useful)
+    processTurn(msg.text, result);
 
     // Try LLM fallback
     if (shouldCallLlmFallback(result)) {
@@ -332,20 +403,26 @@ function handleFinalProspectTranscript(msg) {
 }
 
 async function triggerLlmFallback(utterance, utteranceId, seq) {
+  // Capture state BEFORE await to prevent cross-call bleed if a new call
+  // arrives while the LLM request is in-flight.
+  const capturedCallId = state.callId;
+  const capturedStage = state.stage;
+  const capturedContext = {
+    bridgeAngle: state.bridgeAngle,
+    lastObjectionBucket: state.lastObjectionBucket,
+  };
+
   const result = await classifyWithLlm(
     utterance,
-    state.stage,
-    {
-      bridgeAngle: state.bridgeAngle,
-      lastObjectionBucket: state.lastObjectionBucket,
-    },
+    capturedStage,
+    capturedContext,
     utteranceId,
   );
 
   if (result) {
     dispatch({
       type: 'LLM_RESULT',
-      callSid: state.callId,
+      callSid: capturedCallId,
       utteranceId,
       seq,
       result: {
@@ -359,7 +436,7 @@ async function triggerLlmFallback(utterance, utteranceId, seq) {
   } else {
     dispatch({
       type: 'LLM_FAILED',
-      callSid: state.callId,
+      callSid: capturedCallId,
       atMs: Date.now(),
     });
   }
@@ -382,41 +459,6 @@ function formatPreviewHint(result) {
   return parts.length > 0 ? 'likely: ' + parts.join(', ') : '';
 }
 
-// ── Transcript feed ────────────────────────────────────────────
-
-function addTranscriptTurn(speaker, text, atMs) {
-  const el = document.createElement('div');
-  el.className = 'transcript-turn';
-
-  const speakerEl = document.createElement('span');
-  speakerEl.className = 'speaker ' + (speaker === 'PROSPECT' ? 'prospect' : 'rep');
-  speakerEl.textContent = speaker;
-
-  const textEl = document.createElement('span');
-  textEl.className = 'text' + (speaker === 'PROSPECT' ? ' prospect-text' : '');
-  textEl.textContent = text;
-
-  const tsEl = document.createElement('span');
-  tsEl.className = 'ts';
-  tsEl.textContent = atMs ? formatTimestamp(atMs) : '';
-
-  el.appendChild(speakerEl);
-  el.appendChild(document.createTextNode(' '));
-  el.appendChild(textEl);
-  el.appendChild(tsEl);
-
-  $transcriptFeed.appendChild(el);
-  $transcriptFeed.scrollTop = $transcriptFeed.scrollHeight;
-}
-
-function formatTimestamp(atMs) {
-  if (!callStartTime) return '';
-  const elapsed = Math.floor((atMs - callStartTime) / 1000);
-  if (elapsed < 0) return '';
-  const m = Math.floor(elapsed / 60);
-  const s = elapsed % 60;
-  return m + ':' + String(s).padStart(2, '0');
-}
 
 // ── Call timer ─────────────────────────────────────────────────
 
@@ -443,32 +485,14 @@ function stopCallTimer() {
 document.addEventListener('keydown', (e) => {
   const now = Date.now();
 
+  // Track whether Shift is being used solo or as a modifier
+  if (e.key === 'Shift') { shiftOnlyPressed = true; return; }
+  if (e.shiftKey) { shiftOnlyPressed = false; }
+
   switch (true) {
-    // Escape — Close line bank
-    case e.key === 'Escape': {
-      if (!lineBankOpen) return;
+    // F9 — Non-connect
+    case e.key === 'F9': {
       e.preventDefault();
-      lineBankOpen = false;
-      render();
-      break;
-    }
-
-    // Tab — Toggle line bank
-    case e.key === 'Tab': {
-      const pickerVisible = state.stage === 'OBJECTION' && !state.lastObjectionBucket;
-      if (state.stage === 'IDLE' || pickerVisible) return;
-      e.preventDefault();
-      const stageLines = linesForStage(state.stage, PLAYBOOK);
-      if (!stageLines.length) return;
-      lineBankOpen = !lineBankOpen;
-      render();
-      break;
-    }
-
-    // F4 — Non-connect
-    case e.key === 'F4': {
-      e.preventDefault();
-      lineBankOpen = false;
       dispatch({
         type: 'MANUAL_NON_CONNECT',
         callSid: state.callId,
@@ -477,12 +501,27 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // F6 — Stage back (for corrections)
-    case e.key === 'F6': {
+    // Space — Custom round bookmark (off-script response)
+    case e.key === ' ' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      if (['IDLE', 'EXIT', 'ENDED', 'BOOKED'].includes(state.stage)) return;
       e.preventDefault();
-      lineBankOpen = false;
-      // For stages in NAV_STAGES, go to previous index.
-      // For terminal/branch stages, go to their logical parent:
+      recordRound('CUSTOM', 'off-script', 'custom');
+      break;
+    }
+
+    // ← — Step back through rounds, then go back a stage
+    case e.key === 'ArrowLeft': {
+      e.preventDefault();
+      const effectiveIdx = roundIndex === -1 ? rounds.length - 1 : roundIndex;
+      if (rounds.length > 0 && effectiveIdx > 0) {
+        roundIndex = effectiveIdx - 1;
+        const round = rounds[roundIndex];
+        $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
+        $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
+        renderRoundStrip();
+        return;
+      }
+      // No more rounds — go back a stage
       const BACK_MAP = {
         BOOKED:      'CLOSE',
         SEED_EXIT:   'QUALIFIER',
@@ -506,10 +545,22 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // F7 — Primary path forward (follows decision tree)
-    case e.key === 'F7': {
+    // → — Step forward through rounds, then advance stage
+    case e.key === 'ArrowRight': {
       e.preventDefault();
-      lineBankOpen = false;
+      if (roundIndex !== -1 && roundIndex < rounds.length - 1) {
+        roundIndex++;
+        const round = rounds[roundIndex];
+        $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
+        $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
+        renderRoundStrip();
+        return;
+      }
+      if (roundIndex !== -1) {
+        roundIndex = -1; // Return to live
+        render();
+        return;
+      }
       const nextStage = STAGE_TRANSITIONS[state.stage]?.f7;
       if (!nextStage) break;
       dispatch({
@@ -521,10 +572,9 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // F8 — Alternate path (branch in decision tree)
-    case e.key === 'F8': {
+    // F10 — Alternate path (branch in decision tree)
+    case e.key === 'F10': {
       e.preventDefault();
-      lineBankOpen = false;
       const altStage = STAGE_TRANSITIONS[state.stage]?.f8;
       if (!altStage) break;
       dispatch({
@@ -538,8 +588,9 @@ document.addEventListener('keydown', (e) => {
 
     // 1-3 — Context-sensitive: bridge angles (BRIDGE/OPENER) or objections (CLOSE/OBJECTION)
     case e.key === '1' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages1 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages1.includes(state.stage)) break;
       e.preventDefault();
-      lineBankOpen = false;
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'missed_calls', atMs: now });
       } else {
@@ -549,8 +600,9 @@ document.addEventListener('keydown', (e) => {
     }
 
     case e.key === '2' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages2 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages2.includes(state.stage)) break;
       e.preventDefault();
-      lineBankOpen = false;
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'competition', atMs: now });
       } else {
@@ -560,8 +612,9 @@ document.addEventListener('keydown', (e) => {
     }
 
     case e.key === '3' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages3 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages3.includes(state.stage)) break;
       e.preventDefault();
-      lineBankOpen = false;
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'overwhelmed', atMs: now });
       } else {
@@ -572,16 +625,16 @@ document.addEventListener('keydown', (e) => {
 
     // 4 — Objection: authority (only in CLOSE/OBJECTION)
     case e.key === '4' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages4 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages4.includes(state.stage)) break;
       e.preventDefault();
-      lineBankOpen = false;
       dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
       break;
     }
 
-    // Shift+F11 — Reset
-    case e.key === 'F11' && e.shiftKey: {
+    // Shift+F1 — Reset
+    case (e.key === 'F1' && e.shiftKey): {
       e.preventDefault();
-      lineBankOpen = false;
       dispatch({
         type: 'END_CALL',
         callSid: state.callId,
@@ -592,7 +645,8 @@ document.addEventListener('keydown', (e) => {
       // Reset after brief delay
       setTimeout(() => {
         resetAuditTrail();
-        $transcriptFeed.textContent = '';
+        rounds = [];
+        roundIndex = -1;
         prospectName = '';
         prospectBusiness = '';
         prospectId = null;
@@ -606,20 +660,95 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // H — Hedge (CLOSE or OBJECTION stage)
-    case (e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      if (state.stage !== 'CLOSE' && state.stage !== 'OBJECTION') return;
-      e.preventDefault();
-      lineBankOpen = false;
-      dispatch({
-        type: 'HEDGE_REQUESTED',
-        callSid: state.callId,
-        atMs: now,
-      });
-      break;
-    }
   }
 });
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Shift' && shiftOnlyPressed) {
+    shiftOnlyPressed = false;
+    if (state.stage !== 'CLOSE' && state.stage !== 'OBJECTION') return;
+    dispatch({ type: 'HEDGE_REQUESTED', callSid: state.callId, atMs: Date.now() });
+    return;
+  }
+  shiftOnlyPressed = false;
+});
+
+
+// ── v2 Turn Orchestrator ──────────────────────────────────────
+
+/**
+ * v2 Turn lifecycle orchestrator (spec Section 27).
+ * Runs the full pipeline: classify → tone → risk → route → summary → compose → render → log
+ * Called after classifyUtterance returns for a final prospect transcript.
+ *
+ * @param {string} utterance - the prospect's utterance text
+ * @param {object} classification - result from classifyUtterance
+ */
+function processTurn(utterance, classification) {
+  // Step 1: classification already done by caller
+
+  // Step 2: Assign tone (rules-based)
+  const toneResult = assignTone(utterance, {
+    primaryIntent: classification.detectedIntent || classification.bridgeAngle || classification.objectionBucket || null,
+  }, state.stage);
+
+  // Apply hysteresis - only update if threshold crossed
+  const currentTone = { tone_label: state.tone, tone_confidence: state.toneConfidence };
+  if (shouldUpdateTone(currentTone, toneResult, state._consecutiveToneCount || 0)) {
+    dispatch({
+      type: 'SET_TONE',
+      callSid: state.callId,
+      tone: toneResult.tone_label,
+      toneSource: toneResult.tone_source,
+      toneConfidence: toneResult.tone_confidence,
+    });
+    state._consecutiveToneCount = 0;
+  } else if (toneResult.tone_label === state._lastCandidateTone) {
+    state._consecutiveToneCount = (state._consecutiveToneCount || 0) + 1;
+  } else {
+    state._consecutiveToneCount = 0;
+  }
+  state._lastCandidateTone = toneResult.tone_label;
+
+  // Step 3: Update trajectory and compute risk (for objection-eligible stages)
+  const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || null;
+  if (primaryIntent) {
+    const classObj = {
+      primary: { intent: primaryIntent },
+      compound: false, // single-label for now, compound comes in Task 17
+      utterance: utterance,
+    };
+    const wasSalvage = state.stage === 'OBJECTION' && state.trajectory.turnsInCurrentStage > 0;
+    const newTrajectory = updateTrajectory(state.trajectory, classObj, state.stage, wasSalvage);
+    const risk = computeRisk(newTrajectory, classObj);
+
+    // Update state trajectory and risk (direct mutation for non-reducer fields)
+    state.trajectory = newTrajectory;
+    state.risk = risk;
+    state.primaryIntent = primaryIntent;
+  }
+
+  // Step 4: Check for dedicated stage routing via INTENT_STAGE_MAP
+  if (classification.detectedIntent && INTENT_STAGE_MAP[classification.detectedIntent]) {
+    const targetStage = INTENT_STAGE_MAP[classification.detectedIntent];
+    if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
+      dispatch({ type: 'PRICING_INTERRUPT', callSid: state.callId });
+    } else if (targetStage === 'MINI_PITCH' && state.stage !== 'MINI_PITCH') {
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now() });
+    } else if (targetStage === 'WRONG_PERSON' && state.stage !== 'WRONG_PERSON') {
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now() });
+    }
+  }
+
+  // Step 5: Generate NOW summary
+  state.nowSummary = generateNowSummary({
+    primaryIntent: primaryIntent,
+    tone: state.tone,
+    toneConfidence: state.toneConfidence,
+  });
+
+  // Steps 6-8 (compose + render + log) happen in render() which is called by dispatch
+}
 
 // ── Render ─────────────────────────────────────────────────────
 
@@ -647,26 +776,34 @@ function render() {
   renderStageBar();
   renderContextStrip();
 
+  // Side panels
+  renderLinesPanel();
+  renderObjectionsPanel();
+  renderRoundStrip();
+
   // NOW panel
   $nowPanel.setAttribute('data-stage', state.stage);
   renderObjectionPicker();
-  $nowLine.textContent = state.now?.line || 'Waiting for call...';
-  $nowWhy.textContent = state.now?.why || '';
-  renderLineBank();
+  if (roundIndex === -1) {
+    $nowLine.textContent = state.now?.line || 'Waiting for call...';
+    $nowWhy.textContent = state.now?.why || '';
+  }
 
   // Confidence badge
   renderConfidenceBadge();
 
-  // Dynamic hotkey labels: 1-3 change meaning at BRIDGE/OPENER vs CLOSE/OBJECTION
-  const isBridge = state.stage === 'BRIDGE' || state.stage === 'OPENER';
-  const $hk1 = document.getElementById('hk1');
-  const $hk2 = document.getElementById('hk2');
-  const $hk3 = document.getElementById('hk3');
-  const $hk4 = document.getElementById('hk4');
-  if ($hk1) $hk1.innerHTML = `<kbd>1</kbd> ${isBridge ? 'Missed' : 'Timing'}`;
-  if ($hk2) $hk2.innerHTML = `<kbd>2</kbd> ${isBridge ? 'Comp' : 'Interest'}`;
-  if ($hk3) $hk3.innerHTML = `<kbd>3</kbd> ${isBridge ? 'Overwhelm' : 'Info'}`;
-  if ($hk4) $hk4.style.opacity = isBridge ? '0.3' : '1';
+  // v2 center panel render
+  const activeCard = composeActiveCard({
+    stage: state.stage,
+    activeObjection: state.activeObjection,
+    tone: state.tone,
+    deliveryModifier: state.deliveryModifier,
+    stageCards: NATIVE_STAGE_CARDS,
+    objectionCards: NATIVE_OBJECTION_CARDS,
+  });
+  renderV2CenterPanel(activeCard, state);
+  renderTacticalCard(activeCard);
+
 }
 
 function renderContextStrip() {
@@ -730,8 +867,13 @@ const OBJECTION_CARDS = [
   { key: '4', bucket: 'authority', name: 'Authority', cues: '"not my decision, wife handles, partner"' },
 ];
 
+const BRIDGE_CARDS = [
+  { key: '1', action: 'missed_calls', name: 'Missed', cues: 'voicemail, callback, wife, office' },
+  { key: '2', action: 'competition', name: 'Comp', cues: 'slow, growth, competitor, losing' },
+  { key: '3', action: 'overwhelmed', name: 'Overwhelm', cues: 'busy, stretched, do it all, rushed' },
+];
+
 let $objectionPicker = null;
-let $lineBank = null;
 
 function renderObjectionPicker() {
   // Show picker when stage is OBJECTION and no bucket selected yet
@@ -777,36 +919,36 @@ function renderObjectionPicker() {
   }
 }
 
-function renderLineBank() {
-  const pickerVisible = state.stage === 'OBJECTION' && !state.lastObjectionBucket;
+// ── Side panel renderers ───────────────────────────────────────
+
+function renderLinesPanel() {
+  if (!$linesFeed) return;
+  $linesFeed.replaceChildren();
+
   const stageLines = linesForStage(state.stage, PLAYBOOK);
-  const showLineBank = lineBankOpen && state.stage !== 'IDLE' && !pickerVisible && stageLines.length > 0;
-
-  if (!showLineBank) {
-    if ($lineBank) {
-      $lineBank.remove();
-      $lineBank = null;
-    }
-    return;
+  if (stageLines.length) {
+    $linesFeed.appendChild(buildSidePanelSection('CURRENT STAGE', stageLines, 'stage', 'lines'));
   }
-
-  if ($lineBank) {
-    $lineBank.remove();
-    $lineBank = null;
-  }
-
-  $lineBank = document.createElement('div');
-  $lineBank.className = 'line-bank';
-
-  $lineBank.appendChild(buildLineBankSection('CURRENT STAGE', stageLines, 'stage'));
   if (PLAYBOOK.powerLines?.length) {
-    $lineBank.appendChild(buildLineBankSection('POWER LINES', PLAYBOOK.powerLines, 'power'));
+    $linesFeed.appendChild(buildSidePanelSection('POWER LINES', PLAYBOOK.powerLines, 'power', 'lines'));
   }
-
-  $nowPanel.appendChild($lineBank);
+  if (PLAYBOOK.recoveryLines?.length) {
+    $linesFeed.appendChild(buildSidePanelSection('RECOVERY', PLAYBOOK.recoveryLines, 'recovery', 'lines'));
+  }
 }
 
-function buildLineBankSection(title, entries, kind) {
+function renderObjectionsPanel() {
+  if (!$objectionsFeed) return;
+  $objectionsFeed.replaceChildren();
+
+  const entries = Object.entries(PLAYBOOK.objections).map(([bucket, data]) => ({
+    label: `${bucket.toUpperCase()} — ${data.keywords.slice(0, 3).join(', ')}`,
+    line: data.reset,
+  }));
+  $objectionsFeed.appendChild(buildSidePanelSection('OBJECTION RESETS', entries, 'objection', 'objection'));
+}
+
+function buildSidePanelSection(title, entries, kind, source) {
   const section = document.createElement('div');
   section.className = 'line-bank-section';
 
@@ -831,11 +973,12 @@ function buildLineBankSection(title, entries, kind) {
     row.appendChild(label);
     row.appendChild(text);
     row.addEventListener('click', () => {
-      lineBankOpen = false;
+      const filledLine = fillLineTemplate(entry.line, currentLineContext());
+      recordRound(filledLine, entry.label || entry.tag, source);
       dispatch({
         type: 'LINE_BANK_SELECT',
         callSid: state.callId,
-        line: fillLineTemplate(entry.line, currentLineContext()),
+        line: filledLine,
         atMs: Date.now(),
       });
     });
@@ -844,6 +987,48 @@ function buildLineBankSection(title, entries, kind) {
 
   return section;
 }
+
+// ── Round history ──────────────────────────────────────────────
+
+function recordRound(line, why, source) {
+  if (roundIndex !== -1) {
+    rounds = rounds.slice(0, roundIndex + 1);
+  }
+  rounds.push({ stage: state.stage, line, why, source });
+  roundIndex = -1;
+  renderRoundStrip();
+}
+
+function renderRoundStrip() {
+  if (!$roundStrip) return;
+  $roundStrip.replaceChildren();
+
+  const effectiveIndex = roundIndex === -1 ? rounds.length - 1 : roundIndex;
+
+  rounds.forEach((round, i) => {
+    const bubble = document.createElement('div');
+    bubble.className = 'round-bubble';
+
+    if (i === effectiveIndex && rounds.length > 0) {
+      bubble.classList.add('current');
+    } else if (i < effectiveIndex) {
+      bubble.classList.add('past');
+    }
+
+    bubble.textContent = round.source === 'custom' ? '\u2726' : String(i + 1);
+    bubble.title = round.line === 'CUSTOM' ? 'Off-script' : round.line;
+
+    bubble.addEventListener('click', () => {
+      roundIndex = i;
+      $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
+      $nowWhy.textContent = `Round ${i + 1} \u2014 ${round.source}`;
+      renderRoundStrip();
+    });
+
+    $roundStrip.appendChild(bubble);
+  });
+}
+
 
 function currentLineContext() {
   return {

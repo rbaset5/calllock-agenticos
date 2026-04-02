@@ -271,6 +271,17 @@ if FastAPI:
     else:
         logging.getLogger(__name__).info("Discord bot not started (DISCORD_BOT_TOKEN not set)")
 
+    # Start iMessage reply watcher in background thread
+    try:
+        from outbound.reply_watcher import start_watcher
+        started = start_watcher()
+        if started:
+            logging.getLogger(__name__).info("iMessage reply watcher started")
+        else:
+            logging.getLogger(__name__).info("iMessage reply watcher already running")
+    except Exception:
+        logging.getLogger(__name__).info("iMessage reply watcher not started (missing deps or not on macOS)")
+
     @app.get("/health")
     def health() -> dict[str, Any]:
         return health_dependencies()
@@ -614,6 +625,17 @@ if FastAPI:
             exclude_dialed=exclude_dialed,
         )
         return {"state": state, "queue": queue}
+
+    @app.post("/outbound/followup-send")
+    async def outbound_followup_send(request: Request) -> dict[str, Any]:
+        validate_event_auth(request)
+        body = await request.json()
+        from outbound.followup import emit_followup_text
+        return emit_followup_text(
+            prospect_id=body["prospect_id"],
+            outcome=body.get("outcome", "unknown"),
+            extraction_data=body.get("extraction_data"),
+        )
 
     @app.post("/outbound/lifecycle-run")
     def outbound_lifecycle_run(request: Request) -> dict[str, Any]:

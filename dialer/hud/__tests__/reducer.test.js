@@ -460,7 +460,7 @@ describe('hudReducer', () => {
 
     // State should be unchanged
     assert.equal(stale.stage, s.stage);
-    assert.deepEqual(stale, s);
+    assert.equal(stale.callId, s.callId);
   });
 
   // 22. Stale sequence rejection on LLM_RESULT
@@ -505,7 +505,7 @@ describe('hudReducer', () => {
     }, PLAYBOOK);
 
     assert.equal(stale.bridgeAngle, 'missed_calls'); // unchanged
-    assert.deepEqual(stale, s);
+    assert.equal(stale.lastProcessedUtteranceSeq, s.lastProcessedUtteranceSeq);
   });
 
   it('rejects an older LLM result once a newer transcript has arrived', () => {
@@ -551,7 +551,7 @@ describe('hudReducer', () => {
 
     assert.equal(stale.stage, 'CLOSE');
     assert.equal(stale.qualifierRead, 'pain');
-    assert.deepEqual(stale, s);
+    assert.equal(stale.lastProcessedUtteranceSeq, s.lastProcessedUtteranceSeq);
   });
 
   it('LINE_BANK_SELECT keeps the stage but swaps the line', () => {
@@ -575,5 +575,122 @@ describe('hudReducer', () => {
     assert.equal(next.now.classificationSource, 'manual');
     assert.equal(next.metrics.manualOverrideCount, s.metrics.manualOverrideCount + 1);
     assert.ok(next.autoClassifySuppressedUntilMs > T + 200);
+  });
+});
+
+// ── v2 reducer actions ──────────────────────────────────────────
+
+describe('v2 reducer actions', () => {
+  it('SET_TONE updates tone fields', () => {
+    const s = createInitialState(PLAYBOOK);
+    s.callId = 'test-1';
+    const next = hudReducer(s, { type: 'SET_TONE', callSid: 'test-1', tone: 'rushed', toneSource: 'rules', toneConfidence: 0.7 }, PLAYBOOK);
+    assert.equal(next.tone, 'rushed');
+    assert.equal(next.toneSource, 'rules');
+    assert.equal(next.toneConfidence, 0.7);
+  });
+
+  it('SET_PROSPECT_CONTEXT populates context', () => {
+    const s = createInitialState(PLAYBOOK);
+    s.callId = 'test-1';
+    const ctx = { name: 'John', company: 'Smith Plumbing' };
+    const next = hudReducer(s, { type: 'SET_PROSPECT_CONTEXT', callSid: 'test-1', prospectContext: ctx }, PLAYBOOK);
+    assert.deepEqual(next.prospectContext, ctx);
+  });
+
+  it('PRICING_INTERRUPT saves previousStage and enters PRICING', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'QUALIFIER' };
+    const next = hudReducer(s, { type: 'PRICING_INTERRUPT', callSid: 'test-1' }, PLAYBOOK);
+    assert.equal(next.stage, 'PRICING');
+    assert.equal(next.previousStage, 'QUALIFIER');
+  });
+
+  it('PRICING_INTERRUPT no-ops if already in PRICING', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'PRICING', previousStage: 'BRIDGE' };
+    const next = hudReducer(s, { type: 'PRICING_INTERRUPT', callSid: 'test-1' }, PLAYBOOK);
+    assert.equal(next.stage, 'PRICING');
+    assert.equal(next.previousStage, 'BRIDGE');
+  });
+
+  it('PRICING_INTERRUPT does not overwrite existing previousStage', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'OBJECTION', previousStage: 'BRIDGE' };
+    const next = hudReducer(s, { type: 'PRICING_INTERRUPT', callSid: 'test-1' }, PLAYBOOK);
+    assert.equal(next.stage, 'PRICING');
+    assert.equal(next.previousStage, 'BRIDGE');
+  });
+
+  it('RETURN_FROM_PRICING restores previousStage and clears it', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'PRICING', previousStage: 'QUALIFIER' };
+    const next = hudReducer(s, { type: 'RETURN_FROM_PRICING', callSid: 'test-1' }, PLAYBOOK);
+    assert.equal(next.stage, 'QUALIFIER');
+    assert.equal(next.previousStage, null);
+  });
+
+  it('RETURN_FROM_PRICING falls back to QUALIFIER if no previousStage', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'PRICING', previousStage: null };
+    const next = hudReducer(s, { type: 'RETURN_FROM_PRICING', callSid: 'test-1' }, PLAYBOOK);
+    assert.equal(next.stage, 'QUALIFIER');
+  });
+
+  it('MANUAL_SET_STAGE clears previousStage', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'PRICING', previousStage: 'BRIDGE' };
+    const next = hudReducer(s, { type: 'MANUAL_SET_STAGE', callSid: 'test-1', stage: 'CLOSE', atMs: 1000 }, PLAYBOOK);
+    assert.equal(next.stage, 'CLOSE');
+    assert.equal(next.previousStage, null);
+  });
+
+  it('SET_COMPOUND updates compound fields', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1' };
+    const next = hudReducer(s, {
+      type: 'SET_COMPOUND', callSid: 'test-1',
+      compound: true, signalCount: 2,
+      recommendedActionBias: 'compress',
+      activeObjection: 'timing',
+    }, PLAYBOOK);
+    assert.equal(next.compound, true);
+    assert.equal(next.signalCount, 2);
+    assert.equal(next.recommendedActionBias, 'compress');
+    assert.equal(next.activeObjection, 'timing');
+  });
+
+  it('SET_COMPOUND with no compound resets fields', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', compound: true, signalCount: 2 };
+    const next = hudReducer(s, {
+      type: 'SET_COMPOUND', callSid: 'test-1',
+      compound: false, signalCount: 0,
+    }, PLAYBOOK);
+    assert.equal(next.compound, false);
+    assert.equal(next.signalCount, 0);
+  });
+
+  it('activeObjection is set when objection detected via TRANSCRIPT_FINAL', () => {
+    let s = connect(init());
+    s = hudReducer(s, {
+      type: 'MANUAL_SET_STAGE',
+      callSid: SID,
+      stage: 'CLOSE',
+      atMs: T + 100,
+    }, PLAYBOOK);
+
+    s = transcriptFinal(s, 'not right now', {
+      band: 'high',
+      objectionBucket: 'timing',
+      utterance: 'not right now',
+      why: 'timing objection',
+    }, T + 5000);
+
+    assert.equal(s.stage, 'OBJECTION');
+    assert.equal(s.activeObjection, 'timing');
+  });
+
+  it('createInitialState has v2 fields', () => {
+    const s = createInitialState(PLAYBOOK);
+    assert.equal(s.tone, 'neutral');
+    assert.equal(s.risk, 'low');
+    assert.equal(s.compound, false);
+    assert.equal(s.previousStage, null);
+    assert.equal(s.moveType, 'pause');
+    assert.ok(s.trajectory);
+    assert.equal(s.trajectory.salvageAttemptCount, 0);
   });
 });

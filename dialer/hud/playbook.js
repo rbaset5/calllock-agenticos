@@ -41,6 +41,18 @@ export const PLAYBOOK = {
   textB:
     'Hey {NAME} — quick question: when a call comes in while you\'re on a job, what happens to it?',
 
+  // ── Pitch lines (what CallLock does — any stage) ────────────────
+
+  pitchLines: {
+    elevator:
+      'We built an AI that answers your phones when you\'re on a job — qualifies the caller, and books the appointment directly to your calendar.',
+    howItWorks:
+      'When a call comes in and you can\'t pick up, it answers live — not voicemail. It asks them what they need, where they\'re located, gets their info, and books them in. You see it in your calendar. Customer got taken care of. You never knew you missed a call.',
+    whyYouNeed:
+      'Most of my guys tell me they\'re losing 2-3 calls a week they never call back in time. At your average ticket that\'s a few thousand dollars a month just disappearing. This is the fix for that.',
+  },
+
+
   // ── Bridge angles ───────────────────────────────────────────────
 
   bridge: {
@@ -136,6 +148,15 @@ export const PLAYBOOK = {
       line: 'What would have to be true for this to be worth 15 minutes?',
     },
   ],
+
+  recoveryLines: [
+    { tag: 'buy-time', line: "That's a great question." },
+    { tag: 'acknowledge', line: 'I hear you.' },
+    { tag: 'validate', line: 'Totally fair.' },
+    { tag: 'social-proof', line: 'Most guys I talk to say the same thing at first.' },
+    { tag: 'redirect', line: "What would make this worth your time?" },
+    { tag: 'reframe', line: 'Let me ask you this—' },
+  ],
 };
 
 // ── Line resolution helpers ─────────────────────────────────────
@@ -178,16 +199,20 @@ export function resolveBridgeLine(classification, playbook) {
  */
 export function lineForStage(stage, playbook) {
   switch (stage) {
-    case 'GATEKEEPER':  return playbook.gatekeeper.reach;
-    case 'OPENER':      return playbook.opener;
-    case 'BRIDGE':      return playbook.bridge.fallback;
-    case 'QUALIFIER':   return playbook.qualifier;
-    case 'SEED_EXIT':   return playbook.seedExit;
-    case 'CLOSE':       return playbook.close;
-    case 'BOOKED':      return playbook.booked;
-    case 'EXIT':        return playbook.exit;
-    case 'NON_CONNECT': return playbook.voicemail;
-    default:            return '';
+    case 'GATEKEEPER':        return playbook.gatekeeper.reach;
+    case 'OPENER':            return playbook.opener;
+    case 'PERMISSION_MOMENT': return 'Can I ask you a quick question about new customer calls?';
+    case 'MINI_PITCH':        return "We help contractors make sure inbound calls get handled when the team can't answer live.";
+    case 'WRONG_PERSON':      return "Makes sense. What's the best way to reach the person who handles that?";
+    case 'PRICING':           return "Happy to cover that — first I want to make sure this is even a problem worth solving on your side. When calls come in and nobody can grab them, what usually happens?";
+    case 'BRIDGE':            return playbook.bridge.fallback;
+    case 'QUALIFIER':         return playbook.qualifier;
+    case 'SEED_EXIT':         return playbook.seedExit;
+    case 'CLOSE':             return playbook.close;
+    case 'BOOKED':            return playbook.booked;
+    case 'EXIT':              return playbook.exit;
+    case 'NON_CONNECT':       return playbook.voicemail;
+    default:                  return '';
   }
 }
 
@@ -197,6 +222,16 @@ export function lineForStage(stage, playbook) {
  * @param {object} playbook
  * @returns {Array<{label: string, line: string}>}
  */
+// Pitch lines available at any stage (P key toggles)
+export function pitchLines(playbook) {
+  return [
+    { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
+    { label: '🔧 How it works', line: playbook.pitchLines.howItWorks },
+    { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
+  ];
+}
+
+
 export function linesForStage(stage, playbook) {
   switch (stage) {
     case 'GATEKEEPER':
@@ -206,40 +241,75 @@ export function linesForStage(stage, playbook) {
         { label: 'notAvailable', line: playbook.gatekeeper.notAvailable },
       ];
     case 'OPENER':
-      return [{ label: 'opener', line: playbook.opener }];
+      return [
+        { label: '📞 Opener', line: playbook.opener },
+        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
+        { label: '🔧 How it works', line: playbook.pitchLines.howItWorks },
+        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
+      ];
+    case 'PERMISSION_MOMENT':
+      return [
+        { label: 'Permission ask', line: 'Can I ask you a quick question about new customer calls?' },
+        { label: 'Backup (20s)', line: "This'll take 20 seconds — when a new call comes in and you can't grab it, what happens?" },
+      ];
+    case 'MINI_PITCH':
+      return [
+        { label: 'Mini pitch', line: "We help contractors make sure inbound calls get handled when the team can't answer live." },
+        { label: 'Backup', line: "We help contractors avoid losing jobs when calls come in and nobody can grab the phone." },
+        { label: 'Clarify', line: 'How are you handling that today?' },
+      ];
+    case 'WRONG_PERSON':
+      return [
+        { label: 'Referral ask', line: "Makes sense. What's the best way to reach the person who handles that?" },
+        { label: 'Backup', line: "No worries — is there a good time to catch the owner?" },
+        { label: 'Timing', line: "When's a good time to reach them?" },
+      ];
+    case 'PRICING':
+      return [
+        { label: 'Reframe', line: "Happy to cover that — first I want to make sure this is even a problem worth solving on your side. When calls come in and nobody can grab them, what usually happens?" },
+        { label: 'Backup', line: "I can cover pricing. I just don't want to throw numbers at you before knowing whether there's actually a problem to solve." },
+        { label: 'Frequency', line: 'How often do you think a good inbound call comes in when nobody can answer it properly?' },
+      ];
     case 'BRIDGE':
       return [
-        { label: 'missed_calls/voicemail', line: playbook.bridge.missed_calls.voicemail },
-        { label: 'missed_calls/staff', line: playbook.bridge.missed_calls.staff },
-        { label: 'missed_calls/covered', line: playbook.bridge.missed_calls.covered },
-        { label: 'competition/slow', line: playbook.bridge.competition.slow },
-        { label: 'competition/competitor', line: playbook.bridge.competition.competitor },
-        { label: 'overwhelmed/everything', line: playbook.bridge.overwhelmed.everything },
-        { label: 'overwhelmed/cantKeepUp', line: playbook.bridge.overwhelmed.cantKeepUp },
-        { label: 'fallback', line: playbook.bridge.fallback },
+        { label: '❌ Missed/voicemail', line: playbook.bridge.missed_calls.voicemail },
+        { label: '❌ Missed/staff', line: playbook.bridge.missed_calls.staff },
+        { label: '❌ Missed/covered', line: playbook.bridge.missed_calls.covered },
+        { label: '📊 Comp/slow', line: playbook.bridge.competition.slow },
+        { label: '📊 Comp/first', line: playbook.bridge.competition.competitor },
+        { label: '🔥 Overwhelm/everything', line: playbook.bridge.overwhelmed.everything },
+        { label: '🔥 Overwhelm/keep up', line: playbook.bridge.overwhelmed.cantKeepUp },
+        { label: '❓ Fallback', line: playbook.bridge.fallback },
       ];
     case 'QUALIFIER':
       return [
-        { label: 'qualifier', line: playbook.qualifier },
-        {
-          label: 'unknown_pain/bridge_line',
-          line: playbook.qualifierReads.unknown_pain.bridge_line,
-        },
+        { label: '📞 Ask the question', line: playbook.qualifier },
+        { label: '🔍 Unknown pain bridge', line: playbook.qualifierReads.unknown_pain.bridge_line },
+        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
+        { label: '🔧 How it works', line: playbook.pitchLines.howItWorks },
+        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'CLOSE':
       return [
-        { label: 'close', line: playbook.close },
-        { label: 'hedge', line: playbook.hedge },
-        { label: 'yesFollowup', line: playbook.yesFollowup },
+        { label: '🤝 Close', line: playbook.close },
+        { label: '🛡️ Hedge', line: playbook.hedge },
+        { label: '✅ Yes followup', line: playbook.yesFollowup },
+        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
+        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'SEED_EXIT':
-      return [{ label: 'seedExit', line: playbook.seedExit }];
+      return [
+        { label: 'seedExit', line: playbook.seedExit },
+        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
+      ];
     case 'OBJECTION':
       return [
-        { label: 'timing', line: playbook.objections.timing.reset },
-        { label: 'interest', line: playbook.objections.interest.reset },
-        { label: 'info', line: playbook.objections.info.reset },
-        { label: 'authority', line: playbook.objections.authority.reset },
+        { label: '⏰ Timing reset', line: playbook.objections.timing.reset },
+        { label: '🚫 Interest reset', line: playbook.objections.interest.reset },
+        { label: '📧 Info reset', line: playbook.objections.info.reset },
+        { label: '👤 Authority reset', line: playbook.objections.authority.reset },
+        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
+        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'NON_CONNECT':
       return [

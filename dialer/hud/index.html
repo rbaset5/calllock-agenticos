@@ -177,9 +177,9 @@
       min-height: 0;
     }
 
-    /* Left panel — NOW card */
+    /* Center panel — NOW card */
     .now-panel {
-      flex: 7;
+      flex: 2;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -316,16 +316,18 @@
       color: #f5f5f5;
     }
 
-    /* Right panel — Transcript feed */
-    .transcript-panel {
-      flex: 3;
+    /* Side panels — Lines and Objections */
+    .side-panel {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      border-left: 1px solid #1a1a1a;
       background: #0d0d0d;
+      overflow: hidden;
     }
+    .lines-panel { border-right: 1px solid #1a1a1a; }
+    .objections-panel { border-left: 1px solid #1a1a1a; }
 
-    .transcript-header {
+    .side-panel-header {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -335,54 +337,52 @@
       flex-shrink: 0;
     }
 
-    .transcript-feed {
+    .side-panel-feed {
       flex: 1;
       overflow-y: auto;
-      padding: 12px 16px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
-    .transcript-feed::-webkit-scrollbar { width: 4px; }
-    .transcript-feed::-webkit-scrollbar-track { background: transparent; }
-    .transcript-feed::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    .side-panel-feed::-webkit-scrollbar { width: 4px; }
+    .side-panel-feed::-webkit-scrollbar-track { background: transparent; }
+    .side-panel-feed::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
-    .transcript-turn {
-      font-size: 13px;
-      line-height: 1.45;
+    /* Round history strip */
+    .round-strip {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      padding: 4px 20px;
+      flex-shrink: 0;
+      min-height: 24px;
     }
 
-    .transcript-turn .speaker {
+    .round-bubble {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.5px;
-      margin-right: 6px;
+      cursor: pointer;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #737373;
+      flex-shrink: 0;
     }
 
-    .transcript-turn .speaker.rep { color: #737373; }
-    .transcript-turn .speaker.prospect { color: #e5e5e5; }
-
-    .transcript-turn .text {
-      color: #a3a3a3;
+    .round-bubble.current {
+      border-color: #22c55e;
+      color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
     }
 
-    .transcript-turn .text.prospect-text {
-      color: #e5e5e5;
-    }
-
-    .transcript-turn .ts {
-      font-size: 10px;
-      color: #404040;
-      margin-left: 6px;
-    }
-
-    .transcript-turn.processing {
-      background: rgba(59, 130, 246, 0.08);
-      border-radius: 4px;
-      padding: 4px 6px;
-      margin: -4px -6px;
-    }
+    .round-bubble.past { border-color: #404040; color: #525252; }
 
     /* ── Objection picker grid ─────────────────────── */
     .objection-picker {
@@ -445,6 +445,70 @@
       line-height: 1.4;
     }
 
+    /* ── Quick-pick strip (always visible below NOW) ── */
+    .quick-pick-strip {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      flex-shrink: 0;
+    }
+
+    .quick-pick-strip:empty {
+      display: none;
+    }
+
+    .quick-pick {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #141414;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .quick-pick:hover {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+      color: #fff;
+    }
+
+    .quick-pick-key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 4px;
+      border: 1px solid #555;
+      color: #999;
+      background: #1a1a1a;
+      flex-shrink: 0;
+    }
+
+    .quick-pick:hover .quick-pick-key {
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+
+    .quick-pick-label {
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .quick-pick-cue {
+      color: #525252;
+      font-size: 11px;
+    }
+
+
     /* ── Hotkey legend ──────────────────────────────── */
     .hotkey-bar {
       display: flex;
@@ -475,6 +539,101 @@
       color: #737373;
       margin-right: 3px;
     }
+
+    /* ── v2 center panel stack ─────────────────────── */
+    .v2-move-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      background: #1a1a2e;
+      color: #818cf8;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .v2-now {
+      color: #a1a1aa;
+      font-size: 12px;
+      font-style: italic;
+      margin-bottom: 8px;
+      min-height: 16px;
+    }
+    .v2-alt {
+      color: #71717a;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-left: 2px solid #27272a;
+      margin: 6px 0;
+      min-height: 20px;
+      display: none;
+    }
+    .v2-pause {
+      text-align: center;
+      padding: 6px;
+      font-size: 11px;
+      color: #fbbf24;
+      border: 1px solid #fbbf2433;
+      border-radius: 6px;
+      margin: 8px 0;
+      transition: opacity 0.5s;
+      display: none;
+    }
+    .v2-pause.dimmed { opacity: 0.3; }
+    .v2-listen {
+      font-size: 11px;
+      color: #a1a1aa;
+      margin: 6px 0;
+      display: none;
+    }
+    .v2-next {
+      font-size: 11px;
+      color: #818cf8;
+      margin: 6px 0;
+      display: none;
+    }
+    .v2-donot {
+      background: #7f1d1d33;
+      color: #fca5a5;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin: 6px 0;
+    }
+    .v2-listen-label, .v2-next-label {
+      color: #52525b;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    /* v2 left rail: prospect context */
+    .v2-context-rail { padding: 8px 12px; }
+    .v2-ctx-section { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #27272a; }
+    .v2-ctx-section:empty { display: none; }
+    .v2-ctx-label { color: #52525b; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .v2-ctx-value { color: #e5e5e5; font-size: 13px; }
+    .v2-ctx-inferred { color: #71717a; font-style: italic; font-size: 12px; }
+    /* v2 right rail: tactical support card */
+    .v2-tactical { padding: 8px 12px; }
+    .v2-tac-section { margin-bottom: 10px; }
+    .v2-tac-section:empty { display: none; }
+    .v2-tac-label { color: #52525b; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+    .v2-tac-value { color: #d4d4d8; font-size: 12px; line-height: 1.4; }
+    .v2-transcript-health {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      display: none;
+    }
+    .v2-transcript-health.stale {
+      display: inline-block;
+      background: #78350f33;
+      color: #fbbf24;
+    }
   </style>
 </head>
 <body>
@@ -504,37 +663,56 @@
     <span class="stage-pill future" data-stage="OBJECTION">OBJ</span>
   </div>
 
-  <!-- Main area -->
+  <!-- Round history strip -->
+  <div class="round-strip" id="roundStrip"></div>
+
+  <!-- Main area: 3-column layout -->
   <div class="main-area">
+    <div class="side-panel lines-panel" id="linesPanel">
+      <!-- v2 left rail: prospect context -->
+      <div id="v2-prospect-context" class="v2-context-rail">
+        <div id="v2-prospect-identity" class="v2-ctx-section"></div>
+        <div id="v2-prospect-why" class="v2-ctx-section"></div>
+        <div id="v2-prospect-outreach" class="v2-ctx-section"></div>
+        <div id="v2-prospect-fit" class="v2-ctx-section"></div>
+      </div>
+      <div class="side-panel-header">LINES</div>
+      <div class="side-panel-feed" id="linesFeed"></div>
+    </div>
     <div class="now-panel" id="nowPanel" data-stage="IDLE">
       <div class="preview-hint" id="previewHint"></div>
       <div class="now-line" id="nowLine">Waiting for call...</div>
       <div class="now-meta">
         <span class="now-why" id="nowWhy"></span>
         <span class="confidence-badge manual" id="confidenceBadge"></span>
+        <span id="v2-transcript-health" class="v2-transcript-health"></span>
       </div>
+      <!-- v2 center stack -->
+      <div id="v2-move-type" class="v2-move-pill"></div>
+      <div id="v2-now-summary" class="v2-now"></div>
+      <div id="v2-backup-line" class="v2-alt"></div>
+      <div id="v2-pause-strip" class="v2-pause"></div>
+      <div id="v2-listen-for" class="v2-listen"></div>
+      <div id="v2-branch-preview" class="v2-next"></div>
+      <div id="v2-do-not" class="v2-donot" style="display:none"></div>
     </div>
-
-    <div class="transcript-panel">
-      <div class="transcript-header">TRANSCRIPT</div>
-      <div class="transcript-feed" id="transcriptFeed"></div>
+    <div class="side-panel objections-panel" id="objectionsPanel">
+      <!-- v2 right rail: tactical support card -->
+      <div id="v2-tactical-card" class="v2-tactical">
+        <div id="v2-tac-ask" class="v2-tac-section"></div>
+        <div id="v2-tac-rebuttal" class="v2-tac-section"></div>
+        <div id="v2-tac-value" class="v2-tac-section"></div>
+        <div id="v2-tac-proof" class="v2-tac-section"></div>
+        <div id="v2-tac-ifthen" class="v2-tac-section"></div>
+      </div>
+      <div class="side-panel-header">OBJECTIONS</div>
+      <div class="side-panel-feed" id="objectionsFeed"></div>
     </div>
   </div>
 
   <!-- Hotkey legend -->
-  <div class="hotkey-bar">
-    <span class="hotkey-item"><kbd>F4</kbd> Non-connect</span>
-    <span class="hotkey-item"><kbd>F6</kbd> Back</span>
-    <span class="hotkey-item"><kbd>F7</kbd> Next</span>
-    <span class="hotkey-item"><kbd>F8</kbd> Alt path</span>
-    <span id="hk1" class="hotkey-item"><kbd>1</kbd> Timing</span>
-    <span id="hk2" class="hotkey-item"><kbd>2</kbd> Interest</span>
-    <span id="hk3" class="hotkey-item"><kbd>3</kbd> Info</span>
-    <span id="hk4" class="hotkey-item"><kbd>4</kbd> Authority</span>
-    <span class="hotkey-item"><kbd>H</kbd> Hedge</span>
-    <span class="hotkey-item"><kbd>Tab</kbd> Lines</span>
-    <span class="hotkey-item"><kbd>⇧F11</kbd> Reset</span>
-  </div>
+  <div id="quick-pick-strip" class="quick-pick-strip"></div>
+  <div id="hotkey-bar" class="hotkey-bar"></div>
 
   <script type="module" src="./ui.js"></script>
 </body>

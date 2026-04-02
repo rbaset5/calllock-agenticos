@@ -107,6 +107,104 @@ def upsert_outbound_prospects(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def upsert_or_enrich_prospects(records: list[dict[str, Any]]) -> dict[str, int]:
+    """Upsert prospects, enriching existing records on phone conflict.
+
+    Unlike upsert_outbound_prospects (which ignores duplicates), this updates
+    total_score and score_tier when the new score is higher, and sets source
+    to the new value if the record already exists.
+    """
+    if not records:
+        return {"inserted": 0, "enriched": 0, "skipped": 0}
+
+    inserted = 0
+    enriched = 0
+    skipped = 0
+
+    if _using_supabase():
+        for record in records:
+            tenant_id = record["tenant_id"]
+            phone = record["phone_normalized"]
+            existing = supabase_repository._request(  # type: ignore[attr-defined]
+                "GET",
+                "outbound_prospects",
+                params={
+                    "tenant_id": f"eq.{tenant_id}",
+                    "phone_normalized": f"eq.{phone}",
+                    "select": "id,total_score,score_tier",
+                },
+            )
+            if existing:
+                row = existing[0]
+                old_score = int(row.get("total_score", 0))
+                new_score = int(record.get("total_score", 0))
+                if new_score > old_score:
+                    supabase_repository._request(  # type: ignore[attr-defined]
+                        "PATCH",
+                        f"outbound_prospects?id=eq.{row['id']}",
+                        json={
+                            "total_score": new_score,
+                            "score_tier": record.get("score_tier", "unscored"),
+                        },
+                    )
+                    enriched += 1
+                else:
+                    skipped += 1
+            else:
+                supabase_repository._request(  # type: ignore[attr-defined]
+                    "POST",
+                    "outbound_prospects",
+                    json=[record],
+                    prefer="return=representation",
+                )
+                inserted += 1
+    else:
+        state = _local_state()
+        for record in records:
+            dup = next(
+                (r for r in state["outbound_prospects"]
+                 if r["tenant_id"] == record["tenant_id"]
+                 and r["phone_normalized"] == record["phone_normalized"]),
+                None,
+            )
+            if dup is not None:
+                old_score = int(dup.get("total_score", 0))
+                new_score = int(record.get("total_score", 0))
+                if new_score > old_score:
+                    dup["total_score"] = new_score
+                    dup["score_tier"] = record.get("score_tier", "unscored")
+                    enriched += 1
+                else:
+                    skipped += 1
+            else:
+                now = _now_iso()
+                stored = {
+                    "id": record.get("id", str(uuid4())),
+                    "tenant_id": record["tenant_id"],
+                    "business_name": record["business_name"],
+                    "trade": record.get("trade", "hvac"),
+                    "metro": record.get("metro"),
+                    "website": record.get("website"),
+                    "address": record.get("address"),
+                    "phone": record.get("phone"),
+                    "phone_normalized": record["phone_normalized"],
+                    "source": record["source"],
+                    "source_listing_id": record.get("source_listing_id"),
+                    "timezone": record.get("timezone"),
+                    "raw_source": deepcopy(record.get("raw_source", {})),
+                    "total_score": int(record.get("total_score", 0)),
+                    "score_tier": record.get("score_tier", "unscored"),
+                    "discovered_at": now,
+                    "stage": record.get("stage", "call_ready"),
+                    "disqualification_reason": None,
+                    "created_at": now,
+                }
+                state["outbound_prospects"].append(stored)
+                inserted += 1
+
+    return {"inserted": inserted, "enriched": enriched, "skipped": skipped}
+
+
 def list_outbound_prospects(
     *,
     tenant_id: str = OUTBOUND_TENANT_ID,
@@ -661,3 +759,95 @@ def sprint_scoreboard(
             ]
         ),
     }
+
+
+# ── prospect_messages CRUD ──────────────────────────────────────────
+
+
+def insert_prospect_message(payload: dict[str, Any]) -> dict[str, Any]:
+    """Insert a message record (outbound or inbound)."""
+    if _using_supabase():
+        data = supabase_repository._request(  # type: ignore[attr-defined]
+            "POST",
+            "prospect_messages",
+            json=payload,
+            prefer="return=representation",
+        )
+        return data[0] if data else payload
+
+    now = _now_iso()
+    record = {
+        "id": payload.get("id", str(uuid4())),
+        "tenant_id": payload.get("tenant_id", OUTBOUND_TENANT_ID),
+        "prospect_id": payload.get("prospect_id"),
+        "direction": payload["direction"],
+        "channel": payload.get("channel", "imessage"),
+        "content": payload["content"],
+        "outcome_trigger": payload.get("outcome_trigger"),
+        "status": payload.get("status", "draft"),
+        "imsg_result": deepcopy(payload.get("imsg_result", {})),
+        "created_at": payload.get("created_at", now),
+        "sent_at": payload.get("sent_at"),
+        "phone_normalized": payload.get("phone_normalized", ""),
+    }
+    state = _local_state()
+    state.setdefault("prospect_messages", [])
+    state["prospect_messages"].append(record)
+    return record
+
+
+def list_prospect_messages(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    prospect_id: str | None = None,
+    direction: str | None = None,
+    phone_normalized: str | None = None,
+) -> list[dict[str, Any]]:
+    """List messages, optionally filtered by prospect, direction, or phone."""
+    if _using_supabase():
+        params: dict[str, str] = {
+            "tenant_id": f"eq.{tenant_id}",
+            "order": "created_at.desc",
+        }
+        if prospect_id:
+            params["prospect_id"] = f"eq.{prospect_id}"
+        if direction:
+            params["direction"] = f"eq.{direction}"
+        if phone_normalized:
+            params["phone_normalized"] = f"eq.{phone_normalized}"
+        return supabase_repository._request("GET", "prospect_messages", params=params)  # type: ignore[attr-defined]
+
+    state = _local_state()
+    state.setdefault("prospect_messages", [])
+    rows = [row for row in state["prospect_messages"] if _matches_tenant(row["tenant_id"], tenant_id)]
+    if prospect_id:
+        rows = [row for row in rows if row.get("prospect_id") == prospect_id]
+    if direction:
+        rows = [row for row in rows if row.get("direction") == direction]
+    if phone_normalized:
+        rows = [row for row in rows if row.get("phone_normalized") == phone_normalized]
+    return sorted(rows, key=lambda row: row.get("created_at", ""), reverse=True)
+
+
+def update_prospect_message(
+    message_id: str,
+    updates: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Update a message record by ID."""
+    if _using_supabase():
+        data = supabase_repository._request(  # type: ignore[attr-defined]
+            "PATCH",
+            "prospect_messages",
+            params={"id": f"eq.{message_id}"},
+            json=updates,
+            prefer="return=representation",
+        )
+        return data[0] if data else None
+
+    state = _local_state()
+    state.setdefault("prospect_messages", [])
+    for row in state["prospect_messages"]:
+        if row["id"] == message_id:
+            row.update(deepcopy(updates))
+            return row
+    return None

@@ -3,6 +3,7 @@
 // Vanilla JS ES module — no build step, no TypeScript.
 
 import { resolveBridgeLine, lineForStage } from './playbook.js';
+import { createTrajectoryState } from './risk.js';
 
 // ── Domain constants ────────────────────────────────────────────
 
@@ -10,8 +11,12 @@ export const STAGES = [
   'IDLE',
   'GATEKEEPER',
   'OPENER',
+  'PERMISSION_MOMENT',
+  'MINI_PITCH',
+  'WRONG_PERSON',
   'BRIDGE',
   'QUALIFIER',
+  'PRICING',
   'SEED_EXIT',
   'CLOSE',
   'OBJECTION',
@@ -85,7 +90,7 @@ export function createInitialState(playbook) {
   return {
     callId: '',
     stage: 'IDLE',
-    now: makeNow('IDLE', 'Press F7 to start call', 'low', 'F7 → opener script', 'none'),
+    now: makeNow('IDLE', 'Press → to start call', 'low', '→ opener script', 'none'),
     prospect: null,
 
     transcript: [],
@@ -113,6 +118,25 @@ export function createInitialState(playbook) {
     latestTranscriptSeq: 0,
     lastProcessedUtteranceSeq: 0,
     ended: false,
+
+    // v2 state fields (spec Section 12)
+    tone: 'neutral',
+    toneSource: 'rules',
+    toneConfidence: 0.5,
+    risk: 'low',
+    compound: false,
+    signalCount: 0,
+    recommendedActionBias: null,
+    previousStage: null,
+    moveType: 'pause',
+    deliveryModifier: null,
+    nowSummary: '',
+    prospectContext: null,
+    activeObjection: null,
+    primaryIntent: null,
+
+    // Trajectory state (spec Section 30)
+    trajectory: createTrajectoryState(),
   };
 }
 
@@ -321,6 +345,7 @@ export function hudReducer(state, action, playbook) {
           bucket: rule.objectionBucket,
           atMs: action.atMs,
           utterance: action.turn.text,
+          ...(action.secondaryIntent ? { secondary: action.secondaryIntent } : {}),
         };
 
         return {
@@ -328,6 +353,7 @@ export function hudReducer(state, action, playbook) {
           stage: 'OBJECTION',
           objectionHistory: [...nextState.objectionHistory, historyItem],
           lastObjectionBucket: rule.objectionBucket,
+          activeObjection: rule.objectionBucket,
           now: makeNow(
             'OBJECTION',
             playbook.objections[bucket].reset,
@@ -352,6 +378,7 @@ export function hudReducer(state, action, playbook) {
           bucket: rule.objectionBucket,
           atMs: action.atMs,
           utterance: action.turn.text,
+          ...(action.secondaryIntent ? { secondary: action.secondaryIntent } : {}),
         };
         const updatedHistory = [...nextState.objectionHistory, historyItem];
         const countSame = objectionCountForBucket(updatedHistory, rule.objectionBucket);
@@ -363,6 +390,7 @@ export function hudReducer(state, action, playbook) {
             stage: 'QUALIFIER',
             objectionHistory: updatedHistory,
             lastObjectionBucket: rule.objectionBucket,
+            activeObjection: rule.objectionBucket,
             now: makeNow(
               'QUALIFIER',
               playbook.qualifier,
@@ -390,6 +418,7 @@ export function hudReducer(state, action, playbook) {
             outcome: 'not_booked',
             objectionHistory: updatedHistory,
             lastObjectionBucket: rule.objectionBucket,
+            activeObjection: rule.objectionBucket,
             now: makeNow(
               'EXIT',
               playbook.exit,
@@ -411,6 +440,7 @@ export function hudReducer(state, action, playbook) {
           ...nextState,
           objectionHistory: updatedHistory,
           lastObjectionBucket: rule.objectionBucket,
+          activeObjection: rule.objectionBucket,
           now: makeNow(
             'OBJECTION',
             playbook.objections[bucket].reset,
@@ -695,7 +725,7 @@ export function hudReducer(state, action, playbook) {
       return {
         ...state,
         stage: 'CLOSE',
-        now: makeNow('CLOSE', playbook.hedge, 'high', 'F7 yes! → booked · F8 objection', 'manual'),
+        now: makeNow('CLOSE', playbook.hedge, 'high', '→ yes! → booked · F10 objection', 'manual'),
         lastCommittedAtMs: action.atMs,
       };
     }
@@ -725,20 +755,27 @@ export function hudReducer(state, action, playbook) {
     // ────────────────────────────────────────────────────
     case 'MANUAL_SET_STAGE': {
       const stageHints = {
-        GATEKEEPER:  'F7 got owner · F8 not available',
-        OPENER:      'F7 when they respond',
-        BRIDGE:      'F7 after bridge line',
-        QUALIFIER:   'F7 pain → close · F8 no pain → exit',
-        CLOSE:       'F7 yes! → booked · F8 objection · H hedge',
-        OBJECTION:   'F7 try close · F8 give up · 1-4 new objection',
-        SEED_EXIT:   'F7 wrap up',
-        BOOKED:      'F7 call done',
-        NON_CONNECT: 'F7 after voicemail',
-        EXIT:        'Call complete',
+        GATEKEEPER:        '→ got owner · F10 not available',
+        OPENER:            '→ when they respond',
+        PERMISSION_MOMENT: '→ testing if they will give space',
+        MINI_PITCH:        '→ 1-sentence answer to "what is this?"',
+        WRONG_PERSON:      '→ getting referral to decision-maker',
+        BRIDGE:            '→ after bridge line',
+        QUALIFIER:         '→ pain → close · F10 no pain → exit',
+        PRICING:           '→ redirecting from premature pricing',
+        CLOSE:             '→ yes! → booked · F10 objection · ⇧ hedge',
+        OBJECTION:         '→ try close · F10 give up · 1-4 new objection',
+        SEED_EXIT:         '→ wrap up',
+        BOOKED:            '→ call done',
+        NON_CONNECT:       '→ after voicemail',
+        EXIT:              'Call complete',
       };
       return {
         ...state,
         stage: action.stage,
+        previousStage: null,
+        // Clear activeObjection when leaving OBJECTION to prevent stale overlay
+        activeObjection: action.stage === 'OBJECTION' ? state.activeObjection : null,
         // Clear objection bucket when navigating to OBJECTION so the picker shows
         lastObjectionBucket:
           action.stage === 'OBJECTION' ? null : state.lastObjectionBucket,
@@ -772,7 +809,7 @@ export function hudReducer(state, action, playbook) {
           'BRIDGE',
           line,
           'high',
-          `Bridge: ${angle} · F7 after delivering line`,
+          `Bridge: ${angle} · → after delivering line`,
           'manual',
         ),
         autoClassifySuppressedUntilMs: action.atMs + 4000,
@@ -792,6 +829,7 @@ export function hudReducer(state, action, playbook) {
         ...state,
         stage: 'OBJECTION',
         lastObjectionBucket: action.bucket,
+        activeObjection: bucket,
         objectionHistory: [
           ...state.objectionHistory,
           {
@@ -804,7 +842,7 @@ export function hudReducer(state, action, playbook) {
           'OBJECTION',
           playbook.objections[bucket].reset,
           'high',
-          'Say this → F7 try close · F8 give up · 1-4 new objection',
+          'Say this, then → try close · F10 give up · 1-4 new objection',
           'manual',
         ),
         autoClassifySuppressedUntilMs: action.atMs + 4000,
@@ -871,6 +909,58 @@ export function hudReducer(state, action, playbook) {
         outcome: state.outcome ?? 'ended_unknown',
         ended: true,
         lastCommittedAtMs: action.atMs,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_TONE': {
+      return {
+        ...state,
+        tone: action.tone,
+        toneSource: action.toneSource || 'rules',
+        toneConfidence: action.toneConfidence || 0.5,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_PROSPECT_CONTEXT': {
+      return {
+        ...state,
+        prospectContext: action.prospectContext,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'PRICING_INTERRUPT': {
+      // Ignore if already in PRICING (no nested interrupts)
+      if (state.stage === 'PRICING') return state;
+      return {
+        ...state,
+        previousStage: state.previousStage === null ? state.stage : state.previousStage,
+        stage: 'PRICING',
+        moveType: 'reframe',
+        metrics: { ...state.metrics, stageChanges: state.metrics.stageChanges + 1 },
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'RETURN_FROM_PRICING': {
+      const returnStage = state.previousStage || 'QUALIFIER';
+      return {
+        ...state,
+        stage: returnStage,
+        previousStage: null,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_COMPOUND': {
+      return {
+        ...state,
+        compound: action.compound || false,
+        signalCount: action.signalCount || 0,
+        recommendedActionBias: action.recommendedActionBias || null,
+        activeObjection: action.activeObjection || state.activeObjection,
       };
     }
 

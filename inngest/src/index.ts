@@ -26,6 +26,7 @@ import {
 } from "./functions/outbound-projector.js";
 import { outboundMorningPlanner } from "./functions/outbound-morning-planner.js";
 import { outboundFollowupGuardian } from "./functions/outbound-followup-guardian.js";
+import { outboundFollowupSend } from "./functions/outbound-followup-send.js";
 import { outboundEodDigest } from "./functions/outbound-eod-digest.js";
 import { outboundPipelineReview } from "./functions/outbound-pipeline-review.js";
 
@@ -54,6 +55,7 @@ export const functions = [
   discordOutboundExtraction,
   outboundMorningPlanner,
   outboundFollowupGuardian,
+  outboundFollowupSend,
   outboundPipelineReview,
   outboundEodDigest,
 ];
