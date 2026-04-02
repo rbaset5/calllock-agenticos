@@ -27,6 +27,16 @@ export function logDecision(action, prevState, newState) {
     newStage: newState.stage,
     nowLine: newState.now?.line ?? null,
     overridden: action.type.startsWith('MANUAL_'),
+    // v2 fields (spec Section 14)
+    tone: newState.tone ?? null,
+    toneSource: newState.toneSource ?? null,
+    risk: newState.risk ?? null,
+    compound: newState.compound ?? false,
+    signalCount: newState.signalCount ?? 0,
+    recommendedActionBias: newState.recommendedActionBias ?? null,
+    moveType: newState.moveType ?? null,
+    deliveryModifier: newState.deliveryModifier ?? null,
+    primaryIntent: newState.primaryIntent ?? null,
   });
 }
 
