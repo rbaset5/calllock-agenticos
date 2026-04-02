@@ -3,6 +3,7 @@
 // Vanilla JS ES module — no build step, no TypeScript.
 
 import { resolveBridgeLine, lineForStage } from './playbook.js';
+import { createTrajectoryState } from './risk.js';
 
 // ── Domain constants ────────────────────────────────────────────
 
@@ -117,6 +118,25 @@ export function createInitialState(playbook) {
     latestTranscriptSeq: 0,
     lastProcessedUtteranceSeq: 0,
     ended: false,
+
+    // v2 state fields (spec Section 12)
+    tone: 'neutral',
+    toneSource: 'rules',
+    toneConfidence: 0.5,
+    risk: 'low',
+    compound: false,
+    signalCount: 0,
+    recommendedActionBias: null,
+    previousStage: null,
+    moveType: 'pause',
+    deliveryModifier: null,
+    nowSummary: '',
+    prospectContext: null,
+    activeObjection: null,
+    primaryIntent: null,
+
+    // Trajectory state (spec Section 30)
+    trajectory: createTrajectoryState(),
   };
 }
 
@@ -747,6 +767,7 @@ export function hudReducer(state, action, playbook) {
       return {
         ...state,
         stage: action.stage,
+        previousStage: null,
         // Clear objection bucket when navigating to OBJECTION so the picker shows
         lastObjectionBucket:
           action.stage === 'OBJECTION' ? null : state.lastObjectionBucket,
@@ -879,6 +900,47 @@ export function hudReducer(state, action, playbook) {
         outcome: state.outcome ?? 'ended_unknown',
         ended: true,
         lastCommittedAtMs: action.atMs,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_TONE': {
+      return {
+        ...state,
+        tone: action.tone,
+        toneSource: action.toneSource || 'rules',
+        toneConfidence: action.toneConfidence || 0.5,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_PROSPECT_CONTEXT': {
+      return {
+        ...state,
+        prospectContext: action.prospectContext,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'PRICING_INTERRUPT': {
+      // Ignore if already in PRICING (no nested interrupts)
+      if (state.stage === 'PRICING') return state;
+      return {
+        ...state,
+        previousStage: state.previousStage === null ? state.stage : state.previousStage,
+        stage: 'PRICING',
+        moveType: 'reframe',
+        metrics: { ...state.metrics, stageChanges: state.metrics.stageChanges + 1 },
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'RETURN_FROM_PRICING': {
+      const returnStage = state.previousStage || 'QUALIFIER';
+      return {
+        ...state,
+        stage: returnStage,
+        previousStage: null,
       };
     }
 
