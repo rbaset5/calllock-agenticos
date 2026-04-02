@@ -91,6 +91,20 @@ export function renderListenFor(items) {
 /**
  * Render branch preview (max 3 routes)
  */
+// Human-friendly stage labels for branch preview
+const STAGE_LABELS = {
+  OPENER: 'opener', BRIDGE: 'bridge', QUALIFIER: 'qualify',
+  CLOSE: 'close', OBJECTION: 'objection', EXIT: 'exit',
+  BOOKED: 'booked', SEED_EXIT: 'seed exit', MINI_PITCH: 'mini pitch',
+  WRONG_PERSON: 'wrong person', PRICING: 'pricing',
+  PERMISSION_MOMENT: 'permission', GATEKEEPER: 'gatekeeper',
+  NON_CONNECT: 'voicemail',
+};
+
+function friendlyTarget(raw) {
+  return STAGE_LABELS[raw] || raw.toLowerCase().replace(/_/g, ' ');
+}
+
 export function renderBranchPreview(branchPreview) {
   const el = document.getElementById('v2-branch-preview');
   if (!el) return;
@@ -100,7 +114,6 @@ export function renderBranchPreview(branchPreview) {
     return;
   }
   el.style.display = 'block';
-  // Build branch preview display using safe DOM methods
   const label = document.createElement('div');
   label.className = 'v2-next-label';
   label.textContent = 'NEXT';
@@ -110,7 +123,7 @@ export function renderBranchPreview(branchPreview) {
     const target = route.next || route.action || '';
     const span = document.createElement('span');
     span.style.marginRight = '12px';
-    span.textContent = `${cond} \u2192 ${target}`;
+    span.textContent = `${cond} \u2192 ${friendlyTarget(target)}`;
     el.appendChild(span);
   });
 }

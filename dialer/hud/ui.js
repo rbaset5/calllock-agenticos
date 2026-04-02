@@ -801,6 +801,11 @@ function render() {
     stageCards: NATIVE_STAGE_CARDS,
     objectionCards: NATIVE_OBJECTION_CARDS,
   });
+  // Fill template placeholders ({NAME}, {DAY}, etc.) in card lines
+  const ctx = currentLineContext();
+  if (activeCard.primaryLine) activeCard.primaryLine = fillLineTemplate(activeCard.primaryLine, ctx);
+  if (activeCard.backupLine) activeCard.backupLine = fillLineTemplate(activeCard.backupLine, ctx);
+  if (activeCard.clarifyingQuestion) activeCard.clarifyingQuestion = fillLineTemplate(activeCard.clarifyingQuestion, ctx);
   renderV2CenterPanel(activeCard, state);
   renderTacticalCard(activeCard);
 
