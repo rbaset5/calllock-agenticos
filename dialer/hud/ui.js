@@ -425,7 +425,7 @@ document.addEventListener('keydown', (e) => {
       if (rounds.length > 0 && effectiveIdx > 0) {
         roundIndex = effectiveIdx - 1;
         const round = rounds[roundIndex];
-        $nowLine.textContent = round.line;
+        $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
         $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
         renderRoundStrip();
         return;
@@ -460,7 +460,7 @@ document.addEventListener('keydown', (e) => {
       if (roundIndex !== -1 && roundIndex < rounds.length - 1) {
         roundIndex++;
         const round = rounds[roundIndex];
-        $nowLine.textContent = round.line;
+        $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
         $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
         renderRoundStrip();
         return;
@@ -963,7 +963,7 @@ function renderRoundStrip() {
 
     bubble.addEventListener('click', () => {
       roundIndex = i;
-      $nowLine.textContent = round.line;
+      $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
       $nowWhy.textContent = `Round ${i + 1} \u2014 ${round.source}`;
       renderRoundStrip();
     });
