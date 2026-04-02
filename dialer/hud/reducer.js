@@ -774,6 +774,8 @@ export function hudReducer(state, action, playbook) {
         ...state,
         stage: action.stage,
         previousStage: null,
+        // Clear activeObjection when leaving OBJECTION to prevent stale overlay
+        activeObjection: action.stage === 'OBJECTION' ? state.activeObjection : null,
         // Clear objection bucket when navigating to OBJECTION so the picker shows
         lastObjectionBucket:
           action.stage === 'OBJECTION' ? null : state.lastObjectionBucket,
@@ -827,6 +829,7 @@ export function hudReducer(state, action, playbook) {
         ...state,
         stage: 'OBJECTION',
         lastObjectionBucket: action.bucket,
+        activeObjection: bucket,
         objectionHistory: [
           ...state.objectionHistory,
           {

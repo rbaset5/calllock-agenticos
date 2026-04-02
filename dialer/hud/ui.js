@@ -734,8 +734,11 @@ function processTurn(utterance, classification) {
     const targetStage = INTENT_STAGE_MAP[classification.detectedIntent];
     if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
       dispatch({ type: 'PRICING_INTERRUPT', callSid: state.callId });
+    } else if (targetStage === 'MINI_PITCH' && state.stage !== 'MINI_PITCH') {
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now() });
+    } else if (targetStage === 'WRONG_PERSON' && state.stage !== 'WRONG_PERSON') {
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now() });
     }
-    // WRONG_PERSON and MINI_PITCH routing handled by existing stage transition logic
   }
 
   // Step 5: Generate NOW summary
