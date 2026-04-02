@@ -32,29 +32,37 @@ let sprintContextTimer = null;
 
 // Decision tree navigation: → = primary path, F10 = alternate path
 const STAGE_TRANSITIONS = {
-  IDLE:        { f7: 'OPENER',    f8: null },
-  GATEKEEPER:  { f7: 'OPENER',    f8: 'EXIT' },
-  OPENER:      { f7: 'BRIDGE',    f8: null },
-  BRIDGE:      { f7: 'QUALIFIER', f8: null },
-  QUALIFIER:   { f7: 'CLOSE',     f8: 'SEED_EXIT' },
-  CLOSE:       { f7: 'BOOKED',    f8: 'OBJECTION' },
-  OBJECTION:   { f7: 'CLOSE',     f8: 'EXIT' },
-  SEED_EXIT:   { f7: 'EXIT',      f8: null },
-  BOOKED:      { f7: 'EXIT',      f8: null },
-  NON_CONNECT: { f7: 'EXIT',      f8: null },
-  EXIT:        { f7: null,         f8: null },
+  IDLE:              { f7: 'OPENER',    f8: null },
+  GATEKEEPER:        { f7: 'OPENER',    f8: 'EXIT' },
+  OPENER:            { f7: 'BRIDGE',    f8: null },
+  PERMISSION_MOMENT: { f7: 'BRIDGE',    f8: 'EXIT' },
+  MINI_PITCH:        { f7: 'BRIDGE',    f8: 'EXIT' },
+  WRONG_PERSON:      { f7: 'EXIT',      f8: 'GATEKEEPER' },
+  BRIDGE:            { f7: 'QUALIFIER', f8: null },
+  QUALIFIER:         { f7: 'CLOSE',     f8: 'SEED_EXIT' },
+  PRICING:           { f7: 'QUALIFIER', f8: 'EXIT' },
+  CLOSE:             { f7: 'BOOKED',    f8: 'OBJECTION' },
+  OBJECTION:         { f7: 'CLOSE',     f8: 'EXIT' },
+  SEED_EXIT:         { f7: 'EXIT',      f8: null },
+  BOOKED:            { f7: 'EXIT',      f8: null },
+  NON_CONNECT:       { f7: 'EXIT',      f8: null },
+  EXIT:              { f7: null,         f8: null },
 };
 
 // Linear ordering for ← (back) only — IDLE excluded (→ from IDLE → OPENER is one-way)
-const NAV_STAGES = ['GATEKEEPER', 'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION'];
+const NAV_STAGES = ['GATEKEEPER', 'OPENER', 'PERMISSION_MOMENT', 'MINI_PITCH', 'WRONG_PERSON', 'BRIDGE', 'QUALIFIER', 'PRICING', 'CLOSE', 'OBJECTION'];
 
 // Stage display labels for the pill bar
 const STAGE_DISPLAY = [
   { key: 'IDLE', label: 'IDLE' },
   { key: 'GATEKEEPER', label: 'GK' },
   { key: 'OPENER', label: 'OPEN' },
+  { key: 'PERMISSION_MOMENT', label: 'PERM' },
+  { key: 'MINI_PITCH', label: 'MINI' },
+  { key: 'WRONG_PERSON', label: 'WRONG' },
   { key: 'BRIDGE', label: 'BRIDGE' },
   { key: 'QUALIFIER', label: 'QUAL' },
+  { key: 'PRICING', label: 'PRICE' },
   { key: 'CLOSE', label: 'CLOSE' },
   { key: 'OBJECTION', label: 'OBJ' },
 ];
@@ -497,6 +505,8 @@ document.addEventListener('keydown', (e) => {
 
     // 1-3 — Context-sensitive: bridge angles (BRIDGE/OPENER) or objections (CLOSE/OBJECTION)
     case e.key === '1' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages1 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages1.includes(state.stage)) break;
       e.preventDefault();
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'missed_calls', atMs: now });
@@ -507,6 +517,8 @@ document.addEventListener('keydown', (e) => {
     }
 
     case e.key === '2' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages2 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages2.includes(state.stage)) break;
       e.preventDefault();
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'competition', atMs: now });
@@ -517,6 +529,8 @@ document.addEventListener('keydown', (e) => {
     }
 
     case e.key === '3' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages3 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages3.includes(state.stage)) break;
       e.preventDefault();
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'overwhelmed', atMs: now });
@@ -528,6 +542,8 @@ document.addEventListener('keydown', (e) => {
 
     // 4 — Objection: authority (only in CLOSE/OBJECTION)
     case e.key === '4' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages4 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages4.includes(state.stage)) break;
       e.preventDefault();
       dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
       break;

@@ -125,14 +125,15 @@ describe("normalizeCard", () => {
 const ALL_NATIVE_STAGES = [
   'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION',
   'EXIT', 'SEED_EXIT', 'BOOKED', 'NON_CONNECT', 'GATEKEEPER', 'IDLE',
+  'PERMISSION_MOMENT', 'MINI_PITCH', 'WRONG_PERSON', 'PRICING',
 ];
 
 describe("NATIVE_STAGE_CARDS", () => {
-  it("exports all 11 core stages", () => {
+  it("exports all 15 stages", () => {
     for (const stage of ALL_NATIVE_STAGES) {
       assert.ok(stage in NATIVE_STAGE_CARDS, `missing stage: ${stage}`);
     }
-    assert.equal(Object.keys(NATIVE_STAGE_CARDS).length, 11);
+    assert.equal(Object.keys(NATIVE_STAGE_CARDS).length, 15);
   });
 
   it("every card has id matching its key", () => {
@@ -203,6 +204,63 @@ describe("NATIVE_STAGE_CARDS", () => {
         typeof c.clarifyingQuestion === 'string' && c.clarifyingQuestion.length > 0,
         'CLOSE must have a non-empty clarifyingQuestion'
       );
+    });
+  });
+
+  // PERMISSION_MOMENT-specific tests
+  describe("PERMISSION_MOMENT", () => {
+    it("has moveType 'ask' and toneVariants.rushed", () => {
+      const c = NATIVE_STAGE_CARDS.PERMISSION_MOMENT;
+      assert.equal(c.moveType, 'ask');
+      assert.equal(c.id, 'PERMISSION_MOMENT');
+      assert.ok(c.primaryLine.length > 0, 'primaryLine must be non-empty');
+      assert.ok(c.backupLine.length > 0, 'backupLine must be non-empty');
+      assert.ok(c.why.length > 0, 'why must be non-empty');
+      assert.ok('rushed' in c.toneVariants, 'missing rushed variant');
+      assert.ok(Object.keys(c.branchPreview).length === 3, 'branchPreview must have 3 routes');
+    });
+  });
+
+  // MINI_PITCH-specific tests
+  describe("MINI_PITCH", () => {
+    it("has moveType 'clarify', deliveryModifier 'compress', and clarifyingQuestion", () => {
+      const c = NATIVE_STAGE_CARDS.MINI_PITCH;
+      assert.equal(c.moveType, 'clarify');
+      assert.equal(c.deliveryModifier, 'compress');
+      assert.equal(c.id, 'MINI_PITCH');
+      assert.ok(c.primaryLine.length > 0, 'primaryLine must be non-empty');
+      assert.ok(c.backupLine.length > 0, 'backupLine must be non-empty');
+      assert.ok(c.clarifyingQuestion.length > 0, 'clarifyingQuestion must be non-empty');
+      assert.ok(Object.keys(c.branchPreview).length === 2, 'branchPreview must have 2 routes');
+    });
+  });
+
+  // WRONG_PERSON-specific tests
+  describe("WRONG_PERSON", () => {
+    it("has moveType 'clarify' and clarifyingQuestion", () => {
+      const c = NATIVE_STAGE_CARDS.WRONG_PERSON;
+      assert.equal(c.moveType, 'clarify');
+      assert.equal(c.id, 'WRONG_PERSON');
+      assert.ok(c.primaryLine.length > 0, 'primaryLine must be non-empty');
+      assert.ok(c.backupLine.length > 0, 'backupLine must be non-empty');
+      assert.ok(c.clarifyingQuestion.length > 0, 'clarifyingQuestion must be non-empty');
+      assert.ok(Object.keys(c.branchPreview).length === 2, 'branchPreview must have 2 routes');
+    });
+  });
+
+  // PRICING-specific tests
+  describe("PRICING", () => {
+    it("has moveType 'reframe', valueProp, proofPoint, toneVariants.annoyed", () => {
+      const c = NATIVE_STAGE_CARDS.PRICING;
+      assert.equal(c.moveType, 'reframe');
+      assert.equal(c.id, 'PRICING');
+      assert.ok(c.primaryLine.length > 0, 'primaryLine must be non-empty');
+      assert.ok(c.backupLine.length > 0, 'backupLine must be non-empty');
+      assert.ok(c.valueProp.length > 0, 'valueProp must be non-empty');
+      assert.ok(c.proofPoint.length > 0, 'proofPoint must be non-empty');
+      assert.ok(c.clarifyingQuestion.length > 0, 'clarifyingQuestion must be non-empty');
+      assert.ok('annoyed' in c.toneVariants, 'missing annoyed variant');
+      assert.ok(Object.keys(c.branchPreview).length === 2, 'branchPreview must have 2 routes');
     });
   });
 });

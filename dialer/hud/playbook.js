@@ -199,16 +199,20 @@ export function resolveBridgeLine(classification, playbook) {
  */
 export function lineForStage(stage, playbook) {
   switch (stage) {
-    case 'GATEKEEPER':  return playbook.gatekeeper.reach;
-    case 'OPENER':      return playbook.opener;
-    case 'BRIDGE':      return playbook.bridge.fallback;
-    case 'QUALIFIER':   return playbook.qualifier;
-    case 'SEED_EXIT':   return playbook.seedExit;
-    case 'CLOSE':       return playbook.close;
-    case 'BOOKED':      return playbook.booked;
-    case 'EXIT':        return playbook.exit;
-    case 'NON_CONNECT': return playbook.voicemail;
-    default:            return '';
+    case 'GATEKEEPER':        return playbook.gatekeeper.reach;
+    case 'OPENER':            return playbook.opener;
+    case 'PERMISSION_MOMENT': return 'Can I ask you a quick question about new customer calls?';
+    case 'MINI_PITCH':        return "We help contractors make sure inbound calls get handled when the team can't answer live.";
+    case 'WRONG_PERSON':      return "Makes sense. What's the best way to reach the person who handles that?";
+    case 'PRICING':           return "Happy to cover that — first I want to make sure this is even a problem worth solving on your side. When calls come in and nobody can grab them, what usually happens?";
+    case 'BRIDGE':            return playbook.bridge.fallback;
+    case 'QUALIFIER':         return playbook.qualifier;
+    case 'SEED_EXIT':         return playbook.seedExit;
+    case 'CLOSE':             return playbook.close;
+    case 'BOOKED':            return playbook.booked;
+    case 'EXIT':              return playbook.exit;
+    case 'NON_CONNECT':       return playbook.voicemail;
+    default:                  return '';
   }
 }
 
@@ -242,6 +246,29 @@ export function linesForStage(stage, playbook) {
         { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
         { label: '🔧 How it works', line: playbook.pitchLines.howItWorks },
         { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
+      ];
+    case 'PERMISSION_MOMENT':
+      return [
+        { label: 'Permission ask', line: 'Can I ask you a quick question about new customer calls?' },
+        { label: 'Backup (20s)', line: "This'll take 20 seconds — when a new call comes in and you can't grab it, what happens?" },
+      ];
+    case 'MINI_PITCH':
+      return [
+        { label: 'Mini pitch', line: "We help contractors make sure inbound calls get handled when the team can't answer live." },
+        { label: 'Backup', line: "We help contractors avoid losing jobs when calls come in and nobody can grab the phone." },
+        { label: 'Clarify', line: 'How are you handling that today?' },
+      ];
+    case 'WRONG_PERSON':
+      return [
+        { label: 'Referral ask', line: "Makes sense. What's the best way to reach the person who handles that?" },
+        { label: 'Backup', line: "No worries — is there a good time to catch the owner?" },
+        { label: 'Timing', line: "When's a good time to reach them?" },
+      ];
+    case 'PRICING':
+      return [
+        { label: 'Reframe', line: "Happy to cover that — first I want to make sure this is even a problem worth solving on your side. When calls come in and nobody can grab them, what usually happens?" },
+        { label: 'Backup', line: "I can cover pricing. I just don't want to throw numbers at you before knowing whether there's actually a problem to solve." },
+        { label: 'Frequency', line: 'How often do you think a good inbound call comes in when nobody can answer it properly?' },
       ];
     case 'BRIDGE':
       return [
