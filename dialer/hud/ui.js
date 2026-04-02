@@ -326,20 +326,26 @@ function handleFinalProspectTranscript(msg) {
 }
 
 async function triggerLlmFallback(utterance, utteranceId, seq) {
+  // Capture state BEFORE await to prevent cross-call bleed if a new call
+  // arrives while the LLM request is in-flight.
+  const capturedCallId = state.callId;
+  const capturedStage = state.stage;
+  const capturedContext = {
+    bridgeAngle: state.bridgeAngle,
+    lastObjectionBucket: state.lastObjectionBucket,
+  };
+
   const result = await classifyWithLlm(
     utterance,
-    state.stage,
-    {
-      bridgeAngle: state.bridgeAngle,
-      lastObjectionBucket: state.lastObjectionBucket,
-    },
+    capturedStage,
+    capturedContext,
     utteranceId,
   );
 
   if (result) {
     dispatch({
       type: 'LLM_RESULT',
-      callSid: state.callId,
+      callSid: capturedCallId,
       utteranceId,
       seq,
       result: {
@@ -353,7 +359,7 @@ async function triggerLlmFallback(utterance, utteranceId, seq) {
   } else {
     dispatch({
       type: 'LLM_FAILED',
-      callSid: state.callId,
+      callSid: capturedCallId,
       atMs: Date.now(),
     });
   }

@@ -24,6 +24,8 @@ export async function classifyWithLlm(utterance, stage, context, utteranceId) {
         bridgeAngle: context.bridgeAngle ?? undefined,
         lastObjectionBucket: context.lastObjectionBucket ?? undefined,
         utteranceId,
+        requestTone: true,
+        requestSecondaryIntent: true,
       }),
     });
 
@@ -37,6 +39,15 @@ export async function classifyWithLlm(utterance, stage, context, utteranceId) {
     if (data.error) {
       console.warn('[hud/llm] Server returned error flag');
       return null;
+    }
+
+    // Attach optional extended fields when the server provides them.
+    if (data.tone) {
+      data.tone_confidence = data.tone_confidence || 0.5;
+      data.tone_source = 'llm_refined';
+    }
+    if (data.secondary_intent) {
+      data.secondary_confidence = data.secondary_confidence || 0.5;
     }
 
     return data;
