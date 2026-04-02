@@ -6,9 +6,9 @@ import assert from "node:assert/strict";
 
 import {
   CARD_FIELDS,
-  STAGE_MOVE_MAP,
   makeEmptyCard,
   normalizeCard,
+  NATIVE_STAGE_CARDS,
 } from "../cards.js";
 import { PLAYBOOK } from "../playbook.js";
 
@@ -115,5 +115,94 @@ describe("normalizeCard", () => {
     for (const field of CARD_FIELDS) {
       assert.ok(field in card, `missing field: ${field}`);
     }
+  });
+});
+
+// -------------------------
+// NATIVE_STAGE_CARDS
+// -------------------------
+
+const ALL_NATIVE_STAGES = [
+  'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION',
+  'EXIT', 'SEED_EXIT', 'BOOKED', 'NON_CONNECT', 'GATEKEEPER', 'IDLE',
+];
+
+describe("NATIVE_STAGE_CARDS", () => {
+  it("exports all 11 core stages", () => {
+    for (const stage of ALL_NATIVE_STAGES) {
+      assert.ok(stage in NATIVE_STAGE_CARDS, `missing stage: ${stage}`);
+    }
+    assert.equal(Object.keys(NATIVE_STAGE_CARDS).length, 11);
+  });
+
+  it("every card has id matching its key", () => {
+    for (const [key, card] of Object.entries(NATIVE_STAGE_CARDS)) {
+      assert.equal(card.id, key, `id mismatch for ${key}`);
+    }
+  });
+
+  it("every card has all 14 v2 fields", () => {
+    for (const [key, card] of Object.entries(NATIVE_STAGE_CARDS)) {
+      for (const field of CARD_FIELDS) {
+        assert.ok(field in card, `${key} missing field: ${field}`);
+      }
+    }
+  });
+
+  it("every card has ≤4 listenFor items", () => {
+    for (const [key, card] of Object.entries(NATIVE_STAGE_CARDS)) {
+      assert.ok(
+        Array.isArray(card.listenFor) && card.listenFor.length <= 4,
+        `${key} listenFor must be array with ≤4 items, got ${card.listenFor}`
+      );
+    }
+  });
+
+  it("every card has ≤3 branchPreview routes", () => {
+    for (const [key, card] of Object.entries(NATIVE_STAGE_CARDS)) {
+      assert.ok(
+        typeof card.branchPreview === 'object' && card.branchPreview !== null,
+        `${key} branchPreview must be an object`
+      );
+      assert.ok(
+        Object.keys(card.branchPreview).length <= 3,
+        `${key} branchPreview must have ≤3 routes, got ${Object.keys(card.branchPreview).length}`
+      );
+    }
+  });
+
+  // OPENER-specific tests
+  describe("OPENER", () => {
+    it("has all v2 fields including backupLine, listenFor, branchPreview", () => {
+      const c = NATIVE_STAGE_CARDS.OPENER;
+      assert.equal(c.stage, 'OPENER');
+      assert.equal(c.moveType, 'ask');
+      assert.ok(c.primaryLine.length > 0, 'primaryLine must be non-empty');
+      assert.ok(c.backupLine.length > 0, 'backupLine must be non-empty');
+      assert.ok(Array.isArray(c.listenFor) && c.listenFor.length >= 1);
+      assert.ok(Object.keys(c.branchPreview).length >= 1);
+      assert.ok(typeof c.toneVariants === 'object' && c.toneVariants !== null);
+    });
+  });
+
+  // BRIDGE-specific tests
+  describe("BRIDGE", () => {
+    it("has toneVariants with rushed, annoyed, curious", () => {
+      const c = NATIVE_STAGE_CARDS.BRIDGE;
+      assert.ok('rushed' in c.toneVariants, 'missing rushed variant');
+      assert.ok('annoyed' in c.toneVariants, 'missing annoyed variant');
+      assert.ok('curious' in c.toneVariants, 'missing curious variant');
+    });
+  });
+
+  // CLOSE-specific tests
+  describe("CLOSE", () => {
+    it("has clarifyingQuestion", () => {
+      const c = NATIVE_STAGE_CARDS.CLOSE;
+      assert.ok(
+        typeof c.clarifyingQuestion === 'string' && c.clarifyingQuestion.length > 0,
+        'CLOSE must have a non-empty clarifyingQuestion'
+      );
+    });
   });
 });
