@@ -11,7 +11,7 @@ import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
 import { INTENT_STAGE_MAP } from './taxonomy.js';
-import { renderV2CenterPanel, renderProspectContext, renderTacticalCard } from './render-v2.js';
+import { renderV2CenterPanel, renderProspectContext, renderTacticalCard, renderPauseStrip } from './render-v2.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -35,6 +35,8 @@ let sprintContext = null;
 let sprintContextStale = false;
 let sprintContextCachedAt = null;
 let sprintContextTimer = null;
+let pauseStripTimer = null;
+let pauseStripSilenceTimer = null;
 
 // Decision tree navigation: → = primary path, F10 = alternate path
 const STAGE_TRANSITIONS = {
@@ -89,6 +91,31 @@ const $linesFeed = document.getElementById('linesFeed');
 const $objectionsFeed = document.getElementById('objectionsFeed');
 const $roundStrip = document.getElementById('roundStrip');
 
+// ── Pause strip ──────────────────────────────────────────────
+
+function activatePauseStrip() {
+  renderPauseStrip(true, '\u23F8 PAUSE \u00B7 Let them answer \u00B7 Classify their response type');
+  clearTimeout(pauseStripTimer);
+  pauseStripTimer = setTimeout(() => {
+    const el = document.getElementById('v2-pause-strip');
+    if (el) el.classList.add('dimmed');
+  }, 5000);
+  clearTimeout(pauseStripSilenceTimer);
+  pauseStripSilenceTimer = setTimeout(() => {
+    const el = document.getElementById('v2-pause-strip');
+    if (el && !el.classList.contains('dimmed')) {
+      el.textContent = '\u23F8 Hold. Let them answer.';
+    }
+  }, 8000);
+}
+
+function deactivatePauseStrip() {
+  clearTimeout(pauseStripTimer);
+  clearTimeout(pauseStripSilenceTimer);
+  const el = document.getElementById('v2-pause-strip');
+  if (el) el.classList.add('dimmed');
+}
+
 // ── Dispatch ───────────────────────────────────────────────────
 
 function dispatch(action) {
@@ -97,6 +124,10 @@ function dispatch(action) {
   if (state.stage !== prevState.stage && state.stage !== 'IDLE') {
     // Keep round history across stage changes (Option B from plan)
     roundIndex = -1;
+    activatePauseStrip();
+  }
+  if (action.type === 'TRANSCRIPT_FINAL') {
+    deactivatePauseStrip();
   }
   logDecision(action, prevState, state);
   render();

@@ -127,14 +127,15 @@ const ALL_NATIVE_STAGES = [
   'OPENER', 'BRIDGE', 'QUALIFIER', 'CLOSE', 'OBJECTION',
   'EXIT', 'SEED_EXIT', 'BOOKED', 'NON_CONNECT', 'GATEKEEPER', 'IDLE',
   'PERMISSION_MOMENT', 'MINI_PITCH', 'WRONG_PERSON', 'PRICING',
+  'CALLBACK_CLOSE', 'TRANSFER_CLOSE', 'DIAGNOSTIC_CLOSE', 'REFERRAL_CLOSE',
 ];
 
 describe("NATIVE_STAGE_CARDS", () => {
-  it("exports all 15 stages", () => {
+  it("exports all 19 stages", () => {
     for (const stage of ALL_NATIVE_STAGES) {
       assert.ok(stage in NATIVE_STAGE_CARDS, `missing stage: ${stage}`);
     }
-    assert.equal(Object.keys(NATIVE_STAGE_CARDS).length, 15);
+    assert.equal(Object.keys(NATIVE_STAGE_CARDS).length, 19);
   });
 
   it("every card has id matching its key", () => {
@@ -262,6 +263,50 @@ describe("NATIVE_STAGE_CARDS", () => {
       assert.ok(c.clarifyingQuestion.length > 0, 'clarifyingQuestion must be non-empty');
       assert.ok('annoyed' in c.toneVariants, 'missing annoyed variant');
       assert.ok(Object.keys(c.branchPreview).length === 2, 'branchPreview must have 2 routes');
+    });
+  });
+
+  // ── Close variant cards ─────────────────────────────────────
+  const CLOSE_VARIANT_KEYS = ['CALLBACK_CLOSE', 'TRANSFER_CLOSE', 'DIAGNOSTIC_CLOSE', 'REFERRAL_CLOSE'];
+
+  describe("close variant cards", () => {
+    it("all 4 close variants exist", () => {
+      for (const key of CLOSE_VARIANT_KEYS) {
+        assert.ok(key in NATIVE_STAGE_CARDS, `missing close variant: ${key}`);
+      }
+    });
+
+    it("all close variants have moveType 'close'", () => {
+      for (const key of CLOSE_VARIANT_KEYS) {
+        assert.equal(NATIVE_STAGE_CARDS[key].moveType, 'close', `${key} moveType must be 'close'`);
+      }
+    });
+
+    it("all close variants have required fields", () => {
+      for (const key of CLOSE_VARIANT_KEYS) {
+        const c = NATIVE_STAGE_CARDS[key];
+        assert.equal(c.id, key, `${key} id must match key`);
+        assert.equal(c.stage, key, `${key} stage must match key`);
+        assert.ok(typeof c.goal === 'string' && c.goal.length > 0, `${key} must have non-empty goal`);
+        assert.ok(typeof c.primaryLine === 'string' && c.primaryLine.length > 0, `${key} must have non-empty primaryLine`);
+        assert.ok(typeof c.backupLine === 'string' && c.backupLine.length > 0, `${key} must have non-empty backupLine`);
+        assert.ok(typeof c.why === 'string' && c.why.length > 0, `${key} must have non-empty why`);
+        assert.ok(Array.isArray(c.listenFor) && c.listenFor.length >= 1, `${key} must have listenFor array`);
+        assert.ok(typeof c.branchPreview === 'object' && c.branchPreview !== null, `${key} must have branchPreview`);
+        assert.ok(typeof c.clarifyingQuestion === 'string' && c.clarifyingQuestion.length > 0, `${key} must have non-empty clarifyingQuestion`);
+        for (const field of CARD_FIELDS) {
+          assert.ok(field in c, `${key} missing field: ${field}`);
+        }
+      }
+    });
+
+    it("DIAGNOSTIC_CLOSE has deliveryModifier 'soften'", () => {
+      assert.equal(NATIVE_STAGE_CARDS.DIAGNOSTIC_CLOSE.deliveryModifier, 'soften');
+    });
+
+    it("REFERRAL_CLOSE branchPreview has only engaged route", () => {
+      assert.equal(Object.keys(NATIVE_STAGE_CARDS.REFERRAL_CLOSE.branchPreview).length, 1);
+      assert.ok('engaged' in NATIVE_STAGE_CARDS.REFERRAL_CLOSE.branchPreview);
     });
   });
 });

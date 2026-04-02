@@ -361,6 +361,58 @@ export const NATIVE_STAGE_CARDS = {
     toneVariants: {},
   },
 
+  CALLBACK_CLOSE: {
+    id: 'CALLBACK_CLOSE', stage: 'CALLBACK_CLOSE', moveType: 'close',
+    deliveryModifier: null,
+    goal: 'Schedule callback with right person.',
+    primaryLine: "When would be a good time for a quick 15-minute call to walk through how this would work for your shop?",
+    backupLine: "Should I try you back Thursday or Friday? Just 15 minutes.",
+    why: 'Gets specific callback time instead of vague follow-up.',
+    listenFor: ['time offered', 'resistance', 'redirect to email'],
+    branchPreview: { engaged: { next: 'BOOKED' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: "What day works better this week?",
+    valueProp: null, proofPoint: null, toneVariants: {},
+  },
+
+  TRANSFER_CLOSE: {
+    id: 'TRANSFER_CLOSE', stage: 'TRANSFER_CLOSE', moveType: 'close',
+    deliveryModifier: null,
+    goal: 'Get transferred to decision-maker.',
+    primaryLine: "Would you be able to connect me with them now, or should I call back at a specific time?",
+    backupLine: "What's the best way to reach them directly?",
+    why: 'Asks for transfer or direct contact info.',
+    listenFor: ['transfer offered', 'callback time', 'refusal'],
+    branchPreview: { engaged: { next: 'OPENER' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: "Are they usually available in the morning or afternoon?",
+    valueProp: null, proofPoint: null, toneVariants: {},
+  },
+
+  DIAGNOSTIC_CLOSE: {
+    id: 'DIAGNOSTIC_CLOSE', stage: 'DIAGNOSTIC_CLOSE', moveType: 'close',
+    deliveryModifier: 'soften',
+    goal: 'Offer low-friction audit.',
+    primaryLine: "Would it be useful if I sent you a quick 2-minute breakdown of how your calls are being handled right now?",
+    backupLine: "No commitment — just a snapshot of what's happening with your inbound calls. Worth a look?",
+    why: 'Lowest-friction next step when prospect is interested but not ready to commit.',
+    listenFor: ['agreement', 'curiosity', 'still resisting'],
+    branchPreview: { engaged: { next: 'BOOKED' }, pushback: { next: 'EXIT' } },
+    clarifyingQuestion: "What email should I send that to?",
+    valueProp: null, proofPoint: null, toneVariants: {},
+  },
+
+  REFERRAL_CLOSE: {
+    id: 'REFERRAL_CLOSE', stage: 'REFERRAL_CLOSE', moveType: 'close',
+    deliveryModifier: null,
+    goal: 'Get referral to right person.',
+    primaryLine: "Do you know any other contractors in your area who might be dealing with this same missed-call problem?",
+    backupLine: "Even if this isn't the right fit for you, who else comes to mind that's growing and might be missing calls?",
+    why: 'Turns a dead end into a warm referral.',
+    listenFor: ['name given', 'deflection', 'curiosity'],
+    branchPreview: { engaged: { next: 'EXIT' } },
+    clarifyingQuestion: "What's their name and what trade are they in?",
+    valueProp: null, proofPoint: null, toneVariants: {},
+  },
+
   IDLE: {
     id: 'IDLE',
     stage: 'IDLE',
