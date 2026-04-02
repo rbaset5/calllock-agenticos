@@ -84,6 +84,7 @@ def compute_learned_score(prospect: dict[str, Any], heat_map: dict[str, Any]) ->
     return 0.7 * static_score + 0.3 * metro_rate
 
 
+
 def _fresh_matches_segment(prospect: dict[str, Any], segment: str | None) -> bool:
     if not segment:
         return True

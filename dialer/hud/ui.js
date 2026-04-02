@@ -574,6 +574,7 @@ document.addEventListener('keyup', (e) => {
   shiftOnlyPressed = false;
 });
 
+
 // ── Render ─────────────────────────────────────────────────────
 
 function render() {
@@ -616,137 +617,6 @@ function render() {
   // Confidence badge
   renderConfidenceBadge();
 
-  // Quick-pick strip (bridge angles or objection types)
-  renderQuickPickStrip();
-
-  // Context-sensitive hotkey bar
-  renderHotkeyBar();
-}
-
-function renderHotkeyBar() {
-  const $bar = document.getElementById('hotkey-bar');
-  if (!$bar) return;
-
-  const hk = (key, label) => `<span class="hotkey-item"><kbd>${key}</kbd> ${label}</span>`;
-
-  const HOTKEYS_BY_STAGE = {
-    IDLE: [
-      hk('→', 'Start call'),
-      hk('F9', 'Voicemail'),
-      hk('⇧F1', 'Reset'),
-    ],
-    GATEKEEPER: [
-      hk('→', 'Got owner'),
-      hk('F10', 'Not available'),
-      hk('F9', 'Voicemail'),
-      hk('Space', 'Off-script'),
-      hk('←', 'Back'),
-    ],
-    OPENER: [
-      hk('→', 'They responded'),
-      hk('1', 'Missed'),
-      hk('2', 'Comp'),
-      hk('3', 'Overwhelm'),
-      hk('F9', 'Voicemail'),
-      hk('Space', 'Off-script'),
-      hk('←', 'Back'),
-    ],
-    BRIDGE: [
-      hk('→', 'Next → Qualify'),
-      hk('1', 'Missed'),
-      hk('2', 'Comp'),
-      hk('3', 'Overwhelm'),
-      hk('Space', 'Off-script'),
-      hk('←', 'Back'),
-    ],
-    QUALIFIER: [
-      hk('→', 'Pain → Close'),
-      hk('F10', 'No pain → Exit'),
-      hk('Space', 'Off-script'),
-      hk('←', 'Back'),
-    ],
-    CLOSE: [
-      hk('→', 'Yes! → Booked'),
-      hk('F10', 'Objection'),
-      hk('⇧', 'Hedge'),
-      hk('1', 'Timing'),
-      hk('2', 'Interest'),
-      hk('3', 'Info'),
-      hk('4', 'Authority'),
-      hk('Space', 'Off-script'),
-      hk('←', 'Back'),
-    ],
-    OBJECTION: [
-      hk('1', 'Timing'),
-      hk('2', 'Interest'),
-      hk('3', 'Info'),
-      hk('4', 'Authority'),
-      hk('→', 'Try close'),
-      hk('F10', 'Give up'),
-      hk('⇧', 'Hedge'),
-      hk('Space', 'Off-script'),
-      hk('←', 'Back'),
-    ],
-    SEED_EXIT: [
-      hk('→', 'Done'),
-      hk('Space', 'Off-script'),
-      hk('←', 'Back'),
-    ],
-    BOOKED: [
-      hk('→', 'Call done'),
-      hk('⇧F1', 'Reset'),
-    ],
-    NON_CONNECT: [
-      hk('→', 'Done'),
-    ],
-    EXIT: [
-      hk('⇧F1', 'Reset'),
-    ],
-    ENDED: [
-      hk('⇧F1', 'Reset'),
-    ],
-  };
-
-  const items = HOTKEYS_BY_STAGE[state.stage] || HOTKEYS_BY_STAGE.IDLE;
-  $bar.innerHTML = items.join('');
-}
-
-function renderQuickPickStrip() {
-  const $strip = document.getElementById('quick-pick-strip');
-  if (!$strip) return;
-
-  const inactiveStages = ['IDLE', 'ENDED', 'EXIT', 'BOOKED', 'SEED_EXIT', 'NON_CONNECT'];
-  if (inactiveStages.includes(state.stage)) {
-    $strip.innerHTML = '';
-    return;
-  }
-
-  const isBridgeStage = state.stage === 'OPENER' || state.stage === 'BRIDGE';
-  const cards = isBridgeStage ? BRIDGE_CARDS : OBJECTION_CARDS;
-
-  const html = cards.map(card => {
-    const action = isBridgeStage ? card.action : card.bucket;
-    return `<div class="quick-pick" data-action="${action}" data-bridge="${isBridgeStage}">` +
-      `<span class="quick-pick-key">${card.key}</span>` +
-      `<span class="quick-pick-label">${card.name}</span>` +
-      `<span class="quick-pick-cue">${card.cues}</span>` +
-    `</div>`;
-  }).join('');
-
-  $strip.innerHTML = html;
-
-  // Click handlers
-  $strip.querySelectorAll('.quick-pick').forEach(el => {
-    el.addEventListener('click', () => {
-      const action = el.dataset.action;
-      const bridge = el.dataset.bridge === 'true';
-      if (bridge) {
-        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: action, atMs: Date.now() });
-      } else {
-        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: action, atMs: Date.now() });
-      }
-    });
-  });
 }
 
 function renderContextStrip() {
@@ -971,6 +841,7 @@ function renderRoundStrip() {
     $roundStrip.appendChild(bubble);
   });
 }
+
 
 function currentLineContext() {
   return {

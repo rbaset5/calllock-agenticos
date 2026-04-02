@@ -86,6 +86,7 @@ def _build_shutdown_log() -> str:
     }
     lines = [f"- {field}: {mapping.get(field, '---')}" for field in fields]
 
+
     # Plan-vs-actual: schedule adherence
     dials_done = int(state.get("dials_completed_today", 0) or 0)
     dials_target = int(state.get("dials_target_today", 0) or 0)
@@ -99,6 +100,7 @@ def _build_shutdown_log() -> str:
                 lines.append(f"- first_dial: {first_call_at[:16]}")
     except Exception:
         pass
+
 
     return "\n".join(lines) if lines else "- dials: 0"
 

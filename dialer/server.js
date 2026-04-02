@@ -438,6 +438,7 @@ async function _fetchSprintStart() {
 _fetchSprintStart();
 setInterval(_fetchSprintStart, 24 * 60 * 60 * 1000);
 
+
 async function buildLocalScoreboard(today = new Date()) {
   if (!supabase) {
     return {
@@ -558,6 +559,7 @@ async function writeOutcomeRecord(callSid) {
 }
 
 app.get('/', (_req, res) => {
+  setHudCookie(res);
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
