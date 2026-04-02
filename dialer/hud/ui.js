@@ -6,6 +6,11 @@ import { createInitialState, hudReducer, bandFromScore } from './reducer.js';
 import { classifyUtterance, shouldCallLlmFallback, isUsableDeterministicResult } from './classifier.js';
 import { captureSession, resetAuditTrail, logDecision, saveSession } from './session.js';
 import { classifyWithLlm } from './llm.js';
+import { assignTone, shouldUpdateTone } from './tone.js';
+import { computeRisk, updateTrajectory } from './risk.js';
+import { composeActiveCard, generateNowSummary } from './composer.js';
+import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
+import { INTENT_STAGE_MAP } from './taxonomy.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -307,6 +312,8 @@ function handleFinalProspectTranscript(msg) {
       seq: msg.seq,
       atMs: msg.atMs || Date.now(),
     });
+    // v2: run turn lifecycle after dispatch updates state
+    processTurn(msg.text, result);
   } else {
     // Low confidence: add transcript but don't change state
     dispatch({
@@ -317,6 +324,8 @@ function handleFinalProspectTranscript(msg) {
       seq: msg.seq,
       atMs: msg.atMs || Date.now(),
     });
+    // v2: run turn lifecycle even for low-confidence (tone/risk still useful)
+    processTurn(msg.text, result);
 
     // Try LLM fallback
     if (shouldCallLlmFallback(result)) {
@@ -596,6 +605,79 @@ document.addEventListener('keyup', (e) => {
   shiftOnlyPressed = false;
 });
 
+
+// ── v2 Turn Orchestrator ──────────────────────────────────────
+
+/**
+ * v2 Turn lifecycle orchestrator (spec Section 27).
+ * Runs the full pipeline: classify → tone → risk → route → summary → compose → render → log
+ * Called after classifyUtterance returns for a final prospect transcript.
+ *
+ * @param {string} utterance - the prospect's utterance text
+ * @param {object} classification - result from classifyUtterance
+ */
+function processTurn(utterance, classification) {
+  // Step 1: classification already done by caller
+
+  // Step 2: Assign tone (rules-based)
+  const toneResult = assignTone(utterance, {
+    primaryIntent: classification.detectedIntent || classification.bridgeAngle || classification.objectionBucket || null,
+  }, state.stage);
+
+  // Apply hysteresis - only update if threshold crossed
+  const currentTone = { tone_label: state.tone, tone_confidence: state.toneConfidence };
+  if (shouldUpdateTone(currentTone, toneResult, state._consecutiveToneCount || 0)) {
+    dispatch({
+      type: 'SET_TONE',
+      callSid: state.callId,
+      tone: toneResult.tone_label,
+      toneSource: toneResult.tone_source,
+      toneConfidence: toneResult.tone_confidence,
+    });
+    state._consecutiveToneCount = 0;
+  } else if (toneResult.tone_label === state._lastCandidateTone) {
+    state._consecutiveToneCount = (state._consecutiveToneCount || 0) + 1;
+  } else {
+    state._consecutiveToneCount = 0;
+  }
+  state._lastCandidateTone = toneResult.tone_label;
+
+  // Step 3: Update trajectory and compute risk (for objection-eligible stages)
+  const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || null;
+  if (primaryIntent) {
+    const classObj = {
+      primary: { intent: primaryIntent },
+      compound: false, // single-label for now, compound comes in Task 17
+      utterance: utterance,
+    };
+    const wasSalvage = state.stage === 'OBJECTION' && state.trajectory.turnsInCurrentStage > 0;
+    const newTrajectory = updateTrajectory(state.trajectory, classObj, state.stage, wasSalvage);
+    const risk = computeRisk(newTrajectory, classObj);
+
+    // Update state trajectory and risk (direct mutation for non-reducer fields)
+    state.trajectory = newTrajectory;
+    state.risk = risk;
+    state.primaryIntent = primaryIntent;
+  }
+
+  // Step 4: Check for dedicated stage routing via INTENT_STAGE_MAP
+  if (classification.detectedIntent && INTENT_STAGE_MAP[classification.detectedIntent]) {
+    const targetStage = INTENT_STAGE_MAP[classification.detectedIntent];
+    if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
+      dispatch({ type: 'PRICING_INTERRUPT', callSid: state.callId });
+    }
+    // WRONG_PERSON and MINI_PITCH routing handled by existing stage transition logic
+  }
+
+  // Step 5: Generate NOW summary
+  state.nowSummary = generateNowSummary({
+    primaryIntent: primaryIntent,
+    tone: state.tone,
+    toneConfidence: state.toneConfidence,
+  });
+
+  // Steps 6-8 (compose + render + log) happen in render() which is called by dispatch
+}
 
 // ── Render ─────────────────────────────────────────────────────
 
