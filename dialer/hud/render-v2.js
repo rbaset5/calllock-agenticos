@@ -17,10 +17,13 @@ function _esc(str) {
 /**
  * Render the move type pill (e.g., "BRIDGE ▸ probe" or "ask · compress")
  */
-export function renderMoveTypePill(moveType, deliveryModifier) {
+export function renderMoveTypePill(moveType, deliveryModifier, secondaryIntent) {
   const el = document.getElementById('v2-move-type');
   if (!el) return;
-  const label = deliveryModifier ? `${moveType} · ${deliveryModifier}` : (moveType || '');
+  let label = deliveryModifier ? `${moveType} · ${deliveryModifier}` : (moveType || '');
+  if (secondaryIntent) {
+    label += ` · also: ${secondaryIntent}`;
+  }
   el.textContent = label;
 }
 
@@ -354,7 +357,7 @@ export function renderTacticalCard(card) {
  */
 export function renderV2CenterPanel(activeCard, state) {
   if (!activeCard) return;
-  renderMoveTypePill(activeCard.moveType, activeCard.deliveryModifier);
+  renderMoveTypePill(activeCard.moveType, activeCard.deliveryModifier, state.compound ? state._secondaryIntent : null);
   renderNowSummary(state.nowSummary);
   renderBackupLine(activeCard.backupLine);
   renderListenFor(activeCard.listenFor);

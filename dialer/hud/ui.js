@@ -3,7 +3,7 @@
 
 import { PLAYBOOK, fillLineTemplate, linesForStage } from './playbook.js';
 import { createInitialState, hudReducer, bandFromScore } from './reducer.js';
-import { classifyUtterance, shouldCallLlmFallback, isUsableDeterministicResult } from './classifier.js';
+import { classifyUtterance, shouldCallLlmFallback, isUsableDeterministicResult, detectNewIntents } from './classifier.js';
 import { captureSession, resetAuditTrail, logDecision, saveSession } from './session.js';
 import { classifyWithLlm } from './llm.js';
 import { assignTone, shouldUpdateTone } from './tone.js';
@@ -716,9 +716,14 @@ function processTurn(utterance, classification) {
   // Step 3: Update trajectory and compute risk (for objection-eligible stages)
   const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || null;
   if (primaryIntent) {
+    // Detect secondary intent: check if the utterance also matches a different signal
+    const secondaryCheck = detectNewIntents(utterance, state.stage);
+    const secondaryIntent = (secondaryCheck && secondaryCheck.intent !== primaryIntent) ? secondaryCheck.intent : null;
+    const isCompound = !!secondaryIntent;
+
     const classObj = {
       primary: { intent: primaryIntent },
-      compound: false, // single-label for now, compound comes in Task 17
+      compound: isCompound,
       utterance: utterance,
     };
     const wasSalvage = state.stage === 'OBJECTION' && state.trajectory.turnsInCurrentStage > 0;
@@ -729,6 +734,8 @@ function processTurn(utterance, classification) {
     state.trajectory = newTrajectory;
     state.risk = risk;
     state.primaryIntent = primaryIntent;
+    state.compound = isCompound;
+    state._secondaryIntent = secondaryIntent;
   }
 
   // Step 4: Generate NOW summary BEFORE dispatch (so render() has it ready)
