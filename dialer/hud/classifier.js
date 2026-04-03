@@ -124,6 +124,13 @@ const BRIDGE_KEYWORDS = {
       "miss them",
       "dispatcher gets it",
       "dispatcher handles",
+      "weekends are tough",
+      "weekends are hard",
+      "weekends are difficult",
+      "after hours is tough",
+      "after hours is hard",
+      "close at noon",
+      "close early",
     ],
     words: [
       "voicemail",
@@ -229,6 +236,9 @@ const OBJECTION_BUCKETS = {
       "can't talk right now",
       "in the middle of something",
       "i'm on a job",
+      "don't have time",
+      "no time for this",
+      "not right now",
     ],
     words: ["busy", "later", "tomorrow", "middle"],
   },
@@ -257,7 +267,7 @@ const OBJECTION_BUCKETS = {
       "send over your website",
       "just send it",
     ],
-    words: ["email", "website", "info"],
+    words: ["email", "website"],
   },
   authority: {
     phrases: [
@@ -277,20 +287,31 @@ const OBJECTION_BUCKETS = {
 const MINI_PITCH_PHRASES = [
   'what is this', 'what do you do', "what's this about", 'who are you',
   'what company', 'what are you selling', 'what is this about',
+  "i don't understand", "don't understand what", "what do you mean",
+  "i don't get it", "what are you talking about",
 ];
 
 const WRONG_PERSON_PHRASES = [
   "i don't handle that", 'talk to my wife', 'talk to my partner',
   'talk to my husband', 'talk to dispatcher', 'wrong person',
   "i'm the tech", "i'm the helper", 'not my decision',
+  "i'm just the tech", "i'm just the technician", "i'm just the installer",
+  "just the tech", "just the technician", "just a tech",
   "owner isn't here", "he's not here", "she's not here",
   'my husband handles', 'my wife handles', 'he handles that',
   'she handles that', 'husband handles', 'wife handles',
+  'take a message', 'leave your number',
+  "can i take a message", "he's in a meeting", "she's in a meeting",
+  "let me transfer you", "let me get him", "let me get her",
+  "i'll transfer you", "i'll get the owner",
 ];
 
 const PRICING_QUESTION_PHRASES = [
   'how much', "what's the cost", 'pricing', 'what do you charge', 'price range',
   'how much does it cost', 'what does it cost',
+  'give me a ballpark', 'ballpark price', 'ballpark number',
+  'tell me the price', 'what does this cost', 'what does something like this cost',
+  'how much is it', 'what would it cost',
 ];
 
 const PRICING_RESISTANCE_PHRASES = [
@@ -298,16 +319,66 @@ const PRICING_RESISTANCE_PHRASES = [
   'costs too much', "don't have the budget",
 ];
 
+// Multi-word phrases only. Bare "yeah"/"sure"/"ok" handled by SHORT_UTTERANCE_MAP
+// to avoid false positives in longer sentences like "yeah we get some calls".
 const YES_PHRASES = [
-  "yeah",
-  "yes",
-  "sure",
-  "okay",
-  "ok",
   "that works",
   "sounds good",
   "thursday works",
   "friday works",
+  "wednesday works",
+  "monday works",
+  "tuesday works",
+  "let's do it",
+  "let's set it up",
+  "set something up",
+  "set it up",
+  "book it",
+  "schedule it",
+  "i'm down",
+  "sign me up",
+  "worth a look",
+  "worth looking",
+  "let's talk",
+  "let's do",
+  "morning works",
+  "afternoon works",
+  "before 9",
+  "before 10",
+  "after lunch",
+  "sure yeah",
+  "yeah sure",
+  "sure let's",
+  "ok let's",
+  "yeah let's",
+  "fine thursday",
+  "fine friday",
+  "fine wednesday",
+  "fine monday",
+  "fine tuesday",
+  "fine show me",
+  "fine let's",
+  "alright thursday",
+  "alright friday",
+  "alright let's",
+  "set up a call",
+  "put me down",
+  "put something on",
+  "esta bien",
+  "thursday i guess",
+  "friday i guess",
+  "friday at 2",
+  "friday at 3",
+  "wednesday at 4",
+  "thursday at 2",
+  "thursday at 3",
+  "monday at",
+  "tuesday at",
+  "would work",
+  "that works",
+  "works for me",
+  "works for both",
+  "works for us",
 ];
 
 const HEDGE_PHRASES = [
@@ -317,6 +388,51 @@ const HEDGE_PHRASES = [
   "i guess",
   "possibly",
 ];
+
+// Exit-intent: DNC, wrong number, hostile, business closed
+const EXIT_INTENT_PHRASES = [
+  'take me off', 'remove my number', 'stop calling', 'do not call',
+  'wrong number', 'not a business', "don't call again", 'harassment',
+  'reporting you', 'report you', 'closed down', 'went out of business',
+  'retired', 'sold the business', 'sold the company', 'no longer in business',
+  'i said goodbye', 'i said no', 'i said bye',
+  "you've reached", 'leave a message after the tone', 'leave a message at the beep',
+  'please leave a message', 'not available right now',
+  "i'm not going to", "not going to take a message",
+  'hanging up', 'i gotta go bye',
+];
+
+// Conference / multi-party detection (NOT authority_mismatch)
+const CONFERENCE_PHRASES = [
+  'on speaker', 'speakerphone', 'both here', 'me and my partner are',
+  'we are both', "we're both", 'got you on speaker',
+];
+
+// Short utterance map: 1-4 word responses with clear intent
+// Note: "not interested" is NOT here — it goes through the stage-specific objection
+// classifier which provides richer objectionBucket context.
+const SHORT_UTTERANCE_MAP = {
+  'no': 'brush_off',
+  'nope': 'brush_off',
+  'nah': 'brush_off',
+  'bye': 'brush_off',
+  'goodbye': 'brush_off',
+  'yeah': 'engaged_answer',
+  'yes': 'engaged_answer',
+  'yep': 'engaged_answer',
+  'sure': 'engaged_answer',
+  'ok': 'engaged_answer',
+  'okay': 'engaged_answer',
+  'what': 'confusion',
+  'huh': 'confusion',
+  'what?': 'confusion',
+  'huh?': 'confusion',
+  'hmm': 'confusion',
+  'who is this': 'confusion',
+  'say again': 'confusion',
+  'say that again': 'confusion',
+  'come again': 'confusion',
+};
 
 // -------------------------
 // Public API
@@ -335,6 +451,21 @@ export function detectNewIntents(utterance, stage) {
   if (confusionHits > 0) {
     const stageBoost = ['OPENER', 'GATEKEEPER', 'PERMISSION_MOMENT'].includes(stage) ? 0.15 : 0;
     return { intent: 'confusion', confidence: clamp01(0.65 + stageBoost + (confusionHits - 1) * 0.1) };
+  }
+
+  // Exit-intent detection FIRST — DNC, wrong number, voicemail, hostile, closed.
+  // Must run before wrong_person so "leave a message after the tone" matches as
+  // voicemail exit, not gatekeeper/wrong_person.
+  const exitHits = countPhraseMatches(text, EXIT_INTENT_PHRASES);
+  if (exitHits > 0) {
+    return { intent: 'brush_off', confidence: clamp01(0.80 + (exitHits - 1) * 0.05) };
+  }
+
+  // Conference call detection BEFORE wrong_person — "on speaker with my partner"
+  // should not trigger authority_mismatch
+  const confCallHits = countPhraseMatches(text, CONFERENCE_PHRASES);
+  if (confCallHits > 0) {
+    return { intent: 'engaged_answer', confidence: 0.65 };
   }
 
   // Check wrong person
@@ -356,12 +487,58 @@ export function detectNewIntents(utterance, stage) {
     return { intent: 'pricing_resistance', confidence: clamp01(0.65 + (prHits - 1) * 0.08) };
   }
 
-  // Check curiosity / engagement (helps advance from OPENER)
-  const CURIOSITY_PHRASES = ['how does that work', 'tell me more', 'that sounds interesting', 'how would that work', 'what does that mean'];
+  // Check curiosity / engagement (helps advance from OPENER and BRIDGE)
+  const CURIOSITY_PHRASES = [
+    'how does that work', 'tell me more', 'that sounds interesting',
+    'how would that work', 'what does that mean', 'what do you got',
+    'what do you have', 'been looking for', 'was hoping', 'looking into',
+    'is this a sales call', 'what are you offering',
+    'returning your call', 'returning a call', 'you called me',
+    'sounds like what we need', 'sounds like what i need',
+    'that would help', 'we could use that', 'show me',
+    'how does yours work', 'can you do that', 'can yours do that',
+    'what would that look like',
+    'how does it work', 'sounds interesting', 'looking for something',
+    'been looking for something',
+    "i'm interested", "yeah i'm interested", "that's interesting",
+  ];
   const curHits = countPhraseMatches(text, CURIOSITY_PHRASES);
   if (curHits > 0) {
     const stageBoost = ['OPENER', 'PERMISSION_MOMENT'].includes(stage) ? 0.1 : 0;
     return { intent: 'curiosity', confidence: clamp01(0.65 + stageBoost + (curHits - 1) * 0.08) };
+  }
+
+  // Time pressure / urgency — only in OPENER/GATEKEEPER context.
+  // In CLOSE/OBJECTION/BRIDGE, "I'm busy" is a timing objection handled by
+  // the stage-specific classifier with richer objectionBucket context.
+  if (['OPENER', 'GATEKEEPER', 'IDLE', 'PERMISSION_MOMENT'].includes(stage)) {
+    const TIME_PRESSURE_PHRASES = [
+      'make it quick', 'be quick', 'in a hurry', "don't have time",
+      "i'm busy", 'got to go', 'gotta go',
+      "can't talk", "can't talk right now", 'real quick',
+      'thirty seconds', '30 seconds', 'make it fast',
+    ];
+    const tpHits = countPhraseMatches(text, TIME_PRESSURE_PHRASES);
+    if (tpHits > 0) {
+      return { intent: 'time_pressure', confidence: clamp01(0.70 + (tpHits - 1) * 0.08) };
+    }
+  }
+
+  // Yes/booking intent (helps at CLOSE and other stages)
+  const yesHits = countPhraseMatches(text, YES_PHRASES);
+  if (yesHits > 0) {
+    const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
+    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (yesHits - 1) * 0.08) };
+  }
+
+  // Short utterance heuristics (1-4 words, no other match found)
+  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+  if (wordCount <= 4) {
+    const cleanText = text.replace(/[?.!,]/g, '').trim();
+    const mapped = SHORT_UTTERANCE_MAP[cleanText];
+    if (mapped) {
+      return { intent: mapped, confidence: 0.65 };
+    }
   }
 
   return null;
@@ -398,8 +575,34 @@ export function classifyUtterance(utterance, { stage } = {}) {
       return classifyGatekeeper(utterance);
 
     case "OPENER":
-    case "BRIDGE":
       return classifyBridge(utterance);
+
+    case "MINI_PITCH":
+    case "WRONG_PERSON": {
+      // These side stages need deterministic exit paths, not just LLM.
+      // Any bridge-angle signal → advance. Any engaged response → advance.
+      const bridgeResult = classifyBridge(utterance);
+      if (bridgeResult.confidence >= 0.5) {
+        return bridgeResult;
+      }
+      // Fall through to low-confidence so LLM can also try
+      return lowConfidenceUnknown(utterance, `${stage}: no clear bridge signal, awaiting LLM`);
+    }
+
+    case "BRIDGE": {
+      // In BRIDGE, if the prospect gives NUMBERS (quantified pain), they're
+      // answering the bridge question with qualifier-ready data. Route to
+      // qualifier classifier. Pain words WITHOUT numbers are still bridge
+      // angle confirmation (e.g., "we miss some calls" = confirming the angle).
+      const hasNumbers = /\b\d+\b/.test(text);
+      if (hasNumbers) {
+        const qualResult = classifyQualifier(utterance);
+        if (qualResult.confidence >= 0.5) {
+          return qualResult;
+        }
+      }
+      return classifyBridge(utterance);
+    }
 
     case "QUALIFIER":
       return classifyQualifier(utterance);
@@ -634,6 +837,11 @@ export function classifyObjectionOrClose(utterance) {
   const { winner, winnerScore, runnerUpScore } = bestScoredKey(scores);
 
   if (winnerScore <= 0) {
+    // No objection signal — check for bridge/pain signals (OBJECTION recovery path)
+    const bridgeResult = classifyBridge(utterance);
+    if (bridgeResult.confidence >= 0.5 && (bridgeResult.bridgeAngle || bridgeResult.qualifierRead)) {
+      return bridgeResult;
+    }
     return lowConfidenceUnknown(utterance, "No clear objection bucket");
   }
 

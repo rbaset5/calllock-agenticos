@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HUD v2 Test Harness</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; color: #e5e5e5; font-family: system-ui, sans-serif; padding: 20px; }
+    h1 { font-size: 18px; margin-bottom: 12px; color: #818cf8; }
+    .section { margin-bottom: 20px; padding: 16px; background: #1a1a1a; border-radius: 8px; border: 1px solid #27272a; }
+    .section h2 { font-size: 14px; color: #a1a1aa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    button { background: #312e81; color: #a5b4fc; border: 1px solid #4338ca44; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; margin: 4px; }
+    button:hover { background: #3730a3; }
+    button.danger { background: #7f1d1d; color: #fca5a5; border-color: #991b1b44; }
+    button.success { background: #14532d; color: #86efac; border-color: #16a34a44; }
+    .log { background: #0a0a0a; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 10px; color: #71717a; }
+    .log .entry { margin: 2px 0; }
+    .log .sent { color: #818cf8; }
+    .log .info { color: #fbbf24; }
+    input { background: #0a0a0a; border: 1px solid #27272a; color: #e5e5e5; padding: 6px 10px; border-radius: 4px; font-size: 13px; width: 100%; margin-bottom: 8px; }
+    .prospect-lines { display: flex; flex-wrap: wrap; gap: 4px; }
+    p.note { font-size: 11px; color: #52525b; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>HUD v2 Test Harness</h1>
+  <p style="color:#71717a; margin-bottom:16px; font-size:13px;">
+    Open <a href="/hud/" target="_blank" style="color:#818cf8;">/hud/</a> in another tab (same browser). Then use the buttons below to simulate call events.
+  </p>
+
+  <div class="section">
+    <h2>1. Start Call</h2>
+    <div>
+      <input id="prospectName" placeholder="Prospect name (e.g., John Smith)" value="John Smith" />
+      <input id="businessName" placeholder="Business name (e.g., Smith Plumbing)" value="Smith Plumbing" />
+    </div>
+    <button class="success" onclick="startCall()">Start Call</button>
+    <button class="danger" onclick="endCall()">End Call</button>
+  </div>
+
+  <div class="section">
+    <h2>2. Prospect Says...</h2>
+    <input id="customUtterance" placeholder="Type custom prospect response..." onkeydown="if(event.key==='Enter')sendCustom()" />
+    <button onclick="sendCustom()">Send</button>
+    <p class="note">Or click a preset response:</p>
+    <div class="prospect-lines">
+      <button onclick="sendProspect('Yeah what is this about?')">What is this?</button>
+      <button onclick="sendProspect('We already have a receptionist who handles that')">We have someone</button>
+      <button onclick="sendProspect('How much does it cost?')">How much?</button>
+      <button onclick="sendProspect('Not interested, we are good')">Not interested</button>
+      <button onclick="sendProspect('I am busy right now, call me later')">Too busy</button>
+      <button onclick="sendProspect('Send me an email about it')">Send info</button>
+      <button onclick="sendProspect('You need to talk to my wife, she handles all that')">Wrong person</button>
+      <button onclick="sendProspect('Yeah we lose a few calls after hours, it is frustrating')">Pain reveal</button>
+      <button onclick="sendProspect('How does that work exactly?')">Curious</button>
+      <button onclick="sendProspect('Sure, Thursday works')">Yes / Book it</button>
+      <button onclick="sendProspect('Maybe, let me think about it')">Hedge</button>
+      <button onclick="sendProspect('We use an answering service already')">Answering service</button>
+      <button onclick="sendProspect('That sounds too expensive for us')">Too expensive</button>
+      <button onclick="sendProspect('I said no, stop calling me')">Hostile</button>
+    </div>
+  </div>
+
+  <div class="section" id="mic-section">
+    <h2>3. Live Microphone (for real calls)</h2>
+    <p class="note" style="margin-bottom:8px;">Put your call on speaker. Chrome listens to the mic and sends transcripts to the HUD in real time. Free, no API key needed.</p>
+    <button class="success" id="micStartBtn" onclick="startMic()">Start Listening</button>
+    <button class="danger" id="micStopBtn" onclick="stopMic()" style="display:none">Stop Listening</button>
+    <span id="micStatus" style="margin-left:8px; font-size:12px; color:#52525b;"></span>
+    <div id="micLive" style="margin-top:8px; font-size:13px; color:#71717a; min-height:20px;"></div>
+  </div>
+
+  <div class="section">
+    <h2>4. Full Scenario (auto-play)</h2>
+    <button onclick="runScenario('discovery')">Discovery Flow</button>
+    <button onclick="runScenario('objection')">Objection Handling</button>
+    <button onclick="runScenario('pricing')">Pricing Redirect</button>
+    <button onclick="runScenario('wrongPerson')">Wrong Person</button>
+    <button onclick="runScenario('hostile')">Hostile Exit</button>
+    <p class="note">Auto-plays a sequence of prospect responses with 3-second gaps.</p>
+  </div>
+
+  <div class="section">
+    <h2>Event Log</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    const bc = new BroadcastChannel('calllock-hud');
+    let callActive = false;
+    let callSid = '';
+    let seq = 0;
+
+    function log(msg, cls = 'sent') {
+      const el = document.getElementById('log');
+      const div = document.createElement('div');
+      div.className = 'entry ' + cls;
+      div.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function startCall() {
+      callSid = 'test-' + Date.now();
+      seq = 0;
+      callActive = true;
+      const name = document.getElementById('prospectName').value || 'Prospect';
+      const biz = document.getElementById('businessName').value || '';
+      bc.postMessage({
+        type: 'CALL_STARTED',
+        callSid: callSid,
+        prospectName: name,
+        businessName: biz,
+        prospectId: 'test-prospect',
+        prospectContext: {
+          name: name,
+          company: biz,
+          title: 'Owner',
+          location: 'Houston, TX',
+          fit_reason: 'Running Google Ads, likely after-hours leakage',
+          trigger_reason: 'Owner-operated shop with paid demand',
+          sequence_step: 4,
+          calls_made: 2,
+          emails_sent: 3,
+          email_opens: 2,
+          link_clicks: 1,
+          last_touch_date: '2026-04-01',
+          priority_score: 82,
+          paid_demand: true,
+          coverage_gap_likely: true,
+        },
+      });
+      // Do NOT send AUDIO_MODE manual — it blocks auto-classification
+      log('CALL_STARTED: ' + name + ' / ' + biz + ' (SID: ' + callSid + ')', 'info');
+    }
+
+    function endCall() {
+      if (!callActive) return;
+      bc.postMessage({ type: 'CALL_ENDED', callSid: callSid });
+      callActive = false;
+      log('CALL_ENDED', 'info');
+    }
+
+    function sendProspect(text) {
+      if (!callActive) { log('Start a call first!', 'info'); return; }
+      seq++;
+      bc.postMessage({
+        type: 'TRANSCRIPT',
+        callSid: callSid,
+        isFinal: true,
+        speaker: 'prospect',
+        text: text,
+        seq: seq,
+      });
+      log('[prospect] ' + text);
+    }
+
+    function sendCustom() {
+      const input = document.getElementById('customUtterance');
+      if (input.value.trim()) {
+        sendProspect(input.value.trim());
+        input.value = '';
+      }
+    }
+
+    const SCENARIOS = {
+      discovery: [
+        'Yeah what is this about?',
+        'Ok how does that work?',
+        'We get maybe 3-4 missed calls a week',
+        'Yeah some of those probably go to the next guy',
+        'Sure, Thursday works for a quick call',
+      ],
+      objection: [
+        'We already have a receptionist who handles that',
+        'I am busy right now honestly',
+        'Well yeah after hours it goes to voicemail',
+        'How many calls does that actually save?',
+        'Maybe, let me think about it',
+      ],
+      pricing: [
+        'How much does it cost?',
+        'Yeah we lose some calls but I do not know how many',
+        'That is actually more than I thought',
+        'Well if it saves even one job a week maybe',
+        'Send me an email with the pricing',
+      ],
+      wrongPerson: [
+        'You need to talk to my wife, she handles all that',
+        'She is not here right now',
+        'Yeah you can try calling back tomorrow morning',
+      ],
+      hostile: [
+        'Not interested',
+        'I said no, stop calling me',
+      ],
+    };
+
+    function runScenario(name) {
+      if (!callActive) startCall();
+      const lines = SCENARIOS[name];
+      log('--- Running scenario: ' + name + ' (' + lines.length + ' turns) ---', 'info');
+      lines.forEach((line, i) => {
+        setTimeout(() => sendProspect(line), (i + 1) * 3000);
+      });
+    }
+
+    // ── Live Microphone via Web Speech API ──────────────────────
+    let recognition = null;
+    let micActive = false;
+
+    function startMic() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        log('Web Speech API not supported in this browser. Use Chrome.', 'info');
+        return;
+      }
+
+      if (!callActive) startCall();
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
+
+      micActive = true;
+      document.getElementById('micStartBtn').style.display = 'none';
+      document.getElementById('micStopBtn').style.display = 'inline-block';
+      document.getElementById('micStatus').textContent = 'Listening...';
+      document.getElementById('micStatus').style.color = '#86efac';
+
+      recognition.onresult = function(event) {
+        const liveEl = document.getElementById('micLive');
+        let interimText = '';
+        let finalText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript.trim();
+          if (event.results[i].isFinal) {
+            finalText += transcript + ' ';
+          } else {
+            interimText += transcript;
+          }
+        }
+
+        // Show interim text as preview
+        if (interimText) {
+          liveEl.textContent = '... ' + interimText;
+          liveEl.style.color = '#71717a';
+        }
+
+        // Send final transcripts to HUD
+        if (finalText.trim()) {
+          liveEl.textContent = finalText.trim();
+          liveEl.style.color = '#e5e5e5';
+
+          seq++;
+          bc.postMessage({
+            type: 'TRANSCRIPT',
+            callSid: callSid,
+            isFinal: true,
+            speaker: 'prospect',
+            text: finalText.trim(),
+            seq: seq,
+          });
+          log('[mic] ' + finalText.trim());
+
+          // Clear the preview after a moment
+          setTimeout(() => {
+            if (liveEl.textContent === finalText.trim()) {
+              liveEl.textContent = '';
+            }
+          }, 2000);
+        }
+      };
+
+      recognition.onerror = function(event) {
+        if (event.error === 'no-speech') return; // normal, just silence
+        log('Mic error: ' + event.error, 'info');
+        if (event.error === 'not-allowed') {
+          document.getElementById('micStatus').textContent = 'Mic access denied. Allow in browser settings.';
+          document.getElementById('micStatus').style.color = '#fca5a5';
+          stopMic();
+        }
+      };
+
+      recognition.onend = function() {
+        // Auto-restart if still active (Chrome stops after ~60s of silence)
+        if (micActive) {
+          try { recognition.start(); } catch(e) {}
+        }
+      };
+
+      try {
+        recognition.start();
+        log('Microphone started. Speak into your mic.', 'info');
+      } catch(e) {
+        log('Failed to start mic: ' + e.message, 'info');
+      }
+    }
+
+    function stopMic() {
+      micActive = false;
+      if (recognition) {
+        recognition.abort();
+        recognition = null;
+      }
+      document.getElementById('micStartBtn').style.display = 'inline-block';
+      document.getElementById('micStopBtn').style.display = 'none';
+      document.getElementById('micStatus').textContent = 'Stopped';
+      document.getElementById('micStatus').style.color = '#52525b';
+      document.getElementById('micLive').textContent = '';
+      log('Microphone stopped.', 'info');
+    }
+  </script>
+</body>
+</html>

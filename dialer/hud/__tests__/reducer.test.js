@@ -124,7 +124,7 @@ describe('hudReducer', () => {
     });
     assert.equal(next.stage, 'BRIDGE');
     assert.equal(next.bridgeAngle, 'fallback');
-    assert.ok(next.now.line.includes('voicemail on a Monday morning'));
+    assert.ok(next.now.line.includes('tied up and a new customer calls'));
   });
 
   // 7. BRIDGE → QUALIFIER
@@ -730,5 +730,252 @@ describe('stress test fixes', () => {
     }, PLAYBOOK);
     assert.equal(next.stage, 'OBJECTION');
     assert.equal(next.lastObjectionBucket, 'interest');
+  });
+});
+
+// ── QA simulation fixes: LLM fallthrough side-stage exits ──────
+
+describe('LLM_RESULT side-stage exits (QA fix 2026-04-03)', () => {
+  it('MINI_PITCH + LLM_RESULT → advances to BRIDGE', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'MINI_PITCH', latestTranscriptSeq: 0, lastProcessedUtteranceSeq: 0 };
+    const next = hudReducer(s, {
+      type: 'LLM_RESULT', callSid: 'test-1', seq: 1,
+      result: { band: 'medium', confidence: 0.55, why: 'rules fallthrough', utterance: 'yeah we miss calls' },
+      atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BRIDGE');
+  });
+
+  it('WRONG_PERSON + LLM_RESULT → advances to OPENER', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'WRONG_PERSON', latestTranscriptSeq: 0, lastProcessedUtteranceSeq: 0 };
+    const next = hudReducer(s, {
+      type: 'LLM_RESULT', callSid: 'test-1', seq: 1,
+      result: { band: 'medium', confidence: 0.55, why: 'rules fallthrough', utterance: 'this is Jim' },
+      atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'OPENER');
+  });
+
+  it('PRICING + LLM_RESULT → returns to previousStage (QUALIFIER)', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'PRICING', previousStage: 'QUALIFIER', latestTranscriptSeq: 0, lastProcessedUtteranceSeq: 0 };
+    const next = hudReducer(s, {
+      type: 'LLM_RESULT', callSid: 'test-1', seq: 1,
+      result: { band: 'medium', confidence: 0.55, why: 'rules fallthrough', utterance: 'we miss calls on weekends' },
+      atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'QUALIFIER');
+    assert.equal(next.previousStage, null);
+  });
+
+  it('CONFUSION + LLM_RESULT → advances to BRIDGE', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'CONFUSION', latestTranscriptSeq: 0, lastProcessedUtteranceSeq: 0 };
+    const next = hudReducer(s, {
+      type: 'LLM_RESULT', callSid: 'test-1', seq: 1,
+      result: { band: 'medium', confidence: 0.55, why: 'rules fallthrough', utterance: 'oh ok that makes sense' },
+      atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BRIDGE');
+  });
+});
+
+describe('WRONG_PERSON rules exit via TRANSCRIPT_FINAL', () => {
+  it('WRONG_PERSON + any usable TRANSCRIPT_FINAL → OPENER', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'WRONG_PERSON' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Oh this is Jim, what do you need?', atMs: Date.now() },
+      rule: { band: 'medium', confidence: 0.55, why: 'rules fallthrough' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'OPENER');
+  });
+});
+
+// ── Gap fixes: OBJECTION exit, CLOSE→BOOKED, LLM_RESULT OBJECTION ──
+
+describe('Gap 1: OBJECTION engaged exit via TRANSCRIPT_FINAL', () => {
+  it('OBJECTION + bridge angle (no objectionBucket) → BRIDGE', () => {
+    const s = {
+      ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'OBJECTION',
+      lastObjectionBucket: 'interest', objectionHistory: [{ bucket: 'interest', atMs: 1000 }],
+      metrics: { ...createInitialState(PLAYBOOK).metrics, objectionCount: 1 },
+    };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Well yeah after hours goes to voicemail', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.78, why: 'bridge angle', bridgeAngle: 'missed_calls' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BRIDGE');
+  });
+});
+
+describe('Gap 1b: OBJECTION engaged exit via LLM_RESULT', () => {
+  it('OBJECTION + LLM_RESULT without objectionBucket → BRIDGE', () => {
+    const s = {
+      ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'OBJECTION',
+      lastObjectionBucket: 'interest', latestTranscriptSeq: 0, lastProcessedUtteranceSeq: 0,
+      objectionHistory: [{ bucket: 'interest', atMs: 1000 }],
+    };
+    const next = hudReducer(s, {
+      type: 'LLM_RESULT', callSid: 'test-1', seq: 1,
+      result: { band: 'medium', confidence: 0.55, why: 'rules fallthrough', bridgeAngle: 'missed_calls', utterance: 'yeah voicemail' },
+      atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BRIDGE');
+  });
+});
+
+describe('Round 2: Cross-stage booking', () => {
+  it('CLOSE + yes intent → BOOKED', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'CLOSE', qualifierRead: 'pain' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Thursday works for me', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.75, why: 'yes intent detected', detectedIntent: 'yes' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BOOKED');
+    assert.equal(next.outcome, 'booked');
+  });
+
+  it('QUALIFIER + yes intent → BOOKED (cross-stage)', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'QUALIFIER' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Friday at 2 would work', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.75, why: 'yes intent detected', detectedIntent: 'yes' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BOOKED');
+    assert.equal(next.outcome, 'booked');
+  });
+
+  it('BRIDGE + yes intent → BOOKED (cross-stage)', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'BRIDGE', bridgeAngle: 'missed_calls' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Thursday morning works', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.75, why: 'yes intent detected', detectedIntent: 'yes' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BOOKED');
+    assert.equal(next.outcome, 'booked');
+  });
+
+  it('OPENER + yes intent does NOT → BOOKED (too early)', () => {
+    const s = { ...connect(init()) };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: SID,
+      turn: { speaker: 'prospect', text: 'Sure yeah', atMs: Date.now() },
+      rule: { band: 'medium', confidence: 0.65, why: 'yes', detectedIntent: 'yes' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.notEqual(next.stage, 'BOOKED');
+  });
+});
+
+describe('Round 2: Same-bucket objection x2 → EXIT', () => {
+  it('interest objection x2 → EXIT (not QUALIFIER)', () => {
+    const s = {
+      ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'OBJECTION',
+      objectionHistory: [{ bucket: 'interest', atMs: 1000, utterance: 'not interested' }],
+      lastObjectionBucket: 'interest', activeObjection: 'interest',
+      metrics: { ...createInitialState(PLAYBOOK).metrics, objectionCount: 1 },
+    };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Still not interested', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.8, why: 'interest objection', objectionBucket: 'interest' },
+      seq: 2, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'EXIT');
+  });
+
+  it('3 different buckets → stays OBJECTION (not EXIT)', () => {
+    const s = {
+      ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'OBJECTION',
+      objectionHistory: [
+        { bucket: 'interest', atMs: 1000, utterance: 'not interested' },
+        { bucket: 'timing', atMs: 2000, utterance: 'too busy' },
+      ],
+      lastObjectionBucket: 'timing', activeObjection: 'timing',
+      metrics: { ...createInitialState(PLAYBOOK).metrics, objectionCount: 2 },
+    };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Just email me', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.8, why: 'info objection', objectionBucket: 'info' },
+      seq: 3, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'OBJECTION');
+  });
+});
+
+describe('Round 2: WRONG_PERSON → EXIT on brush_off', () => {
+  it('gatekeeper "goodbye" → EXIT from WRONG_PERSON', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'WRONG_PERSON' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Not taking a message, goodbye', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.8, why: 'brush off detected', detectedIntent: 'brush_off' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'EXIT');
+  });
+});
+
+describe('Round 2: MINI_PITCH preserves bridge angle on pain', () => {
+  it('MINI_PITCH + pain with bridgeAngle → BRIDGE with angle', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'MINI_PITCH' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'We miss calls all the time', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.8, why: 'missed calls', bridgeAngle: 'missed_calls' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BRIDGE');
+    assert.equal(next.bridgeAngle, 'missed_calls');
+  });
+});
+
+// ── Cross-model review fixes ───────────────────────────────────────
+
+describe('Cross-model: BRIDGE → OBJECTION on objection signal', () => {
+  it('BRIDGE + objection bucket → OBJECTION (not QUALIFIER)', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'BRIDGE', bridgeAngle: 'missed_calls' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: "Actually I don't think we need it", atMs: Date.now() },
+      rule: { band: 'medium', confidence: 0.7, why: 'interest objection in bridge', objectionBucket: 'interest' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.lastObjectionBucket, 'interest');
+  });
+
+  it('BRIDGE + no objection bucket → QUALIFIER (normal advance)', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'BRIDGE', bridgeAngle: 'missed_calls' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Yeah we miss calls on weekends', atMs: Date.now() },
+      rule: { band: 'medium', confidence: 0.7, why: 'engaged', bridgeAngle: 'missed_calls' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'QUALIFIER');
+  });
+});
+
+describe('Cross-model: OPENER → EXIT on brush_off', () => {
+  it('OPENER + brush_off → EXIT directly (no transient BRIDGE)', () => {
+    const s = { ...connect(init()) };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: SID,
+      turn: { speaker: 'prospect', text: 'Take me off your calling list', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.8, why: 'DNC detected', detectedIntent: 'brush_off' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'EXIT');
+    assert.equal(next.outcome, 'not_booked');
   });
 });

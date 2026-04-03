@@ -1,0 +1,427 @@
+[
+  {
+    "town": "Traverse City",
+    "data_cid": "5170093061450257953",
+    "state": "MI"
+  },
+  {
+    "town": "Marquette",
+    "data_cid": "10463632892412741402",
+    "state": "MI"
+  },
+  {
+    "town": "Adrian",
+    "data_cid": "15079973721259955564",
+    "state": "MI"
+  },
+  {
+    "town": "Niles",
+    "data_cid": "7550721541071999529",
+    "state": "MI"
+  },
+  {
+    "town": "Mt Pleasant",
+    "data_cid": "8779393750404355547",
+    "state": "MI"
+  },
+  {
+    "town": "Petoskey",
+    "data_cid": "14927100219379930113",
+    "state": "MI"
+  },
+  {
+    "town": "Gaylord",
+    "data_cid": "2774114213559329316",
+    "state": "MI"
+  },
+  {
+    "town": "Alpena",
+    "data_cid": "16828307124838229172",
+    "state": "MI"
+  },
+  {
+    "town": "Cadillac",
+    "data_cid": "14633033407125146954",
+    "state": "MI"
+  },
+  {
+    "town": "Sault Ste. Marie",
+    "data_cid": "11121802468830305287",
+    "state": "MI"
+  },
+  {
+    "town": "Escanaba",
+    "data_cid": "3307151531942047734",
+    "state": "MI"
+  },
+  {
+    "town": "Iron Mountain",
+    "data_cid": "4402231228919240222",
+    "state": "MI"
+  },
+  {
+    "town": "Big Rapids",
+    "data_cid": "5201857729454521795",
+    "state": "MI"
+  },
+  {
+    "town": "Alma",
+    "data_cid": "10530330828802668241",
+    "state": "MI"
+  },
+  {
+    "town": "Owosso",
+    "data_cid": "120246804415272054",
+    "state": "MI"
+  },
+  {
+    "town": "Ionia",
+    "data_cid": "14627620966130188937",
+    "state": "MI"
+  },
+  {
+    "town": "Port Huron",
+    "data_cid": "379305004339711852",
+    "state": "MI"
+  },
+  {
+    "town": "Lapeer",
+    "data_cid": "14851354415178840168",
+    "state": "MI"
+  },
+  {
+    "town": "Sandusky",
+    "data_cid": "17153884592577554083",
+    "state": "MI"
+  },
+  {
+    "town": "Bad Axe",
+    "data_cid": "3547685433019518206",
+    "state": "MI"
+  },
+  {
+    "town": "Sturgis",
+    "data_cid": "11143005998324577203",
+    "state": "MI"
+  },
+  {
+    "town": "Coldwater",
+    "data_cid": "3243010329849332198",
+    "state": "MI"
+  },
+  {
+    "town": "Three Rivers",
+    "data_cid": "2737019075923561136",
+    "state": "MI"
+  },
+  {
+    "town": "Monroe",
+    "data_cid": "1945339053607014961",
+    "state": "MI"
+  },
+  {
+    "town": "Hillsdale",
+    "data_cid": "8875391619527105847",
+    "state": "MI"
+  },
+  {
+    "town": "Ludington",
+    "data_cid": "5037330362285875707",
+    "state": "MI"
+  },
+  {
+    "town": "Manistee",
+    "data_cid": "2011721891531479862",
+    "state": "MI"
+  },
+  {
+    "town": "Reed City",
+    "data_cid": "7792005248850928461",
+    "state": "MI"
+  },
+  {
+    "town": "Greenville",
+    "data_cid": "17391742748223637805",
+    "state": "MI"
+  },
+  {
+    "town": "Dowagiac",
+    "data_cid": "7021200594020913805",
+    "state": "MI"
+  },
+  {
+    "town": "Panama City",
+    "data_cid": "13787874528858669555",
+    "state": "FL"
+  },
+  {
+    "town": "Crestview",
+    "data_cid": "13094259438369587951",
+    "state": "FL"
+  },
+  {
+    "town": "DeFuniak Springs",
+    "data_cid": "7553615891589082243",
+    "state": "FL"
+  },
+  {
+    "town": "Palatka",
+    "data_cid": "4797177030109240899",
+    "state": "FL"
+  },
+  {
+    "town": "Live Oak",
+    "data_cid": "7459784365370514555",
+    "state": "FL"
+  },
+  {
+    "town": "Lake City",
+    "data_cid": "5825490332226971194",
+    "state": "FL"
+  },
+  {
+    "town": "Arcadia",
+    "data_cid": "5594577726147430861",
+    "state": "FL"
+  },
+  {
+    "town": "Wauchula",
+    "data_cid": "17072821526957647573",
+    "state": "FL"
+  },
+  {
+    "town": "Sebring",
+    "data_cid": "5055410198328415474",
+    "state": "FL"
+  },
+  {
+    "town": "Leesburg",
+    "data_cid": "6487165289568687277",
+    "state": "FL"
+  },
+  {
+    "town": "Eustis",
+    "data_cid": "7702859562687186290",
+    "state": "FL"
+  },
+  {
+    "town": "Key West",
+    "data_cid": "4597868659665681246",
+    "state": "FL"
+  },
+  {
+    "town": "Big Spring",
+    "data_cid": "18184919240402260619",
+    "state": "TX"
+  },
+  {
+    "town": "Sweetwater",
+    "data_cid": "15699986583416977243",
+    "state": "TX"
+  },
+  {
+    "town": "Snyder",
+    "data_cid": "871924066744541917",
+    "state": "TX"
+  },
+  {
+    "town": "Borger",
+    "data_cid": "12965526518699942989",
+    "state": "TX"
+  },
+  {
+    "town": "Pampa",
+    "data_cid": "10561095800300769384",
+    "state": "TX"
+  },
+  {
+    "town": "Dumas",
+    "data_cid": "9126395097765381291",
+    "state": "TX"
+  },
+  {
+    "town": "Palestine",
+    "data_cid": "11804711870221011149",
+    "state": "TX"
+  },
+  {
+    "town": "Jacksonville",
+    "data_cid": "478230497294563692",
+    "state": "TX"
+  },
+  {
+    "town": "Nacogdoches",
+    "data_cid": "9861500096510403566",
+    "state": "TX"
+  },
+  {
+    "town": "Lampasas",
+    "data_cid": "9735838277404571068",
+    "state": "TX"
+  },
+  {
+    "town": "Gatesville",
+    "data_cid": "3462420913919650863",
+    "state": "TX"
+  },
+  {
+    "town": "Stephenville",
+    "data_cid": "11337145967110431835",
+    "state": "TX"
+  },
+  {
+    "town": "Eagle Pass",
+    "data_cid": "1023436919073093862",
+    "state": "TX"
+  },
+  {
+    "town": "Del Rio",
+    "data_cid": "14628107154418716172",
+    "state": "TX"
+  },
+  {
+    "town": "Uvalde",
+    "data_cid": "11939242543619449740",
+    "state": "TX"
+  },
+  {
+    "town": "Port Lavaca",
+    "data_cid": "13283652837642057708",
+    "state": "TX"
+  },
+  {
+    "town": "Bay City",
+    "data_cid": "1542424009816561658",
+    "state": "TX"
+  },
+  {
+    "town": "El Campo",
+    "data_cid": "2277363418187275249",
+    "state": "TX"
+  },
+  {
+    "town": "Marion",
+    "data_cid": "17926747002273445263",
+    "state": "IL"
+  },
+  {
+    "town": "Carbondale",
+    "data_cid": "18330894928962328499",
+    "state": "IL"
+  },
+  {
+    "town": "Harrisburg",
+    "data_cid": "16736210664800660708",
+    "state": "IL"
+  },
+  {
+    "town": "West Frankfort",
+    "data_cid": "2793588828874484128",
+    "state": "IL"
+  },
+  {
+    "town": "Jacksonville",
+    "data_cid": "4300105978042535646",
+    "state": "IL"
+  },
+  {
+    "town": "Taylorville",
+    "data_cid": "4153959119998453865",
+    "state": "IL"
+  },
+  {
+    "town": "Lincoln",
+    "data_cid": "11715894965908642260",
+    "state": "IL"
+  },
+  {
+    "town": "Effingham",
+    "data_cid": "1605652562774440663",
+    "state": "IL"
+  },
+  {
+    "town": "Macomb",
+    "data_cid": "15983126596129915346",
+    "state": "IL"
+  },
+  {
+    "town": "Quincy",
+    "data_cid": "6874102857263768766",
+    "state": "IL"
+  },
+  {
+    "town": "Galesburg",
+    "data_cid": "9227103851552087856",
+    "state": "IL"
+  },
+  {
+    "town": "Dixon",
+    "data_cid": "11960485285657658625",
+    "state": "IL"
+  },
+  {
+    "town": "Sterling",
+    "data_cid": "13660657550543122531",
+    "state": "IL"
+  },
+  {
+    "town": "Ottawa",
+    "data_cid": "11758387525351505529",
+    "state": "IL"
+  },
+  {
+    "town": "Streator",
+    "data_cid": "15204369453330484296",
+    "state": "IL"
+  },
+  {
+    "town": "Sierra Vista",
+    "data_cid": "4298325481529001545",
+    "state": "AZ"
+  },
+  {
+    "town": "Douglas",
+    "data_cid": "13671878709421116903",
+    "state": "AZ"
+  },
+  {
+    "town": "Nogales",
+    "data_cid": "6186831517134215543",
+    "state": "AZ"
+  },
+  {
+    "town": "Safford",
+    "data_cid": "16965506208797388427",
+    "state": "AZ"
+  },
+  {
+    "town": "Globe",
+    "data_cid": "9701019033928642517",
+    "state": "AZ"
+  },
+  {
+    "town": "Payson",
+    "data_cid": "10223444916826724911",
+    "state": "AZ"
+  },
+  {
+    "town": "Show Low",
+    "data_cid": "14271864303527515400",
+    "state": "AZ"
+  },
+  {
+    "town": "Winslow",
+    "data_cid": "13963500460835284712",
+    "state": "AZ"
+  },
+  {
+    "town": "Page",
+    "data_cid": "7969171566967148089",
+    "state": "AZ"
+  },
+  {
+    "town": "Cottonwood",
+    "data_cid": "505177558265509744",
+    "state": "AZ"
+  }
+]

@@ -5,7 +5,7 @@ import { PLAYBOOK, fillLineTemplate, linesForStage } from './playbook.js';
 import { createInitialState, hudReducer, bandFromScore } from './reducer.js';
 import { classifyUtterance, shouldCallLlmFallback, isUsableDeterministicResult, detectNewIntents } from './classifier.js';
 import { captureSession, resetAuditTrail, logDecision, saveSession } from './session.js';
-import { classifyWithLlm } from './llm.js';
+import { classifyWithLlm, isLlmBackoffActive } from './llm.js';
 import { assignTone, shouldUpdateTone } from './tone.js';
 import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
@@ -37,6 +37,7 @@ let sprintContextCachedAt = null;
 let sprintContextTimer = null;
 let pauseStripTimer = null;
 let pauseStripSilenceTimer = null;
+let usedProbeLines = new Set(); // Probe dedup: never fire the same probe twice per call
 
 // Decision tree navigation: → = primary path, F10 = alternate path
 const STAGE_TRANSITIONS = {
@@ -65,7 +66,6 @@ const STAGE_DISPLAY = [
   { key: 'IDLE', label: 'IDLE' },
   { key: 'GATEKEEPER', label: 'GK' },
   { key: 'OPENER', label: 'OPEN' },
-  { key: 'PERMISSION_MOMENT', label: 'PERM' },
   { key: 'MINI_PITCH', label: 'MINI' },
   { key: 'WRONG_PERSON', label: 'WRONG' },
   { key: 'BRIDGE', label: 'BRIDGE' },
@@ -73,6 +73,8 @@ const STAGE_DISPLAY = [
   { key: 'PRICING', label: 'PRICE' },
   { key: 'CLOSE', label: 'CLOSE' },
   { key: 'OBJECTION', label: 'OBJ' },
+  { key: 'EXIT', label: 'EXIT' },
+  { key: 'BOOKED', label: 'BOOKED' },
 ];
 
 // ── DOM refs ───────────────────────────────────────────────────
@@ -176,6 +178,7 @@ channel.addEventListener('message', (event) => {
     case 'CALL_STARTED': {
       // Auto-reset
       resetAuditTrail();
+      usedProbeLines.clear();
       prospectName = msg.prospectName || '';
       prospectBusiness = msg.businessName || '';
       prospectId = msg.prospectId || null;
@@ -398,14 +401,34 @@ function handleFinalProspectTranscript(msg) {
     // v2: run turn lifecycle even for low-confidence (tone/risk still useful)
     processTurn(msg.text, result);
 
-    // Try LLM fallback
+    // Try LLM fallback — pass rules result so we can fall through on 503
     if (shouldCallLlmFallback(result)) {
-      triggerLlmFallback(msg.text, msg.utteranceId, msg.seq);
+      if (isLlmBackoffActive() && result.confidence > 0) {
+        // Synchronous fallthrough: LLM is known-down, promote rules result
+        // immediately instead of going async (which loses the race with the
+        // next transcript message).
+        dispatch({
+          type: 'LLM_RESULT',
+          callSid: state.callId,
+          utteranceId: msg.utteranceId,
+          seq: msg.seq,
+          result: {
+            ...result,
+            band: 'medium',
+            confidence: Math.max(result.confidence, 0.55),
+            why: (result.why || 'rules') + ' (sync fallthrough, LLM down)',
+            utterance: msg.text,
+          },
+          atMs: Date.now(),
+        });
+      } else {
+        triggerLlmFallback(msg.text, msg.utteranceId, msg.seq, result);
+      }
     }
   }
 }
 
-async function triggerLlmFallback(utterance, utteranceId, seq) {
+async function triggerLlmFallback(utterance, utteranceId, seq, rulesResult) {
   // Capture state BEFORE await to prevent cross-call bleed if a new call
   // arrives while the LLM request is in-flight.
   const capturedCallId = state.callId;
@@ -415,23 +438,43 @@ async function triggerLlmFallback(utterance, utteranceId, seq) {
     lastObjectionBucket: state.lastObjectionBucket,
   };
 
-  const result = await classifyWithLlm(
+  const llmResult = await classifyWithLlm(
     utterance,
     capturedStage,
     capturedContext,
     utteranceId,
   );
 
-  if (result) {
+  if (llmResult) {
     dispatch({
       type: 'LLM_RESULT',
       callSid: capturedCallId,
       utteranceId,
       seq,
       result: {
-        ...result,
-        band: bandFromScore(result.confidence ?? 0.7),
-        why: result.why || 'LLM classification',
+        ...llmResult,
+        band: bandFromScore(llmResult.confidence ?? 0.7),
+        why: llmResult.why || 'LLM classification',
+        utterance,
+      },
+      atMs: Date.now(),
+    });
+  } else if (rulesResult && rulesResult.confidence > 0) {
+    // Graceful degradation: LLM unavailable (503/timeout/error).
+    // Promote the low-confidence rules result to medium so the conversation
+    // can advance instead of freezing. Better a best-guess transition than
+    // a permanently stuck HUD.
+    console.warn('[hud/llm] LLM unavailable, falling through to rules result:', rulesResult.why);
+    dispatch({
+      type: 'LLM_RESULT',
+      callSid: capturedCallId,
+      utteranceId,
+      seq,
+      result: {
+        ...rulesResult,
+        band: 'medium',
+        confidence: Math.max(rulesResult.confidence, 0.55),
+        why: (rulesResult.why || 'rules') + ' (LLM unavailable, rules fallthrough)',
         utterance,
       },
       atMs: Date.now(),
@@ -754,6 +797,8 @@ function processTurn(utterance, classification) {
       dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now() });
     } else if (targetStage === 'WRONG_PERSON' && state.stage !== 'WRONG_PERSON') {
       dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now() });
+    } else if (targetStage === 'EXIT' && state.stage !== 'EXIT') {
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'EXIT', atMs: Date.now() });
     }
   }
 
@@ -795,7 +840,9 @@ function render() {
   $nowPanel.setAttribute('data-stage', state.stage);
   renderObjectionPicker();
   if (roundIndex === -1) {
-    $nowLine.textContent = fillLineTemplate(state.now?.line || 'Waiting for call...', currentLineContext());
+    const rawLine = state.now?.line || 'Waiting for call...';
+    const dedupedLine = dedupProbeLine(rawLine);
+    $nowLine.textContent = fillLineTemplate(dedupedLine, currentLineContext());
     $nowWhy.textContent = state.now?.why || '';
   }
 
@@ -1053,6 +1100,37 @@ function currentLineContext() {
   };
 }
 
+// Probe dedup: never show the exact same probe line twice in one call.
+// If the line was already used, return a situational variant.
+const PROBE_VARIANTS = [
+  "When you can't get to a new customer call right away, what usually happens?",
+  "When you're on a job and the phone rings, what usually happens to that customer?",
+  "What happens after 5 or on weekends when a new customer calls in?",
+  "When she's already helping someone and another call comes in, what happens then?",
+  "What happens when you're already tied up and another call comes in?",
+];
+function dedupProbeLine(line) {
+  // Only dedup probe/bridge/reset lines (not openers, closes, pitches, etc.)
+  // Probes are the pain-discovery questions that can repeat across stages.
+  const isProbe = /what (?:usually )?happens|when .+ calls? (?:come|comes) in/i.test(line);
+  if (!isProbe) {
+    return line;
+  }
+  if (!usedProbeLines.has(line)) {
+    usedProbeLines.add(line);
+    return line;
+  }
+  // Find an unused variant
+  for (const variant of PROBE_VARIANTS) {
+    if (!usedProbeLines.has(variant)) {
+      usedProbeLines.add(variant);
+      return variant;
+    }
+  }
+  // All variants used (5+ probes in one call is unlikely) — use the line anyway
+  return line;
+}
+
 function renderStageBar() {
   const stageOrder = STAGE_DISPLAY.map((s) => s.key);
   const currentIdx = stageOrder.indexOf(state.stage);
@@ -1079,10 +1157,10 @@ function renderStageBar() {
 function mapToDisplayStage(stage) {
   switch (stage) {
     case 'SEED_EXIT': return 'QUALIFIER';
-    case 'BOOKED': return 'CLOSE';
-    case 'EXIT': return 'CLOSE';
     case 'NON_CONNECT': return 'IDLE';
     case 'ENDED': return 'IDLE';
+    case 'CONFUSION': return 'MINI_PITCH';
+    case 'PERMISSION_MOMENT': return 'OPENER';
     default: return stage;
   }
 }

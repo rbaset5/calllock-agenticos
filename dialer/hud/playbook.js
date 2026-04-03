@@ -62,7 +62,7 @@ export const PLAYBOOK = {
       staff:
         'Yeah... what about nights and weekends? Those callers don\'t wait.',
       covered:
-        'Yeah... what happens when two calls come in at once?',
+        'Yeah... what happens when you\'re already tied up and another call comes in?',
     },
     competition: {
       slow:
@@ -77,7 +77,7 @@ export const PLAYBOOK = {
         'Yeah... the call you miss today is a review you didn\'t get next month.',
     },
     fallback:
-      'What does it cost you when a call goes to voicemail on a Monday morning?',
+      'Yeah — when you\'re tied up and a new customer calls, what usually happens?',
   },
 
   // ── Qualifier reads ─────────────────────────────────────────────
@@ -110,7 +110,7 @@ export const PLAYBOOK = {
     interest: {
       keywords: ['not interested', "we're set", "don't need", 'all good', 'no thanks'],
       reset:
-        'Got it. What happens when two calls come in at once?',
+        'Totally fair — when you can\'t get to a new customer call right away, what usually happens?',
     },
     info: {
       keywords: ['send me info', 'email me', 'send something', 'website'],

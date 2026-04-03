@@ -237,6 +237,30 @@ export function hudReducer(state, action, playbook) {
         return nextState;
       }
 
+      // Cross-stage booking: yes-intent from any advanced stage → BOOKED
+      if (['BRIDGE', 'QUALIFIER', 'CLOSE'].includes(state.stage) && rule.detectedIntent === 'yes') {
+        return {
+          ...nextState,
+          stage: 'BOOKED',
+          outcome: 'booked',
+          now: makeNow('BOOKED', playbook.booked, rule.band, 'Prospect accepted — booking confirmed', 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
+      // OPENER → EXIT on brush_off (DNC, wrong number, voicemail, hostile)
+      if (state.stage === 'OPENER' && rule.detectedIntent === 'brush_off') {
+        return {
+          ...nextState,
+          stage: 'EXIT',
+          outcome: 'not_booked',
+          now: makeNow('EXIT', playbook.exit, rule.band, 'Exit intent from opener', 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
       // OPENER → BRIDGE (or OBJECTION if prospect rejects)
       if (state.stage === 'OPENER') {
         // If prospect objects ("not interested", etc.), route to OBJECTION not BRIDGE
@@ -272,12 +296,16 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
-      // MINI_PITCH → BRIDGE (mini pitch is a pass-through, almost any response advances)
+      // MINI_PITCH → BRIDGE (any substantive response advances, pain signals get angle)
       if (state.stage === 'MINI_PITCH') {
+        const bridgeLine = rule.bridgeAngle
+          ? resolveBridgeLine(rule, playbook)
+          : playbook.bridge.fallback;
         return {
           ...nextState,
           stage: 'BRIDGE',
-          now: makeNow('BRIDGE', playbook.bridge.fallback, rule.band, 'Mini pitch delivered, entering discovery', 'rules'),
+          bridgeAngle: rule.bridgeAngle ?? state.bridgeAngle ?? 'unknown',
+          now: makeNow('BRIDGE', bridgeLine, rule.band, 'Mini pitch delivered, entering discovery', 'rules'),
           metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
           lastCommittedAtMs: action.atMs,
         };
@@ -292,6 +320,44 @@ export function hudReducer(state, action, playbook) {
           previousStage: null,
           now: makeNow(returnStage, lineForStage(returnStage, playbook), rule.band, 'Pricing redirected, back to discovery', 'rules'),
           metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
+      // WRONG_PERSON → EXIT on brush_off/exit-intent (gatekeeper says goodbye)
+      if (state.stage === 'WRONG_PERSON' && rule.detectedIntent === 'brush_off') {
+        return {
+          ...nextState,
+          stage: 'EXIT',
+          outcome: 'not_booked',
+          now: makeNow('EXIT', playbook.exit, rule.band, 'Gatekeeper ended the conversation', 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
+      // WRONG_PERSON → OPENER (any substantive response means someone is engaging)
+      if (state.stage === 'WRONG_PERSON') {
+        return {
+          ...nextState,
+          stage: 'OPENER',
+          now: makeNow('OPENER', playbook.opener, rule.band, 'Re-engaging from wrong person', 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
+      // BRIDGE → OBJECTION (if prospect objects during bridge)
+      if (state.stage === 'BRIDGE' && rule.objectionBucket && ['timing', 'interest', 'info', 'authority'].includes(rule.objectionBucket)) {
+        const bucket = rule.objectionBucket === 'unknown' ? 'interest' : rule.objectionBucket;
+        return {
+          ...nextState,
+          stage: 'OBJECTION',
+          lastObjectionBucket: bucket,
+          activeObjection: bucket,
+          objectionHistory: [...nextState.objectionHistory, { bucket, atMs: action.atMs, utterance: action.turn.text }],
+          now: makeNow('OBJECTION', playbook.objections[bucket].reset, rule.band, `Objection during bridge: ${bucket}`, 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1, objectionCount: nextState.metrics.objectionCount + 1 },
           lastCommittedAtMs: action.atMs,
         };
       }
@@ -408,6 +474,26 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
+      // OBJECTION → BRIDGE when prospect gives an engaged/pain response (no objectionBucket)
+      // e.g., "Well yeah after hours goes to voicemail" while in OBJECTION
+      if (state.stage === 'OBJECTION' && !rule.objectionBucket && (rule.bridgeAngle || rule.qualifierRead || rule.detectedIntent === 'yes' || rule.detectedIntent === 'engaged_answer' || rule.detectedIntent === 'curiosity')) {
+        const bridgeAngle = rule.bridgeAngle || state.bridgeAngle || 'fallback';
+        return {
+          ...nextState,
+          stage: 'BRIDGE',
+          bridgeAngle,
+          now: makeNow(
+            'BRIDGE',
+            resolveBridgeLine(rule, playbook),
+            rule.band,
+            'Prospect engaged after objection — advancing to discovery',
+            'rules',
+          ),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
       // OBJECTION → handle follow-up objections via rules
       if (state.stage === 'OBJECTION' && rule.objectionBucket) {
         const bucket =
@@ -421,19 +507,20 @@ export function hudReducer(state, action, playbook) {
         const updatedHistory = [...nextState.objectionHistory, historyItem];
         const countSame = objectionCountForBucket(updatedHistory, rule.objectionBucket);
 
-        // same bucket twice → qualifier
+        // same bucket twice → exit (prospect is firm, stop pushing)
         if (countSame >= 2) {
           return {
             ...nextState,
-            stage: 'QUALIFIER',
+            stage: 'EXIT',
+            outcome: 'not_booked',
             objectionHistory: updatedHistory,
             lastObjectionBucket: rule.objectionBucket,
             activeObjection: rule.objectionBucket,
             now: makeNow(
-              'QUALIFIER',
-              playbook.qualifier,
+              'EXIT',
+              playbook.exit,
               rule.band,
-              'Same objection bucket twice',
+              'Same objection bucket repeated — prospect is firm',
               'rules',
             ),
             metrics: {
@@ -445,9 +532,10 @@ export function hudReducer(state, action, playbook) {
           };
         }
 
-        // 3rd objection + no engagement → exit
+        // 4th+ objection overall + no engagement → exit
+        // (3 different buckets is normal pushback, keep trying)
         if (
-          nextState.metrics.objectionCount + 1 >= 3 &&
+          nextState.metrics.objectionCount + 1 >= 4 &&
           !prospectHasEngagement(nextState.transcript)
         ) {
           return {
@@ -586,7 +674,88 @@ export function hudReducer(state, action, playbook) {
           ? incomingSeq
           : state.lastProcessedUtteranceSeq;
 
-      // LLM only refines BRIDGE / QUALIFIER / OBJECTION
+      // ── Side-stage exits (LLM or rules-fallthrough) ──────────
+      // MINI_PITCH: any response advances to BRIDGE
+      if (state.stage === 'MINI_PITCH') {
+        const bridgeAngle = action.result.bridgeAngle || state.bridgeAngle || 'fallback';
+        return {
+          ...state,
+          stage: 'BRIDGE',
+          bridgeAngle,
+          now: makeNow(
+            'BRIDGE',
+            resolveBridgeLine(action.result, playbook),
+            action.result.band,
+            action.result.why || 'Advanced from mini pitch',
+            action.result.confidence >= 0.6 ? 'llm' : 'rules',
+          ),
+          lastCommittedAtMs: action.atMs,
+          lastProcessedUtteranceSeq: nextSeq,
+        };
+      }
+
+      // WRONG_PERSON: advance to OPENER on any substantive response
+      // (the real person may have picked up, or the gatekeeper is engaging)
+      if (state.stage === 'WRONG_PERSON') {
+        return {
+          ...state,
+          stage: 'OPENER',
+          now: makeNow(
+            'OPENER',
+            playbook.opener,
+            action.result.band,
+            action.result.why || 'Re-engaging from wrong person',
+            action.result.confidence >= 0.6 ? 'llm' : 'rules',
+          ),
+          lastCommittedAtMs: action.atMs,
+          lastProcessedUtteranceSeq: nextSeq,
+        };
+      }
+
+      // PRICING: return to previousStage (default QUALIFIER) on engagement
+      if (state.stage === 'PRICING') {
+        const returnStage = state.previousStage || 'QUALIFIER';
+        const returnLine = returnStage === 'QUALIFIER'
+          ? playbook.qualifier
+          : returnStage === 'BRIDGE'
+            ? resolveBridgeLine(action.result, playbook)
+            : playbook.opener;
+        return {
+          ...state,
+          stage: returnStage,
+          previousStage: null,
+          now: makeNow(
+            returnStage,
+            returnLine,
+            action.result.band,
+            action.result.why || 'Returned from pricing',
+            action.result.confidence >= 0.6 ? 'llm' : 'rules',
+          ),
+          lastCommittedAtMs: action.atMs,
+          lastProcessedUtteranceSeq: nextSeq,
+        };
+      }
+
+      // CONFUSION: same as MINI_PITCH — advance to BRIDGE
+      if (state.stage === 'CONFUSION') {
+        const bridgeAngle = action.result.bridgeAngle || state.bridgeAngle || 'fallback';
+        return {
+          ...state,
+          stage: 'BRIDGE',
+          bridgeAngle,
+          now: makeNow(
+            'BRIDGE',
+            resolveBridgeLine(action.result, playbook),
+            action.result.band,
+            action.result.why || 'Advanced from confusion',
+            action.result.confidence >= 0.6 ? 'llm' : 'rules',
+          ),
+          lastCommittedAtMs: action.atMs,
+          lastProcessedUtteranceSeq: nextSeq,
+        };
+      }
+
+      // ── Existing stage refinements ─────────────────────
       if (state.stage === 'BRIDGE' && action.result.bridgeAngle) {
         return {
           ...state,
@@ -650,6 +819,25 @@ export function hudReducer(state, action, playbook) {
             action.result.band,
             action.result.why,
             'llm',
+          ),
+          lastCommittedAtMs: action.atMs,
+          lastProcessedUtteranceSeq: nextSeq,
+        };
+      }
+
+      // OBJECTION + engaged response (no objectionBucket) → advance to BRIDGE
+      if (state.stage === 'OBJECTION' && !action.result.objectionBucket) {
+        const bridgeAngle = action.result.bridgeAngle || state.bridgeAngle || 'fallback';
+        return {
+          ...state,
+          stage: 'BRIDGE',
+          bridgeAngle,
+          now: makeNow(
+            'BRIDGE',
+            resolveBridgeLine(action.result, playbook),
+            action.result.band,
+            action.result.why || 'Prospect engaged after objection',
+            action.result.confidence >= 0.6 ? 'llm' : 'rules',
           ),
           lastCommittedAtMs: action.atMs,
           lastProcessedUtteranceSeq: nextSeq,

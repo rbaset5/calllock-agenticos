@@ -26,3 +26,18 @@ Key routing rules:
 - Design system, brand → invoke design-consultation
 - Visual audit, design polish → invoke design-review
 - Architecture review → invoke plan-eng-review
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: Coolify (harness only — dialer runs locally)
+- Harness production URL: http://ls5e6qqlb3wl1jesk21ds2zb.89.167.116.18.sslip.io
+- Harness health check: /health (returns JSON with service status)
+- Dialer (HUD): localhost:3004 only — not yet deployed to production
+- Deploy workflow: Coolify auto-deploy on push to main (harness)
+- Merge method: squash
+- Project type: web app (voice pipeline + sales HUD)
+
+### Custom deploy hooks
+- Pre-merge: none
+- Deploy trigger: automatic on push to main (Coolify webhook for harness)
+- Deploy status: curl harness /health endpoint
+- Health check: http://ls5e6qqlb3wl1jesk21ds2zb.89.167.116.18.sslip.io/health
