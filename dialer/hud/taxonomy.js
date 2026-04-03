@@ -96,6 +96,15 @@ export const NOW_TEMPLATES = {
   time_pressure: "Prospect sounds rushed.",
   hedge: "Prospect is on the fence.",
   yes: "Prospect gave permission to continue.",
+  // Bridge angle keys (from classifier bridgeAngle field)
+  missed_calls: "Prospect mentioned missed calls or voicemail.",
+  competition: "Prospect mentioned competitive pressure.",
+  overwhelmed: "Prospect sounds overwhelmed or stretched thin.",
+  fallback: "Prospect responded — listening for pain signal.",
+  // Qualifier reads
+  pain: "Prospect confirmed they're losing calls.",
+  no_pain: "Prospect says they don't miss calls.",
+  unknown_pain: "Prospect isn't sure how many calls they miss.",
 };
 
 // -------------------------

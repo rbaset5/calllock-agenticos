@@ -20,7 +20,9 @@ export function tokens(input) {
 }
 
 export function hasPhrase(text, phrase) {
-  return normalize(text).includes(normalize(phrase));
+  // Strip commas/semicolons/periods so "Alright, Thursday" matches "alright thursday"
+  const cleanText = normalize(text).replace(/[,;:.!?]/g, ' ').replace(/\s+/g, ' ');
+  return cleanText.includes(normalize(phrase));
 }
 
 export function countPhraseMatches(text, phrases) {
@@ -214,6 +216,20 @@ const QUALIFIER_NO_PAIN_PHRASES = [
   "not really",
   "hardly any",
   "almost none",
+  "don't miss calls",
+  "don't miss any",
+  "we're covered",
+  "we are covered",
+  "fully covered",
+  "have a receptionist",
+  "have someone",
+  "she handles everything",
+  "he handles everything",
+  "not looking to change",
+  "not interested in changing",
+  "we're fully covered",
+  "we don't miss",
+  "we do not miss",
 ];
 
 const QUALIFIER_UNKNOWN_PHRASES = [
@@ -477,14 +493,42 @@ export function detectNewIntents(utterance, stage) {
   // Check pricing question
   const pqHits = countPhraseMatches(text, PRICING_QUESTION_PHRASES);
   if (pqHits > 0) {
-    const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
-    return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
+    // For long utterances (>50 words), check if bridge/pain signals are also present.
+    // If so, pain dominates — the prospect is venting, not price-shopping.
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    if (wordCount > 50) {
+      const bridgePhraseCount = Object.values(BRIDGE_KEYWORDS).reduce(
+        (sum, cfg) => sum + countPhraseMatches(text, cfg.phrases), 0);
+      if (bridgePhraseCount > pqHits) {
+        // Bridge signals dominate — skip pricing, let bridge classifier handle it
+      } else {
+        const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
+        return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
+      }
+    } else {
+      const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
+      return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
+    }
   }
 
   // Check pricing resistance
   const prHits = countPhraseMatches(text, PRICING_RESISTANCE_PHRASES);
   if (prHits > 0) {
     return { intent: 'pricing_resistance', confidence: clamp01(0.65 + (prHits - 1) * 0.08) };
+  }
+
+  // Yes/booking intent — checked BEFORE curiosity so that booking language
+  // like "show me what you got, Thursday works" isn't captured as curiosity.
+  // Day-name regex catches booking phrases not in YES_PHRASES, but REQUIRES a
+  // time qualifier (morning, works, at 3, etc.) to avoid false positives on
+  // bare day names like "we close Saturday" or "I had a problem last Thursday".
+  const yesHits = countPhraseMatches(text, YES_PHRASES);
+  const dayNameBooking = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+(morning|afternoon|evening|at\s+\d|after\s+\d|before\s+\d|works|is good|is fine|i guess)\b/i.test(text)
+    && ['BRIDGE', 'QUALIFIER', 'CLOSE', 'PRICING'].includes(stage);
+  if (yesHits > 0 || dayNameBooking) {
+    const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
+    const hits = Math.max(yesHits, 1);
+    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (hits - 1) * 0.08) };
   }
 
   // Check curiosity / engagement (helps advance from OPENER and BRIDGE)
@@ -524,13 +568,6 @@ export function detectNewIntents(utterance, stage) {
     }
   }
 
-  // Yes/booking intent (helps at CLOSE and other stages)
-  const yesHits = countPhraseMatches(text, YES_PHRASES);
-  if (yesHits > 0) {
-    const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
-    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (yesHits - 1) * 0.08) };
-  }
-
   // Short utterance heuristics (1-4 words, no other match found)
   const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
   if (wordCount <= 4) {
@@ -554,7 +591,7 @@ export function classifyUtterance(utterance, { stage } = {}) {
     const newIntent = detectNewIntents(utterance, stage);
     if (newIntent && newIntent.confidence >= 0.65) {
       const skipAuthority = newIntent.intent === 'authority_mismatch'
-        && (stage === 'CLOSE' || stage === 'OBJECTION');
+        && (stage === 'CLOSE' || stage === 'OBJECTION' || stage === 'QUALIFIER');
       if (!skipAuthority) {
         return makeResult(utterance, {
           confidence: newIntent.confidence,

@@ -757,7 +757,7 @@ function processTurn(utterance, classification) {
   state._lastCandidateTone = toneResult.tone_label;
 
   // Step 3: Update trajectory and compute risk (for objection-eligible stages)
-  const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || null;
+  const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || classification.qualifierRead || null;
   if (primaryIntent) {
     // Detect secondary intent: check if the utterance also matches a different signal
     const secondaryCheck = detectNewIntents(utterance, state.stage);

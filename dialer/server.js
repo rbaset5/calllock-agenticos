@@ -24,7 +24,14 @@ app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 // Only serve the hud/ subdirectory as static (not the whole dialer/ dir which includes server.js)
-app.use('/hud', express.static(path.join(__dirname, 'hud')));
+// no-cache for JS modules during development — prevents stale ES module imports
+app.use('/hud', express.static(path.join(__dirname, 'hud'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 
 const {
   TWILIO_ACCOUNT_SID,
