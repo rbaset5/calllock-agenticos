@@ -151,7 +151,10 @@ function dispatch(action) {
   if (state.stage !== prevState.stage && state.stage !== 'IDLE') {
     // Keep round history across stage changes (Option B from plan)
     roundIndex = -1;
-    activatePauseStrip();
+    // Delay pause strip by 3s so rep can read the line first
+    clearTimeout(pauseStripTimer);
+    clearTimeout(pauseStripSilenceTimer);
+    pauseStripTimer = setTimeout(() => activatePauseStrip(), 3000);
   }
   if (action.type === 'TRANSCRIPT_FINAL') {
     deactivatePauseStrip();
@@ -728,7 +731,14 @@ function processTurn(utterance, classification) {
     state.primaryIntent = primaryIntent;
   }
 
-  // Step 4: Check for dedicated stage routing via INTENT_STAGE_MAP
+  // Step 4: Generate NOW summary BEFORE dispatch (so render() has it ready)
+  state.nowSummary = generateNowSummary({
+    primaryIntent: primaryIntent,
+    tone: state.tone,
+    toneConfidence: state.toneConfidence,
+  });
+
+  // Step 5: Check for dedicated stage routing via INTENT_STAGE_MAP
   if (classification.detectedIntent && INTENT_STAGE_MAP[classification.detectedIntent]) {
     const targetStage = INTENT_STAGE_MAP[classification.detectedIntent];
     if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
@@ -739,13 +749,6 @@ function processTurn(utterance, classification) {
       dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now() });
     }
   }
-
-  // Step 5: Generate NOW summary
-  state.nowSummary = generateNowSummary({
-    primaryIntent: primaryIntent,
-    tone: state.tone,
-    toneConfidence: state.toneConfidence,
-  });
 
   // Steps 6-8 (compose + render + log) happen in render() which is called by dispatch
 }
@@ -785,7 +788,7 @@ function render() {
   $nowPanel.setAttribute('data-stage', state.stage);
   renderObjectionPicker();
   if (roundIndex === -1) {
-    $nowLine.textContent = state.now?.line || 'Waiting for call...';
+    $nowLine.textContent = fillLineTemplate(state.now?.line || 'Waiting for call...', currentLineContext());
     $nowWhy.textContent = state.now?.why || '';
   }
 

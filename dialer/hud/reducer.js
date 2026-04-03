@@ -237,8 +237,22 @@ export function hudReducer(state, action, playbook) {
         return nextState;
       }
 
-      // OPENER → BRIDGE
+      // OPENER → BRIDGE (or OBJECTION if prospect rejects)
       if (state.stage === 'OPENER') {
+        // If prospect objects ("not interested", etc.), route to OBJECTION not BRIDGE
+        if (rule.objectionBucket && ['timing', 'interest', 'info', 'authority'].includes(rule.objectionBucket)) {
+          const bucket = rule.objectionBucket === 'unknown' ? 'interest' : rule.objectionBucket;
+          return {
+            ...nextState,
+            stage: 'OBJECTION',
+            lastObjectionBucket: bucket,
+            activeObjection: bucket,
+            objectionHistory: [...nextState.objectionHistory, { bucket, atMs: action.atMs, utterance: action.turn.text }],
+            now: makeNow('OBJECTION', playbook.objections[bucket].reset, rule.band, rule.why, 'rules'),
+            metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1, objectionCount: nextState.metrics.objectionCount + 1 },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
         return {
           ...nextState,
           stage: 'BRIDGE',
@@ -254,6 +268,30 @@ export function hudReducer(state, action, playbook) {
             ...nextState.metrics,
             stageChanges: nextState.metrics.stageChanges + 1,
           },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
+      // MINI_PITCH → BRIDGE (mini pitch is a pass-through, almost any response advances)
+      if (state.stage === 'MINI_PITCH') {
+        return {
+          ...nextState,
+          stage: 'BRIDGE',
+          now: makeNow('BRIDGE', playbook.bridge.fallback, rule.band, 'Mini pitch delivered, entering discovery', 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
+      // PRICING → return to previousStage (pricing handled, move on)
+      if (state.stage === 'PRICING') {
+        const returnStage = state.previousStage || 'QUALIFIER';
+        return {
+          ...nextState,
+          stage: returnStage,
+          previousStage: null,
+          now: makeNow(returnStage, lineForStage(returnStage, playbook), rule.band, 'Pricing redirected, back to discovery', 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
           lastCommittedAtMs: action.atMs,
         };
       }

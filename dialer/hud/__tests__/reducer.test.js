@@ -694,3 +694,41 @@ describe('v2 reducer actions', () => {
     assert.equal(s.trajectory.salvageAttemptCount, 0);
   });
 });
+
+// ── Stress test fix regressions ─────────────────────────────
+describe('stress test fixes', () => {
+  it('MINI_PITCH + TRANSCRIPT_FINAL advances to BRIDGE', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'MINI_PITCH' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Ok tell me more', atMs: Date.now() },
+      rule: { band: 'medium', confidence: 0.65, why: 'engaged' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'BRIDGE');
+  });
+
+  it('PRICING + TRANSCRIPT_FINAL returns to previousStage', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'PRICING', previousStage: 'QUALIFIER' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Yeah we do miss some calls', atMs: Date.now() },
+      rule: { band: 'medium', confidence: 0.65, why: 'engaged' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'QUALIFIER');
+    assert.equal(next.previousStage, null);
+  });
+
+  it('OPENER + "not interested" routes to OBJECTION not BRIDGE', () => {
+    const s = { ...createInitialState(PLAYBOOK), callId: 'test-1', stage: 'OPENER' };
+    const next = hudReducer(s, {
+      type: 'TRANSCRIPT_FINAL', callSid: 'test-1',
+      turn: { speaker: 'prospect', text: 'Not interested', atMs: Date.now() },
+      rule: { band: 'high', confidence: 0.8, why: 'objection', objectionBucket: 'interest' },
+      seq: 1, atMs: Date.now(),
+    }, PLAYBOOK);
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.lastObjectionBucket, 'interest');
+  });
+});

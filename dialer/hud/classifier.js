@@ -281,8 +281,11 @@ const MINI_PITCH_PHRASES = [
 
 const WRONG_PERSON_PHRASES = [
   "i don't handle that", 'talk to my wife', 'talk to my partner',
-  'talk to dispatcher', 'wrong person', "i'm the tech", "i'm the helper",
-  'not my decision', "owner isn't here", "he's not here", "she's not here",
+  'talk to my husband', 'talk to dispatcher', 'wrong person',
+  "i'm the tech", "i'm the helper", 'not my decision',
+  "owner isn't here", "he's not here", "she's not here",
+  'my husband handles', 'my wife handles', 'he handles that',
+  'she handles that', 'husband handles', 'wife handles',
 ];
 
 const PRICING_QUESTION_PHRASES = [
@@ -351,6 +354,14 @@ export function detectNewIntents(utterance, stage) {
   const prHits = countPhraseMatches(text, PRICING_RESISTANCE_PHRASES);
   if (prHits > 0) {
     return { intent: 'pricing_resistance', confidence: clamp01(0.65 + (prHits - 1) * 0.08) };
+  }
+
+  // Check curiosity / engagement (helps advance from OPENER)
+  const CURIOSITY_PHRASES = ['how does that work', 'tell me more', 'that sounds interesting', 'how would that work', 'what does that mean'];
+  const curHits = countPhraseMatches(text, CURIOSITY_PHRASES);
+  if (curHits > 0) {
+    const stageBoost = ['OPENER', 'PERMISSION_MOMENT'].includes(stage) ? 0.1 : 0;
+    return { intent: 'curiosity', confidence: clamp01(0.65 + stageBoost + (curHits - 1) * 0.08) };
   }
 
   return null;
@@ -540,6 +551,8 @@ export function classifyQualifier(utterance) {
 
   if (hasNumber(text)) painScore += 2.25;
   if (/\b(frustrat|losing|too many|lot)\b/.test(text)) painScore += 1.5;
+  // Boost for loss/miss + temporal context (e.g., "lose calls on weekends")
+  if (/\b(lose|miss|lost|missed)\b/.test(text) && /\b(weekends?|after hours|sometimes|evenings?|nights?|busy)\b/.test(text)) painScore += 1.75;
   if (/\b(few|covered|good|none)\b/.test(text)) noPainScore += 1.25;
   if (/\b(depends|unsure|idea)\b/.test(text)) unknownScore += 1.25;
 

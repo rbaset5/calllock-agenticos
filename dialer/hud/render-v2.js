@@ -340,7 +340,7 @@ export function renderTacticalCard(card) {
       entries.forEach(([c, r]) => {
         const el = document.createElement('div');
         el.className = 'v2-tac-value';
-        el.textContent = c + ' \u2192 ' + (r.next || r.action || '');
+        el.textContent = c + ' \u2192 ' + friendlyTarget(r.next || r.action || '');
         ifthen.appendChild(el);
       });
     }

@@ -176,7 +176,30 @@ describe('detectNewIntents', () => {
 describe('classifyUtterance integration with new intents', () => {
   test('"what is this about" in OPENER routes through classifyUtterance', () => {
     const result = classifyUtterance('what is this about', { stage: 'OPENER' });
-    // Should detect the new intent via the pre-check
     assert.ok(result.confidence >= 0.6);
+  });
+});
+
+describe('stress test fixes', () => {
+  test('detects "talk to my husband" as authority_mismatch', () => {
+    const result = detectNewIntents('you need to talk to my husband he handles that', 'OPENER');
+    assert.equal(result.intent, 'authority_mismatch');
+  });
+
+  test('detects "he handles that" as authority_mismatch', () => {
+    const result = detectNewIntents('he handles that not me', 'OPENER');
+    assert.equal(result.intent, 'authority_mismatch');
+  });
+
+  test('detects curiosity in OPENER', () => {
+    const result = detectNewIntents('how does that work exactly', 'OPENER');
+    assert.equal(result.intent, 'curiosity');
+    assert.ok(result.confidence >= 0.65);
+  });
+
+  test('curiosity higher confidence in OPENER than BRIDGE', () => {
+    const openerResult = detectNewIntents('tell me more about that', 'OPENER');
+    const bridgeResult = detectNewIntents('tell me more about that', 'BRIDGE');
+    assert.ok(openerResult.confidence > bridgeResult.confidence);
   });
 });
