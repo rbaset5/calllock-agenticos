@@ -17,10 +17,13 @@ function _esc(str) {
 /**
  * Render the move type pill (e.g., "BRIDGE ▸ probe" or "ask · compress")
  */
-export function renderMoveTypePill(moveType, deliveryModifier) {
+export function renderMoveTypePill(moveType, deliveryModifier, secondaryIntent) {
   const el = document.getElementById('v2-move-type');
   if (!el) return;
-  const label = deliveryModifier ? `${moveType} · ${deliveryModifier}` : (moveType || '');
+  let label = deliveryModifier ? `${moveType} · ${deliveryModifier}` : (moveType || '');
+  if (secondaryIntent) {
+    label += ` · also: ${secondaryIntent}`;
+  }
   el.textContent = label;
 }
 
@@ -91,6 +94,20 @@ export function renderListenFor(items) {
 /**
  * Render branch preview (max 3 routes)
  */
+// Human-friendly stage labels for branch preview
+const STAGE_LABELS = {
+  OPENER: 'opener', BRIDGE: 'bridge', QUALIFIER: 'qualify',
+  CLOSE: 'close', OBJECTION: 'objection', EXIT: 'exit',
+  BOOKED: 'booked', SEED_EXIT: 'seed exit', MINI_PITCH: 'mini pitch',
+  WRONG_PERSON: 'wrong person', PRICING: 'pricing',
+  PERMISSION_MOMENT: 'permission', GATEKEEPER: 'gatekeeper',
+  NON_CONNECT: 'voicemail',
+};
+
+function friendlyTarget(raw) {
+  return STAGE_LABELS[raw] || raw.toLowerCase().replace(/_/g, ' ');
+}
+
 export function renderBranchPreview(branchPreview) {
   const el = document.getElementById('v2-branch-preview');
   if (!el) return;
@@ -100,7 +117,6 @@ export function renderBranchPreview(branchPreview) {
     return;
   }
   el.style.display = 'block';
-  // Build branch preview display using safe DOM methods
   const label = document.createElement('div');
   label.className = 'v2-next-label';
   label.textContent = 'NEXT';
@@ -110,7 +126,7 @@ export function renderBranchPreview(branchPreview) {
     const target = route.next || route.action || '';
     const span = document.createElement('span');
     span.style.marginRight = '12px';
-    span.textContent = `${cond} \u2192 ${target}`;
+    span.textContent = `${cond} \u2192 ${friendlyTarget(target)}`;
     el.appendChild(span);
   });
 }
@@ -327,7 +343,7 @@ export function renderTacticalCard(card) {
       entries.forEach(([c, r]) => {
         const el = document.createElement('div');
         el.className = 'v2-tac-value';
-        el.textContent = c + ' \u2192 ' + (r.next || r.action || '');
+        el.textContent = c + ' \u2192 ' + friendlyTarget(r.next || r.action || '');
         ifthen.appendChild(el);
       });
     }
@@ -341,7 +357,7 @@ export function renderTacticalCard(card) {
  */
 export function renderV2CenterPanel(activeCard, state) {
   if (!activeCard) return;
-  renderMoveTypePill(activeCard.moveType, activeCard.deliveryModifier);
+  renderMoveTypePill(activeCard.moveType, activeCard.deliveryModifier, state.compound ? state._secondaryIntent : null);
   renderNowSummary(state.nowSummary);
   renderBackupLine(activeCard.backupLine);
   renderListenFor(activeCard.listenFor);

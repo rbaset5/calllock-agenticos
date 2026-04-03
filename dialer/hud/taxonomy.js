@@ -131,6 +131,8 @@ export const INTENT_STAGE_MAP = {
   pricing_resistance: "PRICING",
   authority_mismatch: "WRONG_PERSON",
   confusion: "MINI_PITCH",
+  time_pressure: "MINI_PITCH",
+  brush_off: "EXIT",
 };
 
 // -------------------------

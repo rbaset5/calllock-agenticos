@@ -543,16 +543,18 @@
     /* ── v2 center panel stack ─────────────────────── */
     .v2-move-pill {
       display: inline-block;
-      padding: 2px 10px;
+      padding: 4px 14px;
       border-radius: 12px;
-      background: #1a1a2e;
-      color: #818cf8;
-      font-size: 11px;
-      font-weight: 600;
+      background: #312e81;
+      color: #a5b4fc;
+      font-size: 13px;
+      font-weight: 700;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      border: 1px solid #4338ca44;
     }
+    .v2-move-pill:empty { display: none; }
     .v2-now {
       color: #a1a1aa;
       font-size: 12px;
@@ -657,10 +659,15 @@
     <span class="stage-pill future" data-stage="IDLE">IDLE</span>
     <span class="stage-pill future" data-stage="GATEKEEPER">GK</span>
     <span class="stage-pill future" data-stage="OPENER">OPEN</span>
+    <span class="stage-pill future" data-stage="MINI_PITCH">MINI</span>
+    <span class="stage-pill future" data-stage="WRONG_PERSON">WRONG</span>
     <span class="stage-pill future" data-stage="BRIDGE">BRIDGE</span>
     <span class="stage-pill future" data-stage="QUALIFIER">QUAL</span>
+    <span class="stage-pill future" data-stage="PRICING">PRICE</span>
     <span class="stage-pill future" data-stage="CLOSE">CLOSE</span>
     <span class="stage-pill future" data-stage="OBJECTION">OBJ</span>
+    <span class="stage-pill future" data-stage="EXIT">EXIT</span>
+    <span class="stage-pill future" data-stage="BOOKED">BOOKED</span>
   </div>
 
   <!-- Round history strip -->

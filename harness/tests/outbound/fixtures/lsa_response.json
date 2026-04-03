@@ -1,0 +1,584 @@
+{
+  "search_metadata": {
+    "id": "69cda66495e950e75ceafe72",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/kVY97bERCEE-hwgoIYAAeQ/69cda66495e950e75ceafe72.json",
+    "created_at": "2026-04-01 23:12:36 UTC",
+    "processed_at": "2026-04-01 23:12:36 UTC",
+    "google_local_services_url": "https://www.google.com/_/AdsHomeservicesConsumerUi/data/batchexecute?hl=en",
+    "raw_html_file": "https://serpapi.com/searches/kVY97bERCEE-hwgoIYAAeQ/69cda66495e950e75ceafe72.html",
+    "prettify_html_file": "https://serpapi.com/searches/kVY97bERCEE-hwgoIYAAeQ/69cda66495e950e75ceafe72.prettify",
+    "total_time_taken": 0.91
+  },
+  "search_parameters": {
+    "engine": "google_local_services",
+    "hl": "en",
+    "q": "hvac",
+    "data_cid": "5170093061450257953"
+  },
+  "search_information": {
+    "google_local_services_url": "https://www.google.com/localservices/prolist?scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4"
+  },
+  "local_ads": [
+    {
+      "title": "Able Heating & Cooling",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Able+Heating+%26+Cooling&spp=EjsKEgj-x9L6AhCVzoXQCRj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.8,
+      "reviews": 161,
+      "phone": "+12317795430",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 30,
+      "thumbnail": "https://lh3.googleusercontent.com/62LPWLcrxEO5GZmneAX25M1aVr6ygGE3AJfxVC3ojW0agNY4T2bSkcIDasY=w150-h150-p-rj-sc0x00ffffff",
+      "hours": {
+        "currently": "Open 24 hours",
+        "week": [
+          {
+            "monday": "Open 24 hours"
+          },
+          {
+            "tuesday": "Open 24 hours"
+          },
+          {
+            "wednesday": "Open 24 hours"
+          },
+          {
+            "thursday": "Open 24 hours"
+          },
+          {
+            "friday": "Open 24 hours"
+          },
+          {
+            "saturday": "Open 24 hours"
+          },
+          {
+            "sunday": "Open 24 hours"
+          }
+        ]
+      },
+      "cid": "794076158",
+      "bid": "2583783189",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2583783189&cid=794076158&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Northlake Mechanical",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Northlake+Mechanical&spp=EjsKEgiQ1snVAxDumPfhCRj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.7,
+      "reviews": 133,
+      "phone": "+12317945778",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 7,
+      "thumbnail": "https://lh3.googleusercontent.com/7tKwoU0Pf1_7j1jIQi-RufnePzU8VvwwjAllQ81htl7AgLIoVIunAFl1B0Dijg=w150-h150-p-rj-sc0x00ffffff",
+      "hours": {
+        "currently": "Open 24 hours",
+        "week": [
+          {
+            "monday": "Open 24 hours"
+          },
+          {
+            "tuesday": "Open 24 hours"
+          },
+          {
+            "wednesday": "Open 24 hours"
+          },
+          {
+            "thursday": "Open 24 hours"
+          },
+          {
+            "friday": "Open 24 hours"
+          },
+          {
+            "saturday": "Open 24 hours"
+          },
+          {
+            "sunday": "Open 24 hours"
+          }
+        ]
+      },
+      "cid": "984771344",
+      "bid": "2621295726",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2621295726&cid=984771344&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Peak Heating Cooling Electrical",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Peak+Heating+Cooling+Electrical&spp=EjsKEgiPl6z1AxC765LlCRj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 3.8,
+      "reviews": 35,
+      "phone": "+12312520367",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 7,
+      "thumbnail": "https://lh3.googleusercontent.com/tgmaMWPNVm3gX9R7FsVWCGGT9W6FA5Ai9oHzK-qKzFn39AecVbSXZ9K-OaWF=w150-h150-p-rj-sc0x00ffffff",
+      "hours": {
+        "currently": "Open 24 hours",
+        "week": [
+          {
+            "monday": "Open 24 hours"
+          },
+          {
+            "tuesday": "Open 24 hours"
+          },
+          {
+            "wednesday": "Open 24 hours"
+          },
+          {
+            "thursday": "Open 24 hours"
+          },
+          {
+            "friday": "Open 24 hours"
+          },
+          {
+            "saturday": "Open 24 hours"
+          },
+          {
+            "sunday": "Open 24 hours"
+          }
+        ]
+      },
+      "cid": "1051397007",
+      "bid": "2628040123",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2628040123&cid=1051397007&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Mammoth Mechanical, LLC",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Mammoth+Mechanical,+LLC&spp=EjsKEgjzq7iHGRCFyOesIBj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 5.0,
+      "reviews": 9,
+      "phone": "+12314327231",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 5,
+      "thumbnail": "https://lh3.googleusercontent.com/-SjBQyt55qx12aCkMg_UGnZ4NvFPD8XK_0izY0vIhXhoJFyPQFNyVU6cSgUS=w150-h150-p-rj-sc0x00ffffff",
+      "hours": {
+        "currently": "Closed · Opens 8 AM Thu",
+        "week": [
+          {
+            "monday": "8 AM–6 PM"
+          },
+          {
+            "tuesday": "8 AM–6 PM"
+          },
+          {
+            "wednesday": "8 AM–6 PM"
+          },
+          {
+            "thursday": "8 AM–6 PM"
+          },
+          {
+            "friday": "8 AM–6 PM"
+          },
+          {
+            "saturday": "Closed"
+          },
+          {
+            "sunday": "Closed"
+          }
+        ]
+      },
+      "cid": "6726489587",
+      "bid": "8683906053",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=8683906053&cid=6726489587&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Wilder Heating and Cooling",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Wilder+Heating+and+Cooling&spp=EjsKEgjchsmdGBCP5ejmGBj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.9,
+      "reviews": 260,
+      "phone": "+12316454822",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 25,
+      "hours": {
+        "currently": "Open 24 hours",
+        "week": [
+          {
+            "monday": "Open 24 hours"
+          },
+          {
+            "tuesday": "Open 24 hours"
+          },
+          {
+            "wednesday": "Open 24 hours"
+          },
+          {
+            "thursday": "Open 24 hours"
+          },
+          {
+            "friday": "Open 24 hours"
+          },
+          {
+            "saturday": "Open 24 hours"
+          },
+          {
+            "sunday": "Open 24 hours"
+          }
+        ]
+      },
+      "cid": "6504465244",
+      "bid": "6658077327",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=6658077327&cid=6504465244&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Precision Plumbing and Heating Systems Inc.",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Precision+Plumbing+and+Heating+Systems+Inc.&spp=EjsKEgisxqmXARCXsvqvCRjor-CxCRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.9,
+      "reviews": 2181,
+      "phone": "+12319470100",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "hours": {
+        "currently": "Open 24 hours",
+        "week": [
+          {
+            "monday": "Open 24 hours"
+          },
+          {
+            "tuesday": "Open 24 hours"
+          },
+          {
+            "wednesday": "Open 24 hours"
+          },
+          {
+            "thursday": "Open 24 hours"
+          },
+          {
+            "friday": "Open 24 hours"
+          },
+          {
+            "saturday": "Open 24 hours"
+          },
+          {
+            "sunday": "Open 24 hours"
+          }
+        ]
+      },
+      "cid": "317350700",
+      "bid": "2516490519",
+      "pid": "2520258536",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2516490519&cid=317350700&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=2520258536&q=hvac"
+    },
+    {
+      "title": "Precision Plumbing & Heating Systems, Inc.",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Precision+Plumbing+%26+Heating+Systems,+Inc.&spp=EjsKEgiNjaa-AhCKxe3ACRj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.9,
+      "reviews": 2181,
+      "phone": "+12314429474",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 26,
+      "hours": {
+        "currently": "Open 24 hours",
+        "week": [
+          {
+            "monday": "Open 24 hours"
+          },
+          {
+            "tuesday": "Open 24 hours"
+          },
+          {
+            "wednesday": "Open 24 hours"
+          },
+          {
+            "thursday": "Open 24 hours"
+          },
+          {
+            "friday": "Open 24 hours"
+          },
+          {
+            "saturday": "Open 24 hours"
+          },
+          {
+            "sunday": "Open 24 hours"
+          }
+        ]
+      },
+      "cid": "667518605",
+      "bid": "2551931530",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2551931530&cid=667518605&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Grant Mechanical",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Grant+Mechanical&spp=EjsKEgiilLu4GBCA6LeKGhj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.8,
+      "reviews": 265,
+      "phone": "+12312520739",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 16,
+      "hours": {
+        "currently": "Closes soon · 8 PM",
+        "week": [
+          {
+            "monday": "8 AM–8 PM"
+          },
+          {
+            "tuesday": "8 AM–8 PM"
+          },
+          {
+            "wednesday": "8 AM–8 PM"
+          },
+          {
+            "thursday": "8 AM–8 PM"
+          },
+          {
+            "friday": "8 AM–8 PM"
+          },
+          {
+            "saturday": "9 AM–6 PM"
+          },
+          {
+            "sunday": "9 AM–6 PM"
+          }
+        ]
+      },
+      "cid": "6560860706",
+      "bid": "7001207808",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=7001207808&cid=6560860706&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Rite Choice Plumbing and Heating",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Rite+Choice+Plumbing+and+Heating&spp=EjsKEgiFw8SJGhC_xujNKBj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.6,
+      "reviews": 49,
+      "phone": "+19893302900",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 21,
+      "hours": {
+        "currently": "Open 24 hours",
+        "week": [
+          {
+            "monday": "Open 24 hours"
+          },
+          {
+            "tuesday": "Open 24 hours"
+          },
+          {
+            "wednesday": "Open 24 hours"
+          },
+          {
+            "thursday": "Open 24 hours"
+          },
+          {
+            "friday": "Open 24 hours"
+          },
+          {
+            "saturday": "Open 24 hours"
+          },
+          {
+            "sunday": "Open 24 hours"
+          }
+        ]
+      },
+      "cid": "6999318917",
+      "bid": "10900611903",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=10900611903&cid=6999318917&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "A1 Advantage Heating and Cooling inc.",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=A1+Advantage+Heating+and+Cooling+inc.&spp=EjsKEgi0m7qbARDNnLWwCRjfxaayCRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 5.0,
+      "reviews": 48,
+      "phone": "+12319297475",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "hours": {
+        "currently": "Closed · Opens 7:30 AM Thu",
+        "week": [
+          {
+            "monday": "7:30 AM–5:30 PM"
+          },
+          {
+            "tuesday": "7:30 AM–5:30 PM"
+          },
+          {
+            "wednesday": "7:30 AM–5:30 PM"
+          },
+          {
+            "thursday": "7:30 AM–5:30 PM"
+          },
+          {
+            "friday": "7:30 AM–5:30 PM"
+          },
+          {
+            "saturday": "Closed"
+          },
+          {
+            "sunday": "Closed"
+          }
+        ]
+      },
+      "cid": "326012340",
+      "bid": "2517454413",
+      "pid": "2521408223",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2517454413&cid=326012340&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=2521408223&q=hvac"
+    },
+    {
+      "title": "Team Bob's Heating, Cooling, Plumbing",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Team+Bob's+Heating,+Cooling,+Plumbing&spp=EjsKEgj-3-q2BBCzzLusDBj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.9,
+      "reviews": 3275,
+      "phone": "+12312423642",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 43,
+      "hours": {
+        "currently": "Closed · Opens 8 AM Thu",
+        "week": [
+          {
+            "monday": "8 AM–4:30 PM"
+          },
+          {
+            "tuesday": "8 AM–4:30 PM"
+          },
+          {
+            "wednesday": "8 AM–4:30 PM"
+          },
+          {
+            "thursday": "8 AM–4:30 PM"
+          },
+          {
+            "friday": "8 AM–4:30 PM"
+          },
+          {
+            "saturday": "Closed"
+          },
+          {
+            "sunday": "Closed"
+          }
+        ]
+      },
+      "cid": "1188737022",
+      "bid": "3314476595",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=3314476595&cid=1188737022&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "FNG Mechanical LLC",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=FNG+Mechanical+LLC&spp=EjsKEgibzLqbARDc3b-wCRiiz6ayCRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 5.0,
+      "reviews": 2,
+      "phone": "+12314996329",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "hours": {
+        "currently": "Closed · Opens 8 AM Thu",
+        "week": [
+          {
+            "monday": "8 AM–4 PM"
+          },
+          {
+            "tuesday": "8 AM–4 PM"
+          },
+          {
+            "wednesday": "8 AM–4 PM"
+          },
+          {
+            "thursday": "8 AM–4 PM"
+          },
+          {
+            "friday": "8 AM–4 PM"
+          },
+          {
+            "saturday": "8 AM–4 PM"
+          },
+          {
+            "sunday": "8 AM–4 PM"
+          }
+        ]
+      },
+      "cid": "326018587",
+      "bid": "2517626588",
+      "pid": "2521409442",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2517626588&cid=326018587&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=2521409442&q=hvac"
+    },
+    {
+      "title": "Moore Mechanical - Plumbing, Heating & Air Conditioning",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Moore+Mechanical+-+Plumbing,+Heating+%26+Air+Conditioning&spp=EjsKEgjmj7CnAhDPiNC9CRj_x6-gJRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 4.7,
+      "reviews": 758,
+      "phone": "+18005041058",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "years_in_business": 30,
+      "hours": {
+        "currently": "Closed · Opens 7 AM Thu",
+        "week": [
+          {
+            "monday": "7 AM–5 PM"
+          },
+          {
+            "tuesday": "7 AM–5 PM"
+          },
+          {
+            "wednesday": "7 AM–5 PM"
+          },
+          {
+            "thursday": "7 AM–5 PM"
+          },
+          {
+            "friday": "7 AM–5 PM"
+          },
+          {
+            "saturday": "Closed"
+          },
+          {
+            "sunday": "Closed"
+          }
+        ]
+      },
+      "cid": "619448294",
+      "bid": "2545157199",
+      "pid": "9999999999",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2545157199&cid=619448294&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=9999999999&q=hvac"
+    },
+    {
+      "title": "Peninsula Energy Services",
+      "link": "https://www.google.com/localservices/profile?cs=0&q=Peninsula+Energy+Services&spp=EjsKEgip8bqbARDEsLSwCRjxrqOyCRIleGNhdDpzZXJ2aWNlX2FyZWFfYnVzaW5lc3NfaHZhYzplbi1VUw&scp=CiV4Y2F0OnNlcnZpY2VfYXJlYV9idXNpbmVzc19odmFjOmVuLVVTEhgaEgndKdrXsjIeiBEhVnQ_P9y_RzjqnT4",
+      "rating": 1.0,
+      "reviews": 1,
+      "phone": "+12313573813",
+      "type": "HVAC Pro",
+      "service_area": "Traverse City",
+      "hours": {
+        "currently": "Closed · Opens 8:30 AM Thu",
+        "week": [
+          {
+            "monday": "8:30 AM–6 PM"
+          },
+          {
+            "tuesday": "8:30 AM–6 PM"
+          },
+          {
+            "wednesday": "8:30 AM–6 PM"
+          },
+          {
+            "thursday": "8:30 AM–6 PM"
+          },
+          {
+            "friday": "8:30 AM–6 PM"
+          },
+          {
+            "saturday": "Closed"
+          },
+          {
+            "sunday": "Closed"
+          }
+        ]
+      },
+      "cid": "326023337",
+      "bid": "2517440580",
+      "pid": "2521356145",
+      "serpapi_link": "https://serpapi.com/search.json?bid=2517440580&cid=326023337&data_cid=5170093061450257953&engine=google_local_services&hl=en&pid=2521356145&q=hvac"
+    }
+  ]
+}

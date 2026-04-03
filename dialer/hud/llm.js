@@ -1,6 +1,11 @@
 // dialer/hud/llm.js — Groq LLM fallback client
 // Vanilla JS ES module — no build step, no TypeScript.
 
+// Cache 503 status to avoid repeated network round-trips.
+// After a 503, skip the fetch for 30s before retrying.
+let _lastFailureAt = 0;
+const FAILURE_BACKOFF_MS = 30_000;
+
 /**
  * Call the server-side Groq classify endpoint.
  * Returns the parsed classification or null on error/timeout.
@@ -12,7 +17,21 @@
  * @param {*} utteranceId
  * @returns {Promise<object|null>}
  */
+/**
+ * Returns true if the LLM endpoint is in backoff (recent 503/502).
+ * When true, callers should skip the async fallback and promote rules
+ * results synchronously to avoid race conditions with fast transcripts.
+ */
+export function isLlmBackoffActive() {
+  return _lastFailureAt > 0 && (Date.now() - _lastFailureAt) < FAILURE_BACKOFF_MS;
+}
+
 export async function classifyWithLlm(utterance, stage, context, utteranceId) {
+  // Skip network call if we got a 503 recently — fall through immediately
+  if (_lastFailureAt > 0 && (Date.now() - _lastFailureAt) < FAILURE_BACKOFF_MS) {
+    return null;
+  }
+
   try {
     const res = await fetch('/hud/groq-classify', {
       method: 'POST',
@@ -31,6 +50,9 @@ export async function classifyWithLlm(utterance, stage, context, utteranceId) {
 
     if (!res.ok) {
       console.warn('[hud/llm] Server returned', res.status);
+      if (res.status === 503 || res.status === 502) {
+        _lastFailureAt = Date.now();
+      }
       return null;
     }
 
@@ -57,6 +79,7 @@ export async function classifyWithLlm(utterance, stage, context, utteranceId) {
     return data;
   } catch (err) {
     console.error('[hud/llm] Fetch failed:', err.message);
+    _lastFailureAt = Date.now();
     return null;
   }
 }
