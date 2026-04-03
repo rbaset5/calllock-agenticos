@@ -8,7 +8,14 @@ from types import SimpleNamespace
 from typing import Any, Mapping
 from uuid import uuid4
 
-import httpx
+try:
+    import httpx
+except Exception:  # pragma: no cover
+    class _HttpxShim:
+        Client = None
+        post = None
+
+    httpx = _HttpxShim()  # type: ignore[assignment]
 
 from harness.concurrency import (
     _check_agent_available_for_tenant,
@@ -137,6 +144,8 @@ class _SupabaseRestQuery:
 
 class _SupabaseRestClient:
     def __init__(self, *, base_url: str, service_role_key: str) -> None:
+        if not callable(getattr(httpx, "Client", None)):
+            raise RuntimeError("httpx is required for dispatch")
         self.base_url = base_url.rstrip("/")
         self.headers = {
             "apikey": service_role_key,
@@ -155,6 +164,8 @@ class _InngestDispatchClient:
         self.event_key = event_key
 
     def send_event(self, name: str, data: dict[str, Any]) -> None:
+        if not callable(getattr(httpx, "post", None)):
+            raise RuntimeError("httpx is required for dispatch")
         headers = {"Content-Type": "application/json"}
         if self.event_key:
             headers["Authorization"] = f"Bearer {self.event_key}"

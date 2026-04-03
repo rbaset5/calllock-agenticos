@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "catalog_id": "voice-monitor-spec",
+  "surface": "voice",
+  "domain": "detection",
+  "ownership": {
+    "team": "voice-platform",
+    "pager": "ops-voice"
+  },
+  "default_threshold": {
+    "metric": "rate",
+    "operator": ">=",
+    "value": 0.05,
+    "window_minutes": 60,
+    "min_sample_size": 20
+  },
+  "triage_default": {
+    "priority": "investigate_today",
+    "queue": "voice-monitoring"
+  },
+  "notification_default": {
+    "channel": "ops",
+    "target": "voice-monitoring"
+  },
+  "monitors": [
+    {
+      "monitor_id": "voice_empty_structured_output_spike",
+      "alert_type": "voice_empty_structured_output_spike",
+      "summary": "Structured post-call payloads are arriving empty more often than expected.",
+      "severity": "high",
+      "threshold": {
+        "metric": "empty_structured_output_rate",
+        "value": 0.2
+      }
+    },
+    {
+      "monitor_id": "voice_required_field_missing_spike",
+      "alert_type": "voice_required_field_missing_spike",
+      "summary": "Required structured output fields are missing above the expected rate.",
+      "severity": "high",
+      "threshold": {
+        "metric": "required_field_missing_rate",
+        "value": 0.15
+      }
+    },
+    {
+      "monitor_id": "voice_warning_rate_spike",
+      "alert_type": "voice_warning_rate_spike",
+      "summary": "Voice extraction warnings are spiking across recent calls.",
+      "severity": "medium",
+      "threshold": {
+        "metric": "warning_rate",
+        "value": 0.3
+      }
+    },
+    {
+      "monitor_id": "voice_route_missing_spike",
+      "alert_type": "voice_route_missing_spike",
+      "summary": "Voice calls are missing routing decisions more often than expected.",
+      "severity": "high",
+      "threshold": {
+        "metric": "route_missing_rate",
+        "value": 0.1
+      }
+    },
+    {
+      "monitor_id": "voice_safety_emergency_mismatch_signal",
+      "alert_type": "voice_safety_emergency_mismatch_signal",
+      "summary": "Safety emergency labels appear inconsistent with the detected call content.",
+      "severity": "critical",
+      "threshold": {
+        "metric": "safety_emergency_mismatch_rate",
+        "value": 0.02
+      },
+      "triage_default": {
+        "priority": "page_immediately",
+        "queue": "voice-monitoring"
+      },
+      "notification_default": {
+        "channel": "oncall",
+        "target": "ops-voice"
+      }
+    }
+  ]
+}

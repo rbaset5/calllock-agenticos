@@ -13,6 +13,19 @@ _SEVERITY_TO_URGENCY = {
 
 _DEFAULT_RULES = [
     {
+        "match": {"alert_type": "voice_safety_emergency_mismatch_signal"},
+        "incident_domain": "voice",
+        "incident_category": "voice_safety_signal",
+        "remediation_category": "voice_investigation",
+        "incident_urgency": "critical",
+    },
+    {
+        "match": {"alert_type_prefix": "voice_"},
+        "incident_domain": "voice",
+        "incident_category": "voice_quality_regression",
+        "remediation_category": "voice_investigation",
+    },
+    {
         "match": {"alert_type_prefix": "scheduler_"},
         "incident_domain": "operations",
         "incident_category": "scheduler_health",

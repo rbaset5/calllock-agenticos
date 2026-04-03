@@ -709,6 +709,31 @@ def test_improvement_content_and_cockpit_endpoints() -> None:
     scheduler = client.get("/cockpit/scheduler", params={"now_iso": "2026-01-15T08:21:00+00:00"})
     assert scheduler.status_code == 200
     assert "counts" in scheduler.json()
+
+
+def test_detection_endpoints() -> None:
+    create_alert(
+        {
+            "tenant_id": "tenant-alpha",
+            "alert_type": "voice_safety_emergency_mismatch_signal",
+            "severity": "critical",
+            "message": "Safety mismatch detected",
+            "metrics": {
+                "detection": {
+                    "notification_outcome": "founder_notify",
+                }
+            },
+        }
+    )
+
+    client = TestClient(app)
+    evaluated = client.post("/detection/evaluate", json={"tenant_id": "tenant-alpha"})
+    assert evaluated.status_code == 200
+
+    posture = client.get("/cockpit/detection", params={"tenant_id": "tenant-alpha"})
+    assert posture.status_code == 200
+    assert "counts" in posture.json()
+    assert "active_threads" in posture.json()
     assert "oldest_pending" in scheduler.json()
 
 
@@ -926,8 +951,6 @@ def test_approval_endpoints() -> None:
 
 
 def test_policy_approval_endpoint_continues_work() -> None:
-    from db.repository import create_approval_request
-
     approval = create_approval_request(
         {
             "tenant_id": "00000000-0000-0000-0000-000000000001",

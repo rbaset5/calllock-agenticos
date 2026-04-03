@@ -100,6 +100,11 @@ class AlertEvaluationRequest(StrictModel):
     window_minutes: int = 15
 
 
+class DetectionEvaluationRequest(StrictModel):
+    tenant_id: Optional[str] = None
+    window_minutes: int = 15
+
+
 class AlertDecisionRequest(StrictModel):
     status: Literal["acknowledged", "escalated", "resolved"]
     resolution_notes: str = ""

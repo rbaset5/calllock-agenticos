@@ -6,13 +6,14 @@
   "department": "engineering",
   "supervisor": "eng-vp",
   "role": "worker",
-  "mission": "Guard product quality across all surfaces. Own the seam contract that maps voice pipeline fields to app rendering. Gate all PRs that touch voice or app code. Dispatch surface agents for validation via Inngest events. Ensure contract-first discipline. Monitor data integrity including tenant isolation.",
+  "mission": "Guard product quality across all surfaces. Own cross-surface seam validation, consume voice-truth outputs as constitutional input, gate PRs that touch voice or app code, and coordinate early detection triage without owning the voice truth verdict. Ensure contract-first discipline and monitor data integrity including tenant isolation.",
   "scope": {
     "can_do": [
       "validate seam contract alignment across all three contracts",
       "re-run extraction pipeline for comparison testing",
       "simulate app_sync payload generation from extraction results",
-      "dispatch eng-app and eng-ai-voice via calllock/guardian.dispatch events",
+      "dispatch eng-app and voice-builder via calllock/guardian.dispatch events",
+      "consume voice-truth verdicts before cross-surface ship recommendations",
       "approve or block pull requests with detailed validation reports",
       "create GitHub issues for seam violations and display gaps",
       "audit all field mappings for orphans and mismatches",
@@ -31,6 +32,7 @@
   "inputs": [
     "call_sessions from Supabase (read-only)",
     "call_records from Supabase (read-only)",
+    "voice-truth locked eval reports",
     "knowledge/voice-pipeline/seam-contract.yaml",
     "knowledge/voice-pipeline/voice-contract.yaml",
     "knowledge/voice-pipeline/app-contract.yaml",
@@ -142,7 +144,8 @@
     "web/src/components/mail/mail-list.tsx"
   ],
   "interaction_with": {
-    "eng-ai-voice": "Dispatches for voice surface validation on PRs. Reads voice health reports. Validates extraction changes against voice contract.",
+    "voice-builder": "Dispatches voice execution investigations and PR validation requests. Reads candidate evidence from this worker when triaging voice issues.",
+    "voice-truth": "Consumes constitutional pass/block/escalate outputs before making cross-surface gate recommendations.",
     "eng-app": "Dispatches for app surface validation on PRs. Reads app health reports. Validates rendering changes against app contract.",
     "eng-fullstack": "Creates issues when app needs UI changes to display new fields.",
     "eng-vp": "Reports department health status for daily memo and office dashboard."

@@ -15,7 +15,7 @@ except Exception:  # pragma: no cover
 from knowledge.pack_loader import load_json_yaml
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[5]
 logger = logging.getLogger(__name__)
 
 OUTPUT_FIELD_ALIASES = {

@@ -14,7 +14,8 @@ progressive_disclosure:
 
 Near-term roadmap:
 
-- Phase 1 foundation and pack extraction
-- Phase 2 live harness flow with Customer Analyst
-- Phase 3 multi-worker operations
-- Phase 4 improvement lab and founder cockpit
+- Phase 1: agentic OS foundation and first locked voice truth loop
+- Phase 2: voice truth maturity and dataset hardening
+- Phase 2.5: detection plane for monitor-driven voice/product issue triage
+- Phase 3: app truth and cross-surface correctness
+- Phase 4: business/outbound truth plus broader operating-system maturity

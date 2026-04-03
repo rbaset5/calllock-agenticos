@@ -8,7 +8,10 @@ from typing import Any
 try:
     import httpx
 except Exception:  # pragma: no cover
-    httpx = None  # type: ignore[assignment]
+    class _HttpxShim:
+        post = None
+
+    httpx = _HttpxShim()  # type: ignore[assignment]
 
 from harness.notifications.email_delivery import deliver_email
 from harness.notifications.pager_delivery import deliver_pager
@@ -61,7 +64,7 @@ def _deliver_webhook(alert: dict[str, Any], tenant_config: dict[str, Any]) -> di
     webhook_url = tenant_config.get("alert_webhook_url") or os.getenv("ALERT_WEBHOOK_URL")
     if not webhook_url:
         return {"channel": "webhook", "delivered": False, "reason": "missing_webhook_url"}
-    if httpx is None:
+    if not callable(getattr(httpx, "post", None)):
         return {"channel": "webhook", "delivered": False, "reason": "httpx_unavailable"}
     try:
         response = httpx.post(webhook_url, json=_dashboard_payload(alert), timeout=5.0)
@@ -109,8 +112,20 @@ def _deliver_pager(alert: dict[str, Any], tenant_config: dict[str, Any]) -> dict
 
 def notify(alert: dict, tenant_config: dict[str, Any] | None = None) -> dict[str, Any]:
     config = tenant_config or {}
+    detection_meta = (alert.get("metrics") or {}).get("detection", {})
+    forced_channels = detection_meta.get("channels")
+    if isinstance(forced_channels, list):
+        channels = [channel for channel in forced_channels if isinstance(channel, str)]
+        if not channels:
+            return {
+                "alert_id": alert["id"],
+                "delivered": False,
+                "channels": [],
+            }
+    else:
+        channels = _resolve_channels(config)
     attempts = []
-    for channel in _resolve_channels(config):
+    for channel in channels:
         if channel == "dashboard":
             attempts.append(_deliver_dashboard(alert))
             continue

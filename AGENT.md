@@ -107,3 +107,10 @@ The founder controls the agent organization and context system through Discord v
 
 - The CallLock App (`web/`) is strictly customer-facing. Internal tools (outbound, ops, analytics) must NOT live in the App.
 - Never call the CallLock App "the dashboard" — it's an app that contractors use to review calls and manage their business.
+
+## Truth Org
+
+- Voice extraction quality is the first active constitutional truth loop.
+- Builders may propose changes; only truth may certify them.
+- Governance owns approvals, rollout boundaries, quarantine, and overrides.
+- Active truth-loop order is voice first, app second, outbound third.

@@ -5,6 +5,7 @@ from harness.alerts.escalation import auto_escalate_alerts, resolve_escalation_p
 from harness.alerts.lifecycle import validate_alert_transition
 from harness.alerts.recovery import auto_resolve_recovered_alerts, resolve_recovery_cooldown_minutes
 from harness.alerts.evaluator import evaluate_alerts
+from harness.alerts.notifier import notify
 from harness.incident_notifications import notify_incident
 from harness.incident_classification import classify_incident
 from harness.incident_runbooks import (
@@ -180,6 +181,61 @@ def test_webhook_notifications_use_tenant_override(monkeypatch) -> None:
     assert any(channel["channel"] == "webhook" and channel["delivered"] is True for channel in alerts[0]["notification"]["channels"])
     assert deliveries[0][0] == "https://tenant-beta.example.test/alerts"
     assert deliveries[0][2] == 5.0
+
+
+def test_detection_notification_channels_override_tenant_defaults(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("CALLLOCK_ALERT_ROOT", str(tmp_path))
+
+    result = notify(
+        {
+            "id": "alert-detection-1",
+            "tenant_id": "tenant-alpha",
+            "alert_type": "voice_route_missing_spike",
+            "severity": "high",
+            "message": "Route missing rate breached",
+            "metrics": {
+                "detection": {
+                    "notification_outcome": "internal_only",
+                    "channels": ["dashboard"],
+                }
+            },
+        },
+        {"alert_channels": ["email", "pager"]},
+    )
+
+    assert result["delivered"] is True
+    assert result["channels"] == [
+        {
+            "channel": "dashboard",
+            "delivered": True,
+            "destination": str(tmp_path / "dashboard.jsonl"),
+        }
+    ]
+
+
+def test_detection_silent_stand_down_skips_notifications(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("CALLLOCK_ALERT_ROOT", str(tmp_path))
+
+    result = notify(
+        {
+            "id": "alert-detection-2",
+            "tenant_id": "tenant-alpha",
+            "alert_type": "voice_route_missing_spike",
+            "severity": "high",
+            "message": "Known issue still active",
+            "metrics": {
+                "detection": {
+                    "notification_outcome": "silent_stand_down",
+                    "channels": [],
+                }
+            },
+        },
+        {"alert_channels": ["dashboard", "email"]},
+    )
+
+    assert result["delivered"] is False
+    assert result["channels"] == []
+    assert not (tmp_path / "dashboard.jsonl").exists()
 
 
 def test_email_notifications_use_outbox(monkeypatch, tmp_path: Path) -> None:

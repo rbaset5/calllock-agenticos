@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from db.repository import list_alerts, list_approval_requests, list_audit_logs, list_customer_content, list_experiments, list_incidents, list_jobs, list_kill_switches, list_scheduler_backlog
+from harness.detection.posture import build_detection_posture
 from harness.resilience.recovery_journal import journal_root
 from observability.langsmith_tracer import trace_root
 
@@ -61,6 +62,7 @@ def cockpit_overview() -> dict:
         "kill_switches": list_kill_switches(active_only=True),
         "alerts": alerts,
         "incidents": incidents,
+        "detection": build_detection_posture(),
         "experiments": list_experiments(),
         "content_records": len(list_customer_content("00000000-0000-0000-0000-000000000001")),
     }

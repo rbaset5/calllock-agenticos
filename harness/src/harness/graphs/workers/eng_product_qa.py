@@ -94,6 +94,19 @@ def _deterministic_gate(task: dict[str, Any]) -> dict[str, Any]:
     ctx = task.get("task_context", {})
     task_type = ctx.get("task_type", "")
 
+    if task_type == "detection-investigate":
+        detection_issue = ctx.get("detection_issue", {})
+        alert_type = detection_issue.get("alert_type", "unknown_detection_issue")
+        triage_outcome = detection_issue.get("triage_outcome", "investigate")
+        incident_key = detection_issue.get("incident_key", "")
+        return {
+            "summary": f"Detection coordination: {alert_type} requires {triage_outcome} triage.",
+            "status": "complete",
+            "next_owner": "voice-builder" if str(alert_type).startswith("voice_") else "eng-app",
+            "incident_key": incident_key,
+            "triage_outcome": triage_outcome,
+        }
+
     if task_type == "change-gate-review":
         changed_files = ctx.get("changed_files", [])
         if isinstance(changed_files, str):

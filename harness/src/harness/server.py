@@ -53,6 +53,8 @@ from harness.approval_resume import continue_approved_request
 from harness.approvals import approvals_for_api, resolve_approval_request
 from harness.audit import log_audit_event
 from harness.cockpit import cockpit_overview, cockpit_scheduler_view
+from harness.detection.evaluator import evaluate_detection
+from harness.detection.posture import build_detection_posture
 from harness.content_pipeline.pipeline import process_customer_content
 from harness.control_plane.kill_switches import upsert_kill_switch
 from harness.evals.runner import list_eval_runs_for_api, run_eval_suite
@@ -77,6 +79,7 @@ from harness.models import (
     ApprovalDecisionRequest,
     ArtifactLifecycleRequest,
     ContentPipelineRequest,
+    DetectionEvaluationRequest,
     DueTenantScheduleRequest,
     EvalRunRequest,
     GrowthAdvisorWeeklyRequest,
@@ -847,6 +850,10 @@ if FastAPI:
     def evaluate_alerts_endpoint(request: AlertEvaluationRequest) -> list[dict[str, Any]]:
         return evaluate_alerts(tenant_id=request.tenant_id, window_minutes=request.window_minutes)
 
+    @app.post("/detection/evaluate")
+    def evaluate_detection_endpoint(request: DetectionEvaluationRequest) -> list[dict[str, Any]]:
+        return evaluate_detection(tenant_id=request.tenant_id, window_minutes=request.window_minutes)
+
     @app.post("/alerts/escalate-stale")
     def escalate_alerts_endpoint(request: AlertEscalationRequest) -> list[dict[str, Any]]:
         return auto_escalate_alerts(tenant_id=request.tenant_id, now_iso=request.now_iso)
@@ -1111,5 +1118,9 @@ if FastAPI:
     @app.get("/cockpit/scheduler")
     def cockpit_scheduler_endpoint(now_iso: str = None) -> dict[str, Any]:
         return cockpit_scheduler_view(now_iso=now_iso)
+
+    @app.get("/cockpit/detection")
+    def cockpit_detection_endpoint(tenant_id: str = None) -> dict[str, Any]:
+        return build_detection_posture(tenant_id=tenant_id)
 else:  # pragma: no cover
     app = None
