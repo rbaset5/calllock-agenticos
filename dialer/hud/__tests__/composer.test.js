@@ -90,6 +90,56 @@ describe('composeActiveCard', () => {
     assert.deepEqual(card.toneVariants, {});
   });
 
+  // ── requestIntent (cross-stage override) ──
+
+  it('requestIntent objection overrides activeObjection from any stage', () => {
+    const card = composeActiveCard({
+      stage: 'BRIDGE',  // Not CLOSE/OBJECTION, but intent forces objection
+      requestIntent: { type: 'objection', value: 'timing' },
+      stageCards: NATIVE_STAGE_CARDS,
+      objectionCards: NATIVE_OBJECTION_CARDS,
+    });
+    // Should have timing objection's primaryLine overlaid on BRIDGE stage card
+    const timingObj = NATIVE_OBJECTION_CARDS.timing;
+    assert.equal(card.primaryLine, timingObj.primaryLine);
+    // Goal still comes from BRIDGE stage (objection overlays lines, not goal)
+    assert.equal(card.goal, NATIVE_STAGE_CARDS.BRIDGE.goal);
+  });
+
+  it('requestIntent bridge forces BRIDGE stage card from CLOSE stage', () => {
+    const card = composeActiveCard({
+      stage: 'CLOSE',  // Not BRIDGE, but intent forces bridge
+      requestIntent: { type: 'bridge', value: 'missed_calls' },
+      stageCards: NATIVE_STAGE_CARDS,
+      objectionCards: NATIVE_OBJECTION_CARDS,
+    });
+    // Should get BRIDGE stage card, not CLOSE
+    assert.equal(card.goal, NATIVE_STAGE_CARDS.BRIDGE.goal);
+  });
+
+  it('null requestIntent falls through to normal stage behavior', () => {
+    const card = composeActiveCard({
+      stage: 'OPENER',
+      requestIntent: null,
+      stageCards: NATIVE_STAGE_CARDS,
+      objectionCards: NATIVE_OBJECTION_CARDS,
+    });
+    assert.equal(card.id, 'OPENER');
+    assert.equal(card.primaryLine, NATIVE_STAGE_CARDS.OPENER.primaryLine);
+  });
+
+  it('requestIntent objection works when activeObjection is also set', () => {
+    const card = composeActiveCard({
+      stage: 'OBJECTION',
+      activeObjection: 'interest',  // Existing objection
+      requestIntent: { type: 'objection', value: 'authority' },  // Intent overrides
+      stageCards: NATIVE_STAGE_CARDS,
+      objectionCards: NATIVE_OBJECTION_CARDS,
+    });
+    const authorityObj = NATIVE_OBJECTION_CARDS.authority;
+    assert.equal(card.primaryLine, authorityObj.primaryLine);
+  });
+
   it('objection + tone combined (tone wins since it runs after overlay)', () => {
     // timing objection has an 'annoyed' tone variant
     const card = composeActiveCard({
