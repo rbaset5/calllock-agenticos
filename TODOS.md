@@ -549,3 +549,19 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Priority:** P2 (rare failure mode, but high impact when it happens)
 **Depends on:** HUD v2 upgrade shipped (Task 17 basic degradation as foundation).
 **Source:** Eng review, 2026-04-02. Codex outside voice flagged pause strip's weak event contract.
+
+### Confidence-adaptive legend bar
+**What:** Dim the hotkey legend bar when AI classification confidence is high (the AI has it handled), show it prominently when confidence is low (asking the SDR for help). Uses existing `bandFromScore()` in reducer.js.
+**Why:** Turns the legend from a static reference into a real-time communication channel between the AI and the SDR.
+**Effort:** M (CC: ~15 min)
+**Priority:** P2 (needs telemetry data from hotkey expansion to validate the legend is the right form factor first)
+**Depends on:** HUD hotkey expansion shipped (legend bar + telemetry active).
+**Source:** CEO review expansion ceremony, 2026-04-04. Deferred to measure impact of static legend first.
+
+### Validate intent override quality via telemetry
+**What:** After shipping hotkey expansion, review 5-10 calls where Alt+1-4 was used. Check whether cross-stage responses were contextually appropriate or generated confusing copy.
+**Why:** Codex outside voice flagged that cross-stage forcing may produce lines logically wrong for the conversation context. Need data to confirm or deny.
+**Effort:** S (CC: ~10 min to analyze session data)
+**Priority:** P2 (validation, not implementation)
+**Depends on:** HUD hotkey expansion shipped + 5-10 real calls with Alt+1-4 usage.
+**Source:** Eng review + Codex outside voice, 2026-04-04.
