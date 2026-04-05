@@ -139,6 +139,7 @@ def test_build_daily_plan_with_sprints(monkeypatch: pytest.MonkeyPatch, tmp_path
             {"id": "az-1", "business_name": "AZ 1", "metro": "Phoenix"},
         ],
     )
+    monkeypatch.setattr(daily_plan.store, "list_outbound_calls", lambda **_kw: [])
 
     plan = daily_plan.build_daily_plan(today=date(2026, 3, 30), schedule_path=schedule_path)
 
@@ -146,6 +147,128 @@ def test_build_daily_plan_with_sprints(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert plan["total_sprints"] == 2
     assert len(plan["blocks"][0]["sprints"]) == 2
     assert plan["dials_per_sprint"] == 11
+
+
+def test_callbacks_prioritized_in_metro_sprints(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Due callbacks appear before fresh leads within metro-filtered sprints."""
+    schedule = _base_schedule()
+    # Use 4 sprints on Monday so the FL sprint gets included
+    schedule["weeks"][1]["daily_targets"] = [4, 4, 4, 4, 4]
+    schedule_path = _write_schedule(tmp_path, schedule)
+
+    monkeypatch.setattr(
+        daily_plan.store,
+        "list_due_callbacks",
+        lambda **_kwargs: [
+            {"prospect_id": "cb-fl", "business_name": "Callback FL", "phone": "+15550001111", "metro": "Miami"},
+        ],
+    )
+    monkeypatch.setattr(
+        daily_plan.store,
+        "list_ranked_call_ready_prospects",
+        lambda **_kwargs: [
+            {"id": "fl-1", "business_name": "Fresh FL 1", "metro": "Miami"},
+            {"id": "fl-2", "business_name": "Fresh FL 2", "metro": "Orlando"},
+            {"id": "tx-1", "business_name": "TX 1", "metro": "Dallas"},
+            {"id": "az-1", "business_name": "AZ 1", "metro": "Phoenix"},
+        ],
+    )
+    monkeypatch.setattr(daily_plan.store, "list_outbound_calls", lambda **_kw: [])
+
+    plan = daily_plan.build_daily_plan(today=date(2026, 3, 30), schedule_path=schedule_path)
+
+    # First sprint is FL metro — callback should be first lead
+    fl_sprint = plan["blocks"][0]["sprints"][0]
+    assert fl_sprint["metro"] == "FL"
+    leads = fl_sprint["leads"]
+    assert len(leads) >= 2  # callback + at least 1 fresh
+    assert leads[0]["prospect_id"] == "cb-fl"  # callback comes first
+    assert leads[1]["id"] == "fl-1"  # then fresh
+
+
+def test_final_attempt_callbacks_routed_to_eod(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Callback on attempt 3 (final) should go to EOD block, not MID."""
+    schedule = _base_schedule()
+    schedule["callback_cadence"] = {"max_attempts": 3}
+    # Week 3+ has MID and EOD blocks
+    schedule["weeks"][1]["daily_targets"] = [9, 9, 9, 9, 9]
+    schedule["weeks"][1]["blocks"] = {
+        "AM": {
+            "start_et": "07:20",
+            "sprints": [
+                {"metro": "FL", "note": "s1"},
+                {"metro": "TX", "note": "s2"},
+            ],
+        },
+        "MID": {
+            "start_et": "13:00",
+            "sprints": [
+                {"metro": "callbacks", "note": "mid callbacks"},
+            ],
+        },
+        "EOD": {
+            "start_et": "16:00",
+            "sprints": [
+                {"metro": "callbacks", "note": "eod callbacks"},
+            ],
+        },
+    }
+    schedule_path = _write_schedule(tmp_path, schedule)
+
+    # Two callbacks: one early attempt (no metro match for AM sprints),
+    # one final attempt (also no metro match). This ensures they aren't
+    # consumed by metro-filtered AM sprints and reach the dedicated
+    # callback sprints in MID/EOD.
+    monkeypatch.setattr(
+        daily_plan.store,
+        "list_due_callbacks",
+        lambda **_kwargs: [
+            {"prospect_id": "cb-early", "business_name": "Early CB", "metro": "Denver",
+             "callback_date": "2026-03-28"},
+            {"prospect_id": "cb-final", "business_name": "Final CB", "metro": "Seattle",
+             "callback_date": "2026-03-26"},
+        ],
+    )
+    # cb-early: 1 retry after callback_date (attempt 2), plus 1 old call before callback_date (should be ignored)
+    # cb-final: 2 retries after callback_date (attempt 3 = final)
+    def mock_list_calls(*, tenant_id="", prospect_id=None, **_kw):
+        if prospect_id == "cb-early":
+            return [
+                {"outcome": "no_answer", "called_at": "2026-03-27T10:00:00"},  # before callback_date — ignored
+                {"outcome": "no_answer", "called_at": "2026-03-29T10:00:00"},  # after — counts
+            ]
+        if prospect_id == "cb-final":
+            return [
+                {"outcome": "no_answer", "called_at": "2026-03-27T10:00:00"},  # after callback_date — counts
+                {"outcome": "voicemail_left", "called_at": "2026-03-28T14:00:00"},  # after — counts
+            ]
+        return []
+
+    monkeypatch.setattr(daily_plan.store, "list_outbound_calls", mock_list_calls)
+    monkeypatch.setattr(
+        daily_plan.store,
+        "list_ranked_call_ready_prospects",
+        lambda **_kwargs: [],
+    )
+
+    plan = daily_plan.build_daily_plan(today=date(2026, 3, 30), schedule_path=schedule_path)
+
+    # Find MID and EOD blocks
+    mid_block = next((b for b in plan["blocks"] if b["block"] == "MID"), None)
+    eod_block = next((b for b in plan["blocks"] if b["block"] == "EOD"), None)
+    assert mid_block is not None
+    assert eod_block is not None
+
+    mid_leads = mid_block["sprints"][0]["leads"]
+    eod_leads = eod_block["sprints"][0]["leads"]
+
+    # Early attempt should be in MID
+    mid_ids = {l.get("prospect_id") for l in mid_leads}
+    assert "cb-early" in mid_ids
+
+    # Final attempt should be in EOD
+    eod_ids = {l.get("prospect_id") for l in eod_leads}
+    assert "cb-final" in eod_ids
 
 
 def test_metro_list_for_sprint_callbacks() -> None:

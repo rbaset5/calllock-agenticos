@@ -101,10 +101,6 @@ export const NOW_TEMPLATES = {
   competition: "Prospect mentioned competitive pressure.",
   overwhelmed: "Prospect sounds overwhelmed or stretched thin.",
   fallback: "Prospect responded — listening for pain signal.",
-  // Qualifier reads
-  pain: "Prospect confirmed they're losing calls.",
-  no_pain: "Prospect says they don't miss calls.",
-  unknown_pain: "Prospect isn't sure how many calls they miss.",
 };
 
 // -------------------------
