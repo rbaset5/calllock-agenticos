@@ -6,26 +6,44 @@ import { NOW_TEMPLATES } from './taxonomy.js';
 
 /**
  * Compose the active card for the current moment.
- * Precedence: stage card → objection overlay → tone variant → delivery modifier
+ * Precedence: requestIntent (cross-stage override) → stage card → objection overlay → tone → modifier
+ *
+ * requestIntent is a one-shot action payload from Alt+1-4 override:
+ *   { type: 'bridge'|'objection', value: 'missed_calls'|'timing'|etc. }
+ * When present, it forces the card lookup to the matching deck regardless of current stage.
  */
 export function composeActiveCard({
   stage,
   activeObjection = null,
+  requestIntent = null,
   tone = null,
   deliveryModifier = null,
   stageCards,
   objectionCards,
 }) {
+  // Step 0: Cross-stage intent override (action payload, consumed once)
+  // If requestIntent is present, force objection overlay or bridge stage card
+  let effectiveObjection = activeObjection;
+  let effectiveStage = stage;
+  if (requestIntent) {
+    if (requestIntent.type === 'objection') {
+      effectiveObjection = requestIntent.value;
+    } else if (requestIntent.type === 'bridge') {
+      // Force bridge stage to get bridge-specific card
+      effectiveStage = 'BRIDGE';
+    }
+  }
+
   // Step 1: Start with stage card
-  const stageCard = stageCards[stage];
+  const stageCard = stageCards[effectiveStage];
   if (!stageCard) {
     return { id: stage, stage, moveType: 'pause', deliveryModifier: null, goal: '', primaryLine: '', backupLine: null, why: '', listenFor: [], branchPreview: {}, clarifyingQuestion: null, valueProp: null, proofPoint: null, toneVariants: {} };
   }
   let card = { ...stageCard };
 
-  // Step 2: Overlay objection card if active
-  if (activeObjection && objectionCards[activeObjection]) {
-    const objCard = objectionCards[activeObjection];
+  // Step 2: Overlay objection card if active (or if requestIntent forced an objection)
+  if (effectiveObjection && objectionCards[effectiveObjection]) {
+    const objCard = objectionCards[effectiveObjection];
     card = {
       ...card,
       primaryLine: objCard.primaryLine,
