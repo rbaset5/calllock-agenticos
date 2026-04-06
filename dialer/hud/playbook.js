@@ -297,6 +297,7 @@ export function linesForStage(stage, playbook) {
         { label: 'Mini pitch', line: "We help contractors make sure inbound calls get handled when the team can't answer live." },
         { label: 'Backup', line: "We help contractors avoid losing jobs when calls come in and nobody can grab the phone." },
         { label: 'Clarify', line: 'How are you handling that today?' },
+        { label: 'Redirect', line: "So when a call comes in and you can't grab it, what happens?" },
       ];
     case 'WRONG_PERSON':
       return [
@@ -311,45 +312,38 @@ export function linesForStage(stage, playbook) {
         { label: 'Frequency', line: 'How often do you think a good inbound call comes in when nobody can answer it properly?' },
       ];
     case 'BRIDGE':
+      // Bridge angle quick picks are in the right rail — left rail shows only
+      // the after-hours and fallback variants not covered by the 4 angle picks.
       return [
-        { label: '❌ Missed/voicemail', line: playbook.bridge.missed_calls.voicemail },
+        { label: '❌ Missed/after hours', line: playbook.bridge.missed_calls.afterHours },
         { label: '❌ Missed/staff', line: playbook.bridge.missed_calls.staff },
-        { label: '❌ Missed/covered', line: playbook.bridge.missed_calls.covered },
-        { label: '📊 Comp/slow', line: playbook.bridge.competition.slow },
-        { label: '📊 Comp/first', line: playbook.bridge.competition.firstResponder },
-        { label: '🔥 Overwhelm/everything', line: playbook.bridge.overwhelmed.everything },
-        { label: '🔥 Overwhelm/keep up', line: playbook.bridge.overwhelmed.cantKeepUp },
+        { label: '📊 Comp/shared leads', line: playbook.bridge.competition.shared },
         { label: '❓ Fallback', line: playbook.bridge.fallback },
       ];
     case 'QUALIFIER':
+      // Pitch lines are in the right rail — left rail shows only qualifier-specific lines
       return [
         { label: '📞 Ask the question', line: playbook.qualifier },
         { label: '🔍 Unknown pain bridge', line: playbook.qualifierReads.unknown_pain.bridge_line },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
-        { label: '🔧 How it works', line: playbook.pitchLines.howItWorks },
-        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'CLOSE':
+      // Objection picks are in the right rail — left rail shows close-specific lines
       return [
         { label: '🤝 Close', line: playbook.close },
         { label: '🛡️ Hedge', line: playbook.hedge },
         { label: '✅ Yes followup', line: playbook.yesFollowup },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
-        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'SEED_EXIT':
       return [
         { label: 'seedExit', line: playbook.seedExit },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
       ];
     case 'OBJECTION':
+      // Recovery lines are in the right rail — left rail shows objection reset lines only
       return [
         { label: '⏰ Timing reset', line: playbook.objections.timing.reset },
         { label: '🚫 Interest reset', line: playbook.objections.interest.reset },
         { label: '📧 Info reset', line: playbook.objections.info.reset },
         { label: '👤 Authority reset', line: playbook.objections.authority.reset },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
-        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'NON_CONNECT':
       return [
