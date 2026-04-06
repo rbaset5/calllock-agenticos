@@ -151,3 +151,99 @@ export const INTENT_STAGE_MAP = {
 export const OBJECTION_INTENTS = ["timing", "interest", "info", "authority"];
 
 export const OVERLAY_INTENTS = ["existing_coverage", "answering_service"];
+
+// -------------------------
+// Bridge stages (stages that show bridge angle hotkeys)
+// -------------------------
+
+export const BRIDGE_STAGES = ["BRIDGE", "OPENER"];
+
+// -------------------------
+// Hotkey config — single source of truth for legend, handler, telemetry, replay.
+// Each stage maps to an array of available hotkey actions.
+// -------------------------
+
+export const HOTKEY_CONFIG = {
+  // Stages with bridge angle keys (1-3)
+  BRIDGE: [
+    { key: "1", label: "Missed", action: "MANUAL_SET_BRIDGE_ANGLE", value: "missed_calls", type: "bridge", cues: "voicemail, callback, wife, office" },
+    { key: "2", label: "Comp", action: "MANUAL_SET_BRIDGE_ANGLE", value: "competition", type: "bridge", cues: "slow, growth, competitor, losing" },
+    { key: "3", label: "Overwhelm", action: "MANUAL_SET_BRIDGE_ANGLE", value: "overwhelmed", type: "bridge", cues: "busy, stretched, do it all, rushed" },
+  ],
+  OPENER: [
+    { key: "1", label: "Missed", action: "MANUAL_SET_BRIDGE_ANGLE", value: "missed_calls", type: "bridge", cues: "voicemail, callback, wife, office" },
+    { key: "2", label: "Comp", action: "MANUAL_SET_BRIDGE_ANGLE", value: "competition", type: "bridge", cues: "slow, growth, competitor, losing" },
+    { key: "3", label: "Overwhelm", action: "MANUAL_SET_BRIDGE_ANGLE", value: "overwhelmed", type: "bridge", cues: "busy, stretched, do it all, rushed" },
+  ],
+  // Stages with objection keys (1-4)
+  CLOSE: [
+    { key: "1", label: "Timing", action: "MANUAL_SET_OBJECTION", value: "timing", type: "objection", cues: "busy, bad time, not now, call back" },
+    { key: "2", label: "Interest", action: "MANUAL_SET_OBJECTION", value: "interest", type: "objection", cues: "not interested, we're set, don't need" },
+    { key: "3", label: "Info", action: "MANUAL_SET_OBJECTION", value: "info", type: "objection", cues: "send me info, email me, website" },
+    { key: "4", label: "Authority", action: "MANUAL_SET_OBJECTION", value: "authority", type: "objection", cues: "not my decision, wife handles, partner" },
+  ],
+  OBJECTION: [
+    { key: "1", label: "Timing", action: "MANUAL_SET_OBJECTION", value: "timing", type: "objection", cues: "busy, bad time, not now, call back" },
+    { key: "2", label: "Interest", action: "MANUAL_SET_OBJECTION", value: "interest", type: "objection", cues: "not interested, we're set, don't need" },
+    { key: "3", label: "Info", action: "MANUAL_SET_OBJECTION", value: "info", type: "objection", cues: "send me info, email me, website" },
+    { key: "4", label: "Authority", action: "MANUAL_SET_OBJECTION", value: "authority", type: "objection", cues: "not my decision, wife handles, partner" },
+  ],
+  GATEKEEPER: [
+    { key: "1", label: "Timing", action: "MANUAL_SET_OBJECTION", value: "timing", type: "objection", cues: "busy, bad time, not now" },
+    { key: "2", label: "Interest", action: "MANUAL_SET_OBJECTION", value: "interest", type: "objection", cues: "not interested" },
+    { key: "3", label: "Info", action: "MANUAL_SET_OBJECTION", value: "info", type: "objection", cues: "send info, email" },
+    { key: "4", label: "Authority", action: "MANUAL_SET_OBJECTION", value: "authority", type: "objection", cues: "not my decision" },
+  ],
+  QUALIFIER: [
+    { key: "1", label: "Timing", action: "MANUAL_SET_OBJECTION", value: "timing", type: "objection", cues: "busy, bad time" },
+    { key: "2", label: "Interest", action: "MANUAL_SET_OBJECTION", value: "interest", type: "objection", cues: "not interested" },
+    { key: "3", label: "Info", action: "MANUAL_SET_OBJECTION", value: "info", type: "objection", cues: "send info" },
+    { key: "4", label: "Authority", action: "MANUAL_SET_OBJECTION", value: "authority", type: "objection", cues: "not my decision" },
+  ],
+  SEED_EXIT: [
+    { key: "1", label: "Timing", action: "MANUAL_SET_OBJECTION", value: "timing", type: "objection", cues: "busy, bad time" },
+    { key: "2", label: "Interest", action: "MANUAL_SET_OBJECTION", value: "interest", type: "objection", cues: "not interested" },
+    { key: "3", label: "Info", action: "MANUAL_SET_OBJECTION", value: "info", type: "objection", cues: "send info" },
+    { key: "4", label: "Authority", action: "MANUAL_SET_OBJECTION", value: "authority", type: "objection", cues: "not my decision" },
+  ],
+  // Blocked stages — no numeric keys
+  PRICING: [],
+  MINI_PITCH: [],
+  WRONG_PERSON: [],
+  PERMISSION_MOMENT: [],
+  // Terminal/idle stages — no numeric keys
+  IDLE: [],
+  EXIT: [],
+  ENDED: [],
+  BOOKED: [],
+  NON_CONNECT: [],
+};
+
+// -------------------------
+// Global hotkeys (always available, not stage-dependent)
+// -------------------------
+
+export const GLOBAL_HOTKEYS = [
+  { key: "\u2192", label: "Next", description: "Advance stage" },
+  { key: "\u2190", label: "Back", description: "Previous round/stage" },
+  { key: "F9", label: "No-connect", description: "Mark non-connect" },
+  { key: "F10", label: "Branch", description: "Alternate path" },
+  { key: "Space", label: "Off-script", description: "Bookmark custom response" },
+  { key: "Shift", label: "Hedge", description: "Request hedge (CLOSE/OBJ)" },
+  { key: "Shift+F1", label: "End", description: "End call + reset" },
+  { key: "?", label: "Legend", description: "Toggle hotkey bar" },
+];
+
+// -------------------------
+// Keypress event schema for telemetry (session audit trail)
+// -------------------------
+
+export const KEYPRESS_EVENT_FIELDS = [
+  "ts",
+  "stage",
+  "key",
+  "action",
+  "value",
+  "isOverride",
+  "source",
+];
