@@ -1041,6 +1041,7 @@
     }
 
     function filterByState(state) {
+      if (isDialing) { showToast('Hang up before switching states'); return; }
       activeStateFilter = state;
       if (state === 'all') {
         leads = [...allLeads];
@@ -1053,6 +1054,7 @@
     }
 
     function nextBatch() {
+      if (isDialing) { showToast('Hang up before advancing batch'); return; }
       const nextIdx = currentIndex + BATCH_SIZE;
       if (nextIdx >= leads.length) {
         currentIndex = 0;
@@ -1471,6 +1473,7 @@
     }
 
     document.addEventListener('keydown', (event) => {
+      if (activeTab !== 'dial') return;
       const modalOpen = document.getElementById('modal-overlay').classList.contains('active');
       if (event.key === 'Escape' && modalOpen) {
         closeModal();
