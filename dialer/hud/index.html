@@ -633,6 +633,15 @@
     }
     /* v2 left rail: prospect context */
     .v2-context-rail { padding: 8px 12px; }
+    /* Stage briefing: GOAL + LISTEN FOR */
+    #v2-stage-briefing { padding-bottom: 8px; border-bottom: 1px solid #27272a; margin-bottom: 8px; }
+    #v2-stage-briefing:empty { display: none; padding: 0; border: none; margin: 0; }
+    #v2-stage-briefing .v2-ctx-label { color: #22c55e; }
+    .v2-briefing-goal { font-size: 14px; color: #e5e5e5; margin-bottom: 4px; }
+    .v2-briefing-listen { font-size: 11px; color: #a1a1aa; }
+    /* Compact identity separator */
+    .v2-compact-id { font-size: 13px; font-weight: 600; color: #e5e5e5; padding-bottom: 8px; border-bottom: 1px solid #27272a; margin-bottom: 8px; }
+    .v2-compact-id-fallback { font-size: 13px; color: #737373; font-style: italic; padding-bottom: 8px; border-bottom: 1px solid #27272a; margin-bottom: 8px; }
     .v2-ctx-section { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #27272a; }
     .v2-ctx-section:empty { display: none; }
     .v2-ctx-label { color: #52525b; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
@@ -705,6 +714,7 @@
       <!-- v2 left rail: prospect context -->
       <div id="v2-prospect-context" class="v2-context-rail">
         <div id="v2-prospect-identity" class="v2-ctx-section"></div>
+        <div id="v2-stage-briefing" class="v2-ctx-section"></div>
         <div id="v2-prospect-why" class="v2-ctx-section"></div>
         <div id="v2-prospect-outreach" class="v2-ctx-section"></div>
         <div id="v2-prospect-fit" class="v2-ctx-section"></div>
