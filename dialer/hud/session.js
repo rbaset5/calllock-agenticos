@@ -15,7 +15,7 @@ export function resetAuditTrail() {
  * Called on every reducer dispatch.
  */
 export function logDecision(action, prevState, newState) {
-  auditTrail.push({
+  const entry = {
     ts: Date.now(),
     utteranceId: action.utteranceId ?? action.turn?.utteranceId ?? null,
     utterance: action.turn?.text ?? action.utterance ?? null,
@@ -37,7 +37,17 @@ export function logDecision(action, prevState, newState) {
     moveType: newState.moveType ?? null,
     deliveryModifier: newState.deliveryModifier ?? null,
     primaryIntent: newState.primaryIntent ?? null,
-  });
+  };
+  // Keypress telemetry fields (from logKeypress in ui.js)
+  if (action.type === 'KEYPRESS_LOG') {
+    entry.key = action.key ?? null;
+    entry.action = action.action ?? null;
+    entry.value = action.value ?? null;
+    entry.isOverride = action.isOverride ?? false;
+    entry.source = action.source ?? 'manual';
+    entry.stage = action.stage ?? prevState.stage;
+  }
+  auditTrail.push(entry);
 }
 
 /**
@@ -97,4 +107,47 @@ export async function saveSession(state, prospectId, hudSessionOverride = null) 
  */
 export function getAuditTrail() {
   return auditTrail;
+}
+
+/**
+ * Generate replay timeline data from the audit trail.
+ * Returns an array of keypress events with relative timing.
+ * Consumers render this however they like (table, visual timeline, etc.)
+ */
+export function generateReplayTimeline() {
+  const keypresses = auditTrail.filter(e => e.actionType === 'KEYPRESS_LOG');
+  // Exclude system transitions (INIT_CALL, CALL_CONNECTED, END_CALL) from replay
+  const systemActions = ['INIT_CALL', 'CALL_CONNECTED', 'END_CALL', 'OUTCOME_RECEIVED'];
+  const stageChanges = auditTrail.filter(e =>
+    e.prevStage !== e.newStage && e.newStage !== 'IDLE' && !systemActions.includes(e.actionType)
+  );
+  if (keypresses.length === 0 && stageChanges.length === 0) return [];
+
+  const allEvents = [];
+  const t0 = auditTrail.length > 0 ? auditTrail[0].ts : 0;
+
+  for (const kp of keypresses) {
+    allEvents.push({
+      type: 'keypress',
+      offsetMs: kp.ts - t0,
+      key: kp.key ?? '?',
+      action: kp.action ?? kp.actionType,
+      value: kp.value ?? null,
+      stage: kp.stage ?? kp.newStage,
+      isOverride: kp.isOverride ?? kp.overridden ?? false,
+    });
+  }
+
+  for (const sc of stageChanges) {
+    allEvents.push({
+      type: 'stage_change',
+      offsetMs: sc.ts - t0,
+      from: sc.prevStage,
+      to: sc.newStage,
+      source: sc.overridden ? 'manual' : 'ai',
+    });
+  }
+
+  allEvents.sort((a, b) => a.offsetMs - b.offsetMs);
+  return allEvents;
 }

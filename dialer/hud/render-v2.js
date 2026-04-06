@@ -52,6 +52,28 @@ export function renderBackupLine(backupLine) {
 }
 
 /**
+ * Render "also heard" badge when recent burst contains signals not reflected
+ * in the current card. Shows prior signals that arrived within the buffer window.
+ * @param {Array<{signal: string, seq: number, atMs: number}>} recentSignals
+ * @param {string|null} currentSignal - the signal driving the active card
+ */
+export function renderAlsoHeard(recentSignals, currentSignal) {
+  const el = document.getElementById('v2-also-heard');
+  if (!el) return;
+  // Filter to signals that differ from the current card's driving signal
+  const others = recentSignals.filter(s => s.signal !== currentSignal);
+  if (others.length === 0) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  // Deduplicate signal names
+  const unique = [...new Set(others.map(s => s.signal))];
+  el.style.display = 'block';
+  el.textContent = '\u21B3 also heard: ' + unique.join(', ');
+}
+
+/**
  * Render the pause strip
  */
 export function renderPauseStrip(visible, message) {

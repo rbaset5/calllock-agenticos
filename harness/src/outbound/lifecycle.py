@@ -58,9 +58,11 @@ def run_lifecycle_sweep(
     }
     today_date = date.fromisoformat(today) if today else date.today()
 
-    # Rule 1: Overdue callbacks (3+ days past callback_date)
+    # Rule 1: Overdue callbacks (1+ day past callback_date)
+    # Tightened from 3 days to 1 day to enforce the callback cadence:
+    # see decisions/product/DEC-2026-04-04-sms-postponed.md
     try:
-        overdue = store.list_overdue_callbacks(tenant_id=tenant_id, today=today, grace_days=3)
+        overdue = store.list_overdue_callbacks(tenant_id=tenant_id, today=today, grace_days=1)
         for prospect in overdue:
             pid = prospect["prospect_id"]
             try:
