@@ -87,7 +87,7 @@ export const PLAYBOOK = {
         'At $50-$100 per lead from Google, every missed call is money you already spent — just gone.',
     },
     fallback:
-      'Yeah — when you\'re tied up and a new customer calls, what usually happens?',
+      'What does it cost you when one of those calls slips through the cracks?',
   },
 
   // ── Qualifier reads ─────────────────────────────────────────────
@@ -316,7 +316,7 @@ export function linesForStage(stage, playbook) {
         { label: '❌ Missed/staff', line: playbook.bridge.missed_calls.staff },
         { label: '❌ Missed/covered', line: playbook.bridge.missed_calls.covered },
         { label: '📊 Comp/slow', line: playbook.bridge.competition.slow },
-        { label: '📊 Comp/first', line: playbook.bridge.competition.competitor },
+        { label: '📊 Comp/first', line: playbook.bridge.competition.firstResponder },
         { label: '🔥 Overwhelm/everything', line: playbook.bridge.overwhelmed.everything },
         { label: '🔥 Overwhelm/keep up', line: playbook.bridge.overwhelmed.cantKeepUp },
         { label: '❓ Fallback', line: playbook.bridge.fallback },

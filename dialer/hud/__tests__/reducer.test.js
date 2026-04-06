@@ -98,7 +98,7 @@ describe('hudReducer', () => {
     });
     assert.equal(next.stage, 'BRIDGE');
     assert.equal(next.bridgeAngle, 'competition');
-    assert.ok(next.now.line.includes('responds first'));
+    assert.ok(next.now.line.includes('picks up first'));
   });
 
   it('OPENER → BRIDGE with overwhelmed', () => {
@@ -124,7 +124,7 @@ describe('hudReducer', () => {
     });
     assert.equal(next.stage, 'BRIDGE');
     assert.equal(next.bridgeAngle, 'fallback');
-    assert.ok(next.now.line.includes('tied up and a new customer calls'));
+    assert.ok(next.now.line.includes('slips through the cracks'));
   });
 
   // 7. BRIDGE → QUALIFIER
