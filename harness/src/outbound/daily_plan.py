@@ -23,10 +23,24 @@ SCHEDULE_PATH = Path(__file__).resolve().parents[3] / "knowledge" / "outbound" /
 
 # Metro name to Supabase metro column value mapping.
 METRO_FILTERS: dict[str, list[str]] = {
+    # Southeast cluster
     "FL": ["Miami", "Tampa", "Orlando", "Jacksonville", "Fort Lauderdale", "FL"],
-    "TX": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "TX"],
+    "GA": ["Atlanta", "Savannah", "Augusta", "Columbus", "Macon", "GA"],
+    "NC": ["Charlotte", "Raleigh", "Greensboro", "Durham", "Winston-Salem", "NC"],
+    # Midwest cluster
+    "MI": ["Detroit", "Grand Rapids", "Warren", "Sterling Heights", "Ann Arbor", "MI"],
+    "OH": ["Columbus", "Cleveland", "Cincinnati", "Toledo", "Akron", "OH"],
     "IL": ["Chicago", "IL"],
+    # Solo
+    "TX": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "TX"],
     "AZ": ["Phoenix", "Mesa", "Tucson", "Scottsdale", "Chandler", "Gilbert", "Tempe", "Glendale", "Peoria", "AZ"],
+    # Cluster combos (for sprint block routing)
+    "SE": ["Miami", "Tampa", "Orlando", "Jacksonville", "Fort Lauderdale", "FL",
+           "Atlanta", "Savannah", "Augusta", "Columbus", "Macon", "GA",
+           "Charlotte", "Raleigh", "Greensboro", "Durham", "Winston-Salem", "NC"],
+    "MW": ["Detroit", "Grand Rapids", "Warren", "Sterling Heights", "Ann Arbor", "MI",
+           "Columbus", "Cleveland", "Cincinnati", "Toledo", "Akron", "OH",
+           "Chicago", "IL"],
     "TX_IL": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "Chicago", "TX", "IL"],
 }
 
@@ -231,7 +245,7 @@ def build_daily_plan(
         eod_callbacks = []
 
     # Fetch fresh leads grouped by metro/timezone
-    all_fresh = store.list_ranked_call_ready_prospects(tenant_id=tenant_id, limit=200)
+    all_fresh = store.list_ranked_call_ready_prospects(tenant_id=tenant_id, limit=500)
     dials_per_sprint = week_config.get("dials_per_sprint", schedule.get("dials_per_sprint", 10))
     sprint_min = schedule.get("sprint_duration_min", 20)
     recovery_min = schedule.get("recovery_min", 5)
