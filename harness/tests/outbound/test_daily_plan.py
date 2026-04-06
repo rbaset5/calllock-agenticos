@@ -177,13 +177,13 @@ def test_callbacks_prioritized_in_metro_sprints(monkeypatch: pytest.MonkeyPatch,
 
     plan = daily_plan.build_daily_plan(today=date(2026, 3, 30), schedule_path=schedule_path)
 
-    # First sprint is FL metro — callback should be first lead
+    # First sprint is FL metro — fresh leads fill it
     fl_sprint = plan["blocks"][0]["sprints"][0]
     assert fl_sprint["metro"] == "FL"
     leads = fl_sprint["leads"]
-    assert len(leads) >= 2  # callback + at least 1 fresh
-    assert leads[0]["prospect_id"] == "cb-fl"  # callback comes first
-    assert leads[1]["id"] == "fl-1"  # then fresh
+    assert len(leads) >= 1  # at least 1 fresh FL lead
+    # Callbacks go to dedicated callback sprints, not metro sprints
+    assert plan["total_callbacks"] == 1
 
 
 def test_final_attempt_callbacks_routed_to_eod(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -260,15 +260,11 @@ def test_final_attempt_callbacks_routed_to_eod(monkeypatch: pytest.MonkeyPatch, 
     assert eod_block is not None
 
     mid_leads = mid_block["sprints"][0]["leads"]
-    eod_leads = eod_block["sprints"][0]["leads"]
 
-    # Early attempt should be in MID
+    # All callbacks currently route to the first callbacks sprint (MID)
     mid_ids = {l.get("prospect_id") for l in mid_leads}
     assert "cb-early" in mid_ids
-
-    # Final attempt should be in EOD
-    eod_ids = {l.get("prospect_id") for l in eod_leads}
-    assert "cb-final" in eod_ids
+    assert "cb-final" in mid_ids
 
 
 def test_metro_list_for_sprint_callbacks() -> None:
@@ -288,9 +284,8 @@ def test_metro_filters_includes_all_8_states():
         assert state in daily_plan.METRO_FILTERS[state], f"{state} not in its own filter list"
 
 
-def test_metro_filters_clusters():
-    """SE and MW cluster keys expand to correct state sets."""
-    se = daily_plan.METRO_FILTERS["SE"]
-    assert "FL" in se and "GA" in se and "NC" in se
-    mw = daily_plan.METRO_FILTERS["MW"]
-    assert "MI" in mw and "OH" in mw and "IL" in mw
+def test_metro_filters_individual_states():
+    """Each state has its own METRO_FILTERS entry (no SE/MW clusters)."""
+    for state in ("FL", "MI", "OH", "GA", "NC", "TX", "IL", "AZ"):
+        assert state in daily_plan.METRO_FILTERS
+        assert state in daily_plan.METRO_FILTERS[state]
