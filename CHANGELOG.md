@@ -2,6 +2,21 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.1.0] - 2026-04-05
+
+### Fixed
+- Transcript health badge now clears between calls (was leaking TRANSCRIPT LAG into the next prospect)
+- Added 15-second TRANSCRIPT OFFLINE escalation with red badge and manual-mode lock per spec Section 32
+- Rounds and round index now reset on new call (was bleeding previous prospect's round history)
+- END_CALL reducer action now clears activeObjection (was persisting stale objection data in session snapshots)
+- SET_TURN_ANALYSIS now validates callSid to prevent cross-call state corruption
+- AUTO_SET_STAGE now validates stage value against STAGES array
+
+### Added
+- Session save coordinator for atomic end-of-call persistence (cancels stale saves when outcome arrives first)
+- Heartbeat watchdog (6.5s timeout) with automatic call finalization on connection loss
+- Regression test for END_CALL + activeObjection cleanup (345 total tests)
+
 ## [0.1.0.0] - 2026-04-05
 
 ### Added

@@ -12,6 +12,7 @@ import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
 import { INTENT_STAGE_MAP, HOTKEY_CONFIG, GLOBAL_HOTKEYS, BRIDGE_STAGES } from './taxonomy.js';
 import { renderV2CenterPanel, renderAlsoHeard, renderProspectContext, renderTacticalCard, renderPauseStrip } from './render-v2.js';
+import { createSessionSaveCoordinator } from './session-save-coordinator.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -37,6 +38,7 @@ let sprintContextCachedAt = null;
 let sprintContextTimer = null;
 let pauseStripTimer = null;
 let pauseStripSilenceTimer = null;
+let heartbeatWatchdogTimer = null;
 let usedProbeLines = new Set(); // Probe dedup: never fire the same probe twice per call
 let legendBarVisible = true;    // ? key toggles, resets to true on new call
 let recentKeys = [];            // Last 3 keypresses for breadcrumb trail
@@ -44,6 +46,8 @@ let pendingIntent = null;       // One-shot intent from Alt+N, consumed by next 
 let replayShowing = false;      // True after call ends, prevents dispatch from overwriting replay
 let recentSignals = []; // Rolling buffer of recent classifications for burst detection
 const SIGNAL_BUFFER_TTL_MS = 3500; // Signals older than this are pruned
+const HEARTBEAT_TIMEOUT_MS = 6500;
+const sessionSaveCoordinator = createSessionSaveCoordinator({ saveSession });
 
 // Decision tree navigation: → = primary path, F10 = alternate path
 const STAGE_TRANSITIONS = {
@@ -126,9 +130,12 @@ function deactivatePauseStrip() {
 // ── Transcript health ─────────────────────────────────────────
 
 let transcriptHealthTimer = null;
+let transcriptOfflineTimer = null;
+let transcriptForcedManual = false; // true when 15s offline locked to manual
 
 function startTranscriptHealthWatch() {
   clearTimeout(transcriptHealthTimer);
+  clearTimeout(transcriptOfflineTimer);
   transcriptHealthTimer = setTimeout(() => {
     const el = document.getElementById('v2-transcript-health');
     if (el) {
@@ -136,14 +143,28 @@ function startTranscriptHealthWatch() {
       el.className = 'v2-transcript-health stale';
     }
   }, 3000);
+  transcriptOfflineTimer = setTimeout(() => {
+    const el = document.getElementById('v2-transcript-health');
+    if (el) {
+      el.textContent = 'TRANSCRIPT OFFLINE';
+      el.className = 'v2-transcript-health offline';
+    }
+    manualModeActive = true;
+    transcriptForcedManual = true;
+  }, 15000);
 }
 
 function resetTranscriptHealth() {
   clearTimeout(transcriptHealthTimer);
+  clearTimeout(transcriptOfflineTimer);
   const el = document.getElementById('v2-transcript-health');
   if (el) {
     el.textContent = '';
     el.className = 'v2-transcript-health';
+  }
+  if (transcriptForcedManual) {
+    manualModeActive = false;
+    transcriptForcedManual = false;
   }
   // Restart the watch if call is active
   if (state.callId && !state.ended) {
@@ -180,6 +201,41 @@ function dispatch(action) {
   }
 }
 
+function clearHeartbeatWatchdog() {
+  if (heartbeatWatchdogTimer) {
+    clearTimeout(heartbeatWatchdogTimer);
+    heartbeatWatchdogTimer = null;
+  }
+}
+
+function armHeartbeatWatchdog() {
+  clearHeartbeatWatchdog();
+  if (!state.callId || state.ended) return;
+  heartbeatWatchdogTimer = setTimeout(() => {
+    finalizeCall('heartbeat_timeout');
+  }, HEARTBEAT_TIMEOUT_MS);
+}
+
+function finalizeCall(reason = 'call_ended') {
+  if (!state.callId || state.ended) return;
+  clearHeartbeatWatchdog();
+  clearTimeout(transcriptHealthTimer);
+  clearTimeout(transcriptOfflineTimer);
+  transcriptForcedManual = false;
+  dispatch({
+    type: 'END_CALL',
+    callSid: state.callId,
+    atMs: Date.now(),
+    reason,
+  });
+  const endedState = state;
+  const endedProspectId = prospectId;
+  const endedSession = captureSession(endedState);
+  stopCallTimer();
+  renderReplayTimeline();
+  sessionSaveCoordinator.scheduleEndedSave(endedState, endedProspectId, endedSession);
+}
+
 // ── BroadcastChannel ───────────────────────────────────────────
 
 const channel = new BroadcastChannel('calllock-hud');
@@ -192,6 +248,7 @@ channel.addEventListener('message', (event) => {
   switch (msg.type) {
     case 'CALL_STARTED': {
       // Auto-reset
+      clearHeartbeatWatchdog();
       resetAuditTrail();
       usedProbeLines.clear();
       recentSignals = [];
@@ -204,6 +261,9 @@ channel.addEventListener('message', (event) => {
       prospectBusiness = msg.businessName || '';
       prospectId = msg.prospectId || null;
       manualModeActive = false;
+      rounds = [];
+      roundIndex = -1;
+      resetTranscriptHealth();
 
       dispatch({
         type: 'INIT_CALL',
@@ -219,6 +279,7 @@ channel.addEventListener('message', (event) => {
 
       startCallTimer();
       startTranscriptHealthWatch();
+      armHeartbeatWatchdog();
 
       // v2: populate prospect context if available
       if (msg.prospectContext) {
@@ -240,6 +301,12 @@ channel.addEventListener('message', (event) => {
       break;
     }
 
+    case 'HEARTBEAT': {
+      if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
+      armHeartbeatWatchdog();
+      break;
+    }
+
     case 'AUDIO_MODE': {
       if (msg.mode === 'manual') {
         manualModeActive = true;
@@ -254,19 +321,7 @@ channel.addEventListener('message', (event) => {
 
     case 'CALL_ENDED': {
       if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
-      clearTimeout(transcriptHealthTimer);
-      dispatch({
-        type: 'END_CALL',
-        callSid: state.callId,
-        atMs: Date.now(),
-      });
-      const endedState = state;
-      const endedProspectId = prospectId;
-      const endedSession = captureSession(endedState);
-      stopCallTimer();
-      renderReplayTimeline();
-      // Delay session save briefly to allow OUTCOME to arrive first
-      setTimeout(() => saveSession(endedState, endedProspectId, endedSession), 500);
+      finalizeCall(msg.reason || 'call_ended');
       break;
     }
 
@@ -285,7 +340,7 @@ channel.addEventListener('message', (event) => {
           outcome: msg.outcome,
           atMs: Date.now(),
         });
-        saveSession(state, prospectId);
+        void sessionSaveCoordinator.saveOutcome(state, prospectId);
       }
       break;
     }
@@ -866,19 +921,12 @@ document.addEventListener('keydown', (e) => {
     // Shift+F1 — Reset
     case (e.key === 'F1' && e.shiftKey): {
       e.preventDefault();
-      dispatch({
-        type: 'END_CALL',
-        callSid: state.callId,
-        atMs: now,
-      });
-      saveSession(state, prospectId);
-
-      // Show replay timeline before clearing audit trail
-      renderReplayTimeline();
+      finalizeCall('manual_reset');
 
       // Reset after brief delay (replay stays visible until next call)
       setTimeout(() => {
         resetAuditTrail();
+        clearHeartbeatWatchdog();
         rounds = [];
         roundIndex = -1;
         prospectName = '';
@@ -933,7 +981,8 @@ function processTurn(utterance, classification) {
 
   // Apply hysteresis - only update if threshold crossed
   const currentTone = { tone_label: state.tone, tone_confidence: state.toneConfidence };
-  if (shouldUpdateTone(currentTone, toneResult, state._consecutiveToneCount || 0)) {
+  const toneWillUpdate = shouldUpdateTone(currentTone, toneResult, state._consecutiveToneCount || 0);
+  if (toneWillUpdate) {
     dispatch({
       type: 'SET_TONE',
       callSid: state.callId,
@@ -951,11 +1000,15 @@ function processTurn(utterance, classification) {
 
   // Step 3: Update trajectory and compute risk (for objection-eligible stages)
   const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || classification.qualifierRead || null;
+  let secondaryIntent = null;
+  let isCompound = false;
+  let nextTrajectory = state.trajectory;
+  let nextRisk = state.risk;
   if (primaryIntent) {
     // Detect secondary intent: check if the utterance also matches a different signal
     const secondaryCheck = detectNewIntents(utterance, state.stage);
-    const secondaryIntent = (secondaryCheck && secondaryCheck.intent !== primaryIntent) ? secondaryCheck.intent : null;
-    const isCompound = !!secondaryIntent;
+    secondaryIntent = (secondaryCheck && secondaryCheck.intent !== primaryIntent) ? secondaryCheck.intent : null;
+    isCompound = !!secondaryIntent;
 
     const classObj = {
       primary: { intent: primaryIntent },
@@ -963,22 +1016,28 @@ function processTurn(utterance, classification) {
       utterance: utterance,
     };
     const wasSalvage = state.stage === 'OBJECTION' && state.trajectory.turnsInCurrentStage > 0;
-    const newTrajectory = updateTrajectory(state.trajectory, classObj, state.stage, wasSalvage);
-    const risk = computeRisk(newTrajectory, classObj);
-
-    // Update state trajectory and risk (direct mutation for non-reducer fields)
-    state.trajectory = newTrajectory;
-    state.risk = risk;
-    state.primaryIntent = primaryIntent;
-    state.compound = isCompound;
-    state._secondaryIntent = secondaryIntent;
+    nextTrajectory = updateTrajectory(state.trajectory, classObj, state.stage, wasSalvage);
+    nextRisk = computeRisk(nextTrajectory, classObj);
   }
 
-  // Step 4: Generate NOW summary BEFORE dispatch (so render() has it ready)
-  state.nowSummary = generateNowSummary({
-    primaryIntent: primaryIntent,
-    tone: state.tone,
-    toneConfidence: state.toneConfidence,
+  // Step 4: Publish turn analysis through the reducer so render always sees it.
+  const toneForSummary = toneWillUpdate ? toneResult.tone_label : state.tone;
+  const toneConfidenceForSummary = toneWillUpdate ? toneResult.tone_confidence : state.toneConfidence;
+  dispatch({
+    type: 'SET_TURN_ANALYSIS',
+    callSid: state.callId,
+    primaryIntent,
+    compound: isCompound,
+    secondaryIntent,
+    trajectory: nextTrajectory,
+    risk: nextRisk,
+    signalCount: primaryIntent ? (secondaryIntent ? 2 : 1) : 0,
+    recommendedActionBias: nextRisk === 'call_ending' ? 'exit' : null,
+    nowSummary: generateNowSummary({
+      primaryIntent: primaryIntent,
+      tone: toneForSummary,
+      toneConfidence: toneConfidenceForSummary,
+    }),
   });
 
   // Step 5: Check for dedicated stage routing via INTENT_STAGE_MAP
@@ -987,11 +1046,11 @@ function processTurn(utterance, classification) {
     if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
       dispatch({ type: 'PRICING_INTERRUPT', callSid: state.callId });
     } else if (targetStage === 'MINI_PITCH' && state.stage !== 'MINI_PITCH') {
-      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now() });
+      dispatch({ type: 'AUTO_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now(), why: 'Prospect asked what this is about' });
     } else if (targetStage === 'WRONG_PERSON' && state.stage !== 'WRONG_PERSON') {
-      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now() });
+      dispatch({ type: 'AUTO_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now(), why: 'Prospect indicated someone else owns this decision' });
     } else if (targetStage === 'EXIT' && state.stage !== 'EXIT') {
-      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'EXIT', atMs: Date.now() });
+      dispatch({ type: 'AUTO_SET_STAGE', callSid: state.callId, stage: 'EXIT', atMs: Date.now(), why: 'Prospect signaled the conversation should end' });
     }
   }
 

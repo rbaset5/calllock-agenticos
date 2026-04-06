@@ -1107,6 +1107,36 @@ export function hudReducer(state, action, playbook) {
     }
 
     // ────────────────────────────────────────────────────
+    case 'AUTO_SET_STAGE': {
+      if (!STAGES.includes(action.stage)) return state;
+      const stageHints = {
+        MINI_PITCH: 'Prospect is confused; clarify in one sentence',
+        WRONG_PERSON: 'Prospect redirected you to a different decision-maker',
+        EXIT: 'Prospect signaled the conversation should end',
+      };
+      return {
+        ...state,
+        stage: action.stage,
+        previousStage: action.clearPreviousStage === false ? state.previousStage : null,
+        activeObjection: action.stage === 'OBJECTION' ? state.activeObjection : null,
+        lastObjectionBucket:
+          action.stage === 'OBJECTION' ? null : state.lastObjectionBucket,
+        now: makeNow(
+          action.stage,
+          lineForStage(action.stage, playbook),
+          action.confidence || 'high',
+          action.why || stageHints[action.stage] || 'Automatic route',
+          action.source || 'rules',
+        ),
+        metrics: {
+          ...state.metrics,
+          stageChanges: state.metrics.stageChanges + 1,
+        },
+        lastCommittedAtMs: action.atMs,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
     case 'MANUAL_SET_BRIDGE_ANGLE': {
       if (state.stage !== 'BRIDGE' && state.stage !== 'OPENER') return state;
       const angle = action.angle;
@@ -1218,6 +1248,7 @@ export function hudReducer(state, action, playbook) {
         stage: state.stage === 'BOOKED' ? 'BOOKED' : 'ENDED',
         outcome: state.outcome ?? 'ended_unknown',
         ended: true,
+        activeObjection: null,
         lastCommittedAtMs: action.atMs,
       };
     }
@@ -1237,6 +1268,28 @@ export function hudReducer(state, action, playbook) {
       return {
         ...state,
         prospectContext: action.prospectContext,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_TURN_ANALYSIS': {
+      if (action.callSid && state.callId && action.callSid !== state.callId) return state;
+      return {
+        ...state,
+        risk: action.risk ?? state.risk,
+        signalCount: action.signalCount ?? state.signalCount,
+        recommendedActionBias:
+          action.recommendedActionBias !== undefined
+            ? action.recommendedActionBias
+            : state.recommendedActionBias,
+        primaryIntent:
+          action.primaryIntent !== undefined ? action.primaryIntent : state.primaryIntent,
+        compound: action.compound ?? false,
+        nowSummary:
+          action.nowSummary !== undefined ? action.nowSummary : state.nowSummary,
+        trajectory: action.trajectory ?? state.trajectory,
+        _secondaryIntent:
+          action.secondaryIntent !== undefined ? action.secondaryIntent : state._secondaryIntent,
       };
     }
 
