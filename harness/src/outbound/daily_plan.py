@@ -2,7 +2,7 @@
 
 Reads the 7-week sprint schedule YAML, queries due callbacks and ranked
 fresh leads from Supabase, and produces a structured plan with sprint blocks
-ordered by timezone (FL -> TX -> IL -> AZ).
+ordered by timezone (FL/MI/OH/GA/NC -> TX/IL -> AZ).
 """
 
 from __future__ import annotations
@@ -23,24 +23,14 @@ SCHEDULE_PATH = Path(__file__).resolve().parents[3] / "knowledge" / "outbound" /
 
 # Metro name to Supabase metro column value mapping.
 METRO_FILTERS: dict[str, list[str]] = {
-    # Southeast cluster
     "FL": ["Miami", "Tampa", "Orlando", "Jacksonville", "Fort Lauderdale", "FL"],
-    "GA": ["Atlanta", "Savannah", "Augusta", "Columbus", "Macon", "GA"],
-    "NC": ["Charlotte", "Raleigh", "Greensboro", "Durham", "Winston-Salem", "NC"],
-    # Midwest cluster
-    "MI": ["Detroit", "Grand Rapids", "Warren", "Sterling Heights", "Ann Arbor", "MI"],
-    "OH": ["Columbus", "Cleveland", "Cincinnati", "Toledo", "Akron", "OH"],
-    "IL": ["Chicago", "IL"],
-    # Solo
+    "MI": ["Detroit", "Grand Rapids", "MI"],
+    "OH": ["Columbus", "Cleveland", "Cincinnati", "OH"],
+    "GA": ["Atlanta", "GA"],
+    "NC": ["Charlotte", "Raleigh", "NC"],
     "TX": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "TX"],
+    "IL": ["Chicago", "IL"],
     "AZ": ["Phoenix", "Mesa", "Tucson", "Scottsdale", "Chandler", "Gilbert", "Tempe", "Glendale", "Peoria", "AZ"],
-    # Cluster combos (for sprint block routing)
-    "SE": ["Miami", "Tampa", "Orlando", "Jacksonville", "Fort Lauderdale", "FL",
-           "Atlanta", "Savannah", "Augusta", "Columbus", "Macon", "GA",
-           "Charlotte", "Raleigh", "Greensboro", "Durham", "Winston-Salem", "NC"],
-    "MW": ["Detroit", "Grand Rapids", "Warren", "Sterling Heights", "Ann Arbor", "MI",
-           "Columbus", "Cleveland", "Cincinnati", "Toledo", "Akron", "OH",
-           "Chicago", "IL"],
     "TX_IL": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "Chicago", "TX", "IL"],
 }
 
@@ -127,49 +117,6 @@ def _metro_list_for_sprint(metro_key: str) -> list[str] | None:
     return METRO_FILTERS.get(metro_key, [metro_key])
 
 
-def _enrich_callback_attempts(
-    callbacks: list[dict[str, Any]],
-    tenant_id: str,
-) -> list[dict[str, Any]]:
-    """Add callback_attempt count to each callback prospect.
-
-    Counts outbound_calls made AFTER the callback_date was set (the call
-    that created the callback). Only counts no_answer and voicemail_left
-    outcomes — answered_callback is the initial call that triggered the
-    callback, not a follow-up attempt.
-    """
-    if not callbacks:
-        return callbacks
-    enriched = []
-    for cb in callbacks:
-        pid = cb.get("prospect_id") or cb.get("id")
-        if not pid:
-            enriched.append({**cb, "callback_attempt": 1})
-            continue
-        try:
-            calls = store.list_outbound_calls(tenant_id=tenant_id, prospect_id=str(pid))
-        except Exception:
-            logger.exception("Failed to fetch calls for callback prospect %s", pid)
-            enriched.append({**cb, "callback_attempt": 1})
-            continue
-        # Only count follow-up attempts (no_answer, voicemail_left) after
-        # the callback was created. The answered_callback call is the one
-        # that created the callback stage — don't count it.
-        cb_date = cb.get("callback_date") or ""
-        retry_outcomes = {"no_answer", "voicemail_left"}
-        if cb_date:
-            attempt_count = sum(
-                1 for c in calls
-                if c.get("outcome") in retry_outcomes
-                and str(c.get("called_at", ""))[:10] >= cb_date[:10]
-            )
-        else:
-            # No callback_date means we can't filter by date — count all retries
-            attempt_count = sum(1 for c in calls if c.get("outcome") in retry_outcomes)
-        enriched.append({**cb, "callback_attempt": attempt_count + 1})
-    return enriched
-
-
 def build_daily_plan(
     *,
     today: date | None = None,
@@ -223,29 +170,15 @@ def build_daily_plan(
             "total_fresh": 0,
         }
 
+    # Fetch callbacks due today
+    callbacks = store.list_due_callbacks(tenant_id=tenant_id, today=today.isoformat())
+
+    # Fetch fresh leads grouped by metro/timezone
+    all_fresh = store.list_ranked_call_ready_prospects(tenant_id=tenant_id, limit=200)
+
     # Build sprint blocks from schedule
     week_config = get_week_config(schedule, week_num) or {}
     blocks_config = week_config.get("blocks", {})
-
-    # Fetch callbacks due today and enrich with attempt count
-    raw_callbacks = store.list_due_callbacks(tenant_id=tenant_id, today=today.isoformat())
-    callbacks = _enrich_callback_attempts(raw_callbacks, tenant_id)
-
-    # Read callback cadence config (max_attempts determines MID vs EOD routing)
-    cadence = schedule.get("callback_cadence", {})
-    max_attempts = cadence.get("max_attempts", 3)
-
-    # Split callbacks: attempts below max go to MID block, final attempt to EOD.
-    # If the current week has no EOD block, fold final-attempt callbacks into MID
-    # so they don't get orphaned (weeks 1-3 have no EOD).
-    mid_callbacks = [cb for cb in callbacks if cb.get("callback_attempt", 1) < max_attempts]
-    eod_callbacks = [cb for cb in callbacks if cb.get("callback_attempt", 1) >= max_attempts]
-    if "EOD" not in blocks_config and eod_callbacks:
-        mid_callbacks = mid_callbacks + eod_callbacks
-        eod_callbacks = []
-
-    # Fetch fresh leads grouped by metro/timezone
-    all_fresh = store.list_ranked_call_ready_prospects(tenant_id=tenant_id, limit=500)
     dials_per_sprint = week_config.get("dials_per_sprint", schedule.get("dials_per_sprint", 10))
     sprint_min = schedule.get("sprint_duration_min", 20)
     recovery_min = schedule.get("recovery_min", 5)
@@ -255,7 +188,7 @@ def build_daily_plan(
     fresh_assigned = set()  # track which prospect IDs have been assigned to sprints
     remaining_sprints = daily_sprint_count
 
-    for block_name in ["AM", "MID", "EOD", "LATE"]:
+    for block_name in ["AM", "MID", "EOD"]:
         if remaining_sprints <= 0:
             break
         block_cfg = blocks_config.get(block_name)
@@ -282,11 +215,8 @@ def build_daily_plan(
             metro_filter = _metro_list_for_sprint(metro_key)
 
             if metro_key in ("callbacks", "hot_leads", "warm_callbacks"):
-                # EOD block gets final-attempt callbacks; MID/AM get earlier attempts.
-                # No fallback between pools — keeps routing predictable.
-                pool = eod_callbacks if block_name == "EOD" else mid_callbacks
                 sprint_leads = [
-                    cb for cb in pool
+                    cb for cb in callbacks
                     if cb.get("prospect_id") not in fresh_assigned
                 ][:dials_per_sprint]
             elif metro_key == "fresh":
@@ -296,21 +226,17 @@ def build_daily_plan(
                 ][:dials_per_sprint]
             elif metro_filter:
                 metro_lower = {m.lower() for m in metro_filter}
-                # Callbacks due today get priority within metro sprints.
-                # Use the block-appropriate pool so final-attempt callbacks
-                # aren't consumed by AM sprints (they belong in EOD).
-                cb_pool = eod_callbacks if block_name == "EOD" else mid_callbacks
-                metro_callbacks = [
-                    cb for cb in cb_pool
+                # Callbacks matching this metro go first, then fresh leads
+                matching_callbacks = [
+                    cb for cb in callbacks
                     if (cb.get("metro") or "").lower() in metro_lower
                     and cb.get("prospect_id") not in fresh_assigned
                 ]
-                metro_fresh = [
+                matching_fresh = [
                     p for p in all_fresh
-                    if (p.get("metro") or "").lower() in metro_lower
-                    and p.get("id") not in fresh_assigned
+                    if (p.get("metro") or "").lower() in metro_lower and p.get("id") not in fresh_assigned
                 ]
-                sprint_leads = (metro_callbacks + metro_fresh)[:dials_per_sprint]
+                sprint_leads = (matching_callbacks + matching_fresh)[:dials_per_sprint]
 
             for lead in sprint_leads:
                 fresh_assigned.add(lead.get("id") or lead.get("prospect_id"))

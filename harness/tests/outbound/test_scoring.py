@@ -53,6 +53,7 @@ def test_dimension_score_calculation_for_supported_signals() -> None:
         "hours": 10,
         "owner_operated": 10,
         "review_pain": 10,
+        "already_served": 0,
     }
 
 

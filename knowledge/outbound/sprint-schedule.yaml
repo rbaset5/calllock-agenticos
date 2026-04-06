@@ -1,6 +1,10 @@
 # 7-week progressive cold calling sprint schedule.
 # Read by daily_plan.py to generate timezone-aware sprint plans.
 # Each sprint = 20 min. Recovery = 5 min between sprints.
+#
+# 8 states: FL, MI, OH, GA, NC (Eastern) → TX, IL (Central) → AZ (Mountain)
+# Eastern states rotate across sprints in the AM block.
+# Weeks 1-2 cycle subsets; weeks 3+ cover all 8.
 
 start_date: "2026-03-30"
 deadline: "2026-05-16"
@@ -10,34 +14,13 @@ dials_per_sprint: 10
 
 metro_timezones:
   FL: "America/New_York"
-  GA: "America/New_York"
-  NC: "America/New_York"
   MI: "America/Detroit"
   OH: "America/New_York"
+  GA: "America/New_York"
+  NC: "America/New_York"
   TX: "America/Chicago"
   IL: "America/Chicago"
   AZ: "America/Phoenix"
-
-# Callback follow-up cadence for sprint calls.
-# Lifecycle sweep uses these intervals to re-queue overdue callbacks.
-# See: decisions/product/DEC-2026-04-04-sms-postponed.md
-callback_cadence:
-  max_attempts: 3
-  attempts:
-    1:
-      delay_days: 1          # next business day after initial call
-      block: MID
-      action_on_no_answer: "voicemail + set next_action_date"
-    2:
-      delay_days: 1          # +1 business day after attempt 1
-      block: MID
-      action_on_no_answer: "second voicemail + set next_action_date"
-    3:
-      delay_days: 2          # +2 business days after attempt 2
-      block: EOD
-      action_on_no_answer: "final attempt at different time-of-day"
-  after_max_attempts: "disqualify_unreachable"  # lifecycle Rule 2 handles this
-  queue_priority: "callbacks_due_today > warm_leads > fresh_dials"
 
 weeks:
   1:
@@ -51,9 +34,9 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: SE, note: "Southeast opens. FL/GA/NC." }
-          - { metro: SE, note: "Second SE sprint." }
-          - { metro: MW, note: "Midwest opens. MI/OH/IL." }
+          - { metro: FL, note: "Opening week. Test the pitch." }
+          - { metro: MI, note: "Michigan — new Eastern market." }
+          - { metro: TX, note: "TX opens. Central time." }
           - { metro: AZ, note: "AZ sweet spot." }
 
   2:
@@ -67,11 +50,11 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: SE, note: "Updated opener from Week 1 signal." }
-          - { metro: SE, note: "Notice if the update changes how long they stay on." }
-          - { metro: SE, note: "Mid-AM check: are you asking for the demo?" }
-          - { metro: MW, note: "Midwest sprint. MI/OH/IL." }
-          - { metro: TX, note: "TX. New territory. Finish clean." }
+          - { metro: FL, note: "Updated opener from Week 1 signal." }
+          - { metro: OH, note: "Ohio — new Eastern market." }
+          - { metro: GA, note: "Georgia — Atlanta market." }
+          - { metro: TX_IL, note: "Central states. Notice objection differences." }
+          - { metro: NC, note: "NC — Charlotte/Raleigh. Close the Eastern sweep." }
 
   3:
     days: weekdays
@@ -84,18 +67,18 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: SE, note: "Pitch is sharp now. Make the ask on every live conversation." }
-          - { metro: SE, note: "SE segment. Stay on pace." }
-          - { metro: SE, note: "SE complete. MW auto-loads." }
-          - { metro: MW, note: "Midwest opens." }
-          - { metro: MW, note: "MW segment. Notice objection differences by market." }
-          - { metro: TX, note: "TX segment." }
-          - { metro: AZ, note: "AZ. Best connect window of the AM." }
+          - { metro: FL, note: "Pitch is sharp now. Make the ask on every live conversation." }
+          - { metro: MI, note: "MI segment. Detroit/Grand Rapids." }
+          - { metro: OH, note: "OH segment. Columbus/Cleveland/Cincinnati." }
+          - { metro: TX, note: "TX opens. Central time. Same quality window." }
+          - { metro: GA, note: "GA segment. Atlanta market." }
+          - { metro: IL, note: "IL segment. Chicago market." }
+          - { metro: AZ, note: "AZ loads. Best connect window of the AM." }
       MID:
         start_et: "13:00"
         sprints:
           - { metro: callbacks, note: "AZ and TX voicemails from AM. Higher intent." }
-          - { metro: callbacks, note: "Fresh dials mixed with callbacks." }
+          - { metro: NC, note: "NC afternoon. Fresh dials mixed with callbacks." }
 
   4:
     days: weekdays_saturday
@@ -108,13 +91,13 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: SE, note: "SE opens." }
-          - { metro: SE, note: "SE second sprint." }
-          - { metro: SE, note: "SE complete. MW loads." }
-          - { metro: MW, note: "Midwest opens." }
-          - { metro: MW, note: "MW second sprint." }
+          - { metro: FL, note: "FL opens." }
+          - { metro: MI, note: "MI second week. Refine approach." }
+          - { metro: OH, note: "OH segment." }
+          - { metro: GA, note: "GA segment." }
+          - { metro: NC, note: "NC segment." }
           - { metro: TX, note: "TX opens. Central time." }
-          - { metro: TX, note: "TX second sprint." }
+          - { metro: IL, note: "IL opens. Chicago market." }
           - { metro: AZ, note: "AZ sweet spot. Highest connect rate." }
           - { metro: AZ, note: "AZ second sprint." }
       MID:
@@ -134,20 +117,19 @@ weeks:
     daily_targets: [6, 7, 7, 8, 8, 5]
     coaching_note: "Run disciplined block transitions. No dead time between sprints."
     phase: 3
-    weekly_goal: "Maximize consistency across all blocks and protect energy." 
+    weekly_goal: "Maximize consistency across all blocks and protect energy."
     shutdown_fields: ["dials", "connects", "close_attempts", "fatigue_score"]
-    dials_per_sprint: 12
     blocks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: SE }
-          - { metro: SE }
-          - { metro: SE }
-          - { metro: MW }
-          - { metro: MW }
+          - { metro: FL }
+          - { metro: MI }
+          - { metro: OH }
+          - { metro: GA }
+          - { metro: NC }
           - { metro: TX }
-          - { metro: TX }
+          - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
       MID:
@@ -164,7 +146,7 @@ weeks:
   6:
     days: weekdays_saturday
     daily_targets: [7, 8, 8, 9, 9, 6]
-    dials_per_sprint: 13
+    dials_per_sprint: 11
     coaching_note: "Quality under pressure: keep notes crisp and next steps explicit."
     phase: 3
     weekly_goal: "Push throughput while maintaining close intent and follow-through."
@@ -173,13 +155,13 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: SE }
-          - { metro: SE }
-          - { metro: SE }
-          - { metro: MW }
-          - { metro: MW }
+          - { metro: FL }
+          - { metro: MI }
+          - { metro: OH }
+          - { metro: GA }
+          - { metro: NC }
           - { metro: TX }
-          - { metro: TX }
+          - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
       MID:
@@ -196,7 +178,7 @@ weeks:
   7:
     days: weekdays_saturday
     daily_targets: [8, 9, 9, 10, 10, 7]
-    dials_per_sprint: 14
+    dials_per_sprint: 11
     coaching_note: "Finish strong: prioritize hot/warm follow-through and clean closes."
     phase: 3
     weekly_goal: "Convert pipeline volume into demos and signed customers before deadline."
@@ -205,13 +187,13 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: SE }
-          - { metro: SE }
-          - { metro: SE }
-          - { metro: MW }
-          - { metro: MW }
+          - { metro: FL }
+          - { metro: MI }
+          - { metro: OH }
+          - { metro: GA }
+          - { metro: NC }
           - { metro: TX }
-          - { metro: TX }
+          - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
       MID:
@@ -225,8 +207,3 @@ weeks:
         sprints:
           - { metro: AZ }
           - { metro: AZ }
-      LATE:
-        start_et: "17:00"
-        sprints:
-          - { metro: AZ, note: "AZ afternoon. Final push." }
-          - { metro: callbacks, note: "End-of-day callback sweep." }

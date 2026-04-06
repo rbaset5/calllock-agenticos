@@ -17,7 +17,7 @@ def test_get_current_state_during_am_block() -> None:
 
     assert state["block_active"] is True
     assert state["current_block"] == "AM"
-    assert state["active_segment"] == "SE"
+    assert state["active_segment"] == "FL"
     assert state["sprint_index"] == 1
     assert state["sprints_completed_today"] == 0
     assert state["minutes_until_next"] >= 20
@@ -38,7 +38,7 @@ def test_get_current_state_during_recovery_counts_completed_sprint() -> None:
 
     assert state["block_active"] is True
     assert state["current_block"] == "AM"
-    assert state["active_segment"] == "SE"
+    assert state["active_segment"] == "FL"
     assert state["sprints_completed_today"] == 1
 
 
@@ -75,4 +75,4 @@ def test_get_current_state_uses_week_specific_dials_per_sprint() -> None:
     state = sprint_state.get_current_state(at=_et(2026, 5, 4, 8, 0))
 
     assert state["week"] == 6
-    assert state["dials_target_today"] == state["sprints_target_today"] * 13
+    assert state["dials_target_today"] == state["sprints_target_today"] * 11

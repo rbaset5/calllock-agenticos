@@ -18,7 +18,7 @@ import requests
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 SERPAPI_URL = "https://serpapi.com/search.json"
 MARKETS_FILE = Path(__file__).parent / "data" / "small_markets.json"
-REQUEST_DELAY = 3  # seconds between requests (be gentle)
+REQUEST_DELAY = 20  # seconds between requests (Starter plan: 200/hr = 18s floor + 2s buffer)
 
 
 def lookup_cid(town: str, state: str) -> str | None:

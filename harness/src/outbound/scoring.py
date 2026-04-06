@@ -7,6 +7,9 @@ from typing import Any
 from . import store
 from .constants import DISPATCH_SCORE_WEIGHTS, OUTBOUND_TENANT_ID, TIER_THRESHOLDS
 
+# Vendors that trigger hard disqualification (full-stack field service platforms)
+DISQUALIFIER_VENDORS = {"smith_ai", "servicetitan", "housecall_pro"}
+
 
 def _truthy(value: Any) -> bool:
     if isinstance(value, bool):
@@ -99,6 +102,22 @@ def extract_signal_rows(raw_source: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
 
+    # Website scanner: competitor widget detected → negative signal
+    scan = raw_source.get("website_scan") or {}
+    if scan.get("vendors"):
+        signals.append(
+            {
+                "signal_type": "already_served",
+                "signal_tier": 3,
+                "score": DISPATCH_SCORE_WEIGHTS["already_served"],
+                "raw_evidence": {
+                    "vendors": scan["vendors"],
+                    "has_call_tracking": scan.get("has_call_tracking"),
+                    "has_chat_widget": scan.get("has_chat_widget"),
+                },
+            }
+        )
+
     return signals
 
 
@@ -110,6 +129,7 @@ def compute_dimension_scores(signals: list[dict[str, Any]]) -> dict[str, int]:
         "hours": 0,
         "owner_operated": 0,
         "review_pain": 0,
+        "already_served": 0,
     }
     for signal in signals:
         signal_type = signal["signal_type"]
@@ -125,11 +145,13 @@ def compute_dimension_scores(signals: list[dict[str, Any]]) -> dict[str, int]:
             scores["owner_operated"] = max(scores["owner_operated"], int(signal["score"]))
         elif signal_type == "review_pain":
             scores["review_pain"] = max(scores["review_pain"], int(signal["score"]))
+        elif signal_type == "already_served":
+            scores["already_served"] = min(scores["already_served"], int(signal["score"]))
     return scores
 
 
 def compute_total_score(dimension_scores: dict[str, int]) -> int:
-    return min(100, sum(int(value) for value in dimension_scores.values()))
+    return max(0, min(100, sum(int(value) for value in dimension_scores.values())))
 
 
 def classify_tier(total_score: int) -> str:
@@ -162,6 +184,24 @@ def score_prospects(prospect_ids: list[str] | None = None) -> dict[str, int]:
 
     for prospect in prospects:
         raw_source = prospect.get("raw_source") or {}
+
+        # Hard disqualify: full-stack field service platforms (ServiceTitan, Housecall Pro)
+        scan = raw_source.get("website_scan") or {}
+        if scan.get("has_disqualifier"):
+            disq_vendors = [v for v in scan.get("vendors", []) if v in DISQUALIFIER_VENDORS]
+            store.update_outbound_prospect(
+                prospect["id"],
+                {
+                    "total_score": 0,
+                    "score_tier": "disqualified",
+                    "stage": "disqualified",
+                    "disqualification_reason": f"uses_{disq_vendors[0]}" if disq_vendors else "field_service_platform",
+                },
+            )
+            summary["scored"] += 1
+            summary["disqualified"] += 1
+            continue
+
         signals = extract_signal_rows(raw_source)
         for signal in signals:
             store.insert_prospect_signal(
