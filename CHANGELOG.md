@@ -2,6 +2,17 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.1.1] - 2026-04-05
+
+### Fixed
+- Bridge stage now shows its own line instead of repeating the opener question
+- Fixed render crash when advancing to BRIDGE (typo: `competition.competitor` should be `competition.firstResponder` in `linesForStage`)
+- New calls no longer reset the HUD mid-conversation (CALL_STARTED guard rejects duplicates and mid-call resets)
+- BOOKED calls no longer permanently lock the HUD (added to resettable stages since BOOKED never transitions to ENDED)
+
+### Changed
+- Bridge fallback line differentiated from opener: "What does it cost you when one of those calls slips through the cracks?"
+
 ## [0.1.1.0] - 2026-04-05
 
 ### Fixed
