@@ -650,7 +650,7 @@ app.get('/prospects', validateHudToken, async (_req, res) => {
       .eq('tenant_id', OUTBOUND_TENANT_ID)
       .eq('stage', 'call_ready')
       .order('total_score', { ascending: false })
-      .limit(200);
+      .limit(1000);
 
     if (error) {
       console.error('[prospects] Supabase query error:', error.message, error.code);

@@ -513,6 +513,28 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
+    /* State filter row */
+    .state-filter-row {
+      display: flex; gap: 6px; padding: 8px 16px; background: #111;
+      border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; align-items: center;
+    }
+    .state-filter-btn {
+      padding: 4px 12px; border-radius: 4px; border: 1px solid #333;
+      background: #1a1a1a; color: #a3a3a3; cursor: pointer; font-size: 12px;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .state-filter-btn:hover { border-color: #555; color: #fff; }
+    .state-filter-btn.active { background: #22c55e; color: #000; border-color: #22c55e; font-weight: 600; }
+    .batch-indicator {
+      margin-left: auto; font-size: 12px; color: #525252;
+    }
+    .next-batch-btn {
+      padding: 4px 12px; border-radius: 4px; border: 1px solid #333;
+      background: #1a1a1a; color: #22c55e; cursor: pointer; font-size: 12px;
+      font-family: inherit; font-weight: 600;
+    }
+    .next-batch-btn:hover { background: #22c55e; color: #000; }
+
     /* Today's Plan styles */
     .plan-container { padding: 24px; max-width: 800px; }
     .plan-header { margin-bottom: 20px; }
@@ -556,6 +578,63 @@
       font-size: 13px; color: #a3a3a3;
     }
     .plan-summary span { color: #fff; font-weight: 600; }
+
+    /* Keypad */
+    .keypad-container {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 24px; gap: 24px; max-width: 360px; margin: 0 auto;
+    }
+    .keypad-display-row {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+    }
+    .keypad-display {
+      flex: 1; text-align: center; font-size: 28px; font-weight: 600;
+      font-variant-numeric: tabular-nums; letter-spacing: 2px;
+      color: #fff; background: #111; border: 1px solid #262626;
+      border-radius: 12px; padding: 16px; min-height: 64px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, monospace;
+    }
+    .keypad-display:empty::before {
+      content: 'Enter number'; color: #525252; font-size: 18px; letter-spacing: 0;
+    }
+    .keypad-backspace {
+      width: 48px; height: 48px; border-radius: 12px; border: 1px solid #262626;
+      background: #171717; color: #a3a3a3; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .keypad-backspace:hover { background: #262626; color: #fff; }
+    .keypad-grid {
+      display: grid; grid-template-columns: repeat(3, 80px);
+      gap: 12px; justify-content: center;
+    }
+    .keypad-key {
+      width: 80px; height: 60px; border-radius: 12px; border: 1px solid #262626;
+      background: #171717; color: #fff; font-size: 22px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s;
+    }
+    .keypad-key:hover { background: #262626; }
+    .keypad-key:active { background: #333; }
+    .keypad-actions {
+      display: flex; gap: 12px; align-items: center;
+    }
+    .keypad-dial {
+      width: 72px; height: 72px; border-radius: 50%; border: none;
+      background: #22c55e; color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .keypad-dial:hover { background: #16a34a; }
+    .keypad-dial.active { background: #ef4444; }
+    .keypad-dial.active:hover { background: #dc2626; }
+    .keypad-dial:disabled { background: #374151; cursor: not-allowed; }
+    .keypad-status {
+      font-size: 14px; color: #a3a3a3; min-height: 20px; text-align: center;
+    }
+    .keypad-timer {
+      font-size: 18px; font-weight: 600; color: #22c55e;
+      font-variant-numeric: tabular-nums; display: none;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2/dist/twilio.min.js"></script>
   <!-- Deepgram: using raw WebSocket (not SDK) for audio capture -->
@@ -585,9 +664,11 @@
   <nav class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('dial')">Speed Dial</button>
     <button class="tab-btn" onclick="switchTab('plan')">Today's Plan</button>
+    <button class="tab-btn" onclick="switchTab('keypad')">Keypad</button>
   </nav>
 
   <div id="tab-dial" class="tab-content active">
+    <div class="state-filter-row" id="state-filter-row" style="display:none"></div>
     <main id="main-content">
       <div class="empty-state" id="empty-state">
         <h2>Loading ranked prospects</h2>
@@ -602,6 +683,38 @@
         <h2>Loading today's plan...</h2>
         <p>Fetching sprint schedule from harness.</p>
       </div>
+    </div>
+  </div>
+
+  <div id="tab-keypad" class="tab-content">
+    <div class="keypad-container">
+      <div class="keypad-display-row">
+        <div class="keypad-display" id="keypad-display"></div>
+        <button class="keypad-backspace" onclick="keypadBackspace()" title="Backspace">&larr;</button>
+      </div>
+      <div class="keypad-grid">
+        <button class="keypad-key" onclick="keypadPress('1')">1</button>
+        <button class="keypad-key" onclick="keypadPress('2')">2</button>
+        <button class="keypad-key" onclick="keypadPress('3')">3</button>
+        <button class="keypad-key" onclick="keypadPress('4')">4</button>
+        <button class="keypad-key" onclick="keypadPress('5')">5</button>
+        <button class="keypad-key" onclick="keypadPress('6')">6</button>
+        <button class="keypad-key" onclick="keypadPress('7')">7</button>
+        <button class="keypad-key" onclick="keypadPress('8')">8</button>
+        <button class="keypad-key" onclick="keypadPress('9')">9</button>
+        <button class="keypad-key" onclick="keypadPress('*')">*</button>
+        <button class="keypad-key" onclick="keypadPress('0')">0</button>
+        <button class="keypad-key" onclick="keypadPress('#')">#</button>
+      </div>
+      <div class="keypad-actions">
+        <button class="keypad-dial" id="keypad-dial-btn" onclick="keypadToggleDial()">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="keypad-status" id="keypad-status"></div>
+      <div class="keypad-timer" id="keypad-timer">0:00</div>
     </div>
   </div>
 
@@ -624,6 +737,9 @@
 
   <script>
     let leads = [];
+    let allLeads = [];
+    let activeStateFilter = 'all';
+    const BATCH_SIZE = 15;
     let currentIndex = 0;
     let isDialing = false;
     let modalOutcome = null;
@@ -878,6 +994,7 @@
       `;
 
       updateStats();
+      buildStateFilterBar();
     }
 
     function updateStats() {
@@ -885,6 +1002,67 @@
       document.getElementById('stat-remaining').textContent = Math.max(0, leads.length - currentIndex);
       document.getElementById('stat-interested').textContent = stats.interested;
       document.getElementById('stat-demos').textContent = stats.demos;
+    }
+
+    function buildStateFilterBar() {
+      const row = document.getElementById('state-filter-row');
+      if (!row || allLeads.length === 0) return;
+      const counts = {};
+      for (const l of allLeads) {
+        const s = l.metro || 'Other';
+        counts[s] = (counts[s] || 0) + 1;
+      }
+      const states = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      row.textContent = '';
+      const allBtn = document.createElement('button');
+      allBtn.className = 'state-filter-btn' + (activeStateFilter === 'all' ? ' active' : '');
+      allBtn.textContent = 'All ' + allLeads.length;
+      allBtn.onclick = () => filterByState('all');
+      row.appendChild(allBtn);
+      for (const [state, count] of states) {
+        const btn = document.createElement('button');
+        btn.className = 'state-filter-btn' + (activeStateFilter === state ? ' active' : '');
+        btn.textContent = state + ' ' + count;
+        btn.onclick = () => filterByState(state);
+        row.appendChild(btn);
+      }
+      const totalBatches = Math.max(1, Math.ceil(leads.length / BATCH_SIZE));
+      const batchNum = Math.min(Math.floor(currentIndex / BATCH_SIZE) + 1, totalBatches);
+      const indicator = document.createElement('span');
+      indicator.className = 'batch-indicator';
+      indicator.textContent = 'Batch ' + batchNum + '/' + totalBatches;
+      row.appendChild(indicator);
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'next-batch-btn';
+      nextBtn.textContent = 'Next ' + BATCH_SIZE + ' \u2192';
+      nextBtn.onclick = nextBatch;
+      row.appendChild(nextBtn);
+      row.style.display = 'flex';
+    }
+
+    function filterByState(state) {
+      if (isDialing) { showToast('Hang up before switching states'); return; }
+      activeStateFilter = state;
+      if (state === 'all') {
+        leads = [...allLeads];
+      } else {
+        leads = allLeads.filter(l => (l.metro || 'Other') === state);
+      }
+      currentIndex = 0;
+      renderLead();
+      buildStateFilterBar();
+    }
+
+    function nextBatch() {
+      if (isDialing) { showToast('Hang up before advancing batch'); return; }
+      const nextIdx = currentIndex + BATCH_SIZE;
+      if (nextIdx >= leads.length) {
+        currentIndex = 0;
+      } else {
+        currentIndex = nextIdx;
+      }
+      renderLead();
+      buildStateFilterBar();
     }
 
     function renderScoreboard(metrics) {
@@ -984,6 +1162,7 @@
 
     async function toggleDial() {
       if (currentIndex >= leads.length) return;
+      if (keypadCall) { showToast('Hang up the keypad call first'); return; }
       const lead = leads[currentIndex];
       const button = document.getElementById('dial-btn');
 
@@ -1187,13 +1366,21 @@
         const response = await fetch(`${CALL_SERVER}/prospects`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
-        leads = payload.prospects || [];
+        const raw = payload.prospects || [];
+        raw.sort((a, b) => {
+          if (a.metro < b.metro) return -1;
+          if (a.metro > b.metro) return 1;
+          return (b.total_score || 0) - (a.total_score || 0);
+        });
+        allLeads = raw;
+        leads = [...allLeads];
         if (leads.length === 0) {
           showEmptyState('No call-ready prospects', 'Score and probe leads first, then reload the dialer.');
           return;
         }
         restoreSession(true);
         renderLead();
+        buildStateFilterBar();
       } catch (error) {
         console.error('[dialer] load failed:', error);
         showEmptyState('Could not load prospects', error.message);
@@ -1286,6 +1473,7 @@
     }
 
     document.addEventListener('keydown', (event) => {
+      if (activeTab !== 'dial') return;
       const modalOpen = document.getElementById('modal-overlay').classList.contains('active');
       if (event.key === 'Escape' && modalOpen) {
         closeModal();
@@ -1331,12 +1519,14 @@
     });
 
     // Tab switching
+    let activeTab = 'dial';
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
-      const selector = tabId === 'dial' ? 0 : 1;
-      document.querySelectorAll('.tab-btn')[selector].classList.add('active');
+      const tabIndex = { dial: 0, plan: 1, keypad: 2 }[tabId] || 0;
+      document.querySelectorAll('.tab-btn')[tabIndex].classList.add('active');
+      activeTab = tabId;
       if (tabId === 'plan') loadPlan();
     }
 
@@ -1770,6 +1960,127 @@
     });
 
     // ── End Sales HUD audio bridge ──────────────────────────────────
+
+    // ── Manual Keypad ─────────────────────────────────────────────
+    let keypadNumber = '';
+    let keypadCall = null;
+    let keypadTimerInterval = null;
+    let keypadCallStart = null;
+
+    function keypadPress(digit) {
+      // During active keypad call, send DTMF instead of appending
+      if (keypadCall) {
+        keypadCall.sendDigits(digit);
+        return;
+      }
+      if (keypadNumber.length >= 15) return;
+      keypadNumber += digit;
+      document.getElementById('keypad-display').textContent = formatPhone(keypadNumber);
+    }
+
+    function keypadBackspace() {
+      if (keypadCall) return;
+      keypadNumber = keypadNumber.slice(0, -1);
+      document.getElementById('keypad-display').textContent = formatPhone(keypadNumber);
+    }
+
+    function keypadClear() {
+      if (keypadCall) return;
+      keypadNumber = '';
+      document.getElementById('keypad-display').textContent = '';
+    }
+
+    async function keypadToggleDial() {
+      const btn = document.getElementById('keypad-dial-btn');
+      const statusEl = document.getElementById('keypad-status');
+      const timerEl = document.getElementById('keypad-timer');
+
+      // Hang up active keypad call
+      if (keypadCall) {
+        keypadCall.disconnect();
+        return;
+      }
+
+      // Guard: block if queue call is active
+      if (isDialing) {
+        showToast('Hang up the current call first');
+        return;
+      }
+
+      const digits = keypadNumber.replace(/\D/g, '');
+      if (digits.length < 10) {
+        showToast('Enter at least 10 digits');
+        return;
+      }
+
+      if (!twilioDevice) {
+        showToast('Twilio not ready');
+        return;
+      }
+
+      const numberToDial = digits.startsWith('1') ? `+${digits}` : `+1${digits}`;
+
+      try {
+        keypadCall = await twilioDevice.connect({ params: { To: numberToDial } });
+        isDialing = true;
+        btn.classList.add('active');
+        statusEl.textContent = 'Connecting...';
+
+        keypadCall.on('ringing', () => { statusEl.textContent = 'Ringing...'; });
+        keypadCall.on('accept', () => {
+          keypadCallStart = Date.now();
+          lastCallSid = keypadCall.parameters.CallSid;
+          statusEl.textContent = 'Connected';
+          timerEl.style.display = 'block';
+          keypadTimerInterval = setInterval(() => {
+            const elapsed = Math.round((Date.now() - keypadCallStart) / 1000);
+            timerEl.textContent = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')}`;
+          }, 1000);
+          // Notify HUD
+          hudChannel.postMessage({
+            type: 'CALL_STARTED', callSid: lastCallSid, seq: hudNextSeq(),
+            prospectName: 'Ad Hoc', businessName: numberToDial,
+          });
+          startAudioCapture();
+        });
+        keypadCall.on('disconnect', () => {
+          const dur = keypadCallStart ? Math.round((Date.now() - keypadCallStart) / 1000) : 0;
+          statusEl.textContent = `Ended (${dur}s)`;
+          keypadCallCleanup();
+        });
+        keypadCall.on('error', (error) => {
+          statusEl.textContent = '';
+          showToast(`Call error: ${error.message}`);
+          keypadCallCleanup();
+        });
+      } catch (error) {
+        showToast(`Failed to connect: ${error.message}`);
+      }
+    }
+
+    function keypadCallCleanup() {
+      const btn = document.getElementById('keypad-dial-btn');
+      const timerEl = document.getElementById('keypad-timer');
+      btn.classList.remove('active');
+      clearInterval(keypadTimerInterval);
+      keypadTimerInterval = null;
+      isDialing = false;
+      hudOnCallDisconnect();
+      keypadCall = null;
+      keypadCallStart = null;
+      timerEl.style.display = 'none';
+    }
+
+    // Keyboard input for keypad tab
+    document.addEventListener('keydown', (e) => {
+      if (activeTab !== 'keypad') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (/^[0-9*#]$/.test(e.key)) { keypadPress(e.key); e.preventDefault(); }
+      else if (e.key === 'Backspace') { keypadBackspace(); e.preventDefault(); }
+      else if (e.key === 'Enter') { keypadToggleDial(); e.preventDefault(); }
+      else if (e.key === 'Escape' && keypadCall) { keypadCall.disconnect(); e.preventDefault(); }
+    });
+    // ── End Manual Keypad ─────────────────────────────────────────
 
     initTwilioDevice();
     loadLeads();
