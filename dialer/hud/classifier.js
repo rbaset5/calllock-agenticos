@@ -216,20 +216,18 @@ const QUALIFIER_NO_PAIN_PHRASES = [
   "not really",
   "hardly any",
   "almost none",
-  "don't miss calls",
-  "don't miss any",
   "we're covered",
   "we are covered",
-  "fully covered",
-  "have a receptionist",
-  "have someone",
-  "she handles everything",
-  "he handles everything",
-  "not looking to change",
-  "not interested in changing",
-  "we're fully covered",
-  "we don't miss",
-  "we do not miss",
+  "don't miss calls",
+  "don't really miss",
+  "we handle it",
+  "we've got it handled",
+  "my wife answers",
+  "my wife handles",
+  "office manager handles",
+  "receptionist handles",
+  "we have a receptionist",
+  "we use an answering service",
 ];
 
 const QUALIFIER_UNKNOWN_PHRASES = [
@@ -493,22 +491,8 @@ export function detectNewIntents(utterance, stage) {
   // Check pricing question
   const pqHits = countPhraseMatches(text, PRICING_QUESTION_PHRASES);
   if (pqHits > 0) {
-    // For long utterances (>50 words), check if bridge/pain signals are also present.
-    // If so, pain dominates — the prospect is venting, not price-shopping.
-    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-    if (wordCount > 50) {
-      const bridgePhraseCount = Object.values(BRIDGE_KEYWORDS).reduce(
-        (sum, cfg) => sum + countPhraseMatches(text, cfg.phrases), 0);
-      if (bridgePhraseCount > pqHits) {
-        // Bridge signals dominate — skip pricing, let bridge classifier handle it
-      } else {
-        const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
-        return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
-      }
-    } else {
-      const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
-      return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
-    }
+    const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
+    return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
   }
 
   // Check pricing resistance
@@ -517,18 +501,64 @@ export function detectNewIntents(utterance, stage) {
     return { intent: 'pricing_resistance', confidence: clamp01(0.65 + (prHits - 1) * 0.08) };
   }
 
-  // Yes/booking intent — checked BEFORE curiosity so that booking language
-  // like "show me what you got, Thursday works" isn't captured as curiosity.
-  // Day-name regex catches booking phrases not in YES_PHRASES, but REQUIRES a
-  // time qualifier (morning, works, at 3, etc.) to avoid false positives on
-  // bare day names like "we close Saturday" or "I had a problem last Thursday".
-  const yesHits = countPhraseMatches(text, YES_PHRASES);
-  const dayNameBooking = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+(morning|afternoon|evening|at\s+\d|after\s+\d|before\s+\d|works|is good|is fine|i guess)\b/i.test(text)
-    && ['BRIDGE', 'QUALIFIER', 'CLOSE', 'PRICING'].includes(stage);
-  if (yesHits > 0 || dayNameBooking) {
+  // Yes/booking intent — checked BEFORE objection intents in booking-relevant stages
+  // so "we have a receptionist but yeah Thursday works" captures the booking, not the objection.
+  const yesHitsEarly = countPhraseMatches(text, YES_PHRASES);
+  if (yesHitsEarly > 0 && ['CLOSE', 'QUALIFIER', 'BRIDGE', 'PRICING'].includes(stage)) {
     const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
-    const hits = Math.max(yesHits, 1);
-    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (hits - 1) * 0.08) };
+    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (yesHitsEarly - 1) * 0.08) };
+  }
+
+  // Check existing coverage / answering service / tried AI / referral only / competitor comparison
+  const EXISTING_COVERAGE_PHRASES = [
+    'have a receptionist', 'we have a receptionist', 'receptionist handles',
+    'wife answers', 'my wife answers', 'my wife handles',
+    'someone answers', 'office manager handles', "we're covered",
+    "we are covered", "don't miss calls", "we don't miss",
+  ];
+  const ecHits = countPhraseMatches(text, EXISTING_COVERAGE_PHRASES);
+  if (ecHits > 0) {
+    return { intent: 'existing_coverage', confidence: clamp01(0.70 + (ecHits - 1) * 0.08) };
+  }
+
+  const ANSWERING_SERVICE_PHRASES = [
+    'answering service', 'use an answering', 'have an answering',
+    'use smith', 'use ruby', 'use nexa', 'already have someone',
+    'someone answers our phones',
+  ];
+  const asHits = countPhraseMatches(text, ANSWERING_SERVICE_PHRASES);
+  if (asHits > 0) {
+    return { intent: 'answering_service', confidence: clamp01(0.72 + (asHits - 1) * 0.08) };
+  }
+
+  const TRIED_AI_PHRASES = [
+    'tried ai', 'used ai', 'had ai', 'ai before',
+    'tried a robot', 'robot answering', 'tried chatbot',
+    'tried one of those', 'tried something like that',
+  ];
+  const taiHits = countPhraseMatches(text, TRIED_AI_PHRASES);
+  if (taiHits > 0) {
+    return { intent: 'tried_ai', confidence: clamp01(0.68 + (taiHits - 1) * 0.08) };
+  }
+
+  const REFERRAL_ONLY_PHRASES = [
+    'all referrals', 'referrals only', 'word of mouth',
+    "don't run ads", "don't do ads", 'no google ads', 'no ads',
+    "don't advertise", "don't do marketing",
+  ];
+  const roHits = countPhraseMatches(text, REFERRAL_ONLY_PHRASES);
+  if (roHits > 0) {
+    return { intent: 'referral_only', confidence: clamp01(0.68 + (roHits - 1) * 0.08) };
+  }
+
+  const COMPETITOR_COMPARISON_PHRASES = [
+    'how is this different', 'what makes you different', 'why you',
+    'use sameday', 'use servicetitan', 'heard of sameday',
+    "what's different", 'how are you different',
+  ];
+  const ccHits = countPhraseMatches(text, COMPETITOR_COMPARISON_PHRASES);
+  if (ccHits > 0) {
+    return { intent: 'competitor_comparison', confidence: clamp01(0.68 + (ccHits - 1) * 0.08) };
   }
 
   // Check curiosity / engagement (helps advance from OPENER and BRIDGE)
@@ -568,6 +598,12 @@ export function detectNewIntents(utterance, stage) {
     }
   }
 
+  // Yes/booking intent — fallback for non-booking stages (OPENER, OBJECTION, etc.)
+  if (yesHitsEarly > 0) {
+    const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
+    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (yesHitsEarly - 1) * 0.08) };
+  }
+
   // Short utterance heuristics (1-4 words, no other match found)
   const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
   if (wordCount <= 4) {
@@ -591,7 +627,7 @@ export function classifyUtterance(utterance, { stage } = {}) {
     const newIntent = detectNewIntents(utterance, stage);
     if (newIntent && newIntent.confidence >= 0.65) {
       const skipAuthority = newIntent.intent === 'authority_mismatch'
-        && (stage === 'CLOSE' || stage === 'OBJECTION' || stage === 'QUALIFIER');
+        && (stage === 'CLOSE' || stage === 'OBJECTION');
       if (!skipAuthority) {
         return makeResult(utterance, {
           confidence: newIntent.confidence,

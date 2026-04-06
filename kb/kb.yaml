@@ -1,0 +1,18 @@
+name: CallLock Research Wiki
+description: LLM-compiled research on competitors, voice AI, sales, market intelligence
+version: 1
+checkpoint_date: 2026-04-19
+
+dossiers:
+  - competitors    # battlecards on competing voice AI products
+  - voice-ai       # technical papers, implementation patterns, API capabilities
+  - playbooks      # sales objection handling, qualification logic, GTM strategies
+
+conventions:
+  links: "[[wiki-links]]"           # Obsidian-compatible, resolve within kb/wiki/
+  index: "_index.md"                # catalog file in each directory
+  frontmatter: true                 # YAML frontmatter on all wiki articles
+  confidence:
+    high: multiple corroborating sources
+    medium: single source
+    low: inferred or speculative

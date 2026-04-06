@@ -19,6 +19,7 @@ Tool-specific files (CLAUDE.md, GEMINI.md, CODEX.md) point here plus add tool-sp
 - `docs/` — specs and design documents
 - `decisions/` — structured decision records (check before proposing changes)
 - `errors/` — error pattern log (check before debugging)
+- `kb/` — LLM-compiled research wiki (competitors, voice AI, sales playbooks). See "How to Use kb/" below.
 
 ## How to Navigate knowledge/
 
@@ -43,6 +44,19 @@ Tool-specific files (CLAUDE.md, GEMINI.md, CODEX.md) point here plus add tool-sp
 - If a matching error exists, read it before proposing a fix.
 - If your fix resolves an existing logged error, update its status.
 - If a pattern recurs 3+ times, extract a rule into `decisions/` or update the relevant `knowledge/` file.
+
+## How to Use kb/
+
+The `kb/` directory is an LLM-compiled research wiki — separate from the curated `knowledge/` system.
+
+- `kb/raw/` contains immutable source documents. The LLM reads but never modifies these.
+- `kb/wiki/` contains LLM-compiled articles organized into 3 dossier types: `competitors/`, `voice-ai/`, `playbooks/`.
+- Start at `kb/wiki/_index.md` for a catalog of all articles.
+- Use `/kb-ingest` to process new raw sources into wiki articles.
+- Use `/kb-query` to ask research questions against the wiki.
+- Use `/kb-status` to check wiki health and size.
+- Articles use `[[wiki-links]]` that resolve within `kb/wiki/`. To reference curated knowledge, use relative paths like `[[../../knowledge/product/overview]]`.
+- The wiki is the LLM's domain — users rarely edit it directly.
 
 ## Decomposition Protocol
 

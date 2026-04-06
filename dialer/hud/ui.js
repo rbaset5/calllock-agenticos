@@ -4,15 +4,14 @@
 import { PLAYBOOK, fillLineTemplate, linesForStage } from './playbook.js';
 import { createInitialState, hudReducer, bandFromScore } from './reducer.js';
 import { classifyUtterance, shouldCallLlmFallback, isUsableDeterministicResult, detectNewIntents } from './classifier.js';
-import { captureSession, resetAuditTrail, logDecision, saveSession, generateReplayTimeline } from './session.js';
+import { captureSession, resetAuditTrail, logDecision, saveSession } from './session.js';
 import { classifyWithLlm, isLlmBackoffActive } from './llm.js';
 import { assignTone, shouldUpdateTone } from './tone.js';
 import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
-import { INTENT_STAGE_MAP, HOTKEY_CONFIG, GLOBAL_HOTKEYS, BRIDGE_STAGES } from './taxonomy.js';
-import { renderV2CenterPanel, renderAlsoHeard, renderProspectContext, renderTacticalCard, renderPauseStrip } from './render-v2.js';
-import { createSessionSaveCoordinator } from './session-save-coordinator.js';
+import { INTENT_STAGE_MAP } from './taxonomy.js';
+import { renderV2CenterPanel, renderProspectContext, renderTacticalCard, renderPauseStrip } from './render-v2.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -38,16 +37,7 @@ let sprintContextCachedAt = null;
 let sprintContextTimer = null;
 let pauseStripTimer = null;
 let pauseStripSilenceTimer = null;
-let heartbeatWatchdogTimer = null;
 let usedProbeLines = new Set(); // Probe dedup: never fire the same probe twice per call
-let legendBarVisible = true;    // ? key toggles, resets to true on new call
-let recentKeys = [];            // Last 3 keypresses for breadcrumb trail
-let pendingIntent = null;       // One-shot intent from Alt+N, consumed by next render
-let replayShowing = false;      // True after call ends, prevents dispatch from overwriting replay
-let recentSignals = []; // Rolling buffer of recent classifications for burst detection
-const SIGNAL_BUFFER_TTL_MS = 3500; // Signals older than this are pruned
-const HEARTBEAT_TIMEOUT_MS = 6500;
-const sessionSaveCoordinator = createSessionSaveCoordinator({ saveSession });
 
 // Decision tree navigation: → = primary path, F10 = alternate path
 const STAGE_TRANSITIONS = {
@@ -130,12 +120,9 @@ function deactivatePauseStrip() {
 // ── Transcript health ─────────────────────────────────────────
 
 let transcriptHealthTimer = null;
-let transcriptOfflineTimer = null;
-let transcriptForcedManual = false; // true when 15s offline locked to manual
 
 function startTranscriptHealthWatch() {
   clearTimeout(transcriptHealthTimer);
-  clearTimeout(transcriptOfflineTimer);
   transcriptHealthTimer = setTimeout(() => {
     const el = document.getElementById('v2-transcript-health');
     if (el) {
@@ -143,28 +130,14 @@ function startTranscriptHealthWatch() {
       el.className = 'v2-transcript-health stale';
     }
   }, 3000);
-  transcriptOfflineTimer = setTimeout(() => {
-    const el = document.getElementById('v2-transcript-health');
-    if (el) {
-      el.textContent = 'TRANSCRIPT OFFLINE';
-      el.className = 'v2-transcript-health offline';
-    }
-    manualModeActive = true;
-    transcriptForcedManual = true;
-  }, 15000);
 }
 
 function resetTranscriptHealth() {
   clearTimeout(transcriptHealthTimer);
-  clearTimeout(transcriptOfflineTimer);
   const el = document.getElementById('v2-transcript-health');
   if (el) {
     el.textContent = '';
     el.className = 'v2-transcript-health';
-  }
-  if (transcriptForcedManual) {
-    manualModeActive = false;
-    transcriptForcedManual = false;
   }
   // Restart the watch if call is active
   if (state.callId && !state.ended) {
@@ -184,56 +157,12 @@ function dispatch(action) {
     clearTimeout(pauseStripTimer);
     clearTimeout(pauseStripSilenceTimer);
     pauseStripTimer = setTimeout(() => activatePauseStrip(), 3000);
-    // Stage transition flash: green = manual, blue = AI (skip IDLE transitions)
-    if (prevState.stage !== 'IDLE' && state.stage !== 'IDLE' && state.stage !== 'ENDED') {
-      const isManual = action.type.startsWith('MANUAL_');
-      flashStageTransition(isManual ? 'manual' : 'ai');
-    }
   }
   if (action.type === 'TRANSCRIPT_FINAL') {
     deactivatePauseStrip();
   }
   logDecision(action, prevState, state);
   render();
-  // Only re-render hotkey bar on stage change (avoid DOM thrash on every transcript)
-  if (state.stage !== prevState.stage) {
-    renderHotkeyBar();
-  }
-}
-
-function clearHeartbeatWatchdog() {
-  if (heartbeatWatchdogTimer) {
-    clearTimeout(heartbeatWatchdogTimer);
-    heartbeatWatchdogTimer = null;
-  }
-}
-
-function armHeartbeatWatchdog() {
-  clearHeartbeatWatchdog();
-  if (!state.callId || state.ended) return;
-  heartbeatWatchdogTimer = setTimeout(() => {
-    finalizeCall('heartbeat_timeout');
-  }, HEARTBEAT_TIMEOUT_MS);
-}
-
-function finalizeCall(reason = 'call_ended') {
-  if (!state.callId || state.ended) return;
-  clearHeartbeatWatchdog();
-  clearTimeout(transcriptHealthTimer);
-  clearTimeout(transcriptOfflineTimer);
-  transcriptForcedManual = false;
-  dispatch({
-    type: 'END_CALL',
-    callSid: state.callId,
-    atMs: Date.now(),
-    reason,
-  });
-  const endedState = state;
-  const endedProspectId = prospectId;
-  const endedSession = captureSession(endedState);
-  stopCallTimer();
-  renderReplayTimeline();
-  sessionSaveCoordinator.scheduleEndedSave(endedState, endedProspectId, endedSession);
 }
 
 // ── BroadcastChannel ───────────────────────────────────────────
@@ -248,22 +177,12 @@ channel.addEventListener('message', (event) => {
   switch (msg.type) {
     case 'CALL_STARTED': {
       // Auto-reset
-      clearHeartbeatWatchdog();
       resetAuditTrail();
       usedProbeLines.clear();
-      recentSignals = [];
-      recentKeys = [];
-      pendingIntent = null;
-      legendBarVisible = true;
-      replayShowing = false;
-      renderBreadcrumb(); // Clear stale replay stats from previous call
       prospectName = msg.prospectName || '';
       prospectBusiness = msg.businessName || '';
       prospectId = msg.prospectId || null;
       manualModeActive = false;
-      rounds = [];
-      roundIndex = -1;
-      resetTranscriptHealth();
 
       dispatch({
         type: 'INIT_CALL',
@@ -279,7 +198,6 @@ channel.addEventListener('message', (event) => {
 
       startCallTimer();
       startTranscriptHealthWatch();
-      armHeartbeatWatchdog();
 
       // v2: populate prospect context if available
       if (msg.prospectContext) {
@@ -301,12 +219,6 @@ channel.addEventListener('message', (event) => {
       break;
     }
 
-    case 'HEARTBEAT': {
-      if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
-      armHeartbeatWatchdog();
-      break;
-    }
-
     case 'AUDIO_MODE': {
       if (msg.mode === 'manual') {
         manualModeActive = true;
@@ -321,7 +233,18 @@ channel.addEventListener('message', (event) => {
 
     case 'CALL_ENDED': {
       if (msg.callSid && state.callId && msg.callSid !== state.callId) break;
-      finalizeCall(msg.reason || 'call_ended');
+      clearTimeout(transcriptHealthTimer);
+      dispatch({
+        type: 'END_CALL',
+        callSid: state.callId,
+        atMs: Date.now(),
+      });
+      const endedState = state;
+      const endedProspectId = prospectId;
+      const endedSession = captureSession(endedState);
+      stopCallTimer();
+      // Delay session save briefly to allow OUTCOME to arrive first
+      setTimeout(() => saveSession(endedState, endedProspectId, endedSession), 500);
       break;
     }
 
@@ -340,7 +263,7 @@ channel.addEventListener('message', (event) => {
           outcome: msg.outcome,
           atMs: Date.now(),
         });
-        void sessionSaveCoordinator.saveOutcome(state, prospectId);
+        saveSession(state, prospectId);
       }
       break;
     }
@@ -446,20 +369,12 @@ function handleFinalProspectTranscript(msg) {
 
   // Run rules classifier
   const result = classifyUtterance(msg.text, { stage: state.stage });
-  const now = Date.now();
   const turn = {
     speaker: 'prospect',
     text: msg.text,
-    atMs: msg.atMs || now,
+    atMs: msg.atMs || Date.now(),
     utteranceId: msg.utteranceId,
   };
-
-  // Push to rolling signal buffer + prune stale entries
-  const signal = result.detectedIntent || result.objectionBucket || result.bridgeAngle || result.qualifierRead || null;
-  if (signal) {
-    recentSignals.push({ signal, atMs: now, seq: msg.seq });
-  }
-  recentSignals = recentSignals.filter(s => now - s.atMs < SIGNAL_BUFFER_TTL_MS);
 
   if (isUsableDeterministicResult(result)) {
     // High/medium confidence: commit via reducer
@@ -611,168 +526,6 @@ function stopCallTimer() {
   }
 }
 
-// ── Hotkey bar + breadcrumb ────────────────────────────────────
-
-/** Render the stage-aware hotkey legend bar from HOTKEY_CONFIG. */
-function renderHotkeyBar() {
-  const $bar = document.getElementById('hotkey-bar');
-  if (!$bar) return;
-  if (replayShowing) return; // Don't overwrite replay timeline
-  if (!legendBarVisible) { $bar.style.display = 'none'; return; }
-  $bar.style.display = '';
-  const stageKeys = HOTKEY_CONFIG[state.stage] || [];
-  const globalItems = GLOBAL_HOTKEYS.filter(g =>
-    g.key !== 'Shift' || state.stage === 'CLOSE' || state.stage === 'OBJECTION'
-  );
-  // All values from HOTKEY_CONFIG constants, _esc() for defense-in-depth (existing pattern)
-  const parts = [];
-  for (const h of stageKeys) {
-    const span = document.createElement('span');
-    span.className = 'hotkey-item';
-    const kbd = document.createElement('kbd');
-    kbd.textContent = h.key;
-    span.appendChild(kbd);
-    span.appendChild(document.createTextNode(' ' + h.label));
-    parts.push(span);
-  }
-  if (stageKeys.length > 0) {
-    const sep = document.createElement('span');
-    sep.className = 'hotkey-item';
-    sep.style.opacity = '0.3';
-    sep.textContent = '|';
-    parts.push(sep);
-  }
-  for (const g of globalItems) {
-    const span = document.createElement('span');
-    span.className = 'hotkey-item';
-    const kbd = document.createElement('kbd');
-    kbd.textContent = g.key;
-    span.appendChild(kbd);
-    span.appendChild(document.createTextNode(' ' + g.label));
-    parts.push(span);
-  }
-  $bar.replaceChildren(...parts);
-}
-
-/** Push a key label to the breadcrumb trail (max 3, sliding window). */
-function pushRecentKey(key, label) {
-  recentKeys.push({ key, label, ts: Date.now() });
-  if (recentKeys.length > 3) recentKeys.shift();
-  renderBreadcrumb();
-}
-
-/** Render the last-3-keys breadcrumb trail below the legend bar. */
-function renderBreadcrumb() {
-  const $strip = document.getElementById('quick-pick-strip');
-  if (!$strip) return;
-  if (recentKeys.length === 0) { $strip.replaceChildren(); return; }
-  const pills = [];
-  for (const r of recentKeys) {
-    const span = document.createElement('span');
-    span.className = 'quick-pick';
-    span.style.pointerEvents = 'none';
-    span.style.opacity = '0.6';
-    const keySpan = document.createElement('span');
-    keySpan.className = 'quick-pick-key';
-    keySpan.textContent = r.key;
-    const labelSpan = document.createElement('span');
-    labelSpan.className = 'quick-pick-label';
-    labelSpan.textContent = r.label;
-    span.appendChild(keySpan);
-    span.appendChild(labelSpan);
-    pills.push(span);
-  }
-  $strip.replaceChildren(...pills);
-}
-
-/** Render post-call replay timeline into the hotkey bar area. */
-function renderReplayTimeline() {
-  replayShowing = true;
-  const $bar = document.getElementById('hotkey-bar');
-  const $strip = document.getElementById('quick-pick-strip');
-  if (!$bar) return;
-  $bar.style.display = ''; // Force visible even if ? toggled it off
-
-  const events = generateReplayTimeline();
-  if (events.length === 0) {
-    $bar.replaceChildren();
-    const msg = document.createElement('span');
-    msg.className = 'hotkey-item';
-    msg.textContent = 'No keypresses this call';
-    $bar.appendChild(msg);
-    if ($strip) $strip.replaceChildren();
-    return;
-  }
-
-  // Render into hotkey bar: compact timeline of events
-  const frag = document.createDocumentFragment();
-  const header = document.createElement('span');
-  header.className = 'hotkey-item';
-  header.style.color = '#a5b4fc';
-  header.textContent = 'REPLAY';
-  frag.appendChild(header);
-
-  const sep = document.createElement('span');
-  sep.className = 'hotkey-item';
-  sep.style.opacity = '0.3';
-  sep.textContent = '|';
-  frag.appendChild(sep);
-
-  // Show up to 12 events inline, with timing
-  const maxInline = 12;
-  const shown = events.slice(0, maxInline);
-  for (const ev of shown) {
-    const span = document.createElement('span');
-    span.className = 'hotkey-item';
-    const secs = (ev.offsetMs / 1000).toFixed(0);
-    if (ev.type === 'keypress') {
-      const kbd = document.createElement('kbd');
-      kbd.textContent = ev.key;
-      if (ev.isOverride) kbd.style.borderColor = '#f59e0b';
-      span.appendChild(kbd);
-      span.appendChild(document.createTextNode(' ' + secs + 's'));
-    } else {
-      span.style.opacity = '0.5';
-      span.textContent = ev.from + '\u2192' + ev.to + ' ' + secs + 's';
-    }
-    frag.appendChild(span);
-  }
-
-  if (events.length > maxInline) {
-    const more = document.createElement('span');
-    more.className = 'hotkey-item';
-    more.style.opacity = '0.4';
-    more.textContent = '+' + (events.length - maxInline) + ' more';
-    frag.appendChild(more);
-  }
-
-  $bar.replaceChildren(frag);
-
-  // Summary stats in the breadcrumb strip area
-  if ($strip) {
-    const keypresses = events.filter(e => e.type === 'keypress');
-    const overrides = keypresses.filter(e => e.isOverride);
-    const stageChanges = events.filter(e => e.type === 'stage_change');
-    const manualChanges = stageChanges.filter(e => e.source === 'manual');
-    const aiChanges = stageChanges.filter(e => e.source === 'ai');
-
-    const stats = document.createElement('span');
-    stats.className = 'hotkey-item';
-    stats.style.fontSize = '10px';
-    stats.style.color = '#737373';
-    stats.textContent = keypresses.length + ' keys | ' +
-      overrides.length + ' overrides | ' +
-      manualChanges.length + ' manual / ' + aiChanges.length + ' AI transitions';
-    $strip.replaceChildren(stats);
-  }
-}
-
-/** Log a keypress event to the session audit trail. */
-function logKeypress(stage, key, action, value, isOverride) {
-  const entry = { ts: Date.now(), stage, key, action, value, isOverride, source: 'manual' };
-  logDecision({ type: 'KEYPRESS_LOG', ...entry }, state, state);
-}
-
 // ── Hotkeys ────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
@@ -879,70 +632,98 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // 1-4 — Context-sensitive via HOTKEY_CONFIG lookup
-    case ['1', '2', '3', '4'].includes(e.key) && !e.ctrlKey && !e.metaKey: {
-      const isAltOverride = e.altKey;
-      const stageKeys = HOTKEY_CONFIG[state.stage] || [];
-      // Alt+N = cross-stage intent override (use bridge config if in bridge family, else objection)
-      const lookupStage = isAltOverride
-        ? (BRIDGE_STAGES.includes(state.stage) ? 'BRIDGE' : 'CLOSE')
-        : state.stage;
-      const config = (HOTKEY_CONFIG[lookupStage] || []).find(h => h.key === e.key);
-      if (!config) break;
-      // Without Alt, blocked stages produce no config entries (empty array)
-      if (!isAltOverride && stageKeys.length === 0) break;
+    // 1-3 — Context-sensitive: bridge angles (BRIDGE/OPENER) or objections (CLOSE/OBJECTION)
+    case e.key === '1' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages1 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages1.includes(state.stage)) break;
       e.preventDefault();
-      logKeypress(state.stage, isAltOverride ? `Alt+${e.key}` : e.key, config.action, config.value, isAltOverride);
-      if (isAltOverride) {
-        // Alt+N: set pending intent for composer WITHOUT dispatching to reducer.
-        // This avoids mutating stage/objection state. Composer consumes intent on next render.
-        pendingIntent = { type: config.type, value: config.value };
-        render();
-        renderHotkeyBar();
+      if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
+        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'missed_calls', atMs: now });
       } else {
-        // Normal 1-4: dispatch to reducer as before (mutates state)
-        const actionPayload = config.action === 'MANUAL_SET_BRIDGE_ANGLE'
-          ? { type: config.action, callSid: state.callId, angle: config.value, atMs: now }
-          : { type: config.action, callSid: state.callId, bucket: config.value, atMs: now };
-        dispatch(actionPayload);
+        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'timing', atMs: now });
       }
-      pushRecentKey(isAltOverride ? `Alt+${e.key}` : e.key, config.label);
       break;
     }
 
-    // ? — Toggle legend bar visibility
-    case e.key === '?': {
+    case e.key === '2' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages2 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages2.includes(state.stage)) break;
       e.preventDefault();
-      legendBarVisible = !legendBarVisible;
-      renderHotkeyBar();
+      if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
+        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'competition', atMs: now });
+      } else {
+        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'interest', atMs: now });
+      }
+      break;
+    }
+
+    case e.key === '3' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages3 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages3.includes(state.stage)) break;
+      e.preventDefault();
+      if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
+        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'overwhelmed', atMs: now });
+      } else {
+        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'info', atMs: now });
+      }
+      break;
+    }
+
+    // 4 — Context-sensitive: ad_spend bridge (BRIDGE/OPENER) or authority objection
+    case e.key === '4' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages4 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
+      if (objBlockStages4.includes(state.stage)) break;
+      e.preventDefault();
+      if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
+        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'ad_spend', atMs: now });
+      } else {
+        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
+      }
+      break;
+    }
+
+    // 5 — Objection: existing_coverage
+    case e.key === '5' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages5 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
+      if (objBlockStages5.includes(state.stage)) break;
+      e.preventDefault();
+      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'existing_coverage', atMs: now });
+      break;
+    }
+
+    // 6 — Objection: answering_service
+    case e.key === '6' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages6 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
+      if (objBlockStages6.includes(state.stage)) break;
+      e.preventDefault();
+      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'answering_service', atMs: now });
       break;
     }
 
     // Shift+F1 — Reset
     case (e.key === 'F1' && e.shiftKey): {
       e.preventDefault();
-      finalizeCall('manual_reset');
+      dispatch({
+        type: 'END_CALL',
+        callSid: state.callId,
+        atMs: now,
+      });
+      saveSession(state, prospectId);
 
-      // Reset after brief delay (replay stays visible until next call)
+      // Reset after brief delay
       setTimeout(() => {
         resetAuditTrail();
-        clearHeartbeatWatchdog();
         rounds = [];
         roundIndex = -1;
         prospectName = '';
         prospectBusiness = '';
         prospectId = null;
         manualModeActive = false;
-        pendingIntent = null;
-        legendBarVisible = true;
-        recentKeys = [];
         state = createInitialState(PLAYBOOK);
         stopCallTimer();
         callStartTime = null;
         $callTimer.textContent = '00:00';
         render();
-        // Don't renderHotkeyBar here — replay timeline is showing
-        // It will be replaced by legend on next CALL_STARTED
       }, 100);
       break;
     }
@@ -981,8 +762,7 @@ function processTurn(utterance, classification) {
 
   // Apply hysteresis - only update if threshold crossed
   const currentTone = { tone_label: state.tone, tone_confidence: state.toneConfidence };
-  const toneWillUpdate = shouldUpdateTone(currentTone, toneResult, state._consecutiveToneCount || 0);
-  if (toneWillUpdate) {
+  if (shouldUpdateTone(currentTone, toneResult, state._consecutiveToneCount || 0)) {
     dispatch({
       type: 'SET_TONE',
       callSid: state.callId,
@@ -999,16 +779,12 @@ function processTurn(utterance, classification) {
   state._lastCandidateTone = toneResult.tone_label;
 
   // Step 3: Update trajectory and compute risk (for objection-eligible stages)
-  const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || classification.qualifierRead || null;
-  let secondaryIntent = null;
-  let isCompound = false;
-  let nextTrajectory = state.trajectory;
-  let nextRisk = state.risk;
+  const primaryIntent = classification.detectedIntent || classification.objectionBucket || classification.bridgeAngle || null;
   if (primaryIntent) {
     // Detect secondary intent: check if the utterance also matches a different signal
     const secondaryCheck = detectNewIntents(utterance, state.stage);
-    secondaryIntent = (secondaryCheck && secondaryCheck.intent !== primaryIntent) ? secondaryCheck.intent : null;
-    isCompound = !!secondaryIntent;
+    const secondaryIntent = (secondaryCheck && secondaryCheck.intent !== primaryIntent) ? secondaryCheck.intent : null;
+    const isCompound = !!secondaryIntent;
 
     const classObj = {
       primary: { intent: primaryIntent },
@@ -1016,28 +792,22 @@ function processTurn(utterance, classification) {
       utterance: utterance,
     };
     const wasSalvage = state.stage === 'OBJECTION' && state.trajectory.turnsInCurrentStage > 0;
-    nextTrajectory = updateTrajectory(state.trajectory, classObj, state.stage, wasSalvage);
-    nextRisk = computeRisk(nextTrajectory, classObj);
+    const newTrajectory = updateTrajectory(state.trajectory, classObj, state.stage, wasSalvage);
+    const risk = computeRisk(newTrajectory, classObj);
+
+    // Update state trajectory and risk (direct mutation for non-reducer fields)
+    state.trajectory = newTrajectory;
+    state.risk = risk;
+    state.primaryIntent = primaryIntent;
+    state.compound = isCompound;
+    state._secondaryIntent = secondaryIntent;
   }
 
-  // Step 4: Publish turn analysis through the reducer so render always sees it.
-  const toneForSummary = toneWillUpdate ? toneResult.tone_label : state.tone;
-  const toneConfidenceForSummary = toneWillUpdate ? toneResult.tone_confidence : state.toneConfidence;
-  dispatch({
-    type: 'SET_TURN_ANALYSIS',
-    callSid: state.callId,
-    primaryIntent,
-    compound: isCompound,
-    secondaryIntent,
-    trajectory: nextTrajectory,
-    risk: nextRisk,
-    signalCount: primaryIntent ? (secondaryIntent ? 2 : 1) : 0,
-    recommendedActionBias: nextRisk === 'call_ending' ? 'exit' : null,
-    nowSummary: generateNowSummary({
-      primaryIntent: primaryIntent,
-      tone: toneForSummary,
-      toneConfidence: toneConfidenceForSummary,
-    }),
+  // Step 4: Generate NOW summary BEFORE dispatch (so render() has it ready)
+  state.nowSummary = generateNowSummary({
+    primaryIntent: primaryIntent,
+    tone: state.tone,
+    toneConfidence: state.toneConfidence,
   });
 
   // Step 5: Check for dedicated stage routing via INTENT_STAGE_MAP
@@ -1046,11 +816,11 @@ function processTurn(utterance, classification) {
     if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
       dispatch({ type: 'PRICING_INTERRUPT', callSid: state.callId });
     } else if (targetStage === 'MINI_PITCH' && state.stage !== 'MINI_PITCH') {
-      dispatch({ type: 'AUTO_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now(), why: 'Prospect asked what this is about' });
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now() });
     } else if (targetStage === 'WRONG_PERSON' && state.stage !== 'WRONG_PERSON') {
-      dispatch({ type: 'AUTO_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now(), why: 'Prospect indicated someone else owns this decision' });
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'WRONG_PERSON', atMs: Date.now() });
     } else if (targetStage === 'EXIT' && state.stage !== 'EXIT') {
-      dispatch({ type: 'AUTO_SET_STAGE', callSid: state.callId, stage: 'EXIT', atMs: Date.now(), why: 'Prospect signaled the conversation should end' });
+      dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'EXIT', atMs: Date.now() });
     }
   }
 
@@ -1101,13 +871,10 @@ function render() {
   // Confidence badge
   renderConfidenceBadge();
 
-  // v2 center panel render (pendingIntent consumed once then cleared)
-  const intentForCompose = pendingIntent;
-  pendingIntent = null;
+  // v2 center panel render
   const activeCard = composeActiveCard({
     stage: state.stage,
     activeObjection: state.activeObjection,
-    requestIntent: intentForCompose,
     tone: state.tone,
     deliveryModifier: state.deliveryModifier,
     stageCards: NATIVE_STAGE_CARDS,
@@ -1119,9 +886,6 @@ function render() {
   if (activeCard.backupLine) activeCard.backupLine = fillLineTemplate(activeCard.backupLine, ctx);
   if (activeCard.clarifyingQuestion) activeCard.clarifyingQuestion = fillLineTemplate(activeCard.clarifyingQuestion, ctx);
   renderV2CenterPanel(activeCard, state);
-  // Show "also heard" badge when burst contains signals beyond the current card
-  const currentSignal = state.primaryIntent || state.activeObjection || null;
-  renderAlsoHeard(recentSignals, currentSignal);
   renderTacticalCard(activeCard);
 
 }
@@ -1177,7 +941,7 @@ function renderContextStrip() {
 }
 
 // ── Objection picker ──────────────────────────────────────────
-// Shows a 2x2 grid of labeled objection cards when in OBJECTION stage
+// Shows a 3x2 grid of labeled objection cards when in OBJECTION stage
 // and no bucket has been selected yet. Replaces the now-line text.
 
 const OBJECTION_CARDS = [
@@ -1185,6 +949,15 @@ const OBJECTION_CARDS = [
   { key: '2', bucket: 'interest', name: 'Interest', cues: '"not interested, we\'re set, don\'t need"' },
   { key: '3', bucket: 'info', name: 'Info', cues: '"send me info, email me, website"' },
   { key: '4', bucket: 'authority', name: 'Authority', cues: '"not my decision, wife handles, partner"' },
+  { key: '5', bucket: 'existing_coverage', name: 'Covered', cues: '"have a receptionist, wife answers, we\'re covered"' },
+  { key: '6', bucket: 'answering_service', name: 'Ans. Svc', cues: '"use Smith, use Ruby, answering service"' },
+];
+
+const BRIDGE_CARDS = [
+  { key: '1', action: 'missed_calls', name: 'Missed', cues: 'voicemail, callback, wife, office' },
+  { key: '2', action: 'competition', name: 'Comp', cues: 'slow, growth, competitor, losing' },
+  { key: '3', action: 'overwhelmed', name: 'Overwhelm', cues: 'busy, stretched, do it all, rushed' },
+  { key: '4', action: 'ad_spend', name: 'Ad $', cues: 'Google, LSA, Angi, Thumbtack, ads, spending' },
 ];
 
 let $objectionPicker = null;
@@ -1381,17 +1154,6 @@ function dedupProbeLine(line) {
   }
   // All variants used (5+ probes in one call is unlikely) — use the line anyway
   return line;
-}
-
-/** Flash the stage bar to indicate transition source (green=manual, blue=AI). */
-function flashStageTransition(source) {
-  const $bar = document.getElementById('stageBar');
-  if (!$bar) return;
-  $bar.classList.remove('flash-manual', 'flash-ai');
-  // Force reflow to restart animation
-  void $bar.offsetWidth;
-  $bar.classList.add(source === 'manual' ? 'flash-manual' : 'flash-ai');
-  setTimeout(() => $bar.classList.remove('flash-manual', 'flash-ai'), 400);
 }
 
 function renderStageBar() {
