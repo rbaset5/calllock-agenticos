@@ -2,6 +2,18 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.4.0] - 2026-04-06
+
+### Added
+- State filter buttons on Speed Dial: filter 790 leads by state (MI, TX, IL, FL, AZ)
+- "Next 15" batch advance button to skip through leads in groups of 15
+- Batch indicator showing current position (Batch N of M)
+- Manual keypad tab for dialing arbitrary phone numbers with DTMF support
+- Leads sorted by state then score for geographic call batching
+
+### Changed
+- Prospects endpoint limit increased from 200 to 1000 to load all call-ready leads
+
 ## [0.1.3.1] - 2026-04-06
 
 ### Added
