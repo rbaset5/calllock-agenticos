@@ -177,13 +177,13 @@ def test_callbacks_prioritized_in_metro_sprints(monkeypatch: pytest.MonkeyPatch,
 
     plan = daily_plan.build_daily_plan(today=date(2026, 3, 30), schedule_path=schedule_path)
 
-    # First sprint is FL metro — fresh leads fill it
+    # First sprint is FL metro — callback should be first lead, then fresh
     fl_sprint = plan["blocks"][0]["sprints"][0]
     assert fl_sprint["metro"] == "FL"
     leads = fl_sprint["leads"]
-    assert len(leads) >= 1  # at least 1 fresh FL lead
-    # Callbacks go to dedicated callback sprints, not metro sprints
-    assert plan["total_callbacks"] == 1
+    assert len(leads) >= 2  # callback + at least 1 fresh
+    assert leads[0]["prospect_id"] == "cb-fl"  # callback comes first
+    assert leads[1]["id"] == "fl-1"  # then fresh
 
 
 def test_final_attempt_callbacks_routed_to_eod(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

@@ -226,10 +226,17 @@ def build_daily_plan(
                 ][:dials_per_sprint]
             elif metro_filter:
                 metro_lower = {m.lower() for m in metro_filter}
-                sprint_leads = [
+                # Callbacks matching this metro go first, then fresh leads
+                matching_callbacks = [
+                    cb for cb in callbacks
+                    if (cb.get("metro") or "").lower() in metro_lower
+                    and cb.get("prospect_id") not in fresh_assigned
+                ]
+                matching_fresh = [
                     p for p in all_fresh
                     if (p.get("metro") or "").lower() in metro_lower and p.get("id") not in fresh_assigned
-                ][:dials_per_sprint]
+                ]
+                sprint_leads = (matching_callbacks + matching_fresh)[:dials_per_sprint]
 
             for lead in sprint_leads:
                 fresh_assigned.add(lead.get("id") or lead.get("prospect_id"))

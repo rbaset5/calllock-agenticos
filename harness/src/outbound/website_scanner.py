@@ -73,6 +73,32 @@ FRIENDLY_NAMES: dict[str, str] = {
 }
 
 
+def _is_safe_url(url: str) -> bool:
+    """Block SSRF: reject internal/private IPs and non-public hostnames."""
+    from urllib.parse import urlparse
+    import ipaddress
+
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+    except Exception:
+        return False
+
+    if not hostname or hostname == "localhost":
+        return False
+
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            return False
+    except ValueError:
+        # Not an IP, it's a hostname — check for suspicious patterns
+        if hostname.endswith(".local") or hostname.endswith(".internal"):
+            return False
+
+    return True
+
+
 def scan_website(url: str) -> dict[str, Any]:
     """Fetch *url* and return detected vendor widgets.
 
@@ -86,6 +112,9 @@ def scan_website(url: str) -> dict[str, Any]:
     """
     if not url or not url.startswith(("http://", "https://")):
         return _empty_result(error="invalid_url")
+
+    if not _is_safe_url(url):
+        return _empty_result(error="blocked_url")
 
     try:
         resp = httpx.get(

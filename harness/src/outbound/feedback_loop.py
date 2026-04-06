@@ -251,6 +251,7 @@ def compute_discrimination_score(
     training_data: list[dict[str, Any]],
     *,
     max_sample: int = 500,
+    seed: int = 42,
 ) -> float | None:
     """Wilcoxon-Mann-Whitney concordance index.
 
@@ -267,11 +268,12 @@ def compute_discrimination_score(
     if len(positives) < 5 or len(negatives) < 5:
         return None
 
-    # Sample to cap computation at max_sample^2 pairs
+    # Deterministic sampling for reproducible results across runs
+    rng = random.Random(seed)
     if len(positives) > max_sample:
-        positives = random.sample(positives, max_sample)
+        positives = rng.sample(positives, max_sample)
     if len(negatives) > max_sample:
-        negatives = random.sample(negatives, max_sample)
+        negatives = rng.sample(negatives, max_sample)
 
     concordant = 0.0
     total_pairs = len(positives) * len(negatives)

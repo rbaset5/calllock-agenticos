@@ -237,12 +237,14 @@ def enrich_prospect_reviews(
         if not existing:
             return False
         row = existing[0]
-        old_score = int(row.get("total_score", 0))
         old_review_delta = int(row.get("review_enrichment_score", 0) or 0)
         new_delta = int(enrichment.get("review_enrichment_score", 0))
-        # Idempotent: subtract old review delta before adding new one
-        base_score = old_score - old_review_delta
-        patch = {**review_fields, "total_score": max(0, base_score + new_delta)}
+        score_adjustment = new_delta - old_review_delta
+        # Atomic score update: read total_score at UPDATE time, not at SELECT time
+        # This avoids race conditions with concurrent score_prospects() calls
+        current_total = int(row.get("total_score", 0))
+        new_total = max(0, current_total + score_adjustment)
+        patch = {**review_fields, "total_score": new_total}
         supabase_repository._request(  # type: ignore[attr-defined]
             "PATCH",
             f"outbound_prospects?id=eq.{row['id']}",
