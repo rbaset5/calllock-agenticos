@@ -423,5 +423,4195 @@
     "town": "Cottonwood",
     "data_cid": "505177558265509744",
     "state": "AZ"
+  },
+  {
+    "town": "Cave Creek",
+    "data_cid": "574124732115445810",
+    "state": "AZ"
+  },
+  {
+    "town": "Guadalupe",
+    "data_cid": "505177563065499424",
+    "state": "AZ"
+  },
+  {
+    "town": "Benson",
+    "data_cid": "13533884971195330855",
+    "state": "AZ"
+  },
+  {
+    "town": "Thatcher",
+    "data_cid": "13858143159669150648",
+    "state": "AZ"
+  },
+  {
+    "town": "Snowflake",
+    "data_cid": "13132569447438690096",
+    "state": "AZ"
+  },
+  {
+    "town": "Litchfield Park",
+    "data_cid": "14418903580188518887",
+    "state": "AZ"
+  },
+  {
+    "town": "Youngtown",
+    "data_cid": "505177563065498432",
+    "state": "AZ"
+  },
+  {
+    "town": "Wickenburg",
+    "data_cid": "10830772494854966842",
+    "state": "AZ"
+  },
+  {
+    "town": "Tolleson",
+    "data_cid": "4680884162427538958",
+    "state": "AZ"
+  },
+  {
+    "town": "Sedona",
+    "data_cid": "6145378449862987517",
+    "state": "AZ"
+  },
+  {
+    "town": "Paradise Valley",
+    "data_cid": "5598770747778211069",
+    "state": "AZ"
+  },
+  {
+    "town": "Camp Verde",
+    "data_cid": "6388348060674732873",
+    "state": "AZ"
+  },
+  {
+    "town": "Chino Valley",
+    "data_cid": "58631349576409749",
+    "state": "AZ"
+  },
+  {
+    "town": "Fellsmere",
+    "data_cid": "14296774540504196542",
+    "state": "FL"
+  },
+  {
+    "town": "South Bay",
+    "data_cid": "17644570434774731590",
+    "state": "FL"
+  },
+  {
+    "town": "Daytona Beach Shores",
+    "data_cid": "14315904624300632290",
+    "state": "FL"
+  },
+  {
+    "town": "South Pasadena",
+    "data_cid": "13276294800320791407",
+    "state": "FL"
+  },
+  {
+    "town": "Fort Myers Beach",
+    "data_cid": "15334710586230976594",
+    "state": "FL"
+  },
+  {
+    "town": "Fort Meade",
+    "data_cid": "13447293007640971752",
+    "state": "FL"
+  },
+  {
+    "town": "LaBelle",
+    "data_cid": "8316406216933032133",
+    "state": "FL"
+  },
+  {
+    "town": "Flagler Beach",
+    "data_cid": "12047850360996050176",
+    "state": "FL"
+  },
+  {
+    "town": "Eagle Lake",
+    "data_cid": "11430345955664426870",
+    "state": "FL"
+  },
+  {
+    "town": "Surfside",
+    "data_cid": "2875108151638945164",
+    "state": "FL"
+  },
+  {
+    "town": "Grant-Valkaria",
+    "data_cid": "12296548023993944942",
+    "state": "FL"
+  },
+  {
+    "town": "Okeechobee",
+    "data_cid": "12285846610841758407",
+    "state": "FL"
+  },
+  {
+    "town": "Pahokee",
+    "data_cid": "3992542579983897595",
+    "state": "FL"
+  },
+  {
+    "town": "Bay Harbor Islands",
+    "data_cid": "4101560656584716156",
+    "state": "FL"
+  },
+  {
+    "town": "Starke",
+    "data_cid": "13415163548308008466",
+    "state": "FL"
+  },
+  {
+    "town": "Belleview",
+    "data_cid": "6865102930931931618",
+    "state": "FL"
+  },
+  {
+    "town": "Dundee",
+    "data_cid": "13193901904105367105",
+    "state": "FL"
+  },
+  {
+    "town": "Tequesta",
+    "data_cid": "5368360343145181414",
+    "state": "FL"
+  },
+  {
+    "town": "Sanibel",
+    "data_cid": "12640508932383267489",
+    "state": "FL"
+  },
+  {
+    "town": "Lauderdale-by-the-Sea",
+    "data_cid": "8112550805421155786",
+    "state": "FL"
+  },
+  {
+    "town": "Treasure Island",
+    "data_cid": "18060391360437361375",
+    "state": "FL"
+  },
+  {
+    "town": "Pembroke Park",
+    "data_cid": "11499283937316910558",
+    "state": "FL"
+  },
+  {
+    "town": "High Springs",
+    "data_cid": "9939589091997736318",
+    "state": "FL"
+  },
+  {
+    "town": "St. Augustine Beach",
+    "data_cid": "15757481227924858255",
+    "state": "FL"
+  },
+  {
+    "town": "Indiantown",
+    "data_cid": "2116555079223447980",
+    "state": "FL"
+  },
+  {
+    "town": "Gulf Breeze",
+    "data_cid": "11577377465054600502",
+    "state": "FL"
+  },
+  {
+    "town": "Islamorada, Village of Islands",
+    "data_cid": "755783724108595145",
+    "state": "FL"
+  },
+  {
+    "town": "Neptune Beach",
+    "data_cid": "5369834414058642634",
+    "state": "FL"
+  },
+  {
+    "town": "Freeport",
+    "data_cid": "17175306350033939024",
+    "state": "FL"
+  },
+  {
+    "town": "West Miami",
+    "data_cid": "12120839775738664489",
+    "state": "FL"
+  },
+  {
+    "town": "Perry",
+    "data_cid": "9344102639554426599",
+    "state": "FL"
+  },
+  {
+    "town": "Longboat Key",
+    "data_cid": "12595535315310563769",
+    "state": "FL"
+  },
+  {
+    "town": "Clewiston",
+    "data_cid": "5585268428497202701",
+    "state": "FL"
+  },
+  {
+    "town": "Westlake",
+    "data_cid": "17999252170000024495",
+    "state": "FL"
+  },
+  {
+    "town": "Belle Isle",
+    "data_cid": "721396937360607447",
+    "state": "FL"
+  },
+  {
+    "town": "Southwest Ranches",
+    "data_cid": "7150483228543633005",
+    "state": "FL"
+  },
+  {
+    "town": "Inverness",
+    "data_cid": "15291235516248490514",
+    "state": "FL"
+  },
+  {
+    "town": "Marianna",
+    "data_cid": "8315407877078739678",
+    "state": "FL"
+  },
+  {
+    "town": "Quincy",
+    "data_cid": "10954480943805704771",
+    "state": "FL"
+  },
+  {
+    "town": "Macclenny",
+    "data_cid": "6801637043239773797",
+    "state": "FL"
+  },
+  {
+    "town": "North Bay Village",
+    "data_cid": "2484194563276209801",
+    "state": "FL"
+  },
+  {
+    "town": "Newberry",
+    "data_cid": "14430771050439870909",
+    "state": "FL"
+  },
+  {
+    "town": "Springfield",
+    "data_cid": "3171729981186891914",
+    "state": "FL"
+  },
+  {
+    "town": "Lake Alfred",
+    "data_cid": "1404744377736041358",
+    "state": "FL"
+  },
+  {
+    "town": "St. Pete Beach",
+    "data_cid": "11000882981944396906",
+    "state": "FL"
+  },
+  {
+    "town": "Fruitland Park",
+    "data_cid": "15744373654293520556",
+    "state": "FL"
+  },
+  {
+    "town": "Orange Park",
+    "data_cid": "6802647807789160949",
+    "state": "FL"
+  },
+  {
+    "town": "Indian Harbour Beach",
+    "data_cid": "2056077628288909313",
+    "state": "FL"
+  },
+  {
+    "town": "Mascotte",
+    "data_cid": "7556222414663647455",
+    "state": "FL"
+  },
+  {
+    "town": "Lake Park",
+    "data_cid": "15000007174741863111",
+    "state": "FL"
+  },
+  {
+    "town": "Palm Beach",
+    "data_cid": "4296595431525599002",
+    "state": "FL"
+  },
+  {
+    "town": "Dade City",
+    "data_cid": "13863552543243176980",
+    "state": "FL"
+  },
+  {
+    "town": "Brooksville",
+    "data_cid": "1638438249180572140",
+    "state": "FL"
+  },
+  {
+    "town": "Cape Canaveral",
+    "data_cid": "13478060878202261918",
+    "state": "FL"
+  },
+  {
+    "town": "Marathon",
+    "data_cid": "13598093789956752631",
+    "state": "FL"
+  },
+  {
+    "town": "Green Cove Springs",
+    "data_cid": "18218789813307017161",
+    "state": "FL"
+  },
+  {
+    "town": "Avon Park",
+    "data_cid": "2076936497072715080",
+    "state": "FL"
+  },
+  {
+    "town": "Alachua",
+    "data_cid": "14401000662984675696",
+    "state": "FL"
+  },
+  {
+    "town": "Lighthouse Point",
+    "data_cid": "14547919769166079197",
+    "state": "FL"
+  },
+  {
+    "town": "Milton",
+    "data_cid": "506457558265545728",
+    "state": "FL"
+  },
+  {
+    "town": "Satellite Beach",
+    "data_cid": "17822907591660630736",
+    "state": "FL"
+  },
+  {
+    "town": "Cocoa Beach",
+    "data_cid": "11950326955203916486",
+    "state": "FL"
+  },
+  {
+    "town": "Gulfport",
+    "data_cid": "1300491133495087795",
+    "state": "FL"
+  },
+  {
+    "town": "Wilton Manors",
+    "data_cid": "13117160122767342486",
+    "state": "FL"
+  },
+  {
+    "town": "Miami Shores",
+    "data_cid": "6891016926500603132",
+    "state": "FL"
+  },
+  {
+    "town": "Lantana",
+    "data_cid": "9447528991169043878",
+    "state": "FL"
+  },
+  {
+    "town": "Florida City",
+    "data_cid": "17851682681311560480",
+    "state": "FL"
+  },
+  {
+    "town": "Holly Hill",
+    "data_cid": "5853040452482316286",
+    "state": "FL"
+  },
+  {
+    "town": "South Miami",
+    "data_cid": "4394289129408475182",
+    "state": "FL"
+  },
+  {
+    "town": "Atlantic Beach",
+    "data_cid": "1317406843117082403",
+    "state": "FL"
+  },
+  {
+    "town": "North Palm Beach",
+    "data_cid": "1674567595423224058",
+    "state": "FL"
+  },
+  {
+    "town": "Fernandina Beach",
+    "data_cid": "15208778291473431779",
+    "state": "FL"
+  },
+  {
+    "town": "Palmetto",
+    "data_cid": "14541874519286839359",
+    "state": "FL"
+  },
+  {
+    "town": "Miami Springs",
+    "data_cid": "15884347923197667288",
+    "state": "FL"
+  },
+  {
+    "town": "South Daytona",
+    "data_cid": "10923038883358150731",
+    "state": "FL"
+  },
+  {
+    "town": "Destin",
+    "data_cid": "1703640332947180594",
+    "state": "FL"
+  },
+  {
+    "town": "Callaway",
+    "data_cid": "3923615218581224487",
+    "state": "FL"
+  },
+  {
+    "town": "Oldsmar",
+    "data_cid": "9257731773946050613",
+    "state": "FL"
+  },
+  {
+    "town": "Milan",
+    "data_cid": "16053030574633785592",
+    "state": "IL"
+  },
+  {
+    "town": "Pana",
+    "data_cid": "9096919134903565984",
+    "state": "IL"
+  },
+  {
+    "town": "South Barrington",
+    "data_cid": "11409260946135232420",
+    "state": "IL"
+  },
+  {
+    "town": "Monee",
+    "data_cid": "7076164104765134028",
+    "state": "IL"
+  },
+  {
+    "town": "Berkeley",
+    "data_cid": "7153182257001247256",
+    "state": "IL"
+  },
+  {
+    "town": "Lake Barrington",
+    "data_cid": "11408722856456373243",
+    "state": "IL"
+  },
+  {
+    "town": "Poplar Grove",
+    "data_cid": "7957335134543357383",
+    "state": "IL"
+  },
+  {
+    "town": "Eureka",
+    "data_cid": "2670869451341333938",
+    "state": "IL"
+  },
+  {
+    "town": "Wonder Lake",
+    "data_cid": "507417563065503856",
+    "state": "IL"
+  },
+  {
+    "town": "Highwood",
+    "data_cid": "9802399452851730842",
+    "state": "IL"
+  },
+  {
+    "town": "Spring Valley",
+    "data_cid": "14307862042728375424",
+    "state": "IL"
+  },
+  {
+    "town": "Posen",
+    "data_cid": "4385286678565370837",
+    "state": "IL"
+  },
+  {
+    "town": "Genoa",
+    "data_cid": "2832614336146608669",
+    "state": "IL"
+  },
+  {
+    "town": "Spring Grove",
+    "data_cid": "8181465431151184923",
+    "state": "IL"
+  },
+  {
+    "town": "Carlinville",
+    "data_cid": "5573406637543754340",
+    "state": "IL"
+  },
+  {
+    "town": "Lake Bluff",
+    "data_cid": "13967448516068524863",
+    "state": "IL"
+  },
+  {
+    "town": "Du Quoin",
+    "data_cid": "15473499839668755684",
+    "state": "IL"
+  },
+  {
+    "town": "East Alton",
+    "data_cid": "13237747720868588930",
+    "state": "IL"
+  },
+  {
+    "town": "Northfield",
+    "data_cid": "15916203404702159093",
+    "state": "IL"
+  },
+  {
+    "town": "Wilmington",
+    "data_cid": "12619657224226796081",
+    "state": "IL"
+  },
+  {
+    "town": "Hillsboro",
+    "data_cid": "660411719265165340",
+    "state": "IL"
+  },
+  {
+    "town": "Metropolis",
+    "data_cid": "4549113753661348844",
+    "state": "IL"
+  },
+  {
+    "town": "Willow Springs",
+    "data_cid": "8907827329504781273",
+    "state": "IL"
+  },
+  {
+    "town": "Peoria Heights",
+    "data_cid": "8502896113422348637",
+    "state": "IL"
+  },
+  {
+    "town": "Beardstown",
+    "data_cid": "2805396829305996999",
+    "state": "IL"
+  },
+  {
+    "town": "Coal City",
+    "data_cid": "14815213899246036262",
+    "state": "IL"
+  },
+  {
+    "town": "Carterville",
+    "data_cid": "4643615145355015314",
+    "state": "IL"
+  },
+  {
+    "town": "Bartonville",
+    "data_cid": "14268408566041474165",
+    "state": "IL"
+  },
+  {
+    "town": "Pontoon Beach",
+    "data_cid": "17635464015144007058",
+    "state": "IL"
+  },
+  {
+    "town": "Mount Zion",
+    "data_cid": "15680137120841955425",
+    "state": "IL"
+  },
+  {
+    "town": "Monticello",
+    "data_cid": "12289036010960804172",
+    "state": "IL"
+  },
+  {
+    "town": "Chillicothe",
+    "data_cid": "18310188435122678188",
+    "state": "IL"
+  },
+  {
+    "town": "Braidwood",
+    "data_cid": "3402171354765597209",
+    "state": "IL"
+  },
+  {
+    "town": "Countryside",
+    "data_cid": "5948443663504688177",
+    "state": "IL"
+  },
+  {
+    "town": "Johnsburg",
+    "data_cid": "16229832236050704376",
+    "state": "IL"
+  },
+  {
+    "town": "Lakemoor",
+    "data_cid": "8430865609807910433",
+    "state": "IL"
+  },
+  {
+    "town": "Geneseo",
+    "data_cid": "6097237625199977030",
+    "state": "IL"
+  },
+  {
+    "town": "Winthrop Harbor",
+    "data_cid": "11203162967789831999",
+    "state": "IL"
+  },
+  {
+    "town": "Benton",
+    "data_cid": "4446272156701037302",
+    "state": "IL"
+  },
+  {
+    "town": "Litchfield",
+    "data_cid": "18141751420099676974",
+    "state": "IL"
+  },
+  {
+    "town": "Orland Hills",
+    "data_cid": "11510409866451661784",
+    "state": "IL"
+  },
+  {
+    "town": "Chester",
+    "data_cid": "9073778631121390849",
+    "state": "IL"
+  },
+  {
+    "town": "Mount Carmel",
+    "data_cid": "8639891866817531215",
+    "state": "IL"
+  },
+  {
+    "town": "Calumet Park",
+    "data_cid": "12272160176069893256",
+    "state": "IL"
+  },
+  {
+    "town": "Elburn",
+    "data_cid": "5976436296678147048",
+    "state": "IL"
+  },
+  {
+    "town": "Clinton",
+    "data_cid": "15613198144405471572",
+    "state": "IL"
+  },
+  {
+    "town": "Stickney",
+    "data_cid": "9037154110049152141",
+    "state": "IL"
+  },
+  {
+    "town": "Mendota",
+    "data_cid": "5276243979243695799",
+    "state": "IL"
+  },
+  {
+    "town": "Salem",
+    "data_cid": "15536696054754626884",
+    "state": "IL"
+  },
+  {
+    "town": "University Park",
+    "data_cid": "4200511826773971657",
+    "state": "IL"
+  },
+  {
+    "town": "Murphysboro",
+    "data_cid": "15339852204464937029",
+    "state": "IL"
+  },
+  {
+    "town": "Robinson",
+    "data_cid": "8975640570719470214",
+    "state": "IL"
+  },
+  {
+    "town": "Greenville",
+    "data_cid": "5431577643900535798",
+    "state": "IL"
+  },
+  {
+    "town": "North Riverside",
+    "data_cid": "5761837783411945948",
+    "state": "IL"
+  },
+  {
+    "town": "Sandwich",
+    "data_cid": "17185760700705516699",
+    "state": "IL"
+  },
+  {
+    "town": "Vandalia",
+    "data_cid": "6689116541768342842",
+    "state": "IL"
+  },
+  {
+    "town": "Volo",
+    "data_cid": "16610309102119767280",
+    "state": "IL"
+  },
+  {
+    "town": "Inverness",
+    "data_cid": "15440811523328422425",
+    "state": "IL"
+  },
+  {
+    "town": "Princeton",
+    "data_cid": "18128814204948490436",
+    "state": "IL"
+  },
+  {
+    "town": "Marengo",
+    "data_cid": "1467595809930557014",
+    "state": "IL"
+  },
+  {
+    "town": "Round Lake Park",
+    "data_cid": "10554070962613301472",
+    "state": "IL"
+  },
+  {
+    "town": "Rockton",
+    "data_cid": "18087497862676413639",
+    "state": "IL"
+  },
+  {
+    "town": "Broadview",
+    "data_cid": "12667005094751372740",
+    "state": "IL"
+  },
+  {
+    "town": "West Dundee",
+    "data_cid": "11523152433864640413",
+    "state": "IL"
+  },
+  {
+    "town": "Park City",
+    "data_cid": "17226028990530729601",
+    "state": "IL"
+  },
+  {
+    "town": "South Beloit",
+    "data_cid": "5117366673782703504",
+    "state": "IL"
+  },
+  {
+    "town": "Silvis",
+    "data_cid": "5540647551088694891",
+    "state": "IL"
+  },
+  {
+    "town": "Lincolnshire",
+    "data_cid": "5912188879368043391",
+    "state": "IL"
+  },
+  {
+    "town": "Hillside",
+    "data_cid": "13489600725132478386",
+    "state": "IL"
+  },
+  {
+    "town": "Island Lake",
+    "data_cid": "17162450866272397622",
+    "state": "IL"
+  },
+  {
+    "town": "Paris",
+    "data_cid": "776586276493651535",
+    "state": "IL"
+  },
+  {
+    "town": "Oak Brook",
+    "data_cid": "15034083077582356716",
+    "state": "IL"
+  },
+  {
+    "town": "Jerseyville",
+    "data_cid": "952899570419185498",
+    "state": "IL"
+  },
+  {
+    "town": "Maryville",
+    "data_cid": "2128725152725134582",
+    "state": "IL"
+  },
+  {
+    "town": "Crete",
+    "data_cid": "1147064733321188078",
+    "state": "IL"
+  },
+  {
+    "town": "Long Grove",
+    "data_cid": "4574030808857922549",
+    "state": "IL"
+  },
+  {
+    "town": "Glenwood",
+    "data_cid": "11455349379754819520",
+    "state": "IL"
+  },
+  {
+    "town": "Olney",
+    "data_cid": "18271811432965804323",
+    "state": "IL"
+  },
+  {
+    "town": "Rock Falls",
+    "data_cid": "5326850528959589538",
+    "state": "IL"
+  },
+  {
+    "town": "Monmouth",
+    "data_cid": "10808535099681722628",
+    "state": "IL"
+  },
+  {
+    "town": "Clarendon Hills",
+    "data_cid": "10935683251158456609",
+    "state": "IL"
+  },
+  {
+    "town": "Glencoe",
+    "data_cid": "5605627321309819191",
+    "state": "IL"
+  },
+  {
+    "town": "Lake Villa",
+    "data_cid": "14125325131847757014",
+    "state": "IL"
+  },
+  {
+    "town": "Harwood Heights",
+    "data_cid": "258486137549803269",
+    "state": "IL"
+  },
+  {
+    "town": "Hampshire",
+    "data_cid": "12367064005082870891",
+    "state": "IL"
+  },
+  {
+    "town": "Riverside",
+    "data_cid": "1435656964314827118",
+    "state": "IL"
+  },
+  {
+    "town": "Gilberts",
+    "data_cid": "13792386164884615684",
+    "state": "IL"
+  },
+  {
+    "town": "Mascoutah",
+    "data_cid": "9083745562913858223",
+    "state": "IL"
+  },
+  {
+    "town": "Willowbrook",
+    "data_cid": "14668948109842427953",
+    "state": "IL"
+  },
+  {
+    "town": "Bethalto",
+    "data_cid": "6443582043531185859",
+    "state": "IL"
+  },
+  {
+    "town": "Lynwood",
+    "data_cid": "13085980433411947270",
+    "state": "IL"
+  },
+  {
+    "town": "Manteno",
+    "data_cid": "8540235671557216305",
+    "state": "IL"
+  },
+  {
+    "town": "Savoy",
+    "data_cid": "5062486577371732560",
+    "state": "IL"
+  },
+  {
+    "town": "Sugar Grove",
+    "data_cid": "11453613617187679662",
+    "state": "IL"
+  },
+  {
+    "town": "Flossmoor",
+    "data_cid": "507417563065513776",
+    "state": "IL"
+  },
+  {
+    "town": "Steger",
+    "data_cid": "11670369011190481272",
+    "state": "IL"
+  },
+  {
+    "town": "Harvard",
+    "data_cid": "12617966795758527174",
+    "state": "IL"
+  },
+  {
+    "town": "LaSalle",
+    "data_cid": "3422947374209200346",
+    "state": "IL"
+  },
+  {
+    "town": "Itasca",
+    "data_cid": "507417563065498848",
+    "state": "IL"
+  },
+  {
+    "town": "Rochelle",
+    "data_cid": "17287186939310526505",
+    "state": "IL"
+  },
+  {
+    "town": "Hawthorn Woods",
+    "data_cid": "16421415858061575446",
+    "state": "IL"
+  },
+  {
+    "town": "Sauk Village",
+    "data_cid": "14674873943172901993",
+    "state": "IL"
+  },
+  {
+    "town": "Peru",
+    "data_cid": "7880600440346368966",
+    "state": "IL"
+  },
+  {
+    "town": "Highland",
+    "data_cid": "11557134799416132456",
+    "state": "IL"
+  },
+  {
+    "town": "Winfield",
+    "data_cid": "15324516136898068932",
+    "state": "IL"
+  },
+  {
+    "town": "Wood River",
+    "data_cid": "14618994760270656593",
+    "state": "IL"
+  },
+  {
+    "town": "Riverdale",
+    "data_cid": "8451335599397328640",
+    "state": "IL"
+  },
+  {
+    "town": "River Grove",
+    "data_cid": "4675935334107689189",
+    "state": "IL"
+  },
+  {
+    "town": "Lyons",
+    "data_cid": "6366359901443762278",
+    "state": "IL"
+  },
+  {
+    "town": "Crestwood",
+    "data_cid": "11640981369572727305",
+    "state": "IL"
+  },
+  {
+    "town": "Barrington",
+    "data_cid": "16911407714168200125",
+    "state": "IL"
+  },
+  {
+    "town": "Mahomet",
+    "data_cid": "507577558265571792",
+    "state": "IL"
+  },
+  {
+    "town": "Worth",
+    "data_cid": "3123480400155981726",
+    "state": "IL"
+  },
+  {
+    "town": "Summit",
+    "data_cid": "16123014183086556431",
+    "state": "IL"
+  },
+  {
+    "town": "Manhattan",
+    "data_cid": "13999783709234550178",
+    "state": "IL"
+  },
+  {
+    "town": "Campton Hills",
+    "data_cid": "9865814598017838880",
+    "state": "IL"
+  },
+  {
+    "town": "Columbia",
+    "data_cid": "15812589409730191286",
+    "state": "IL"
+  },
+  {
+    "town": "Fox Lake",
+    "data_cid": "9720337799642131510",
+    "state": "IL"
+  },
+  {
+    "town": "Roscoe",
+    "data_cid": "15001605269569476995",
+    "state": "IL"
+  },
+  {
+    "town": "Pontiac",
+    "data_cid": "1164913994896749977",
+    "state": "IL"
+  },
+  {
+    "town": "Waterloo",
+    "data_cid": "11171450601572787361",
+    "state": "IL"
+  },
+  {
+    "town": "Burr Ridge",
+    "data_cid": "16331364521842007705",
+    "state": "IL"
+  },
+  {
+    "town": "Markham",
+    "data_cid": "1477733780865712953",
+    "state": "IL"
+  },
+  {
+    "town": "Schiller Park",
+    "data_cid": "45786360573950776",
+    "state": "IL"
+  },
+  {
+    "town": "Pingree Grove",
+    "data_cid": "507417563065501440",
+    "state": "IL"
+  },
+  {
+    "town": "Centralia",
+    "data_cid": "7138801161652782240",
+    "state": "IL"
+  },
+  {
+    "town": "Troy",
+    "data_cid": "940514040557272153",
+    "state": "IL"
+  },
+  {
+    "town": "River Forest",
+    "data_cid": "2991355757343596066",
+    "state": "IL"
+  },
+  {
+    "town": "Palos Heights",
+    "data_cid": "16884334525153803907",
+    "state": "IL"
+  },
+  {
+    "town": "Kewanee",
+    "data_cid": "14325250727280802183",
+    "state": "IL"
+  },
+  {
+    "town": "Herrin",
+    "data_cid": "7377105798082214141",
+    "state": "IL"
+  },
+  {
+    "town": "Justice",
+    "data_cid": "12641313792314570686",
+    "state": "IL"
+  },
+  {
+    "town": "Rantoul",
+    "data_cid": "6513748079880727596",
+    "state": "IL"
+  },
+  {
+    "town": "Northlake",
+    "data_cid": "10489794915656476123",
+    "state": "IL"
+  },
+  {
+    "town": "Winnetka",
+    "data_cid": "8416078226481077603",
+    "state": "IL"
+  },
+  {
+    "town": "Richton Park",
+    "data_cid": "5520013714320121239",
+    "state": "IL"
+  },
+  {
+    "town": "Plano",
+    "data_cid": "1640235322738120850",
+    "state": "IL"
+  },
+  {
+    "town": "Canton",
+    "data_cid": "10678071898810130521",
+    "state": "IL"
+  },
+  {
+    "town": "Minooka",
+    "data_cid": "15731617971535006296",
+    "state": "IL"
+  },
+  {
+    "town": "Hazel Crest",
+    "data_cid": "578638351056033057",
+    "state": "IL"
+  },
+  {
+    "town": "Lincolnwood",
+    "data_cid": "226183780359520092",
+    "state": "IL"
+  },
+  {
+    "town": "La Grange Park",
+    "data_cid": "17893396039016353959",
+    "state": "IL"
+  },
+  {
+    "town": "Western Springs",
+    "data_cid": "11883631018072327522",
+    "state": "IL"
+  },
+  {
+    "town": "Davison",
+    "data_cid": "6778096758452605056",
+    "state": "MI"
+  },
+  {
+    "town": "Kingsford",
+    "data_cid": "7347685231259434613",
+    "state": "MI"
+  },
+  {
+    "town": "Utica",
+    "data_cid": "4140361006510720565",
+    "state": "MI"
+  },
+  {
+    "town": "Allegan",
+    "data_cid": "5830055470430856715",
+    "state": "MI"
+  },
+  {
+    "town": "Eaton Rapids",
+    "data_cid": "14929360937732305372",
+    "state": "MI"
+  },
+  {
+    "town": "Frankenmuth",
+    "data_cid": "9245979514624585759",
+    "state": "MI"
+  },
+  {
+    "town": "Gladstone",
+    "data_cid": "4714612973324410898",
+    "state": "MI"
+  },
+  {
+    "town": "Springfield",
+    "data_cid": "14973106122136142068",
+    "state": "MI"
+  },
+  {
+    "town": "Chelsea",
+    "data_cid": "5538360989533443919",
+    "state": "MI"
+  },
+  {
+    "town": "Grosse Pointe",
+    "data_cid": "5680522170991578065",
+    "state": "MI"
+  },
+  {
+    "town": "Zeeland",
+    "data_cid": "14784241129981322473",
+    "state": "MI"
+  },
+  {
+    "town": "St. Clair",
+    "data_cid": "1501032213935070846",
+    "state": "MI"
+  },
+  {
+    "town": "Swartz Creek",
+    "data_cid": "14512624720110457207",
+    "state": "MI"
+  },
+  {
+    "town": "Richmond",
+    "data_cid": "16364691102940236798",
+    "state": "MI"
+  },
+  {
+    "town": "Belding",
+    "data_cid": "1775081477893061978",
+    "state": "MI"
+  },
+  {
+    "town": "Holly",
+    "data_cid": "4793217764285291339",
+    "state": "MI"
+  },
+  {
+    "town": "Dundee",
+    "data_cid": "5439980346828842834",
+    "state": "MI"
+  },
+  {
+    "town": "Northville",
+    "data_cid": "12323235680576505563",
+    "state": "MI"
+  },
+  {
+    "town": "Milan",
+    "data_cid": "13886520274872871909",
+    "state": "MI"
+  },
+  {
+    "town": "Ishpeming",
+    "data_cid": "2690596347632018061",
+    "state": "MI"
+  },
+  {
+    "town": "Rockford",
+    "data_cid": "5495749770532785414",
+    "state": "MI"
+  },
+  {
+    "town": "Huntington Woods",
+    "data_cid": "9483340999255139484",
+    "state": "MI"
+  },
+  {
+    "town": "Milford",
+    "data_cid": "6029725482327837036",
+    "state": "MI"
+  },
+  {
+    "town": "New Haven",
+    "data_cid": "9471046752250595698",
+    "state": "MI"
+  },
+  {
+    "town": "Marshall",
+    "data_cid": "5136719513577805401",
+    "state": "MI"
+  },
+  {
+    "town": "River Rouge",
+    "data_cid": "10200610155501891938",
+    "state": "MI"
+  },
+  {
+    "town": "Walled Lake",
+    "data_cid": "16471874687315037330",
+    "state": "MI"
+  },
+  {
+    "town": "St. Louis",
+    "data_cid": "9669797589566908099",
+    "state": "MI"
+  },
+  {
+    "town": "Albion",
+    "data_cid": "16122541463529218055",
+    "state": "MI"
+  },
+  {
+    "town": "Hastings",
+    "data_cid": "10347754201462454918",
+    "state": "MI"
+  },
+  {
+    "town": "St. Johns",
+    "data_cid": "3517726450489277943",
+    "state": "MI"
+  },
+  {
+    "town": "Grand Ledge",
+    "data_cid": "12908155619164937992",
+    "state": "MI"
+  },
+  {
+    "town": "Grand Blanc",
+    "data_cid": "5175923239577468465",
+    "state": "MI"
+  },
+  {
+    "town": "St. Joseph",
+    "data_cid": "12601417068740434109",
+    "state": "MI"
+  },
+  {
+    "town": "Brighton",
+    "data_cid": "4726656837175154530",
+    "state": "MI"
+  },
+  {
+    "town": "Hudsonville",
+    "data_cid": "17581908295252313434",
+    "state": "MI"
+  },
+  {
+    "town": "Flushing",
+    "data_cid": "12641195054738928136",
+    "state": "MI"
+  },
+  {
+    "town": "Menominee",
+    "data_cid": "5382973621515747564",
+    "state": "MI"
+  },
+  {
+    "town": "Mason",
+    "data_cid": "18354805056143602694",
+    "state": "MI"
+  },
+  {
+    "town": "Highland Park",
+    "data_cid": "4323328880289799671",
+    "state": "MI"
+  },
+  {
+    "town": "Center Line",
+    "data_cid": "10818991385486078249",
+    "state": "MI"
+  },
+  {
+    "town": "Houghton",
+    "data_cid": "13723255103597899645",
+    "state": "MI"
+  },
+  {
+    "town": "Tecumseh",
+    "data_cid": "11029264320995040983",
+    "state": "MI"
+  },
+  {
+    "town": "Benton Harbor",
+    "data_cid": "104406151069173904",
+    "state": "MI"
+  },
+  {
+    "town": "Ecorse",
+    "data_cid": "144463101606647799",
+    "state": "MI"
+  },
+  {
+    "town": "Saline",
+    "data_cid": "13217105667296261069",
+    "state": "MI"
+  },
+  {
+    "town": "Plymouth",
+    "data_cid": "18268508376140379123",
+    "state": "MI"
+  },
+  {
+    "town": "Charlotte",
+    "data_cid": "1419811281784947185",
+    "state": "MI"
+  },
+  {
+    "town": "Grosse Pointe Farms",
+    "data_cid": "7474886428295071418",
+    "state": "MI"
+  },
+  {
+    "town": "Muskegon Heights",
+    "data_cid": "948874432499253029",
+    "state": "MI"
+  },
+  {
+    "town": "Bullard",
+    "data_cid": "1652406434990140558",
+    "state": "TX"
+  },
+  {
+    "town": "Diboll",
+    "data_cid": "11160452713938084851",
+    "state": "TX"
+  },
+  {
+    "town": "La Joya",
+    "data_cid": "784613579692881662",
+    "state": "TX"
+  },
+  {
+    "town": "Terrell Hills",
+    "data_cid": "4743583756220636424",
+    "state": "TX"
+  },
+  {
+    "town": "Jarrell",
+    "data_cid": "14467616195906667012",
+    "state": "TX"
+  },
+  {
+    "town": "Progreso",
+    "data_cid": "3561125594034967913",
+    "state": "TX"
+  },
+  {
+    "town": "Breckenridge",
+    "data_cid": "9909856813979953565",
+    "state": "TX"
+  },
+  {
+    "town": "Gilmer",
+    "data_cid": "13722943163152462152",
+    "state": "TX"
+  },
+  {
+    "town": "Port Isabel",
+    "data_cid": "17610988437658229263",
+    "state": "TX"
+  },
+  {
+    "town": "Horseshoe Bay",
+    "data_cid": "13044718712761697546",
+    "state": "TX"
+  },
+  {
+    "town": "Muleshoe",
+    "data_cid": "4258524312345315056",
+    "state": "TX"
+  },
+  {
+    "town": "Nassau Bay",
+    "data_cid": "11558577623108721280",
+    "state": "TX"
+  },
+  {
+    "town": "Center",
+    "data_cid": "14269712788664661195",
+    "state": "TX"
+  },
+  {
+    "town": "Caddo Mills",
+    "data_cid": "8482189613431632733",
+    "state": "TX"
+  },
+  {
+    "town": "Hudson",
+    "data_cid": "18311607207392968292",
+    "state": "TX"
+  },
+  {
+    "town": "McLendon-Chisholm",
+    "data_cid": "448061873969038452",
+    "state": "TX"
+  },
+  {
+    "town": "Giddings",
+    "data_cid": "17463931048712592454",
+    "state": "TX"
+  },
+  {
+    "town": "Mineola",
+    "data_cid": "1005083454173419388",
+    "state": "TX"
+  },
+  {
+    "town": "Sansom Park",
+    "data_cid": "8248909209464622964",
+    "state": "TX"
+  },
+  {
+    "town": "Granite Shoals",
+    "data_cid": "4998463750067375248",
+    "state": "TX"
+  },
+  {
+    "town": "Atlanta",
+    "data_cid": "17977147834127071410",
+    "state": "TX"
+  },
+  {
+    "town": "Primera",
+    "data_cid": "11791506127005905369",
+    "state": "TX"
+  },
+  {
+    "town": "Cameron",
+    "data_cid": "8186891969835909856",
+    "state": "TX"
+  },
+  {
+    "town": "Rusk",
+    "data_cid": "1074659670536790597",
+    "state": "TX"
+  },
+  {
+    "town": "Livingston",
+    "data_cid": "8280001911018015504",
+    "state": "TX"
+  },
+  {
+    "town": "Marlin",
+    "data_cid": "16615678689781217353",
+    "state": "TX"
+  },
+  {
+    "town": "Rockdale",
+    "data_cid": "2170803887935923895",
+    "state": "TX"
+  },
+  {
+    "town": "Sinton",
+    "data_cid": "513817558265587616",
+    "state": "TX"
+  },
+  {
+    "town": "Childress",
+    "data_cid": "14745092370627092948",
+    "state": "TX"
+  },
+  {
+    "town": "Sandy Oaks",
+    "data_cid": "8489681987385214740",
+    "state": "TX"
+  },
+  {
+    "town": "Slaton",
+    "data_cid": "15372060138350950892",
+    "state": "TX"
+  },
+  {
+    "town": "Littlefield",
+    "data_cid": "8115168611437752764",
+    "state": "TX"
+  },
+  {
+    "town": "Elsa",
+    "data_cid": "11515110530884386254",
+    "state": "TX"
+  },
+  {
+    "town": "Luling",
+    "data_cid": "16442584515590845871",
+    "state": "TX"
+  },
+  {
+    "town": "Brookshire",
+    "data_cid": "4014138366703195776",
+    "state": "TX"
+  },
+  {
+    "town": "Windcrest",
+    "data_cid": "4523061239756157591",
+    "state": "TX"
+  },
+  {
+    "town": "Wake Village",
+    "data_cid": "2864047616948342480",
+    "state": "TX"
+  },
+  {
+    "town": "Yoakum",
+    "data_cid": "17187450971693619382",
+    "state": "TX"
+  },
+  {
+    "town": "Kermit",
+    "data_cid": "10821598108316381683",
+    "state": "TX"
+  },
+  {
+    "town": "Crandall",
+    "data_cid": "3852850915889374940",
+    "state": "TX"
+  },
+  {
+    "town": "Crystal City",
+    "data_cid": "18283737781047160824",
+    "state": "TX"
+  },
+  {
+    "town": "Alpine",
+    "data_cid": "1878481888011776756",
+    "state": "TX"
+  },
+  {
+    "town": "Edna",
+    "data_cid": "13431529502366914518",
+    "state": "TX"
+  },
+  {
+    "town": "Bowie",
+    "data_cid": "14455450978962344025",
+    "state": "TX"
+  },
+  {
+    "town": "McGregor",
+    "data_cid": "6289100083815298737",
+    "state": "TX"
+  },
+  {
+    "town": "Justin",
+    "data_cid": "9390990309738252994",
+    "state": "TX"
+  },
+  {
+    "town": "White Oak",
+    "data_cid": "1179769678082415115",
+    "state": "TX"
+  },
+  {
+    "town": "Argyle",
+    "data_cid": "6943494453215003278",
+    "state": "TX"
+  },
+  {
+    "town": "Gladewater",
+    "data_cid": "13312933170737864057",
+    "state": "TX"
+  },
+  {
+    "town": "Parker",
+    "data_cid": "9629617034549436113",
+    "state": "TX"
+  },
+  {
+    "town": "Everman",
+    "data_cid": "9448993700833722170",
+    "state": "TX"
+  },
+  {
+    "town": "Crockett",
+    "data_cid": "8717217112723694600",
+    "state": "TX"
+  },
+  {
+    "town": "Magnolia",
+    "data_cid": "6188992762567377508",
+    "state": "TX"
+  },
+  {
+    "town": "Penitas",
+    "data_cid": "4986659942727500112",
+    "state": "TX"
+  },
+  {
+    "town": "Iowa Park",
+    "data_cid": "10385032155005967924",
+    "state": "TX"
+  },
+  {
+    "town": "Carthage",
+    "data_cid": "621266183971110322",
+    "state": "TX"
+  },
+  {
+    "town": "Aledo",
+    "data_cid": "4756356674987211884",
+    "state": "TX"
+  },
+  {
+    "town": "Hempstead",
+    "data_cid": "3303442878942883433",
+    "state": "TX"
+  },
+  {
+    "town": "Silsbee",
+    "data_cid": "10006891942159930386",
+    "state": "TX"
+  },
+  {
+    "town": "Bridgeport",
+    "data_cid": "17525745253128930742",
+    "state": "TX"
+  },
+  {
+    "town": "Pilot Point",
+    "data_cid": "17413163943935459086",
+    "state": "TX"
+  },
+  {
+    "town": "Wilmer",
+    "data_cid": "14368485888691446808",
+    "state": "TX"
+  },
+  {
+    "town": "Krum",
+    "data_cid": "5823103699845168757",
+    "state": "TX"
+  },
+  {
+    "town": "Oak Point",
+    "data_cid": "2776668498626737891",
+    "state": "TX"
+  },
+  {
+    "town": "Willow Park",
+    "data_cid": "1372153797575939604",
+    "state": "TX"
+  },
+  {
+    "town": "Burnet",
+    "data_cid": "8892957741042401092",
+    "state": "TX"
+  },
+  {
+    "town": "Hickory Creek",
+    "data_cid": "1293579715959384165",
+    "state": "TX"
+  },
+  {
+    "town": "Mexia",
+    "data_cid": "8600256133332651108",
+    "state": "TX"
+  },
+  {
+    "town": "Keene",
+    "data_cid": "11916526307129368336",
+    "state": "TX"
+  },
+  {
+    "town": "Gun Barrel City",
+    "data_cid": "18038548817021967850",
+    "state": "TX"
+  },
+  {
+    "town": "Mabank",
+    "data_cid": "3107921343038840678",
+    "state": "TX"
+  },
+  {
+    "town": "La Feria",
+    "data_cid": "817851629049576279",
+    "state": "TX"
+  },
+  {
+    "town": "Bulverde",
+    "data_cid": "11227432109398784522",
+    "state": "TX"
+  },
+  {
+    "town": "Van Alstyne",
+    "data_cid": "11825051892949111752",
+    "state": "TX"
+  },
+  {
+    "town": "Willis",
+    "data_cid": "8994508259485304069",
+    "state": "TX"
+  },
+  {
+    "town": "Lindale",
+    "data_cid": "10665798126034539502",
+    "state": "TX"
+  },
+  {
+    "town": "Gonzales",
+    "data_cid": "4746713980717270682",
+    "state": "TX"
+  },
+  {
+    "town": "Lacy-Lakeview",
+    "data_cid": "18046356962941090427",
+    "state": "TX"
+  },
+  {
+    "town": "Alvarado",
+    "data_cid": "13101783179127418617",
+    "state": "TX"
+  },
+  {
+    "town": "Monahans",
+    "data_cid": "2823381079302621824",
+    "state": "TX"
+  },
+  {
+    "town": "Seminole",
+    "data_cid": "16972504357061547634",
+    "state": "TX"
+  },
+  {
+    "town": "Nolanville",
+    "data_cid": "1059801819926589853",
+    "state": "TX"
+  },
+  {
+    "town": "Jasper",
+    "data_cid": "8690440120398023193",
+    "state": "TX"
+  },
+  {
+    "town": "River Oaks",
+    "data_cid": "14037128287283023558",
+    "state": "TX"
+  },
+  {
+    "town": "Sealy",
+    "data_cid": "18210994299884733564",
+    "state": "TX"
+  },
+  {
+    "town": "Alamo Heights",
+    "data_cid": "223563402496503726",
+    "state": "TX"
+  },
+  {
+    "town": "Hitchcock",
+    "data_cid": "513497563065498608",
+    "state": "TX"
+  },
+  {
+    "town": "Jersey Village",
+    "data_cid": "6432671662574337441",
+    "state": "TX"
+  },
+  {
+    "town": "Lake Dallas",
+    "data_cid": "12240171266079881483",
+    "state": "TX"
+  },
+  {
+    "town": "Wolfforth",
+    "data_cid": "12106352559830578644",
+    "state": "TX"
+  },
+  {
+    "town": "Hutchins",
+    "data_cid": "11668101096773323460",
+    "state": "TX"
+  },
+  {
+    "town": "Kirby",
+    "data_cid": "3465204023638532168",
+    "state": "TX"
+  },
+  {
+    "town": "Lamesa",
+    "data_cid": "15589048378027999039",
+    "state": "TX"
+  },
+  {
+    "town": "Fort Stockton",
+    "data_cid": "10054825508828344340",
+    "state": "TX"
+  },
+  {
+    "town": "Venus",
+    "data_cid": "4471304421326245915",
+    "state": "TX"
+  },
+  {
+    "town": "Cuero",
+    "data_cid": "12290028910119375732",
+    "state": "TX"
+  },
+  {
+    "town": "Perryton",
+    "data_cid": "15935842672919245579",
+    "state": "TX"
+  },
+  {
+    "town": "Decatur",
+    "data_cid": "14054644026302873165",
+    "state": "TX"
+  },
+  {
+    "town": "Dalhart",
+    "data_cid": "15797642609919054162",
+    "state": "TX"
+  },
+  {
+    "town": "Lavon",
+    "data_cid": "10865229517909346620",
+    "state": "TX"
+  },
+  {
+    "town": "Bee Cave",
+    "data_cid": "1239765900328279405",
+    "state": "TX"
+  },
+  {
+    "town": "Richland Hills",
+    "data_cid": "17621807212603872109",
+    "state": "TX"
+  },
+  {
+    "town": "Los Fresnos",
+    "data_cid": "16681117030076281295",
+    "state": "TX"
+  },
+  {
+    "town": "Prairie View",
+    "data_cid": "9207923612345984459",
+    "state": "TX"
+  },
+  {
+    "town": "Brownfield",
+    "data_cid": "5402495885156191069",
+    "state": "TX"
+  },
+  {
+    "town": "Floresville",
+    "data_cid": "15062523940711593808",
+    "state": "TX"
+  },
+  {
+    "town": "Aransas Pass",
+    "data_cid": "5628796302735411748",
+    "state": "TX"
+  },
+  {
+    "town": "Wharton",
+    "data_cid": "7160244456884904363",
+    "state": "TX"
+  },
+  {
+    "town": "Highland Park",
+    "data_cid": "13920443180761880057",
+    "state": "TX"
+  },
+  {
+    "town": "Josephine",
+    "data_cid": "513337563065499856",
+    "state": "TX"
+  },
+  {
+    "town": "Sunnyvale",
+    "data_cid": "16008743764371816106",
+    "state": "TX"
+  },
+  {
+    "town": "Lucas",
+    "data_cid": "10995769028012677100",
+    "state": "TX"
+  },
+  {
+    "town": "Aubrey",
+    "data_cid": "15351065966236759699",
+    "state": "TX"
+  },
+  {
+    "town": "Graham",
+    "data_cid": "10677194747890140562",
+    "state": "TX"
+  },
+  {
+    "town": "Hillsboro",
+    "data_cid": "2074045118413903620",
+    "state": "TX"
+  },
+  {
+    "town": "Hondo",
+    "data_cid": "3042370190008477777",
+    "state": "TX"
+  },
+  {
+    "town": "Liberty",
+    "data_cid": "16784350761999680212",
+    "state": "TX"
+  },
+  {
+    "town": "Joshua",
+    "data_cid": "5876124626967129936",
+    "state": "TX"
+  },
+  {
+    "town": "Marble Falls",
+    "data_cid": "38287767260640652",
+    "state": "TX"
+  },
+  {
+    "town": "Jacinto City",
+    "data_cid": "18392295969892479760",
+    "state": "TX"
+  },
+  {
+    "town": "Navasota",
+    "data_cid": "6241650307575885780",
+    "state": "TX"
+  },
+  {
+    "town": "Pearsall",
+    "data_cid": "9853380777366839782",
+    "state": "TX"
+  },
+  {
+    "town": "Vidor",
+    "data_cid": "489532762547476168",
+    "state": "TX"
+  },
+  {
+    "town": "Woodway",
+    "data_cid": "6220415660948877092",
+    "state": "TX"
+  },
+  {
+    "town": "Vernon",
+    "data_cid": "8346977019565485274",
+    "state": "TX"
+  },
+  {
+    "town": "Dayton",
+    "data_cid": "13181908872466205049",
+    "state": "TX"
+  },
+  {
+    "town": "Cleveland",
+    "data_cid": "8123038647042285146",
+    "state": "TX"
+  },
+  {
+    "town": "Whitehouse",
+    "data_cid": "3370682978201989032",
+    "state": "TX"
+  },
+  {
+    "town": "Kaufman",
+    "data_cid": "3585109233830848248",
+    "state": "TX"
+  },
+  {
+    "town": "Commerce",
+    "data_cid": "7986375371280559265",
+    "state": "TX"
+  },
+  {
+    "town": "Bridge City",
+    "data_cid": "8781698933197712484",
+    "state": "TX"
+  },
+  {
+    "town": "Raymondville",
+    "data_cid": "7231982779038830345",
+    "state": "TX"
+  },
+  {
+    "town": "San Elizario",
+    "data_cid": "12935159975856547293",
+    "state": "TX"
+  },
+  {
+    "town": "Sanger",
+    "data_cid": "1782244650277040598",
+    "state": "TX"
+  },
+  {
+    "town": "Ingleside",
+    "data_cid": "5733149787009666561",
+    "state": "TX"
+  },
+  {
+    "town": "Dripping Springs",
+    "data_cid": "1525984224595319915",
+    "state": "TX"
+  },
+  {
+    "town": "Lago Vista",
+    "data_cid": "13053946969536915288",
+    "state": "TX"
+  },
+  {
+    "town": "Helotes",
+    "data_cid": "6717126195771895829",
+    "state": "TX"
+  },
+  {
+    "town": "Town of Pecos",
+    "data_cid": "17148070206606600113",
+    "state": "TX"
+  },
+  {
+    "town": "Mont Belvieu",
+    "data_cid": "9083136999073529498",
+    "state": "TX"
+  },
+  {
+    "town": "Providence Village",
+    "data_cid": "18194835143318297086",
+    "state": "TX"
+  },
+  {
+    "town": "Robstown",
+    "data_cid": "18204019380963810299",
+    "state": "TX"
+  },
+  {
+    "town": "Galena Park",
+    "data_cid": "7657021934408228401",
+    "state": "TX"
+  },
+  {
+    "town": "Bellmead",
+    "data_cid": "10291426082442298199",
+    "state": "TX"
+  },
+  {
+    "town": "Freeport",
+    "data_cid": "4820686830004567226",
+    "state": "TX"
+  },
+  {
+    "town": "Northlake",
+    "data_cid": "6992423197552662543",
+    "state": "TX"
+  },
+  {
+    "town": "Zanesville",
+    "data_cid": "10457645456953256407",
+    "state": "OH"
+  },
+  {
+    "town": "Chillicothe",
+    "data_cid": "2068695594761385649",
+    "state": "OH"
+  },
+  {
+    "town": "Lancaster",
+    "data_cid": "1400010181231463909",
+    "state": "OH"
+  },
+  {
+    "town": "Newark",
+    "data_cid": "1252401150061484316",
+    "state": "OH"
+  },
+  {
+    "town": "Marion",
+    "data_cid": "13149105145180203360",
+    "state": "OH"
+  },
+  {
+    "town": "Findlay",
+    "data_cid": "2573055170062626514",
+    "state": "OH"
+  },
+  {
+    "town": "Tiffin",
+    "data_cid": "1017745974063345369",
+    "state": "OH"
+  },
+  {
+    "town": "Wooster",
+    "data_cid": "7944249138702944988",
+    "state": "OH"
+  },
+  {
+    "town": "Ashland",
+    "data_cid": "17019892753645184143",
+    "state": "OH"
+  },
+  {
+    "town": "Mansfield",
+    "data_cid": "7136018446733307734",
+    "state": "OH"
+  },
+  {
+    "town": "Norwalk",
+    "data_cid": "7095688524757390252",
+    "state": "OH"
+  },
+  {
+    "town": "Sandusky",
+    "data_cid": "18386654184416096783",
+    "state": "OH"
+  },
+  {
+    "town": "Fremont",
+    "data_cid": "9737631955760413747",
+    "state": "OH"
+  },
+  {
+    "town": "Defiance",
+    "data_cid": "16101738653076178846",
+    "state": "OH"
+  },
+  {
+    "town": "Van Wert",
+    "data_cid": "13698085571030917476",
+    "state": "OH"
+  },
+  {
+    "town": "Lima",
+    "data_cid": "8115927080491166146",
+    "state": "OH"
+  },
+  {
+    "town": "Sidney",
+    "data_cid": "443748437515101900",
+    "state": "OH"
+  },
+  {
+    "town": "Piqua",
+    "data_cid": "14586523048722488516",
+    "state": "OH"
+  },
+  {
+    "town": "Troy",
+    "data_cid": "245894048186764037",
+    "state": "OH"
+  },
+  {
+    "town": "Greenville",
+    "data_cid": "16052095873253190356",
+    "state": "OH"
+  },
+  {
+    "town": "Xenia",
+    "data_cid": "15792679821954592917",
+    "state": "OH"
+  },
+  {
+    "town": "Wilmington",
+    "data_cid": "429330181127912707",
+    "state": "OH"
+  },
+  {
+    "town": "Washington Court House",
+    "data_cid": "5376482524772646947",
+    "state": "OH"
+  },
+  {
+    "town": "Circleville",
+    "data_cid": "13577527057731914167",
+    "state": "OH"
+  },
+  {
+    "town": "Logan",
+    "data_cid": "3608724295842145476",
+    "state": "OH"
+  },
+  {
+    "town": "Athens",
+    "data_cid": "3508305411203811883",
+    "state": "OH"
+  },
+  {
+    "town": "Marietta",
+    "data_cid": "4423140895065695381",
+    "state": "OH"
+  },
+  {
+    "town": "Cambridge",
+    "data_cid": "5206249822319491706",
+    "state": "OH"
+  },
+  {
+    "town": "Coshocton",
+    "data_cid": "6554405103181602212",
+    "state": "OH"
+  },
+  {
+    "town": "New Philadelphia",
+    "data_cid": "12670127838864989170",
+    "state": "OH"
+  },
+  {
+    "town": "Dover",
+    "data_cid": "9909342676758686230",
+    "state": "OH"
+  },
+  {
+    "town": "Massillon",
+    "data_cid": "5281637452131990694",
+    "state": "OH"
+  },
+  {
+    "town": "Alliance",
+    "data_cid": "16659311931038937930",
+    "state": "OH"
+  },
+  {
+    "town": "Salem",
+    "data_cid": "11371597234319468548",
+    "state": "OH"
+  },
+  {
+    "town": "East Liverpool",
+    "data_cid": "18206308703391136800",
+    "state": "OH"
+  },
+  {
+    "town": "Steubenville",
+    "data_cid": "13128424886206181161",
+    "state": "OH"
+  },
+  {
+    "town": "Ironton",
+    "data_cid": "15767069541142992163",
+    "state": "OH"
+  },
+  {
+    "town": "Portsmouth",
+    "data_cid": "8750461780268697482",
+    "state": "OH"
+  },
+  {
+    "town": "Gallipolis",
+    "data_cid": "7406435226952606856",
+    "state": "OH"
+  },
+  {
+    "town": "Jackson",
+    "data_cid": "15443305004254134980",
+    "state": "OH"
+  },
+  {
+    "town": "Bellefontaine",
+    "data_cid": "103107682220181673",
+    "state": "OH"
+  },
+  {
+    "town": "Urbana",
+    "data_cid": "15992246977140996804",
+    "state": "OH"
+  },
+  {
+    "town": "Marysville",
+    "data_cid": "14286402222887183130",
+    "state": "OH"
+  },
+  {
+    "town": "Delaware",
+    "data_cid": "16192802900743187767",
+    "state": "OH"
+  },
+  {
+    "town": "Mount Vernon",
+    "data_cid": "8680053914169108182",
+    "state": "OH"
+  },
+  {
+    "town": "Bucyrus",
+    "data_cid": "2363688193359302044",
+    "state": "OH"
+  },
+  {
+    "town": "Galion",
+    "data_cid": "2383189171746483474",
+    "state": "OH"
+  },
+  {
+    "town": "Upper Sandusky",
+    "data_cid": "9612067155708805941",
+    "state": "OH"
+  },
+  {
+    "town": "Kenton",
+    "data_cid": "10403348267073728674",
+    "state": "OH"
+  },
+  {
+    "town": "Celina",
+    "data_cid": "4290375477660673766",
+    "state": "OH"
+  },
+  {
+    "town": "Wapakoneta",
+    "data_cid": "12225526903902030622",
+    "state": "OH"
+  },
+  {
+    "town": "Minster",
+    "data_cid": "17316417790550924233",
+    "state": "OH"
+  },
+  {
+    "town": "Coldwater",
+    "data_cid": "5991359807322599649",
+    "state": "OH"
+  },
+  {
+    "town": "Bryan",
+    "data_cid": "14720915771162219782",
+    "state": "OH"
+  },
+  {
+    "town": "Napoleon",
+    "data_cid": "396419545541317694",
+    "state": "OH"
+  },
+  {
+    "town": "Bowling Green",
+    "data_cid": "2751444988169374115",
+    "state": "OH"
+  },
+  {
+    "town": "Fostoria",
+    "data_cid": "14045564242480212947",
+    "state": "OH"
+  },
+  {
+    "town": "Bellevue",
+    "data_cid": "13544405007819809366",
+    "state": "OH"
+  },
+  {
+    "town": "Willard",
+    "data_cid": "2175071216150533148",
+    "state": "OH"
+  },
+  {
+    "town": "Loudonville",
+    "data_cid": "1908789721184989448",
+    "state": "OH"
+  },
+  {
+    "town": "Millersburg",
+    "data_cid": "6174051395743160519",
+    "state": "OH"
+  },
+  {
+    "town": "Orrville",
+    "data_cid": "5228624842668728951",
+    "state": "OH"
+  },
+  {
+    "town": "Wadsworth",
+    "data_cid": "17813013400429326203",
+    "state": "OH"
+  },
+  {
+    "town": "Medina",
+    "data_cid": "4017838134536830485",
+    "state": "OH"
+  },
+  {
+    "town": "Ravenna",
+    "data_cid": "748007373248977021",
+    "state": "OH"
+  },
+  {
+    "town": "Kent",
+    "data_cid": "14569964584657273999",
+    "state": "OH"
+  },
+  {
+    "town": "Ashtabula",
+    "data_cid": "15729852246429039139",
+    "state": "OH"
+  },
+  {
+    "town": "Painesville",
+    "data_cid": "5145014510780958142",
+    "state": "OH"
+  },
+  {
+    "town": "Conneaut",
+    "data_cid": "8923993750158101407",
+    "state": "OH"
+  },
+  {
+    "town": "Geneva",
+    "data_cid": "18200644244962079822",
+    "state": "OH"
+  },
+  {
+    "town": "Chardon",
+    "data_cid": "15068861539353408718",
+    "state": "OH"
+  },
+  {
+    "town": "Elyria",
+    "data_cid": "11957139098138816694",
+    "state": "OH"
+  },
+  {
+    "town": "Oberlin",
+    "data_cid": "17838144740438492847",
+    "state": "OH"
+  },
+  {
+    "town": "Vermilion",
+    "data_cid": "15584522463043346866",
+    "state": "OH"
+  },
+  {
+    "town": "Avon Lake",
+    "data_cid": "14713363379852746419",
+    "state": "OH"
+  },
+  {
+    "town": "Amherst",
+    "data_cid": "9593834860264536255",
+    "state": "OH"
+  },
+  {
+    "town": "Grafton",
+    "data_cid": "9669828400387290579",
+    "state": "OH"
+  },
+  {
+    "town": "Wellington",
+    "data_cid": "1506364250962328060",
+    "state": "OH"
+  },
+  {
+    "town": "Shelby",
+    "data_cid": "6670895981172090189",
+    "state": "OH"
+  },
+  {
+    "town": "Ontario",
+    "data_cid": "10398591971670243760",
+    "state": "OH"
+  },
+  {
+    "town": "Lexington",
+    "data_cid": "3078289483873262311",
+    "state": "OH"
+  },
+  {
+    "town": "Bellville",
+    "data_cid": "7507584529946128619",
+    "state": "OH"
+  },
+  {
+    "town": "Perrysburg",
+    "data_cid": "15348879842127052625",
+    "state": "OH"
+  },
+  {
+    "town": "Sylvania",
+    "data_cid": "3739128370451915679",
+    "state": "OH"
+  },
+  {
+    "town": "Maumee",
+    "data_cid": "10559482200508999486",
+    "state": "OH"
+  },
+  {
+    "town": "Huron",
+    "data_cid": "17254320876055270686",
+    "state": "OH"
+  },
+  {
+    "town": "Port Clinton",
+    "data_cid": "15452977397675605702",
+    "state": "OH"
+  },
+  {
+    "town": "Wauseon",
+    "data_cid": "13266832406070735549",
+    "state": "OH"
+  },
+  {
+    "town": "Archbold",
+    "data_cid": "14417557088503945039",
+    "state": "OH"
+  },
+  {
+    "town": "Swanton",
+    "data_cid": "5894043506190863398",
+    "state": "OH"
+  },
+  {
+    "town": "Greenfield",
+    "data_cid": "839765812244795039",
+    "state": "OH"
+  },
+  {
+    "town": "Hillsboro",
+    "data_cid": "5060011822061728600",
+    "state": "OH"
+  },
+  {
+    "town": "Georgetown",
+    "data_cid": "18133573264946304783",
+    "state": "OH"
+  },
+  {
+    "town": "Batavia",
+    "data_cid": "10643483277025007959",
+    "state": "OH"
+  },
+  {
+    "town": "Loveland",
+    "data_cid": "8132916593013720620",
+    "state": "OH"
+  },
+  {
+    "town": "Springboro",
+    "data_cid": "5691273195029733930",
+    "state": "OH"
+  },
+  {
+    "town": "Lebanon",
+    "data_cid": "11954925279151012756",
+    "state": "OH"
+  },
+  {
+    "town": "Franklin",
+    "data_cid": "9622232892893281439",
+    "state": "OH"
+  },
+  {
+    "town": "Miamisburg",
+    "data_cid": "1034163868212273911",
+    "state": "OH"
+  },
+  {
+    "town": "Vandalia",
+    "data_cid": "14296990901343531582",
+    "state": "OH"
+  },
+  {
+    "town": "Tipp City",
+    "data_cid": "7216521306182856314",
+    "state": "OH"
+  },
+  {
+    "town": "Englewood",
+    "data_cid": "9115925265147456691",
+    "state": "OH"
+  },
+  {
+    "town": "Brookville",
+    "data_cid": "12762997689746694055",
+    "state": "OH"
+  },
+  {
+    "town": "Eaton",
+    "data_cid": "6484587363739534240",
+    "state": "OH"
+  },
+  {
+    "town": "Oxford",
+    "data_cid": "7588292122264645580",
+    "state": "OH"
+  },
+  {
+    "town": "Hamilton",
+    "data_cid": "2403358835090521765",
+    "state": "OH"
+  },
+  {
+    "town": "Middletown",
+    "data_cid": "511897558265562656",
+    "state": "OH"
+  },
+  {
+    "town": "Norwood",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Sharonville",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Deer Park",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Streetsboro",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Aurora",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Tallmadge",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Barberton",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Norton",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Cuyahoga Falls",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Stow",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Hudson",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Twinsburg",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Macedonia",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "North Olmsted",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Westlake",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Bay Village",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Avon",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "North Ridgeville",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Granville",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Heath",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Pataskala",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Pickerington",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Canal Winchester",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Belpre",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "St Clairsville",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Barnesville",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Cadiz",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Uhrichsville",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Newcomerstown",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Crestline",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Mount Gilead",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Cardington",
+    "data_cid": "TBD",
+    "state": "OH"
+  },
+  {
+    "town": "Rome",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Dalton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Calhoun",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Cartersville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Cedartown",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Bremen",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Douglasville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Villa Rica",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Carrollton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Newnan",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Peachtree City",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Fayetteville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Griffin",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Thomaston",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Barnesville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Forsyth",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Milledgeville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Dublin",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Eastman",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "McRae-Helena",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Vidalia",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Lyons",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Baxley",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Jesup",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Waycross",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Blackshear",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Alma",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Douglas",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Fitzgerald",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Tifton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Adel",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Nashville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Valdosta",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Moultrie",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Thomasville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Cairo",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Bainbridge",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Donalsonville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Blakely",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Albany",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Americus",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Cordele",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Vienna",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Perry",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Fort Valley",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Byron",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Centerville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Cochran",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Hawkinsville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Sandersville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Swainsboro",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Statesboro",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Metter",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Claxton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Reidsville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Hinesville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Ludowici",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Brunswick",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Kingsland",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "St Marys",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Folkston",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Hazlehurst",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Wrightsville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Soperton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Sylvania",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Waynesboro",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Louisville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Thomson",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Washington",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Elberton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Hartwell",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Toccoa",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Cornelia",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Clarkesville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Dahlonega",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Cumming",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Dawsonville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Blue Ridge",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Ellijay",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Jasper",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Canton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Winder",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Monroe",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Social Circle",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Covington",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Conyers",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "McDonough",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Stockbridge",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Locust Grove",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Jackson",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Monticello",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Madison",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Greensboro",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Eatonton",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Gray",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Macon",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Roberta",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Butler",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "LaGrange",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "West Point",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Hogansville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Warm Springs",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Manchester",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Pine Mountain",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Camilla",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Pelham",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Sylvester",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Ocilla",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Abbeville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Rochelle",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Ashburn",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Riversdale",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Willacoochee",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Lakeland",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Hahira",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Quitman",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Homerville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Pearson",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Waresboro",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Boone",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Blowing Rock",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Banner Elk",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Spruce Pine",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Burnsville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Marion",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Morganton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Valdese",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Granite Falls",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Lenoir",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "North Wilkesboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Elkin",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Mount Airy",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "King",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Pilot Mountain",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Reidsville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Eden",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Madison",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Lexington",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Thomasville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Asheboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Albemarle",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Wadesboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Rockingham",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Hamlet",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Southern Pines",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Pinehurst",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Aberdeen",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Sanford",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Siler City",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Pittsboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Hillsborough",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Mebane",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Graham",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Elon",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Hendersonville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Brevard",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Waynesville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Canton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Sylva",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Franklin",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Murphy",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Andrews",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Robbinsville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Bryson City",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Black Mountain",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Swannanoa",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Weaverville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Mars Hill",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Marshall",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Shelby",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Kings Mountain",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Cherryville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Belmont",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Mount Holly",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Dallas",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Lincolnton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Newton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Conover",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Claremont",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Taylorsville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Statesville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Mooresville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Troutman",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Cornelius",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Davidson",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Kannapolis",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Concord",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Harrisburg",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Mint Hill",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Laurinburg",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Lumberton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Pembroke",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Red Springs",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "St Pauls",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Elizabethtown",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Whiteville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Tabor City",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Shallotte",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Southport",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Bolivia",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Burgaw",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Wallace",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Clinton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Dunn",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Erwin",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Lillington",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Fuquay-Varina",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Holly Springs",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Apex",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Garner",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Knightdale",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Wendell",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Zebulon",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Wake Forest",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Youngsville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Franklinton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Oxford",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Henderson",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Louisburg",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Roanoke Rapids",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Weldon",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Scotland Neck",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Tarboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Rocky Mount",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Nashville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Spring Hope",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Wilson",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Kinston",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "La Grange",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Goldsboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Mount Olive",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Smithfield",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Selma",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Clayton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Angier",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Benson",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Four Oaks",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Newton Grove",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Kenansville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Jacksonville",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Swansboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Morehead City",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Beaufort",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Havelock",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "New Bern",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Washington",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Williamston",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Plymouth",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Elizabeth City",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Edenton",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Hertford",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Ahoskie",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Murfreesboro",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Kitty Hawk",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Kill Devil Hills",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Nags Head",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Manteo",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Emerald Isle",
+    "data_cid": "TBD",
+    "state": "NC"
+  },
+  {
+    "town": "Tybee Island",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Rincon",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Pooler",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Garden City",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Darien",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Midway",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Glennville",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Mount Vernon",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Unadilla",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Wrens",
+    "data_cid": "TBD",
+    "state": "GA"
+  },
+  {
+    "town": "Sparta",
+    "data_cid": "TBD",
+    "state": "GA"
   }
 ]

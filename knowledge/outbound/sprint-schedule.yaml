@@ -1,6 +1,10 @@
 # 7-week progressive cold calling sprint schedule.
 # Read by daily_plan.py to generate timezone-aware sprint plans.
 # Each sprint = 20 min. Recovery = 5 min between sprints.
+#
+# 8 states: FL, MI, OH, GA, NC (Eastern) → TX, IL (Central) → AZ (Mountain)
+# Eastern states rotate across sprints in the AM block.
+# Weeks 1-2 cycle subsets; weeks 3+ cover all 8.
 
 start_date: "2026-03-30"
 deadline: "2026-05-16"
@@ -10,6 +14,10 @@ dials_per_sprint: 10
 
 metro_timezones:
   FL: "America/New_York"
+  MI: "America/Detroit"
+  OH: "America/New_York"
+  GA: "America/New_York"
+  NC: "America/New_York"
   TX: "America/Chicago"
   IL: "America/Chicago"
   AZ: "America/Phoenix"
@@ -27,7 +35,7 @@ weeks:
         start_et: "07:20"
         sprints:
           - { metro: FL, note: "Opening week. Test the pitch." }
-          - { metro: FL, note: "Second sprint. Stay on pace." }
+          - { metro: MI, note: "Michigan — new Eastern market." }
           - { metro: TX, note: "TX opens. Central time." }
           - { metro: AZ, note: "AZ sweet spot." }
 
@@ -43,10 +51,10 @@ weeks:
         start_et: "07:20"
         sprints:
           - { metro: FL, note: "Updated opener from Week 1 signal." }
-          - { metro: FL, note: "Notice if the update changes how long they stay on." }
-          - { metro: FL, note: "Mid-AM check: are you asking for the demo?" }
-          - { metro: TX_IL, note: "Fourth sprint. You passed last week's limit." }
-          - { metro: TX_IL, note: "Fifth sprint. New territory. Finish clean." }
+          - { metro: OH, note: "Ohio — new Eastern market." }
+          - { metro: GA, note: "Georgia — Atlanta market." }
+          - { metro: TX_IL, note: "Central states. Notice objection differences." }
+          - { metro: NC, note: "NC — Charlotte/Raleigh. Close the Eastern sweep." }
 
   3:
     days: weekdays
@@ -60,17 +68,17 @@ weeks:
         start_et: "07:20"
         sprints:
           - { metro: FL, note: "Pitch is sharp now. Make the ask on every live conversation." }
-          - { metro: FL, note: "FL segment. Stay on pace." }
-          - { metro: FL, note: "FL complete after this sprint. TX list auto-loads." }
+          - { metro: MI, note: "MI segment. Detroit/Grand Rapids." }
+          - { metro: OH, note: "OH segment. Columbus/Cleveland/Cincinnati." }
           - { metro: TX, note: "TX opens. Central time. Same quality window." }
-          - { metro: TX_IL, note: "TX / IL segment. Notice objection differences by market." }
+          - { metro: GA, note: "GA segment. Atlanta market." }
           - { metro: IL, note: "IL segment. Chicago market." }
-          - { metro: IL, note: "IL complete. AZ loads. Best connect window of the AM." }
+          - { metro: AZ, note: "AZ loads. Best connect window of the AM." }
       MID:
         start_et: "13:00"
         sprints:
           - { metro: callbacks, note: "AZ and TX voicemails from AM. Higher intent." }
-          - { metro: callbacks, note: "Fresh dials mixed with callbacks." }
+          - { metro: NC, note: "NC afternoon. Fresh dials mixed with callbacks." }
 
   4:
     days: weekdays_saturday
@@ -84,12 +92,12 @@ weeks:
         start_et: "07:20"
         sprints:
           - { metro: FL, note: "FL opens." }
-          - { metro: FL, note: "FL second sprint." }
-          - { metro: FL, note: "FL complete. TX list auto-loads." }
+          - { metro: MI, note: "MI second week. Refine approach." }
+          - { metro: OH, note: "OH segment." }
+          - { metro: GA, note: "GA segment." }
+          - { metro: NC, note: "NC segment." }
           - { metro: TX, note: "TX opens. Central time." }
-          - { metro: TX, note: "TX second sprint." }
           - { metro: IL, note: "IL opens. Chicago market." }
-          - { metro: IL, note: "IL complete. AZ loads. Best connect window." }
           - { metro: AZ, note: "AZ sweet spot. Highest connect rate." }
           - { metro: AZ, note: "AZ second sprint." }
       MID:
@@ -109,18 +117,18 @@ weeks:
     daily_targets: [6, 7, 7, 8, 8, 5]
     coaching_note: "Run disciplined block transitions. No dead time between sprints."
     phase: 3
-    weekly_goal: "Maximize consistency across all blocks and protect energy." 
+    weekly_goal: "Maximize consistency across all blocks and protect energy."
     shutdown_fields: ["dials", "connects", "close_attempts", "fatigue_score"]
     blocks:
       AM:
         start_et: "07:20"
         sprints:
           - { metro: FL }
-          - { metro: FL }
-          - { metro: FL }
+          - { metro: MI }
+          - { metro: OH }
+          - { metro: GA }
+          - { metro: NC }
           - { metro: TX }
-          - { metro: TX }
-          - { metro: IL }
           - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
@@ -148,11 +156,11 @@ weeks:
         start_et: "07:20"
         sprints:
           - { metro: FL }
-          - { metro: FL }
-          - { metro: FL }
+          - { metro: MI }
+          - { metro: OH }
+          - { metro: GA }
+          - { metro: NC }
           - { metro: TX }
-          - { metro: TX }
-          - { metro: IL }
           - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
@@ -180,11 +188,11 @@ weeks:
         start_et: "07:20"
         sprints:
           - { metro: FL }
-          - { metro: FL }
-          - { metro: FL }
+          - { metro: MI }
+          - { metro: OH }
+          - { metro: GA }
+          - { metro: NC }
           - { metro: TX }
-          - { metro: TX }
-          - { metro: IL }
           - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }

@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS queries (
     completed_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS place_ids (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT UNIQUE NOT NULL,
+    data_id TEXT,
+    lookup_status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS lsa_businesses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     business_name TEXT NOT NULL,
@@ -90,6 +98,27 @@ def upsert_business(conn: sqlite3.Connection, biz: dict):
             1, biz.get("lsa_badge"),
             biz.get("leads_db_match", 0), "lsa_discovery",
         ),
+    )
+    conn.commit()
+
+
+def get_place_id(conn: sqlite3.Connection, phone: str) -> str | None:
+    """Return cached data_id for a phone, or None if not cached."""
+    row = conn.execute(
+        "SELECT data_id FROM place_ids WHERE phone = ? AND lookup_status = 'success'",
+        (phone,),
+    ).fetchone()
+    return row["data_id"] if row else None
+
+
+def save_place_id(conn: sqlite3.Connection, phone: str, data_id: str | None,
+                  status: str = "success"):
+    conn.execute(
+        """INSERT INTO place_ids (phone, data_id, lookup_status)
+           VALUES (?, ?, ?)
+           ON CONFLICT(phone) DO UPDATE SET
+             data_id=excluded.data_id, lookup_status=excluded.lookup_status""",
+        (phone, data_id, status),
     )
     conn.commit()
 

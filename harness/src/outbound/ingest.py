@@ -241,8 +241,8 @@ def compute_lsa_icp_score(row: dict) -> tuple[int, str, dict[str, int]]:
 
 def ingest_from_lsa(
     lsa_db_path: str | None = None,
-    min_reviews: int = 10,
-    max_reviews: int = 100,
+    min_reviews: int = 5,
+    max_reviews: int = 150,
 ) -> dict[str, int]:
     """Ingest LSA-discovered businesses into Supabase outbound_prospects.
 
@@ -275,7 +275,7 @@ def ingest_from_lsa(
         state = row_dict.get("state", "").upper()
 
         # Only ingest states that have sprint segments
-        if state not in ("FL", "TX", "IL", "AZ"):
+        if state not in ("MI", "FL", "TX", "IL", "AZ", "OH", "GA", "NC"):
             filtered_out += 1
             continue
 

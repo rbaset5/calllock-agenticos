@@ -41,7 +41,7 @@ SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 SERPAPI_URL = "https://serpapi.com/search.json"
 MARKETS_FILE = Path(__file__).parent / "data" / "small_markets.json"
 LEADS_DB_PATH = Path.home() / "conductor/workspaces/CallLock-Leads/missoula/emtoss_downloader/data/leads.db"
-REQUEST_DELAY = 75  # seconds between requests (50/hr limit = 72s floor + 3s buffer)
+REQUEST_DELAY = 20  # seconds between requests (Starter plan: 200/hr = 18s floor + 2s buffer)
 MAX_RETRIES = 3
 
 

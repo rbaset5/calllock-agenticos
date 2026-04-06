@@ -2,7 +2,7 @@
 
 Reads the 7-week sprint schedule YAML, queries due callbacks and ranked
 fresh leads from Supabase, and produces a structured plan with sprint blocks
-ordered by timezone (FL -> TX -> IL -> AZ).
+ordered by timezone (FL/MI/OH/GA/NC -> TX/IL -> AZ).
 """
 
 from __future__ import annotations
@@ -24,6 +24,10 @@ SCHEDULE_PATH = Path(__file__).resolve().parents[3] / "knowledge" / "outbound" /
 # Metro name to Supabase metro column value mapping.
 METRO_FILTERS: dict[str, list[str]] = {
     "FL": ["Miami", "Tampa", "Orlando", "Jacksonville", "Fort Lauderdale", "FL"],
+    "MI": ["Detroit", "Grand Rapids", "MI"],
+    "OH": ["Columbus", "Cleveland", "Cincinnati", "OH"],
+    "GA": ["Atlanta", "GA"],
+    "NC": ["Charlotte", "Raleigh", "NC"],
     "TX": ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "TX"],
     "IL": ["Chicago", "IL"],
     "AZ": ["Phoenix", "Mesa", "Tucson", "Scottsdale", "Chandler", "Gilbert", "Tempe", "Glendale", "Peoria", "AZ"],
