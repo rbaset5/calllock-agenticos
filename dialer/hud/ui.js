@@ -10,8 +10,8 @@ import { assignTone, shouldUpdateTone } from './tone.js';
 import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
-import { INTENT_STAGE_MAP } from './taxonomy.js';
-import { renderV2CenterPanel, renderProspectContext, renderTacticalCard, renderPauseStrip } from './render-v2.js';
+import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS } from './taxonomy.js';
+import { renderV2CenterPanel, renderProspectContext, renderPauseStrip, renderLeftPane, renderRightPane, renderCompactIdentity } from './render-v2.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -92,6 +92,19 @@ const $confidenceBadge = document.getElementById('confidenceBadge');
 const $linesFeed = document.getElementById('linesFeed');
 const $objectionsFeed = document.getElementById('objectionsFeed');
 const $roundStrip = document.getElementById('roundStrip');
+const $hotkeyBar = document.getElementById('hotkey-bar');
+
+// Populate hotkey legend from taxonomy (hidden by default)
+for (const h of GLOBAL_HOTKEYS) {
+  const span = document.createElement('span');
+  span.className = 'hotkey-item';
+  const kbd = document.createElement('kbd');
+  kbd.textContent = h.key;
+  span.appendChild(kbd);
+  span.appendChild(document.createTextNode(h.label));
+  $hotkeyBar.appendChild(span);
+}
+$hotkeyBar.style.display = 'none';
 
 // ── Pause strip ──────────────────────────────────────────────
 
@@ -261,6 +274,9 @@ channel.addEventListener('message', (event) => {
       const endedProspectId = prospectId;
       const endedSession = captureSession(endedState);
       stopCallTimer();
+      // Clear prospect context from panes (Amendment 10: prevent stale data in IDLE)
+      renderProspectContext(null);
+      renderCompactIdentity(null);
       // Delay session save briefly to allow OUTCOME to arrive first
       setTimeout(() => saveSession(endedState, endedProspectId, endedSession), 500);
       break;
@@ -741,8 +757,18 @@ document.addEventListener('keydown', (e) => {
         stopCallTimer();
         callStartTime = null;
         $callTimer.textContent = '00:00';
+        // Clear prospect context (Amendment 10)
+        renderProspectContext(null);
+        renderCompactIdentity(null);
         render();
       }, 100);
+      break;
+    }
+
+    // ? — Toggle hotkey legend bar
+    case e.key === '?': {
+      e.preventDefault();
+      $hotkeyBar.style.display = $hotkeyBar.style.display === 'none' ? '' : 'none';
       break;
     }
 
@@ -871,9 +897,28 @@ function render() {
   renderStageBar();
   renderContextStrip();
 
-  // Side panels
-  renderLinesPanel();
-  renderObjectionsPanel();
+  // Compose active card FIRST (needed by both center panel and side panes)
+  const activeCard = composeActiveCard({
+    stage: state.stage,
+    activeObjection: state.activeObjection,
+    tone: state.tone,
+    deliveryModifier: state.deliveryModifier,
+    stageCards: NATIVE_STAGE_CARDS,
+    objectionCards: NATIVE_OBJECTION_CARDS,
+  });
+  const ctx = currentLineContext();
+  if (activeCard.primaryLine) activeCard.primaryLine = fillLineTemplate(activeCard.primaryLine, ctx);
+  if (activeCard.backupLine) activeCard.backupLine = fillLineTemplate(activeCard.backupLine, ctx);
+  if (activeCard.clarifyingQuestion) activeCard.clarifyingQuestion = fillLineTemplate(activeCard.clarifyingQuestion, ctx);
+
+  // Side panels (stage-aware orchestrators)
+  const paneDeps = {
+    playbook: PLAYBOOK,
+    buildSection: buildSidePanelSection,
+    lineContext: ctx,
+  };
+  renderLeftPane(state.stage, activeCard, state.prospectContext, paneDeps);
+  renderRightPane(state.stage, activeCard, paneDeps);
   renderRoundStrip();
 
   // NOW panel
@@ -890,21 +935,7 @@ function render() {
   renderConfidenceBadge();
 
   // v2 center panel render
-  const activeCard = composeActiveCard({
-    stage: state.stage,
-    activeObjection: state.activeObjection,
-    tone: state.tone,
-    deliveryModifier: state.deliveryModifier,
-    stageCards: NATIVE_STAGE_CARDS,
-    objectionCards: NATIVE_OBJECTION_CARDS,
-  });
-  // Fill template placeholders ({NAME}, {DAY}, etc.) in card lines
-  const ctx = currentLineContext();
-  if (activeCard.primaryLine) activeCard.primaryLine = fillLineTemplate(activeCard.primaryLine, ctx);
-  if (activeCard.backupLine) activeCard.backupLine = fillLineTemplate(activeCard.backupLine, ctx);
-  if (activeCard.clarifyingQuestion) activeCard.clarifyingQuestion = fillLineTemplate(activeCard.clarifyingQuestion, ctx);
   renderV2CenterPanel(activeCard, state);
-  renderTacticalCard(activeCard);
 
 }
 
