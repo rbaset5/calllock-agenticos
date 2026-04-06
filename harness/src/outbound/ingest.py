@@ -275,7 +275,7 @@ def ingest_from_lsa(
         state = row_dict.get("state", "").upper()
 
         # Only ingest states that have sprint segments
-        if state not in ("FL", "TX", "IL", "AZ"):
+        if state not in ("FL", "TX", "IL", "AZ", "MI", "OH", "GA", "NC"):
             filtered_out += 1
             continue
 

@@ -10,6 +10,10 @@ dials_per_sprint: 10
 
 metro_timezones:
   FL: "America/New_York"
+  GA: "America/New_York"
+  NC: "America/New_York"
+  MI: "America/Detroit"
+  OH: "America/New_York"
   TX: "America/Chicago"
   IL: "America/Chicago"
   AZ: "America/Phoenix"
@@ -47,9 +51,9 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: FL, note: "Opening week. Test the pitch." }
-          - { metro: FL, note: "Second sprint. Stay on pace." }
-          - { metro: TX, note: "TX opens. Central time." }
+          - { metro: SE, note: "Southeast opens. FL/GA/NC." }
+          - { metro: SE, note: "Second SE sprint." }
+          - { metro: MW, note: "Midwest opens. MI/OH/IL." }
           - { metro: AZ, note: "AZ sweet spot." }
 
   2:
@@ -63,11 +67,11 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: FL, note: "Updated opener from Week 1 signal." }
-          - { metro: FL, note: "Notice if the update changes how long they stay on." }
-          - { metro: FL, note: "Mid-AM check: are you asking for the demo?" }
-          - { metro: TX_IL, note: "Fourth sprint. You passed last week's limit." }
-          - { metro: TX_IL, note: "Fifth sprint. New territory. Finish clean." }
+          - { metro: SE, note: "Updated opener from Week 1 signal." }
+          - { metro: SE, note: "Notice if the update changes how long they stay on." }
+          - { metro: SE, note: "Mid-AM check: are you asking for the demo?" }
+          - { metro: MW, note: "Midwest sprint. MI/OH/IL." }
+          - { metro: TX, note: "TX. New territory. Finish clean." }
 
   3:
     days: weekdays
@@ -80,13 +84,13 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: FL, note: "Pitch is sharp now. Make the ask on every live conversation." }
-          - { metro: FL, note: "FL segment. Stay on pace." }
-          - { metro: FL, note: "FL complete after this sprint. TX list auto-loads." }
-          - { metro: TX, note: "TX opens. Central time. Same quality window." }
-          - { metro: TX_IL, note: "TX / IL segment. Notice objection differences by market." }
-          - { metro: IL, note: "IL segment. Chicago market." }
-          - { metro: IL, note: "IL complete. AZ loads. Best connect window of the AM." }
+          - { metro: SE, note: "Pitch is sharp now. Make the ask on every live conversation." }
+          - { metro: SE, note: "SE segment. Stay on pace." }
+          - { metro: SE, note: "SE complete. MW auto-loads." }
+          - { metro: MW, note: "Midwest opens." }
+          - { metro: MW, note: "MW segment. Notice objection differences by market." }
+          - { metro: TX, note: "TX segment." }
+          - { metro: AZ, note: "AZ. Best connect window of the AM." }
       MID:
         start_et: "13:00"
         sprints:
@@ -104,13 +108,13 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: FL, note: "FL opens." }
-          - { metro: FL, note: "FL second sprint." }
-          - { metro: FL, note: "FL complete. TX list auto-loads." }
+          - { metro: SE, note: "SE opens." }
+          - { metro: SE, note: "SE second sprint." }
+          - { metro: SE, note: "SE complete. MW loads." }
+          - { metro: MW, note: "Midwest opens." }
+          - { metro: MW, note: "MW second sprint." }
           - { metro: TX, note: "TX opens. Central time." }
           - { metro: TX, note: "TX second sprint." }
-          - { metro: IL, note: "IL opens. Chicago market." }
-          - { metro: IL, note: "IL complete. AZ loads. Best connect window." }
           - { metro: AZ, note: "AZ sweet spot. Highest connect rate." }
           - { metro: AZ, note: "AZ second sprint." }
       MID:
@@ -132,17 +136,18 @@ weeks:
     phase: 3
     weekly_goal: "Maximize consistency across all blocks and protect energy." 
     shutdown_fields: ["dials", "connects", "close_attempts", "fatigue_score"]
+    dials_per_sprint: 12
     blocks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: FL }
-          - { metro: FL }
-          - { metro: FL }
+          - { metro: SE }
+          - { metro: SE }
+          - { metro: SE }
+          - { metro: MW }
+          - { metro: MW }
           - { metro: TX }
           - { metro: TX }
-          - { metro: IL }
-          - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
       MID:
@@ -159,7 +164,7 @@ weeks:
   6:
     days: weekdays_saturday
     daily_targets: [7, 8, 8, 9, 9, 6]
-    dials_per_sprint: 11
+    dials_per_sprint: 13
     coaching_note: "Quality under pressure: keep notes crisp and next steps explicit."
     phase: 3
     weekly_goal: "Push throughput while maintaining close intent and follow-through."
@@ -168,13 +173,13 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: FL }
-          - { metro: FL }
-          - { metro: FL }
+          - { metro: SE }
+          - { metro: SE }
+          - { metro: SE }
+          - { metro: MW }
+          - { metro: MW }
           - { metro: TX }
           - { metro: TX }
-          - { metro: IL }
-          - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
       MID:
@@ -191,7 +196,7 @@ weeks:
   7:
     days: weekdays_saturday
     daily_targets: [8, 9, 9, 10, 10, 7]
-    dials_per_sprint: 11
+    dials_per_sprint: 14
     coaching_note: "Finish strong: prioritize hot/warm follow-through and clean closes."
     phase: 3
     weekly_goal: "Convert pipeline volume into demos and signed customers before deadline."
@@ -200,13 +205,13 @@ weeks:
       AM:
         start_et: "07:20"
         sprints:
-          - { metro: FL }
-          - { metro: FL }
-          - { metro: FL }
+          - { metro: SE }
+          - { metro: SE }
+          - { metro: SE }
+          - { metro: MW }
+          - { metro: MW }
           - { metro: TX }
           - { metro: TX }
-          - { metro: IL }
-          - { metro: IL }
           - { metro: AZ }
           - { metro: AZ }
       MID:
@@ -220,3 +225,8 @@ weeks:
         sprints:
           - { metro: AZ }
           - { metro: AZ }
+      LATE:
+        start_et: "17:00"
+        sprints:
+          - { metro: AZ, note: "AZ afternoon. Final push." }
+          - { metro: callbacks, note: "End-of-day callback sweep." }

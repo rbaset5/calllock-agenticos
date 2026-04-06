@@ -279,3 +279,18 @@ def test_metro_list_for_sprint_fl() -> None:
     metros = daily_plan._metro_list_for_sprint("FL")
     assert metros is not None
     assert "Miami" in metros
+
+
+def test_metro_filters_includes_all_8_states():
+    """METRO_FILTERS has entries for all 8 sprint states."""
+    for state in ("FL", "TX", "IL", "AZ", "MI", "OH", "GA", "NC"):
+        assert state in daily_plan.METRO_FILTERS, f"Missing METRO_FILTERS entry for {state}"
+        assert state in daily_plan.METRO_FILTERS[state], f"{state} not in its own filter list"
+
+
+def test_metro_filters_clusters():
+    """SE and MW cluster keys expand to correct state sets."""
+    se = daily_plan.METRO_FILTERS["SE"]
+    assert "FL" in se and "GA" in se and "NC" in se
+    mw = daily_plan.METRO_FILTERS["MW"]
+    assert "MI" in mw and "OH" in mw and "IL" in mw
