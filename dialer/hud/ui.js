@@ -176,12 +176,18 @@ channel.addEventListener('message', (event) => {
 
   switch (msg.type) {
     case 'CALL_STARTED': {
-      // Guard: ignore duplicate CALL_STARTED for the same call
-      if (msg.callSid && msg.callSid === state.callId) break;
+      // Guard: reject CALL_STARTED without a callSid (prevents poisoning state.callId with undefined)
+      if (!msg.callSid) {
+        console.warn('[HUD] Ignoring CALL_STARTED — missing callSid');
+        break;
+      }
 
-      // Guard: reject mid-call reset unless the call has ended or is idle
-      const activeStages = ['OPENER', 'GATEKEEPER', 'BRIDGE', 'QUALIFIER', 'PRICING', 'CLOSE', 'OBJECTION', 'PERMISSION_MOMENT', 'MINI_PITCH', 'WRONG_PERSON'];
-      if (state.callId && activeStages.includes(state.stage)) {
+      // Guard: ignore duplicate CALL_STARTED for the same call
+      if (msg.callSid === state.callId) break;
+
+      // Guard: reject mid-call reset — only allow reset from terminal/idle stages
+      const resettableStages = ['IDLE', 'EXIT', 'ENDED', 'BOOKED', 'SEED_EXIT', 'NON_CONNECT'];
+      if (state.callId && !resettableStages.includes(state.stage)) {
         console.warn('[HUD] Ignoring CALL_STARTED — active call in stage:', state.stage, 'callId:', state.callId);
         break;
       }
