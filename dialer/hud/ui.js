@@ -669,12 +669,34 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // 4 — Objection: authority (only in CLOSE/OBJECTION)
+    // 4 — Context-sensitive: ad_spend bridge (BRIDGE/OPENER) or authority objection
     case e.key === '4' && !e.ctrlKey && !e.altKey && !e.metaKey: {
       const objBlockStages4 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
       if (objBlockStages4.includes(state.stage)) break;
       e.preventDefault();
-      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
+      if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
+        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'ad_spend', atMs: now });
+      } else {
+        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
+      }
+      break;
+    }
+
+    // 5 — Objection: existing_coverage
+    case e.key === '5' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages5 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
+      if (objBlockStages5.includes(state.stage)) break;
+      e.preventDefault();
+      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'existing_coverage', atMs: now });
+      break;
+    }
+
+    // 6 — Objection: answering_service
+    case e.key === '6' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages6 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
+      if (objBlockStages6.includes(state.stage)) break;
+      e.preventDefault();
+      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'answering_service', atMs: now });
       break;
     }
 
@@ -919,7 +941,7 @@ function renderContextStrip() {
 }
 
 // ── Objection picker ──────────────────────────────────────────
-// Shows a 2x2 grid of labeled objection cards when in OBJECTION stage
+// Shows a 3x2 grid of labeled objection cards when in OBJECTION stage
 // and no bucket has been selected yet. Replaces the now-line text.
 
 const OBJECTION_CARDS = [
@@ -927,12 +949,15 @@ const OBJECTION_CARDS = [
   { key: '2', bucket: 'interest', name: 'Interest', cues: '"not interested, we\'re set, don\'t need"' },
   { key: '3', bucket: 'info', name: 'Info', cues: '"send me info, email me, website"' },
   { key: '4', bucket: 'authority', name: 'Authority', cues: '"not my decision, wife handles, partner"' },
+  { key: '5', bucket: 'existing_coverage', name: 'Covered', cues: '"have a receptionist, wife answers, we\'re covered"' },
+  { key: '6', bucket: 'answering_service', name: 'Ans. Svc', cues: '"use Smith, use Ruby, answering service"' },
 ];
 
 const BRIDGE_CARDS = [
   { key: '1', action: 'missed_calls', name: 'Missed', cues: 'voicemail, callback, wife, office' },
   { key: '2', action: 'competition', name: 'Comp', cues: 'slow, growth, competitor, losing' },
   { key: '3', action: 'overwhelmed', name: 'Overwhelm', cues: 'busy, stretched, do it all, rushed' },
+  { key: '4', action: 'ad_spend', name: 'Ad $', cues: 'Google, LSA, Angi, Thumbtack, ads, spending' },
 ];
 
 let $objectionPicker = null;

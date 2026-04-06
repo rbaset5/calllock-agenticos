@@ -96,6 +96,13 @@ export const NOW_TEMPLATES = {
   time_pressure: "Prospect sounds rushed.",
   hedge: "Prospect is on the fence.",
   yes: "Prospect gave permission to continue.",
+  tried_ai: "Prospect says they tried AI before.",
+  referral_only: "Prospect says all business is referrals.",
+  competitor_comparison: "Prospect asks how this is different from a competitor.",
+  missed_calls: "Bridge: discussing missed calls.",
+  competition: "Bridge: discussing competitor speed.",
+  overwhelmed: "Bridge: discussing owner being stretched.",
+  ad_spend: "Bridge: discussing wasted ad spend.",
 };
 
 // -------------------------
@@ -139,6 +146,6 @@ export const INTENT_STAGE_MAP = {
 // Intent families
 // -------------------------
 
-export const OBJECTION_INTENTS = ["timing", "interest", "info", "authority"];
+export const OBJECTION_INTENTS = ["timing", "interest", "info", "authority", "existing_coverage", "answering_service"];
 
-export const OVERLAY_INTENTS = ["existing_coverage", "answering_service"];
+export const OVERLAY_INTENTS = [];
