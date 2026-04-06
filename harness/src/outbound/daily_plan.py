@@ -255,7 +255,7 @@ def build_daily_plan(
     fresh_assigned = set()  # track which prospect IDs have been assigned to sprints
     remaining_sprints = daily_sprint_count
 
-    for block_name in ["AM", "MID", "EOD"]:
+    for block_name in ["AM", "MID", "EOD", "LATE"]:
         if remaining_sprints <= 0:
             break
         block_cfg = blocks_config.get(block_name)

@@ -32,7 +32,7 @@ def _schedule_blocks(schedule: dict[str, Any], week_num: int, day: date) -> list
 
     blocks: list[dict[str, Any]] = []
     global_index = 0
-    for block_name in ("AM", "MID", "EOD"):
+    for block_name in ("AM", "MID", "EOD", "LATE"):
         block_cfg = blocks_config.get(block_name)
         if not isinstance(block_cfg, dict):
             continue
