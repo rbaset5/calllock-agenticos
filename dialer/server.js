@@ -566,8 +566,15 @@ async function writeOutcomeRecord(callSid) {
   }
 }
 
-app.get('/', (_req, res) => {
-  setHudCookie(res);
+app.get('/', (req, res) => {
+  const tokenParam = req.query.token;
+  if (tokenParam && HUD_INTERNAL_TOKEN) {
+    const a = Buffer.from(tokenParam);
+    const b = Buffer.from(HUD_INTERNAL_TOKEN);
+    if (a.length === b.length && require('crypto').timingSafeEqual(a, b)) {
+      setHudCookie(res);
+    }
+  }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -897,12 +904,62 @@ app.post('/dial-started', async (req, res) => {
 
 // ── HUD endpoints ──────────────────────────────────────────────
 
-app.get('/hud/deepgram-token', validateHudToken, (_req, res) => {
-  res.json({ key: DEEPGRAM_API_KEY || '' });
+app.get('/hud/deepgram-token', validateHudToken, async (_req, res) => {
+  if (!DEEPGRAM_API_KEY) {
+    return res.status(503).json({ error: 'DEEPGRAM_API_KEY not set' });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch('https://api.deepgram.com/v1/auth/grant', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ ttl_seconds: 60 }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error('[hud/deepgram] Token mint failed:', response.status, detail);
+      return res.status(503).json({ error: 'Could not mint Deepgram token' });
+    }
+
+    const data = await response.json();
+    if (!data.access_token) {
+      console.error('[hud/deepgram] Token mint missing access_token');
+      return res.status(503).json({ error: 'Could not mint Deepgram token' });
+    }
+
+    res.json({
+      key: data.access_token,
+      expires_in: typeof data.expires_in === 'number' ? data.expires_in : 60,
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error('[hud/deepgram] Token mint timed out');
+    } else {
+      console.error('[hud/deepgram] Token mint error:', error.message);
+    }
+    res.status(503).json({ error: 'Could not mint Deepgram token' });
+  }
 });
 
 app.post('/hud/groq-classify', validateHudToken, async (req, res) => {
-  const { utterance, stage, bridgeAngle, lastObjectionBucket, utteranceId } = req.body;
+  const {
+    utterance,
+    stage,
+    bridgeAngle,
+    lastObjectionBucket,
+    utteranceId,
+    requestTone,
+    requestSecondaryIntent,
+  } = req.body;
 
   if (!GROQ_API_KEY) {
     return res.status(503).json({ error: true, reason: 'GROQ_API_KEY not set' });
@@ -921,6 +978,24 @@ app.post('/hud/groq-classify', validateHudToken, async (req, res) => {
   const VALID_BRIDGE_ANGLES = ['missed_calls', 'competition', 'overwhelmed', 'fallback', 'unknown'];
   const VALID_OBJECTION_BUCKETS = ['timing', 'interest', 'info', 'authority', 'unknown'];
   const VALID_QUALIFIER_READS = ['pain', 'no_pain', 'unknown_pain', 'unknown'];
+  const VALID_TONES = ['rushed', 'skeptical', 'annoyed', 'curious', 'guarded', 'neutral', 'unknown'];
+  const VALID_SECONDARY_INTENTS = [
+    'yes',
+    'curiosity',
+    'engaged_answer',
+    'timing',
+    'interest',
+    'info',
+    'authority',
+    'existing_coverage',
+    'answering_service',
+    'pricing_question',
+    'pricing_resistance',
+    'confusion',
+    'authority_mismatch',
+    'brush_off',
+    'time_pressure',
+  ];
 
   const systemPrompt = `You are a cold call stage classifier for an HVAC contractor sales call. Given a prospect's utterance and the current call stage, classify the response. Return ONLY a valid JSON object with no other text.
 
@@ -932,6 +1007,10 @@ Return JSON with these fields (include only relevant ones):
 - "bridgeAngle": one of [${VALID_BRIDGE_ANGLES.join(', ')}] (only if stage is OPENER or BRIDGE)
 - "objectionBucket": one of [${VALID_OBJECTION_BUCKETS.join(', ')}] (only if stage is CLOSE or OBJECTION)
 - "qualifierRead": one of [${VALID_QUALIFIER_READS.join(', ')}] (only if stage is QUALIFIER)
+- "tone": one of [${VALID_TONES.join(', ')}]${requestTone ? ' (include when you can infer prospect tone)' : ' (omit unless requested)'}
+- "tone_confidence": number 0-1${requestTone ? ' (only when tone is present)' : ' (omit unless requested)'}
+- "secondary_intent": one of [${VALID_SECONDARY_INTENTS.join(', ')}]${requestSecondaryIntent ? ' (include only when a credible secondary signal is present)' : ' (omit unless requested)'}
+- "secondary_confidence": number 0-1${requestSecondaryIntent ? ' (only when secondary_intent is present)' : ' (omit unless requested)'}
 - "confidence": number 0-1
 - "why": brief explanation
 
@@ -995,12 +1074,27 @@ Example: {"bridgeAngle":"missed_calls","confidence":0.82,"why":"mentions voicema
       console.warn('[hud/groq] Invalid qualifierRead:', parsed.qualifierRead);
       return res.json({ error: true });
     }
+    if (parsed.tone && !VALID_TONES.includes(parsed.tone)) {
+      console.warn('[hud/groq] Invalid tone:', parsed.tone);
+      return res.json({ error: true });
+    }
+    if (parsed.secondary_intent && !VALID_SECONDARY_INTENTS.includes(parsed.secondary_intent)) {
+      console.warn('[hud/groq] Invalid secondary_intent:', parsed.secondary_intent);
+      return res.json({ error: true });
+    }
 
     // Whitelist only expected fields (don't spread arbitrary LLM output)
     res.json({
       bridgeAngle: parsed.bridgeAngle || undefined,
       objectionBucket: parsed.objectionBucket || undefined,
       qualifierRead: parsed.qualifierRead || undefined,
+      tone: requestTone ? (parsed.tone || undefined) : undefined,
+      tone_confidence: requestTone && typeof parsed.tone_confidence === 'number' ? parsed.tone_confidence : undefined,
+      secondary_intent: requestSecondaryIntent ? (parsed.secondary_intent || undefined) : undefined,
+      secondary_confidence:
+        requestSecondaryIntent && typeof parsed.secondary_confidence === 'number'
+          ? parsed.secondary_confidence
+          : undefined,
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
       why: typeof parsed.why === 'string' ? parsed.why.slice(0, 200) : undefined,
       utteranceId,

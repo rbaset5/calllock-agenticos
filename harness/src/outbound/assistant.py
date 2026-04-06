@@ -59,6 +59,9 @@ def route_intent(message_text: str) -> str | None:
 
 def _dialer_link(block: str | None, segment: str | None, view: str) -> str:
     query = []
+    hud_token = os.getenv("HUD_INTERNAL_TOKEN")
+    if hud_token:
+        query.append(f"token={hud_token}")
     if block:
         query.append(f"block={block}")
     if segment:
