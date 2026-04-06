@@ -2,6 +2,237 @@
 // v2 render functions for the center panel, left rail, and right rail.
 // Separated from ui.js per eng review Amendment 2.
 
+import { linesForStage } from './playbook.js';
+
+// ── Stage Pane Config ─────────────────────────────────────────────
+// Data-driven map: stage → { left: [...components], right: [...components], leftHeader, rightHeader }
+// Each component key maps to a renderer in renderLeftPane/renderRightPane.
+
+export const STAGE_PANE_CONFIG = {
+  IDLE:              { left: ['compactId'],                             right: [],                           leftHeader: null,         rightHeader: null },
+  OPENER:            { left: ['compactId', 'prospectFull', 'briefing'], right: ['tactical', 'powerLines'],   leftHeader: 'PROSPECT',   rightHeader: 'SUPPORT' },
+  GATEKEEPER:        { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
+  PERMISSION_MOMENT: { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
+  MINI_PITCH:        { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
+  WRONG_PERSON:      { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
+  BRIDGE:            { left: ['compactId', 'briefing', 'lines'],       right: ['tactical', 'bridgeAngles'], leftHeader: 'PLAYBOOK',   rightHeader: 'ANGLES' },
+  QUALIFIER:         { left: ['compactId', 'briefing', 'lines'],       right: ['tactical', 'pitchLines'],   leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
+  PRICING:           { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
+  CLOSE:             { left: ['compactId', 'briefing', 'lines'],       right: ['tactical', 'objectionPicks'], leftHeader: 'PLAYBOOK', rightHeader: 'TACTICS' },
+  OBJECTION:         { left: ['compactId', 'briefing', 'lines'],       right: ['tactical', 'recoveryLines'], leftHeader: 'PLAYBOOK',  rightHeader: 'OBJECTIONS' },
+  SEED_EXIT:         { left: ['compactId', 'briefing', 'lines'],       right: [],                           leftHeader: 'PLAYBOOK',   rightHeader: null },
+  BOOKED:            { left: ['compactId', 'briefing', 'lines'],       right: [],                           leftHeader: null,         rightHeader: null },
+  NON_CONNECT:       { left: ['compactId', 'briefing', 'lines'],       right: [],                           leftHeader: 'PLAYBOOK',   rightHeader: null },
+  EXIT:              { left: ['compactId', 'briefing', 'lines'],       right: [],                           leftHeader: null,         rightHeader: null },
+  ENDED:             { left: ['compactId'],                             right: [],                           leftHeader: null,         rightHeader: null },
+};
+
+// ── Compact Identity ──────────────────────────────────────────────
+
+export function renderCompactIdentity(ctx) {
+  const el = document.getElementById('v2-prospect-identity');
+  if (!el) return;
+  el.textContent = '';
+  if (!ctx) {
+    const fallback = document.createElement('div');
+    fallback.className = 'v2-compact-id-fallback';
+    fallback.textContent = 'Incoming call...';
+    el.appendChild(fallback);
+    return;
+  }
+  const parts = [ctx.name, ctx.company].filter(Boolean);
+  if (parts.length === 0) return;
+  const line = document.createElement('div');
+  line.className = 'v2-compact-id';
+  line.textContent = parts.join(' \u00B7 ');
+  el.appendChild(line);
+}
+
+// ── Stage Briefing ────────────────────────────────────────────────
+
+export function renderStageBriefing(card) {
+  const el = document.getElementById('v2-stage-briefing');
+  if (!el) return;
+  el.textContent = '';
+  if (!card || card.stage === 'IDLE' || card.stage === 'ENDED') {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+
+  if (card.goal) {
+    const goalLabel = document.createElement('div');
+    goalLabel.className = 'v2-ctx-label';
+    goalLabel.textContent = 'GOAL';
+    el.appendChild(goalLabel);
+    const goalVal = document.createElement('div');
+    goalVal.className = 'v2-briefing-goal';
+    goalVal.textContent = card.goal;
+    el.appendChild(goalVal);
+  }
+
+  if (card.listenFor && card.listenFor.length > 0) {
+    const listenLabel = document.createElement('div');
+    listenLabel.className = 'v2-ctx-label';
+    listenLabel.style.marginTop = '6px';
+    listenLabel.textContent = 'LISTEN FOR';
+    el.appendChild(listenLabel);
+    card.listenFor.forEach(item => {
+      const span = document.createElement('div');
+      span.className = 'v2-briefing-listen';
+      span.textContent = '\u2022 ' + item;
+      el.appendChild(span);
+    });
+  }
+}
+
+// ── Left Pane Orchestrator ────────────────────────────────────────
+
+/**
+ * Orchestrate left pane rendering based on STAGE_PANE_CONFIG.
+ * @param {string} stage
+ * @param {object} activeCard - from composeActiveCard() (Amendment 9: use activeCard for briefing)
+ * @param {object|null} prospectCtx - from state.prospectContext
+ * @param {object} deps - { playbook, buildSection, lineContext }
+ */
+export function renderLeftPane(stage, activeCard, prospectCtx, deps) {
+  const config = STAGE_PANE_CONFIG[stage] || STAGE_PANE_CONFIG['IDLE'];
+  const components = config.left;
+
+  // Clear dynamic sections
+  const briefing = document.getElementById('v2-stage-briefing');
+  const linesFeed = document.getElementById('linesFeed');
+  if (briefing) { briefing.textContent = ''; briefing.style.display = 'none'; }
+  if (linesFeed) linesFeed.replaceChildren();
+
+  // Toggle prospect context visibility (Amendment 8: visibility toggle, not rebuild)
+  const prospectWhy = document.getElementById('v2-prospect-why');
+  const prospectOutreach = document.getElementById('v2-prospect-outreach');
+  const prospectFit = document.getElementById('v2-prospect-fit');
+  const showFull = components.includes('prospectFull');
+  [prospectWhy, prospectOutreach, prospectFit].forEach(el => {
+    if (el) el.style.display = showFull ? '' : 'none';
+  });
+
+  // Dynamic header
+  const headerEl = document.querySelector('.lines-panel .side-panel-header');
+  if (headerEl) {
+    if (config.leftHeader) {
+      headerEl.textContent = config.leftHeader;
+      headerEl.style.display = '';
+    } else {
+      headerEl.style.display = 'none';
+    }
+  }
+
+  for (const comp of components) {
+    switch (comp) {
+      case 'compactId':
+        renderCompactIdentity(prospectCtx);
+        break;
+      case 'prospectFull':
+        // Handled above via visibility toggle
+        break;
+      case 'briefing':
+        renderStageBriefing(activeCard);
+        break;
+      case 'lines':
+        if (linesFeed && deps.buildSection) {
+          const stageLines = linesForStage(stage, deps.playbook);
+          if (stageLines.length) {
+            linesFeed.appendChild(deps.buildSection('CURRENT STAGE', stageLines, 'stage', 'lines'));
+          }
+        }
+        break;
+    }
+  }
+}
+
+// ── Right Pane Orchestrator ───────────────────────────────────────
+
+/**
+ * Orchestrate right pane rendering based on STAGE_PANE_CONFIG.
+ * Uses a single renderRightPaneLinesSection for all line types (Amendment 5: DRY).
+ * @param {string} stage
+ * @param {object} activeCard - from composeActiveCard()
+ * @param {object} deps - { playbook, buildSection, lineContext }
+ */
+export function renderRightPane(stage, activeCard, deps) {
+  const config = STAGE_PANE_CONFIG[stage] || STAGE_PANE_CONFIG['IDLE'];
+  const components = config.right;
+
+  // Clear right pane
+  const objFeed = document.getElementById('objectionsFeed');
+  if (objFeed) objFeed.replaceChildren();
+
+  // Clear tactical card sections when right rail is empty
+  if (components.length === 0) {
+    ['v2-tac-ask', 'v2-tac-rebuttal', 'v2-tac-value', 'v2-tac-proof', 'v2-tac-ifthen'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '';
+    });
+  }
+
+  // Dynamic header
+  const headerEl = document.querySelector('.objections-panel .side-panel-header');
+  if (headerEl) {
+    if (config.rightHeader) {
+      headerEl.textContent = config.rightHeader;
+      headerEl.style.display = '';
+    } else {
+      headerEl.style.display = 'none';
+    }
+  }
+
+  for (const comp of components) {
+    switch (comp) {
+      case 'tactical':
+        renderTacticalCard(activeCard);
+        break;
+      case 'powerLines':
+        if (objFeed && deps.buildSection && deps.playbook.powerLines?.length) {
+          objFeed.appendChild(deps.buildSection('POWER LINES', deps.playbook.powerLines, 'power', 'lines'));
+        }
+        break;
+      case 'recoveryLines':
+        if (objFeed && deps.buildSection && deps.playbook.recoveryLines?.length) {
+          objFeed.appendChild(deps.buildSection('RECOVERY', deps.playbook.recoveryLines, 'recovery', 'lines'));
+        }
+        break;
+      case 'pitchLines':
+        if (objFeed && deps.buildSection) {
+          const pitchItems = [
+            { label: 'Elevator pitch', line: deps.playbook.pitchLines.elevator },
+            { label: 'How it works', line: deps.playbook.pitchLines.howItWorks },
+            { label: 'Why you need it', line: deps.playbook.pitchLines.whyYouNeed },
+          ];
+          objFeed.appendChild(deps.buildSection('PITCH', pitchItems, 'stage', 'lines'));
+        }
+        break;
+      case 'bridgeAngles':
+        if (objFeed && deps.buildSection) {
+          const bridgeItems = [
+            { label: 'Missed calls', line: deps.playbook.bridge.fallback },
+            { label: 'Competition', line: deps.playbook.bridge.competition.firstResponder },
+            { label: 'Overwhelmed', line: deps.playbook.bridge.overwhelmed.cantKeepUp },
+            { label: 'Ad spend', line: deps.playbook.bridge.ad_spend.lsa },
+          ];
+          objFeed.appendChild(deps.buildSection('BRIDGE ANGLES', bridgeItems, 'stage', 'lines'));
+        }
+        break;
+      case 'objectionPicks':
+        if (objFeed && deps.buildSection) {
+          const objItems = Object.entries(deps.playbook.objections).slice(0, 4).map(([bucket, data]) => ({
+            label: bucket.toUpperCase(),
+            line: data.reset,
+          }));
+          objFeed.appendChild(deps.buildSection('ANTICIPATE', objItems, 'objection', 'objection'));
+        }
+        break;
+    }
+  }
+}
+
 /**
  * Escape HTML to prevent XSS. Matches the existing _esc() pattern in ui.js.
  */
@@ -49,6 +280,28 @@ export function renderBackupLine(backupLine) {
     el.textContent = '';
     el.style.display = 'none';
   }
+}
+
+/**
+ * Render "also heard" badge when recent burst contains signals not reflected
+ * in the current card. Shows prior signals that arrived within the buffer window.
+ * @param {Array<{signal: string, seq: number, atMs: number}>} recentSignals
+ * @param {string|null} currentSignal - the signal driving the active card
+ */
+export function renderAlsoHeard(recentSignals, currentSignal) {
+  const el = document.getElementById('v2-also-heard');
+  if (!el) return;
+  // Filter to signals that differ from the current card's driving signal
+  const others = recentSignals.filter(s => s.signal !== currentSignal);
+  if (others.length === 0) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  // Deduplicate signal names
+  const unique = [...new Set(others.map(s => s.signal))];
+  el.style.display = 'block';
+  el.textContent = '\u21B3 also heard: ' + unique.join(', ');
 }
 
 /**

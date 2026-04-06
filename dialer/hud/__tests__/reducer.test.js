@@ -98,7 +98,7 @@ describe('hudReducer', () => {
     });
     assert.equal(next.stage, 'BRIDGE');
     assert.equal(next.bridgeAngle, 'competition');
-    assert.ok(next.now.line.includes('responds first'));
+    assert.ok(next.now.line.includes('picks up first'));
   });
 
   it('OPENER → BRIDGE with overwhelmed', () => {
@@ -124,7 +124,7 @@ describe('hudReducer', () => {
     });
     assert.equal(next.stage, 'BRIDGE');
     assert.equal(next.bridgeAngle, 'fallback');
-    assert.ok(next.now.line.includes('tied up and a new customer calls'));
+    assert.ok(next.now.line.includes('slips through the cracks'));
   });
 
   // 7. BRIDGE → QUALIFIER
@@ -449,6 +449,21 @@ describe('hudReducer', () => {
     assert.equal(s.ended, true);
   });
 
+  // 20b. END_CALL clears activeObjection
+  it('END_CALL clears activeObjection', () => {
+    let s = connect(init());
+    // Manually set activeObjection as if we entered OBJECTION stage
+    s = { ...s, stage: 'OBJECTION', activeObjection: 'timing', lastObjectionBucket: 'timing' };
+    s = hudReducer(s, {
+      type: 'END_CALL',
+      callSid: SID,
+      atMs: T + 9000,
+    }, PLAYBOOK);
+
+    assert.equal(s.ended, true);
+    assert.equal(s.activeObjection, null);
+  });
+
   // 21. Stale callSid rejection
   it('rejects actions with wrong callSid', () => {
     const s = connect(init());
@@ -581,6 +596,40 @@ describe('hudReducer', () => {
 // ── v2 reducer actions ──────────────────────────────────────────
 
 describe('v2 reducer actions', () => {
+  it('AUTO_SET_STAGE transitions without enabling manual suppression', () => {
+    let s = connect(init());
+    s = hudReducer(s, {
+      type: 'AUTO_SET_STAGE',
+      callSid: SID,
+      stage: 'WRONG_PERSON',
+      atMs: T + 150,
+      why: 'Authority mismatch detected',
+    }, PLAYBOOK);
+
+    assert.equal(s.stage, 'WRONG_PERSON');
+    assert.equal(shouldSuppressAuto(s, T + 500), false);
+  });
+
+  it('AUTO_SET_STAGE allows the next transcript to classify immediately', () => {
+    let s = connect(init());
+    s = hudReducer(s, {
+      type: 'AUTO_SET_STAGE',
+      callSid: SID,
+      stage: 'WRONG_PERSON',
+      atMs: T + 150,
+      why: 'Authority mismatch detected',
+    }, PLAYBOOK);
+
+    s = transcriptFinal(s, 'yeah we miss calls', {
+      band: 'high',
+      bridgeAngle: 'missed_calls',
+      utterance: 'yeah we miss calls',
+      why: 'pain signal after transfer',
+    }, T + 400);
+
+    assert.equal(s.stage, 'OPENER');
+  });
+
   it('SET_TONE updates tone fields', () => {
     const s = createInitialState(PLAYBOOK);
     s.callId = 'test-1';

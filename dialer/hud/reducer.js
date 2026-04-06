@@ -238,7 +238,8 @@ export function hudReducer(state, action, playbook) {
       }
 
       // Cross-stage booking: yes-intent from any advanced stage → BOOKED
-      if (['BRIDGE', 'QUALIFIER', 'CLOSE'].includes(state.stage) && rule.detectedIntent === 'yes') {
+      // PRICING included: "Fine Thursday at 2" during pricing should book, not just exit pricing
+      if (['BRIDGE', 'QUALIFIER', 'CLOSE', 'PRICING'].includes(state.stage) && rule.detectedIntent === 'yes') {
         return {
           ...nextState,
           stage: 'BOOKED',
@@ -362,8 +363,39 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
-      // BRIDGE → QUALIFIER
+      // BRIDGE → QUALIFIER (or SEED_EXIT if prospect explicitly denies pain)
       if (state.stage === 'BRIDGE') {
+        // Check if the utterance contains explicit no-pain signal.
+        // "We don't miss calls", "we're fully covered" contain bridge keywords
+        // but actually indicate zero pain — should go to SEED_EXIT, not QUALIFIER.
+        const utteranceText = (action.turn?.text || '').toLowerCase();
+        const NO_PAIN_SIGNALS = /\b(don'?t miss|we'?re covered|fully covered|we'?re good|we are good|have a receptionist|not looking to change|not interested in changing|she handles everything|he handles everything|we do not miss)\b/;
+        const hasPainDenial = NO_PAIN_SIGNALS.test(utteranceText);
+        // Only trigger SEED_EXIT if there's NO quantified pain (no numbers like "5 a week")
+        const hasQuantifiedPain = /\b\d+\b/.test(utteranceText);
+
+        if (hasPainDenial && !hasQuantifiedPain) {
+          return {
+            ...nextState,
+            stage: 'SEED_EXIT',
+            qualifierRead: 'no_pain',
+            outcome: 'seed_exit',
+            now: makeNow(
+              'SEED_EXIT',
+              playbook.seedExit,
+              rule.band,
+              'No pain signal during bridge — prospect is covered',
+              'rules',
+            ),
+            bridgeAngle: rule.bridgeAngle ?? state.bridgeAngle,
+            metrics: {
+              ...nextState.metrics,
+              stageChanges: nextState.metrics.stageChanges + 1,
+            },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
+
         return {
           ...nextState,
           stage: 'QUALIFIER',
@@ -508,7 +540,32 @@ export function hudReducer(state, action, playbook) {
         const countSame = objectionCountForBucket(updatedHistory, rule.objectionBucket);
 
         // same bucket twice → exit (prospect is firm, stop pushing)
+        // BUT: if the utterance also contains a bridge signal, pain overrides
         if (countSame >= 2) {
+          const utteranceText = (action.turn?.text || '').toLowerCase();
+          const hasBridgeSignal = /\b(miss\w*\s+calls?|voicemail|go(es)?\s+to\s+voicemail|can't\s+answer|unanswered)\b/.test(utteranceText);
+          if (hasBridgeSignal) {
+            return {
+              ...nextState,
+              stage: 'BRIDGE',
+              bridgeAngle: 'missed_calls',
+              objectionHistory: updatedHistory,
+              now: makeNow(
+                'BRIDGE',
+                resolveBridgeLine({ bridgeAngle: 'missed_calls' }, playbook),
+                rule.band,
+                'Bridge signal overrides same-bucket exit — pain detected',
+                'rules',
+              ),
+              metrics: {
+                ...nextState.metrics,
+                objectionCount: nextState.metrics.objectionCount + 1,
+                stageChanges: nextState.metrics.stageChanges + 1,
+              },
+              lastCommittedAtMs: action.atMs,
+            };
+          }
+
           return {
             ...nextState,
             stage: 'EXIT',
@@ -534,10 +591,37 @@ export function hudReducer(state, action, playbook) {
 
         // 4th+ objection overall + no engagement → exit
         // (3 different buckets is normal pushback, keep trying)
+        // BUT: if the utterance also contains a bridge signal ("miss calls"),
+        // the pain overrides the count-based exit — route to BRIDGE instead.
         if (
           nextState.metrics.objectionCount + 1 >= 4 &&
           !prospectHasEngagement(nextState.transcript)
         ) {
+          // Check for bridge keywords in the utterance before exiting
+          const utteranceText = (action.turn?.text || '').toLowerCase();
+          const hasBridgeSignal = /\b(miss\w*\s+calls?|voicemail|go(es)?\s+to\s+voicemail|can't\s+answer|unanswered)\b/.test(utteranceText);
+          if (hasBridgeSignal) {
+            return {
+              ...nextState,
+              stage: 'BRIDGE',
+              bridgeAngle: 'missed_calls',
+              objectionHistory: updatedHistory,
+              now: makeNow(
+                'BRIDGE',
+                resolveBridgeLine({ bridgeAngle: 'missed_calls' }, playbook),
+                rule.band,
+                'Bridge signal overrides objection count — pain detected',
+                'rules',
+              ),
+              metrics: {
+                ...nextState.metrics,
+                objectionCount: nextState.metrics.objectionCount + 1,
+                stageChanges: nextState.metrics.stageChanges + 1,
+              },
+              lastCommittedAtMs: action.atMs,
+            };
+          }
+
           return {
             ...nextState,
             stage: 'EXIT',
@@ -1023,6 +1107,36 @@ export function hudReducer(state, action, playbook) {
     }
 
     // ────────────────────────────────────────────────────
+    case 'AUTO_SET_STAGE': {
+      if (!STAGES.includes(action.stage)) return state;
+      const stageHints = {
+        MINI_PITCH: 'Prospect is confused; clarify in one sentence',
+        WRONG_PERSON: 'Prospect redirected you to a different decision-maker',
+        EXIT: 'Prospect signaled the conversation should end',
+      };
+      return {
+        ...state,
+        stage: action.stage,
+        previousStage: action.clearPreviousStage === false ? state.previousStage : null,
+        activeObjection: action.stage === 'OBJECTION' ? state.activeObjection : null,
+        lastObjectionBucket:
+          action.stage === 'OBJECTION' ? null : state.lastObjectionBucket,
+        now: makeNow(
+          action.stage,
+          lineForStage(action.stage, playbook),
+          action.confidence || 'high',
+          action.why || stageHints[action.stage] || 'Automatic route',
+          action.source || 'rules',
+        ),
+        metrics: {
+          ...state.metrics,
+          stageChanges: state.metrics.stageChanges + 1,
+        },
+        lastCommittedAtMs: action.atMs,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
     case 'MANUAL_SET_BRIDGE_ANGLE': {
       if (state.stage !== 'BRIDGE' && state.stage !== 'OPENER') return state;
       const angle = action.angle;
@@ -1134,6 +1248,7 @@ export function hudReducer(state, action, playbook) {
         stage: state.stage === 'BOOKED' ? 'BOOKED' : 'ENDED',
         outcome: state.outcome ?? 'ended_unknown',
         ended: true,
+        activeObjection: null,
         lastCommittedAtMs: action.atMs,
       };
     }
@@ -1153,6 +1268,28 @@ export function hudReducer(state, action, playbook) {
       return {
         ...state,
         prospectContext: action.prospectContext,
+      };
+    }
+
+    // ────────────────────────────────────────────────────
+    case 'SET_TURN_ANALYSIS': {
+      if (action.callSid && state.callId && action.callSid !== state.callId) return state;
+      return {
+        ...state,
+        risk: action.risk ?? state.risk,
+        signalCount: action.signalCount ?? state.signalCount,
+        recommendedActionBias:
+          action.recommendedActionBias !== undefined
+            ? action.recommendedActionBias
+            : state.recommendedActionBias,
+        primaryIntent:
+          action.primaryIntent !== undefined ? action.primaryIntent : state.primaryIntent,
+        compound: action.compound ?? false,
+        nowSummary:
+          action.nowSummary !== undefined ? action.nowSummary : state.nowSummary,
+        trajectory: action.trajectory ?? state.trajectory,
+        _secondaryIntent:
+          action.secondaryIntent !== undefined ? action.secondaryIntent : state._secondaryIntent,
       };
     }
 

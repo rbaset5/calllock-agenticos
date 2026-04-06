@@ -45,11 +45,11 @@ export const PLAYBOOK = {
 
   pitchLines: {
     elevator:
-      'We built an AI that answers your phones when you\'re on a job — qualifies the caller, and books the appointment directly to your calendar.',
+      'When you can\'t get to the phone, we answer it, find out what the customer needs, and get them on your schedule.',
     howItWorks:
       'When a call comes in and you can\'t pick up, it answers live — not voicemail. It asks them what they need, where they\'re located, gets their info, and books them in. You see it in your calendar. Customer got taken care of. You never knew you missed a call.',
     whyYouNeed:
-      'Most of my guys tell me they\'re losing 2-3 calls a week they never call back in time. At your average ticket that\'s a few thousand dollars a month just disappearing. This is the fix for that.',
+      'How many calls a week do you think slip through? At your ticket size, even one or two a month adds up fast.',
   },
 
 
@@ -63,21 +63,31 @@ export const PLAYBOOK = {
         'Yeah... what about nights and weekends? Those callers don\'t wait.',
       covered:
         'Yeah... what happens when you\'re already tied up and another call comes in?',
+      afterHours:
+        'Most guys I talk to have it covered during the day. It\'s the 6 PM call on a Tuesday that disappears.',
     },
     competition: {
       slow:
         'Yeah... the contractors picking up market share right now are the ones available when everyone else isn\'t.',
-      competitor:
-        'Yeah... most jobs go to whoever responds first. Not whoever\'s cheapest.',
+      firstResponder:
+        'Half the time, the job goes to whoever picks up first. Not whoever\'s cheapest, not whoever\'s best — whoever answers.',
+      shared:
+        'On Angi and Thumbtack, that same lead goes to 3-5 other guys. First one to answer gets the job.',
     },
     overwhelmed: {
       everything:
         'Yeah... every call you answer personally is time you\'re not on the job.',
       cantKeepUp:
-        'Yeah... the call you miss today is a review you didn\'t get next month.',
+        'Yeah... every missed call is a job your competitor books instead.',
+    },
+    ad_spend: {
+      lsa:
+        'You\'re spending a couple thousand a month on Google ads that ring your phone. How many of those go to voicemail after 5?',
+      wasted:
+        'At $50-$100 per lead from Google, every missed call is money you already spent — just gone.',
     },
     fallback:
-      'Yeah — when you\'re tied up and a new customer calls, what usually happens?',
+      'What does it cost you when one of those calls slips through the cracks?',
   },
 
   // ── Qualifier reads ─────────────────────────────────────────────
@@ -122,6 +132,31 @@ export const PLAYBOOK = {
       reset:
         'Makes sense. What\'s the best way to loop them in?',
     },
+    existing_coverage: {
+      keywords: ['receptionist', 'wife answers', "we're covered", 'someone answers'],
+      reset:
+        "Makes sense — usually this isn't about replacing whoever answers now. It's about what happens when they're tied up or it's after hours.",
+    },
+    answering_service: {
+      keywords: ['answering service', 'smith', 'ruby', 'nexa'],
+      reset:
+        'Got it — and are they actually qualifying and booking those calls live, or mostly just taking messages?',
+    },
+    tried_ai: {
+      keywords: ['tried ai', 'used ai', 'robot', 'chatbot'],
+      reset:
+        "Totally fair — most of the AI phone stuff out there is pretty rough. What didn't work about it?",
+    },
+    referral_only: {
+      keywords: ['referrals', 'word of mouth', 'no ads'],
+      reset:
+        "That's great — referrals are the best leads. When one of those calls comes in and you're on a job, what happens?",
+    },
+    competitor_comparison: {
+      keywords: ['sameday', 'servicetitan', 'different', 'why you'],
+      reset:
+        "Good question. Before I compare — what's not working about what you have now?",
+    },
   },
 
   // ── Gatekeeper lines ────────────────────────────────────────────
@@ -141,7 +176,7 @@ export const PLAYBOOK = {
       tag: 'reframe',
       line: 'Let me ask it differently — if you lost two jobs this week because nobody picked up, would you know?',
     },
-    { tag: 'pattern-interrupt', line: 'Can I be honest with you for a second?' },
+    { tag: 'pattern-interrupt', line: 'What would have to change for this to be worth a look?' },
     { tag: 'validate', line: 'That makes total sense.' },
     {
       tag: 'curiosity',
@@ -153,7 +188,7 @@ export const PLAYBOOK = {
     { tag: 'buy-time', line: "That's a great question." },
     { tag: 'acknowledge', line: 'I hear you.' },
     { tag: 'validate', line: 'Totally fair.' },
-    { tag: 'social-proof', line: 'Most guys I talk to say the same thing at first.' },
+    { tag: 'social-proof', line: "That's what I'd say too if I were in your shoes." },
     { tag: 'redirect', line: "What would make this worth your time?" },
     { tag: 'reframe', line: 'Let me ask you this—' },
   ],
@@ -178,11 +213,16 @@ export function resolveBridgeLine(classification, playbook) {
 
     case 'competition':
       if (/slow|season/i.test(classification.utterance)) return pb.competition.slow;
-      return pb.competition.competitor;
+      if (/angi|thumbtack|shared/i.test(classification.utterance)) return pb.competition.shared;
+      return pb.competition.firstResponder;
 
     case 'overwhelmed':
       if (/everything|myself|do it all/i.test(classification.utterance)) return pb.overwhelmed.everything;
       return pb.overwhelmed.cantKeepUp;
+
+    case 'ad_spend':
+      if (/wasted|waste|per lead|cost per/i.test(classification.utterance)) return pb.ad_spend.wasted;
+      return pb.ad_spend.lsa;
 
     case 'fallback':
     case 'unknown':
@@ -257,6 +297,7 @@ export function linesForStage(stage, playbook) {
         { label: 'Mini pitch', line: "We help contractors make sure inbound calls get handled when the team can't answer live." },
         { label: 'Backup', line: "We help contractors avoid losing jobs when calls come in and nobody can grab the phone." },
         { label: 'Clarify', line: 'How are you handling that today?' },
+        { label: 'Redirect', line: "So when a call comes in and you can't grab it, what happens?" },
       ];
     case 'WRONG_PERSON':
       return [
@@ -271,45 +312,38 @@ export function linesForStage(stage, playbook) {
         { label: 'Frequency', line: 'How often do you think a good inbound call comes in when nobody can answer it properly?' },
       ];
     case 'BRIDGE':
+      // Bridge angle quick picks are in the right rail — left rail shows only
+      // the after-hours and fallback variants not covered by the 4 angle picks.
       return [
-        { label: '❌ Missed/voicemail', line: playbook.bridge.missed_calls.voicemail },
+        { label: '❌ Missed/after hours', line: playbook.bridge.missed_calls.afterHours },
         { label: '❌ Missed/staff', line: playbook.bridge.missed_calls.staff },
-        { label: '❌ Missed/covered', line: playbook.bridge.missed_calls.covered },
-        { label: '📊 Comp/slow', line: playbook.bridge.competition.slow },
-        { label: '📊 Comp/first', line: playbook.bridge.competition.competitor },
-        { label: '🔥 Overwhelm/everything', line: playbook.bridge.overwhelmed.everything },
-        { label: '🔥 Overwhelm/keep up', line: playbook.bridge.overwhelmed.cantKeepUp },
+        { label: '📊 Comp/shared leads', line: playbook.bridge.competition.shared },
         { label: '❓ Fallback', line: playbook.bridge.fallback },
       ];
     case 'QUALIFIER':
+      // Pitch lines are in the right rail — left rail shows only qualifier-specific lines
       return [
         { label: '📞 Ask the question', line: playbook.qualifier },
         { label: '🔍 Unknown pain bridge', line: playbook.qualifierReads.unknown_pain.bridge_line },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
-        { label: '🔧 How it works', line: playbook.pitchLines.howItWorks },
-        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'CLOSE':
+      // Objection picks are in the right rail — left rail shows close-specific lines
       return [
         { label: '🤝 Close', line: playbook.close },
         { label: '🛡️ Hedge', line: playbook.hedge },
         { label: '✅ Yes followup', line: playbook.yesFollowup },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
-        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'SEED_EXIT':
       return [
         { label: 'seedExit', line: playbook.seedExit },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
       ];
     case 'OBJECTION':
+      // Recovery lines are in the right rail — left rail shows objection reset lines only
       return [
         { label: '⏰ Timing reset', line: playbook.objections.timing.reset },
         { label: '🚫 Interest reset', line: playbook.objections.interest.reset },
         { label: '📧 Info reset', line: playbook.objections.info.reset },
         { label: '👤 Authority reset', line: playbook.objections.authority.reset },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
-        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
       ];
     case 'NON_CONNECT':
       return [
@@ -337,7 +371,7 @@ export function fillLineTemplate(line, context = {}) {
     NAME: context.name || context.business || 'there',
     NUMBER: context.number || context.phone || 'the number you have for me',
     DAY: context.day || 'later this week',
-    TRADE: context.trade || 'HVAC',
+    TRADE: context.trade || 'home service',
   };
 
   return line.replace(/\{([A-Z]+)\}/g, (match, token) => replacements[token] || match);

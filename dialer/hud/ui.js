@@ -10,8 +10,8 @@ import { assignTone, shouldUpdateTone } from './tone.js';
 import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
-import { INTENT_STAGE_MAP } from './taxonomy.js';
-import { renderV2CenterPanel, renderProspectContext, renderTacticalCard, renderPauseStrip } from './render-v2.js';
+import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS } from './taxonomy.js';
+import { renderV2CenterPanel, renderProspectContext, renderPauseStrip, renderLeftPane, renderRightPane, renderCompactIdentity } from './render-v2.js';
 
 function _esc(str) {
   const el = document.createElement('span');
@@ -92,6 +92,19 @@ const $confidenceBadge = document.getElementById('confidenceBadge');
 const $linesFeed = document.getElementById('linesFeed');
 const $objectionsFeed = document.getElementById('objectionsFeed');
 const $roundStrip = document.getElementById('roundStrip');
+const $hotkeyBar = document.getElementById('hotkey-bar');
+
+// Populate hotkey legend from taxonomy (hidden by default)
+for (const h of GLOBAL_HOTKEYS) {
+  const span = document.createElement('span');
+  span.className = 'hotkey-item';
+  const kbd = document.createElement('kbd');
+  kbd.textContent = h.key;
+  span.appendChild(kbd);
+  span.appendChild(document.createTextNode(h.label));
+  $hotkeyBar.appendChild(span);
+}
+$hotkeyBar.style.display = 'none';
 
 // ── Pause strip ──────────────────────────────────────────────
 
@@ -176,9 +189,27 @@ channel.addEventListener('message', (event) => {
 
   switch (msg.type) {
     case 'CALL_STARTED': {
+      // Guard: reject CALL_STARTED without a callSid (prevents poisoning state.callId with undefined)
+      if (!msg.callSid) {
+        console.warn('[HUD] Ignoring CALL_STARTED — missing callSid');
+        break;
+      }
+
+      // Guard: ignore duplicate CALL_STARTED for the same call
+      if (msg.callSid === state.callId) break;
+
+      // Guard: reject mid-call reset — only allow reset from terminal/idle stages
+      const resettableStages = ['IDLE', 'EXIT', 'ENDED', 'BOOKED', 'SEED_EXIT', 'NON_CONNECT'];
+      if (state.callId && !resettableStages.includes(state.stage)) {
+        console.warn('[HUD] Ignoring CALL_STARTED — active call in stage:', state.stage, 'callId:', state.callId);
+        break;
+      }
+
       // Auto-reset
       resetAuditTrail();
       usedProbeLines.clear();
+      lastDedupedInput = null;
+      lastDedupedOutput = null;
       prospectName = msg.prospectName || '';
       prospectBusiness = msg.businessName || '';
       prospectId = msg.prospectId || null;
@@ -243,6 +274,9 @@ channel.addEventListener('message', (event) => {
       const endedProspectId = prospectId;
       const endedSession = captureSession(endedState);
       stopCallTimer();
+      // Clear prospect context from panes (Amendment 10: prevent stale data in IDLE)
+      renderProspectContext(null);
+      renderCompactIdentity(null);
       // Delay session save briefly to allow OUTCOME to arrive first
       setTimeout(() => saveSession(endedState, endedProspectId, endedSession), 500);
       break;
@@ -669,12 +703,34 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // 4 — Objection: authority (only in CLOSE/OBJECTION)
+    // 4 — Context-sensitive: ad_spend bridge (BRIDGE/OPENER) or authority objection
     case e.key === '4' && !e.ctrlKey && !e.altKey && !e.metaKey: {
       const objBlockStages4 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
       if (objBlockStages4.includes(state.stage)) break;
       e.preventDefault();
-      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
+      if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
+        dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'ad_spend', atMs: now });
+      } else {
+        dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'authority', atMs: now });
+      }
+      break;
+    }
+
+    // 5 — Objection: existing_coverage
+    case e.key === '5' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages5 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
+      if (objBlockStages5.includes(state.stage)) break;
+      e.preventDefault();
+      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'existing_coverage', atMs: now });
+      break;
+    }
+
+    // 6 — Objection: answering_service
+    case e.key === '6' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      const objBlockStages6 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
+      if (objBlockStages6.includes(state.stage)) break;
+      e.preventDefault();
+      dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'answering_service', atMs: now });
       break;
     }
 
@@ -701,8 +757,18 @@ document.addEventListener('keydown', (e) => {
         stopCallTimer();
         callStartTime = null;
         $callTimer.textContent = '00:00';
+        // Clear prospect context (Amendment 10)
+        renderProspectContext(null);
+        renderCompactIdentity(null);
         render();
       }, 100);
+      break;
+    }
+
+    // ? — Toggle hotkey legend bar
+    case e.key === '?': {
+      e.preventDefault();
+      $hotkeyBar.style.display = $hotkeyBar.style.display === 'none' ? '' : 'none';
       break;
     }
 
@@ -831,9 +897,28 @@ function render() {
   renderStageBar();
   renderContextStrip();
 
-  // Side panels
-  renderLinesPanel();
-  renderObjectionsPanel();
+  // Compose active card FIRST (needed by both center panel and side panes)
+  const activeCard = composeActiveCard({
+    stage: state.stage,
+    activeObjection: state.activeObjection,
+    tone: state.tone,
+    deliveryModifier: state.deliveryModifier,
+    stageCards: NATIVE_STAGE_CARDS,
+    objectionCards: NATIVE_OBJECTION_CARDS,
+  });
+  const ctx = currentLineContext();
+  if (activeCard.primaryLine) activeCard.primaryLine = fillLineTemplate(activeCard.primaryLine, ctx);
+  if (activeCard.backupLine) activeCard.backupLine = fillLineTemplate(activeCard.backupLine, ctx);
+  if (activeCard.clarifyingQuestion) activeCard.clarifyingQuestion = fillLineTemplate(activeCard.clarifyingQuestion, ctx);
+
+  // Side panels (stage-aware orchestrators)
+  const paneDeps = {
+    playbook: PLAYBOOK,
+    buildSection: buildSidePanelSection,
+    lineContext: ctx,
+  };
+  renderLeftPane(state.stage, activeCard, state.prospectContext, paneDeps);
+  renderRightPane(state.stage, activeCard, paneDeps);
   renderRoundStrip();
 
   // NOW panel
@@ -850,21 +935,7 @@ function render() {
   renderConfidenceBadge();
 
   // v2 center panel render
-  const activeCard = composeActiveCard({
-    stage: state.stage,
-    activeObjection: state.activeObjection,
-    tone: state.tone,
-    deliveryModifier: state.deliveryModifier,
-    stageCards: NATIVE_STAGE_CARDS,
-    objectionCards: NATIVE_OBJECTION_CARDS,
-  });
-  // Fill template placeholders ({NAME}, {DAY}, etc.) in card lines
-  const ctx = currentLineContext();
-  if (activeCard.primaryLine) activeCard.primaryLine = fillLineTemplate(activeCard.primaryLine, ctx);
-  if (activeCard.backupLine) activeCard.backupLine = fillLineTemplate(activeCard.backupLine, ctx);
-  if (activeCard.clarifyingQuestion) activeCard.clarifyingQuestion = fillLineTemplate(activeCard.clarifyingQuestion, ctx);
   renderV2CenterPanel(activeCard, state);
-  renderTacticalCard(activeCard);
 
 }
 
@@ -919,7 +990,7 @@ function renderContextStrip() {
 }
 
 // ── Objection picker ──────────────────────────────────────────
-// Shows a 2x2 grid of labeled objection cards when in OBJECTION stage
+// Shows a 3x2 grid of labeled objection cards when in OBJECTION stage
 // and no bucket has been selected yet. Replaces the now-line text.
 
 const OBJECTION_CARDS = [
@@ -927,12 +998,15 @@ const OBJECTION_CARDS = [
   { key: '2', bucket: 'interest', name: 'Interest', cues: '"not interested, we\'re set, don\'t need"' },
   { key: '3', bucket: 'info', name: 'Info', cues: '"send me info, email me, website"' },
   { key: '4', bucket: 'authority', name: 'Authority', cues: '"not my decision, wife handles, partner"' },
+  { key: '5', bucket: 'existing_coverage', name: 'Covered', cues: '"have a receptionist, wife answers, we\'re covered"' },
+  { key: '6', bucket: 'answering_service', name: 'Ans. Svc', cues: '"use Smith, use Ruby, answering service"' },
 ];
 
 const BRIDGE_CARDS = [
   { key: '1', action: 'missed_calls', name: 'Missed', cues: 'voicemail, callback, wife, office' },
   { key: '2', action: 'competition', name: 'Comp', cues: 'slow, growth, competitor, losing' },
   { key: '3', action: 'overwhelmed', name: 'Overwhelm', cues: 'busy, stretched, do it all, rushed' },
+  { key: '4', action: 'ad_spend', name: 'Ad $', cues: 'Google, LSA, Angi, Thumbtack, ads, spending' },
 ];
 
 let $objectionPicker = null;
@@ -1109,25 +1183,38 @@ const PROBE_VARIANTS = [
   "When she's already helping someone and another call comes in, what happens then?",
   "What happens when you're already tied up and another call comes in?",
 ];
+let lastDedupedInput = null;  // Tracks last input to avoid re-dedup on re-renders
+let lastDedupedOutput = null;
 function dedupProbeLine(line) {
+  // Same line as last render — return cached result (avoids re-dedup on re-render)
+  if (line === lastDedupedInput) return lastDedupedOutput;
+
   // Only dedup probe/bridge/reset lines (not openers, closes, pitches, etc.)
   // Probes are the pain-discovery questions that can repeat across stages.
   const isProbe = /what (?:usually )?happens|when .+ calls? (?:come|comes) in/i.test(line);
   if (!isProbe) {
+    lastDedupedInput = line;
+    lastDedupedOutput = line;
     return line;
   }
   if (!usedProbeLines.has(line)) {
     usedProbeLines.add(line);
+    lastDedupedInput = line;
+    lastDedupedOutput = line;
     return line;
   }
   // Find an unused variant
   for (const variant of PROBE_VARIANTS) {
     if (!usedProbeLines.has(variant)) {
       usedProbeLines.add(variant);
+      lastDedupedInput = line;
+      lastDedupedOutput = variant;
       return variant;
     }
   }
   // All variants used (5+ probes in one call is unlikely) — use the line anyway
+  lastDedupedInput = line;
+  lastDedupedOutput = line;
   return line;
 }
 

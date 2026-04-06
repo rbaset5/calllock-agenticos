@@ -90,6 +90,7 @@
     let callActive = false;
     let callSid = '';
     let seq = 0;
+    let heartbeatInterval = null;
 
     function log(msg, cls = 'sent') {
       const el = document.getElementById('log');
@@ -140,11 +141,18 @@
         },
       });
       // Do NOT send AUDIO_MODE manual — it blocks auto-classification
+      // Send heartbeats to prevent watchdog timeout (HUD expects them every <6.5s)
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = setInterval(function() {
+        if (!callActive) { clearInterval(heartbeatInterval); return; }
+        bc.postMessage({ type: 'HEARTBEAT', callSid: callSid });
+      }, 3000);
       log('CALL_STARTED: ' + name + ' / ' + biz + ' (SID: ' + callSid + ')', 'info');
     }
 
     function endCall() {
       if (!callActive) return;
+      clearInterval(heartbeatInterval);
       bc.postMessage({ type: 'CALL_ENDED', callSid: callSid });
       callActive = false;
       log('CALL_ENDED', 'info');

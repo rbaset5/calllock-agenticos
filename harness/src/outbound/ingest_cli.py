@@ -102,8 +102,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=500, help="Row limit for dry run (default 500)")
     parser.add_argument("--batch-size", type=int, default=5000, help="Batch size for live run")
     parser.add_argument("--lsa-db", help="Path to lsa_discovery.db (for --source lsa)")
-    parser.add_argument("--min-reviews", type=int, default=10, help="Min review count for LSA filter")
-    parser.add_argument("--max-reviews", type=int, default=100, help="Max review count for LSA filter")
+    parser.add_argument("--min-reviews", type=int, default=5, help="Min review count for LSA filter")
+    parser.add_argument("--max-reviews", type=int, default=150, help="Max review count for LSA filter")
     args = parser.parse_args()
 
     if args.source == "lsa":
