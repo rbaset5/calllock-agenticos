@@ -2,6 +2,11 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.4.1] - 2026-04-06
+
+### Fixed
+- HUD not responding to calls: restored missing taxonomy exports (GLOBAL_HOTKEYS, HOTKEY_CONFIG, BRIDGE_STAGES, KEYPRESS_EVENT_FIELDS) lost during a prior merge, which caused ui.js module to fail silently
+
 ## [0.1.4.0] - 2026-04-06
 
 ### Added
