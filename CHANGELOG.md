@@ -2,6 +2,24 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.3.0] - 2026-04-06
+
+### Added
+- Scoring feedback loop: tracks call outcomes to measure which signals predict "interested" prospects
+- Bayesian-smoothed signal effectiveness (precision, lift, coverage) per scoring dimension
+- Concordance index (AUC proxy) measures how well total_score separates positive from negative outcomes
+- Advisory weight suggestions scaled by lift, renormalized to preserve budget
+- Website scanner: detects competitor call-tracking and chat widgets via HTML fingerprinting
+- `already_served` penalty signal (-15) in dispatch scoring when competitor widget detected
+- Supabase migration 067: scoring_feedback table for persisting feedback run results
+- CLI entrypoint: `python -m outbound.feedback_loop [--dry-run] [--json]`
+- 21 tests for feedback loop, 12 tests for website scanner
+
+### Changed
+- `compute_total_score` now clamps to max(0, ...) to handle negative penalty signals
+- Discrimination score samples to 500 per class to prevent O(n*m) blowup on large datasets
+- HUD review intel panel: fixed double-escaping in signal evidence display
+
 ## [0.1.2.0] - 2026-04-05
 
 ### Added
