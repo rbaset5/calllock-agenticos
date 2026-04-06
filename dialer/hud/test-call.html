@@ -128,6 +128,15 @@
           priority_score: 82,
           paid_demand: true,
           coverage_gap_likely: true,
+          review_opener: 'Your Google reviews mention customers waiting days for callbacks. That\'s exactly what we fix.',
+          review_signals: {
+            signals: [
+              { signal_type: 'responsiveness_gap', evidence: 'Called 3 times, nobody picked up', confidence: 'high' },
+              { signal_type: 'after_hours_gap', evidence: 'No after-hours service available', confidence: 'medium' },
+            ],
+            owner_response_style: 'template',
+          },
+          desperation_score: 72,
         },
       });
       // Do NOT send AUDIO_MODE manual — it blocks auto-classification

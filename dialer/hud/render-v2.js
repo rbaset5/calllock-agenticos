@@ -156,9 +156,10 @@ export function renderProspectContext(ctx) {
   const why = document.getElementById('v2-prospect-why');
   const outreach = document.getElementById('v2-prospect-outreach');
   const fit = document.getElementById('v2-prospect-fit');
+  const reviews = document.getElementById('v2-prospect-reviews');
 
   if (!ctx) {
-    [identity, why, outreach, fit].forEach(el => { if (el) el.textContent = ''; });
+    [identity, why, outreach, fit, reviews].forEach(el => { if (el) el.textContent = ''; });
     return;
   }
 
@@ -257,6 +258,79 @@ export function renderProspectContext(ctx) {
         el.textContent = p;
         fit.appendChild(el);
       });
+    }
+  }
+
+  // ── Review Intel (from review_scanner.py enrichment) ──────────
+  if (reviews) {
+    reviews.textContent = '';
+    const hasOpener = ctx.review_opener;
+    const hasSignals = ctx.review_signals && Array.isArray(ctx.review_signals.signals) && ctx.review_signals.signals.length;
+    const hasDesperation = ctx.desperation_score != null && ctx.desperation_score > 0;
+
+    if (hasOpener || hasSignals || hasDesperation) {
+      const label = document.createElement('div');
+      label.className = 'v2-ctx-label';
+      label.textContent = 'Review Intel';
+      reviews.appendChild(label);
+
+      // Opener line (the main pre-call ammunition)
+      if (hasOpener) {
+        const openerEl = document.createElement('div');
+        openerEl.className = 'v2-ctx-value';
+        openerEl.style.fontWeight = '600';
+        openerEl.style.color = '#22c55e';
+        openerEl.style.fontSize = '12px';
+        openerEl.textContent = _esc(ctx.review_opener);
+        reviews.appendChild(openerEl);
+      }
+
+      // Top 2 signal evidence snippets
+      if (hasSignals) {
+        const sorted = ctx.review_signals.signals
+          .slice()
+          .sort((a, b) => {
+            const order = { high: 0, medium: 1, low: 2 };
+            return (order[a.confidence] || 2) - (order[b.confidence] || 2);
+          });
+        sorted.slice(0, 2).forEach(sig => {
+          const el = document.createElement('div');
+          el.className = 'v2-ctx-inferred';
+          el.style.fontSize = '10px';
+          el.textContent = sig.signal_type.replace(/_/g, ' ') + ': "' + (sig.evidence || '') + '"';
+          reviews.appendChild(el);
+        });
+      }
+
+      // Desperation badge
+      if (hasDesperation) {
+        const badge = document.createElement('div');
+        badge.className = 'v2-ctx-value';
+        badge.style.fontSize = '10px';
+        badge.style.marginTop = '4px';
+        const score = ctx.desperation_score;
+        const color = score > 60 ? '#ef4444' : score > 30 ? '#eab308' : '#71717a';
+        badge.style.color = color;
+        badge.textContent = 'Desperation: ' + score + '/100';
+        reviews.appendChild(badge);
+      }
+
+      // Owner response style hint
+      const ownerStyle = ctx.review_signals && ctx.review_signals.owner_response_style;
+      if (ownerStyle === 'absent') {
+        const hint = document.createElement('div');
+        hint.className = 'v2-ctx-inferred';
+        hint.style.fontSize = '10px';
+        hint.style.color = '#eab308';
+        hint.textContent = 'Owner doesn\'t respond to reviews';
+        reviews.appendChild(hint);
+      } else if (ownerStyle === 'defensive') {
+        const hint = document.createElement('div');
+        hint.className = 'v2-ctx-inferred';
+        hint.style.fontSize = '10px';
+        hint.textContent = 'Owner responds defensively to criticism';
+        reviews.appendChild(hint);
+      }
     }
   }
 }
