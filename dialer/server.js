@@ -56,6 +56,16 @@ const {
 } = process.env;
 
 const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+
+// Local presence: state → Twilio number for outbound caller ID.
+// Falls back to TWILIO_PHONE_NUMBER if state not mapped.
+const LOCAL_PRESENCE_NUMBERS = {
+  FL: '+13526767831',
+  MI: '+12314473584',
+  IL: '+13097412672',
+  TX: '+13252164094',
+  AZ: '+19287560437',
+};
 const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -709,10 +719,13 @@ app.post('/twiml', validateTwilioSignature, (req, res) => {
     return;
   }
 
+  const prospectState = (req.body.ProspectState || '').toUpperCase();
+  const callerId = LOCAL_PRESENCE_NUMBERS[prospectState] || TWILIO_PHONE_NUMBER;
+
   const VoiceResponse = twilio.twiml.VoiceResponse;
   const response = new VoiceResponse();
   const dial = response.dial({
-    callerId: TWILIO_PHONE_NUMBER,
+    callerId,
     record: 'record-from-answer-dual',
     recordingStatusCallback: `${CALL_SERVER_BASE_URL}/callbacks/recording`,
     recordingStatusCallbackMethod: 'POST',

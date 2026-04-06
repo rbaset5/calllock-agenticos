@@ -1003,7 +1003,7 @@
             if (p) lastDialStartedId = p.id || null;
           }).catch(() => {});
 
-          activeCall = await twilioDevice.connect({ params: { To: lead.phone } });
+          activeCall = await twilioDevice.connect({ params: { To: lead.phone, ProspectState: lead.metro || '' } });
           button.classList.add('dialing');
           isDialing = true;
           stats.dialed += 1;
