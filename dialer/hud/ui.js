@@ -179,6 +179,8 @@ channel.addEventListener('message', (event) => {
       // Auto-reset
       resetAuditTrail();
       usedProbeLines.clear();
+      lastDedupedInput = null;
+      lastDedupedOutput = null;
       prospectName = msg.prospectName || '';
       prospectBusiness = msg.businessName || '';
       prospectId = msg.prospectId || null;
@@ -1134,25 +1136,38 @@ const PROBE_VARIANTS = [
   "When she's already helping someone and another call comes in, what happens then?",
   "What happens when you're already tied up and another call comes in?",
 ];
+let lastDedupedInput = null;  // Tracks last input to avoid re-dedup on re-renders
+let lastDedupedOutput = null;
 function dedupProbeLine(line) {
+  // Same line as last render — return cached result (avoids re-dedup on re-render)
+  if (line === lastDedupedInput) return lastDedupedOutput;
+
   // Only dedup probe/bridge/reset lines (not openers, closes, pitches, etc.)
   // Probes are the pain-discovery questions that can repeat across stages.
   const isProbe = /what (?:usually )?happens|when .+ calls? (?:come|comes) in/i.test(line);
   if (!isProbe) {
+    lastDedupedInput = line;
+    lastDedupedOutput = line;
     return line;
   }
   if (!usedProbeLines.has(line)) {
     usedProbeLines.add(line);
+    lastDedupedInput = line;
+    lastDedupedOutput = line;
     return line;
   }
   // Find an unused variant
   for (const variant of PROBE_VARIANTS) {
     if (!usedProbeLines.has(variant)) {
       usedProbeLines.add(variant);
+      lastDedupedInput = line;
+      lastDedupedOutput = variant;
       return variant;
     }
   }
   // All variants used (5+ probes in one call is unlikely) — use the line anyway
+  lastDedupedInput = line;
+  lastDedupedOutput = line;
   return line;
 }
 
