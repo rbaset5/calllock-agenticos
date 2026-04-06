@@ -19,3 +19,4 @@ coverage.xml
 supabase/.branches/
 .next/
 .gstack/
+.claude/

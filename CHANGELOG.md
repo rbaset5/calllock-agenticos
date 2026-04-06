@@ -2,6 +2,23 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.2.0] - 2026-04-05
+
+### Added
+- Google review scanner: LLM-powered enrichment extracts dispatch-pain signals from business reviews via SerpAPI
+- Desperation scoring (0-100) from review signals, wired into queue builder for priority ordering
+- Review Intel section in Sales HUD left rail: opener, signal evidence, desperation badge, owner style hints
+- Discord enrichment summary posted after batch scan completes
+- Place ID lookup with SQLite caching to avoid redundant SerpAPI credit usage
+- Supabase migration 066: review_signals, review_opener, review_enrichment_score, desperation_score columns
+- 515 small-market towns across MI/FL/TX/IL/AZ for LSA discovery expansion
+- MI added to ingest state filter for sprint calling
+
+### Changed
+- Queue builder blends desperation score into learned ranking (15% weight when available)
+- CID lookup rate limit increased from 3s to 20s for SerpAPI Starter plan
+- Review enrichment is idempotent: re-running subtracts old delta before adding new
+
 ## [0.1.1.1] - 2026-04-05
 
 ### Fixed
