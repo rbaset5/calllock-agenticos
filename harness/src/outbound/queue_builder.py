@@ -78,9 +78,17 @@ def compute_learned_score(prospect: dict[str, Any], heat_map: dict[str, Any]) ->
         return float(static_score)
     total_dials = sum(int(slot.get("dials", 0) or 0) for slot in metro_data.values() if isinstance(slot, dict))
     total_connects = sum(int(slot.get("connects", 0) or 0) for slot in metro_data.values() if isinstance(slot, dict))
+    desperation = float(prospect.get("desperation_score", 0) or 0)
+
     if total_dials < 10:
+        # No metro data yet — blend static + desperation only
+        if desperation > 0:
+            return 0.85 * static_score + 0.15 * desperation
         return float(static_score)
+
     metro_rate = (total_connects / total_dials) * 100
+    if desperation > 0:
+        return 0.6 * static_score + 0.25 * metro_rate + 0.15 * desperation
     return 0.7 * static_score + 0.3 * metro_rate
 
 

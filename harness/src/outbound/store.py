@@ -37,6 +37,7 @@ def _local_state() -> dict[str, Any]:
     state.setdefault("prospect_scores", [])
     state.setdefault("call_tests", [])
     state.setdefault("outbound_calls", [])
+    state.setdefault("scoring_feedback", [])
     return state
 
 
@@ -203,6 +204,65 @@ def upsert_or_enrich_prospects(records: list[dict[str, Any]]) -> dict[str, int]:
                 inserted += 1
 
     return {"inserted": inserted, "enriched": enriched, "skipped": skipped}
+
+
+def enrich_prospect_reviews(
+    phone_normalized: str,
+    enrichment: dict[str, Any],
+    tenant_id: str = OUTBOUND_TENANT_ID,
+) -> bool:
+    """Update a prospect with review enrichment data.
+
+    Sets review_signals, review_opener, review_enrichment_score,
+    desperation_score, and bumps total_score by the enrichment delta.
+    Returns True if a prospect was found and updated.
+    """
+    review_fields = {
+        "review_signals": enrichment.get("review_signals"),
+        "review_opener": enrichment.get("review_opener"),
+        "review_enrichment_score": enrichment.get("review_enrichment_score", 0),
+        "desperation_score": enrichment.get("desperation_score", 0),
+    }
+
+    if _using_supabase():
+        existing = supabase_repository._request(  # type: ignore[attr-defined]
+            "GET",
+            "outbound_prospects",
+            params={
+                "tenant_id": f"eq.{tenant_id}",
+                "phone_normalized": f"eq.{phone_normalized}",
+                "select": "id,total_score,review_enrichment_score",
+            },
+        )
+        if not existing:
+            return False
+        row = existing[0]
+        old_score = int(row.get("total_score", 0))
+        old_review_delta = int(row.get("review_enrichment_score", 0) or 0)
+        new_delta = int(enrichment.get("review_enrichment_score", 0))
+        # Idempotent: subtract old review delta before adding new one
+        base_score = old_score - old_review_delta
+        patch = {**review_fields, "total_score": max(0, base_score + new_delta)}
+        supabase_repository._request(  # type: ignore[attr-defined]
+            "PATCH",
+            f"outbound_prospects?id=eq.{row['id']}",
+            json=patch,
+        )
+        return True
+
+    # Local path
+    state = _local_state()
+    for prospect in state["outbound_prospects"]:
+        if (prospect["phone_normalized"] == phone_normalized
+                and _matches_tenant(prospect["tenant_id"], tenant_id)):
+            old_review_delta = int(prospect.get("review_enrichment_score", 0) or 0)
+            old_score = int(prospect.get("total_score", 0))
+            new_delta = int(enrichment.get("review_enrichment_score", 0))
+            base_score = old_score - old_review_delta
+            prospect.update(review_fields)
+            prospect["total_score"] = max(0, base_score + new_delta)
+            return True
+    return False
 
 
 def list_outbound_prospects(
@@ -851,3 +911,60 @@ def update_prospect_message(
             row.update(deepcopy(updates))
             return row
     return None
+
+
+# ---------------------------------------------------------------------------
+# Scoring feedback
+# ---------------------------------------------------------------------------
+
+
+def insert_scoring_feedback(payload: dict[str, Any]) -> dict[str, Any]:
+    """Insert a scoring feedback run record."""
+    if _using_supabase():
+        data = supabase_repository._request(  # type: ignore[attr-defined]
+            "POST", "scoring_feedback", json=payload, prefer="return=representation"
+        )
+        return data[0] if data else payload
+
+    now = _now_iso()
+    record = {
+        "id": payload.get("id", str(uuid4())),
+        "tenant_id": payload.get("tenant_id", OUTBOUND_TENANT_ID),
+        "rubric_hash": payload["rubric_hash"],
+        "run_at": payload.get("run_at", now),
+        "total_prospects_analyzed": payload["total_prospects_analyzed"],
+        "positive_count": payload["positive_count"],
+        "negative_count": payload["negative_count"],
+        "inconclusive_count": payload["inconclusive_count"],
+        "base_rate": payload["base_rate"],
+        "dimension_metrics": deepcopy(payload["dimension_metrics"]),
+        "current_weights": deepcopy(payload["current_weights"]),
+        "suggested_weights": deepcopy(payload["suggested_weights"]),
+        "review_signal_metrics": deepcopy(payload.get("review_signal_metrics")),
+        "tier_accuracy": deepcopy(payload["tier_accuracy"]),
+        "discrimination_score": payload.get("discrimination_score"),
+    }
+    state = _local_state()
+    state["scoring_feedback"].append(record)
+    return record
+
+
+def list_scoring_feedback(
+    *,
+    tenant_id: str = OUTBOUND_TENANT_ID,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """List recent scoring feedback runs, most recent first."""
+    if _using_supabase():
+        params: dict[str, str] = {
+            "tenant_id": f"eq.{tenant_id}",
+            "order": "run_at.desc",
+            "limit": str(limit),
+        }
+        return supabase_repository._request("GET", "scoring_feedback", params=params)  # type: ignore[attr-defined]
+
+    rows = [
+        row for row in _local_state()["scoring_feedback"]
+        if _matches_tenant(row["tenant_id"], tenant_id)
+    ]
+    return sorted(rows, key=lambda r: r.get("run_at", ""), reverse=True)[:limit]
