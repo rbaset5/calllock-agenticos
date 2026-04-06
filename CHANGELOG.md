@@ -2,6 +2,20 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.3.1] - 2026-04-06
+
+### Added
+- LSA discovery expanded to 8 states: OH, GA, NC added to MI/FL/TX/IL/AZ
+- 408 new small-market towns (139 OH, 130 GA, 139 NC) in discovery pipeline
+- Full flywheel script chains CID lookup → LSA sweep → export in one run
+
+### Changed
+- Ingest review filter loosened from 10-100 to 5-150 reviews (adds ~30% more prospects)
+- METRO_FILTERS updated with OH, GA, NC entries for queue builder routing
+- State whitelist in `ingest_from_lsa()` expanded to include OH, GA, NC
+- Sprint schedule uses individual state codes instead of SE/MW clusters
+- Tests updated for individual state sprint schedule (SE→FL, MW→MI, dials 13→11)
+
 ## [0.1.3.0] - 2026-04-06
 
 ### Added
