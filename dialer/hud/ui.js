@@ -176,6 +176,22 @@ channel.addEventListener('message', (event) => {
 
   switch (msg.type) {
     case 'CALL_STARTED': {
+      // Guard: reject CALL_STARTED without a callSid (prevents poisoning state.callId with undefined)
+      if (!msg.callSid) {
+        console.warn('[HUD] Ignoring CALL_STARTED — missing callSid');
+        break;
+      }
+
+      // Guard: ignore duplicate CALL_STARTED for the same call
+      if (msg.callSid === state.callId) break;
+
+      // Guard: reject mid-call reset — only allow reset from terminal/idle stages
+      const resettableStages = ['IDLE', 'EXIT', 'ENDED', 'BOOKED', 'SEED_EXIT', 'NON_CONNECT'];
+      if (state.callId && !resettableStages.includes(state.stage)) {
+        console.warn('[HUD] Ignoring CALL_STARTED — active call in stage:', state.stage, 'callId:', state.callId);
+        break;
+      }
+
       // Auto-reset
       resetAuditTrail();
       usedProbeLines.clear();
