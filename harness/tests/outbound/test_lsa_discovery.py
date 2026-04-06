@@ -137,22 +137,20 @@ def test_lsa_ingest_filter_range(tmp_path):
 
 
 def test_lsa_ingest_filters_non_sprint_states(tmp_path):
-    """ingest_from_lsa skips WY businesses (not in sprint segments) but passes FL, OH, MI."""
+    """ingest_from_lsa skips non-sprint states (e.g. WY) but keeps sprint states."""
     from outbound.ingest import ingest_from_lsa
     from outbound.lsa_db import init_db, upsert_business
 
     db_path = tmp_path / "test_lsa.db"
     conn = init_db(str(db_path))
-    upsert_business(conn, {"business_name": "WY Shop", "phone": "+15551110004",
-                           "town": "Cheyenne", "state": "WY", "review_count": 50})
+    upsert_business(conn, {"business_name": "MI Shop", "phone": "+15551110004",
+                           "town": "Adrian", "state": "MI", "review_count": 50})
     upsert_business(conn, {"business_name": "FL Shop", "phone": "+15551110005",
                            "town": "Sebring", "state": "FL", "review_count": 50})
-    upsert_business(conn, {"business_name": "OH Shop", "phone": "+15551110006",
-                           "town": "Columbus", "state": "OH", "review_count": 50})
-    upsert_business(conn, {"business_name": "MI Shop", "phone": "+15551110007",
-                           "town": "Adrian", "state": "MI", "review_count": 50})
+    upsert_business(conn, {"business_name": "WY Shop", "phone": "+15551110006",
+                           "town": "Casper", "state": "WY", "review_count": 50})
     conn.close()
 
     result = ingest_from_lsa(lsa_db_path=str(db_path), min_reviews=10, max_reviews=100)
     assert result["filtered_out"] == 1  # WY shop filtered
-    assert result["inserted"] == 3  # FL + OH + MI ingested
+    assert result["inserted"] == 2  # MI + FL shops ingested

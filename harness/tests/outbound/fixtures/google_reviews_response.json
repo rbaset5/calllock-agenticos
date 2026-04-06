@@ -1,0 +1,88 @@
+{
+  "reviews": [
+    {
+      "user": {"name": "Mike Johnson"},
+      "rating": 2,
+      "date": "2 months ago",
+      "snippet": "Called three times and nobody picked up. Left voicemails and never got a callback. Finally went with another company.",
+      "response": null
+    },
+    {
+      "user": {"name": "Sarah Williams"},
+      "rating": 5,
+      "date": "3 months ago",
+      "snippet": "Great service! The owner came out himself and fixed our furnace the same day. Very professional.",
+      "response": {
+        "snippet": "Thank you Sarah! We always try to provide same-day service."
+      }
+    },
+    {
+      "user": {"name": "Tom Davis"},
+      "rating": 1,
+      "date": "1 month ago",
+      "snippet": "Scheduled an appointment for 2pm. Technician showed up at 6pm with no call or explanation. Very unprofessional.",
+      "response": null
+    },
+    {
+      "user": {"name": "Emily Chen"},
+      "rating": 4,
+      "date": "4 months ago",
+      "snippet": "Good work overall but it took 3 days to get someone out for what I told them was an emergency. No after-hours service available.",
+      "response": {
+        "snippet": "Thank you for your feedback."
+      }
+    },
+    {
+      "user": {"name": "James Wilson"},
+      "rating": 3,
+      "date": "2 months ago",
+      "snippet": "Decent work once they finally showed up. But getting ahold of someone on the phone is nearly impossible.",
+      "response": null
+    },
+    {
+      "user": {"name": "Lisa Martinez"},
+      "rating": 5,
+      "date": "5 months ago",
+      "snippet": "The owner and his son did a great job installing our new AC unit. Small family business that really cares.",
+      "response": {
+        "snippet": "Thank you for your feedback."
+      }
+    },
+    {
+      "user": {"name": "Robert Brown"},
+      "rating": 2,
+      "date": "1 month ago",
+      "snippet": "Used to be good but quality has really gone downhill lately. The last two visits were sloppy and they had to come back to fix their own mistakes.",
+      "response": null
+    },
+    {
+      "user": {"name": "Amanda Lee"},
+      "rating": 4,
+      "date": "6 months ago",
+      "snippet": "Fair pricing and friendly staff. Wish they had weekend hours though, had to take time off work.",
+      "response": {
+        "snippet": "Thank you for your feedback."
+      }
+    },
+    {
+      "user": {"name": "Chris Taylor"},
+      "rating": 1,
+      "date": "3 weeks ago",
+      "snippet": "Worst experience ever. Called their emergency line at 10pm when our heat went out in January. Nobody answered. Had to call someone else.",
+      "response": null
+    },
+    {
+      "user": {"name": "Karen White"},
+      "rating": 3,
+      "date": "2 months ago",
+      "snippet": "Average service. They got the job done but communication was poor. Would have been nice to get updates without having to chase them down.",
+      "response": null
+    }
+  ],
+  "serpapi_pagination": {
+    "next_page_token": "CAoQAA"
+  },
+  "search_information": {
+    "query_displayed": "reviews"
+  }
+}

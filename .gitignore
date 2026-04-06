@@ -19,3 +19,5 @@ coverage.xml
 supabase/.branches/
 .next/
 .gstack/
+.claude/
+harness/lsa_*.csv
