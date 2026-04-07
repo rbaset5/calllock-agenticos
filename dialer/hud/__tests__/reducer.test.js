@@ -1028,3 +1028,107 @@ describe('Cross-model: OPENER → EXIT on brush_off', () => {
     assert.equal(next.outcome, 'not_booked');
   });
 });
+
+// ── Special intent → OBJECTION routing ──────────────────────────
+
+describe('Special intent → OBJECTION cross-stage routing', () => {
+  function stateAt(stage) {
+    return { ...createInitialState(PLAYBOOK), callId: SID, stage };
+  }
+
+  function specialIntentRule(intent) {
+    return { band: 'medium', confidence: 0.72, detectedIntent: intent, why: `Special intent: ${intent}` };
+  }
+
+  it('tried_ai from MINI_PITCH → OBJECTION', () => {
+    const s = stateAt('MINI_PITCH');
+    const next = transcriptFinal(s, "I don't trust robots", specialIntentRule('tried_ai'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'tried_ai');
+    assert.ok(next.now.line.includes('fair'));
+  });
+
+  it('tried_ai from BRIDGE → OBJECTION', () => {
+    const s = stateAt('BRIDGE');
+    const next = transcriptFinal(s, "We tried AI before and it was terrible", specialIntentRule('tried_ai'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'tried_ai');
+  });
+
+  it('existing_coverage from OPENER → OBJECTION', () => {
+    const s = stateAt('OPENER');
+    const next = transcriptFinal(s, "We have a receptionist who handles all that plus we're pretty covered", specialIntentRule('existing_coverage'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'existing_coverage');
+  });
+
+  it('answering_service from QUALIFIER → OBJECTION', () => {
+    const s = stateAt('QUALIFIER');
+    const next = transcriptFinal(s, "We already use an answering service", specialIntentRule('answering_service'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'answering_service');
+  });
+
+  it('referral_only from BRIDGE → OBJECTION', () => {
+    const s = stateAt('BRIDGE');
+    const next = transcriptFinal(s, "We're all referrals, don't run ads", specialIntentRule('referral_only'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'referral_only');
+  });
+
+  it('competitor_comparison from MINI_PITCH → OBJECTION', () => {
+    const s = stateAt('MINI_PITCH');
+    const next = transcriptFinal(s, "What makes you different from everyone else", specialIntentRule('competitor_comparison'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'competitor_comparison');
+  });
+
+  it('denylist: tried_ai from EXIT → stays EXIT', () => {
+    const s = stateAt('EXIT');
+    const next = transcriptFinal(s, "We tried AI before", specialIntentRule('tried_ai'));
+    assert.equal(next.stage, 'EXIT');
+  });
+
+  it('priority: detectedIntent tried_ai wins over objectionBucket interest', () => {
+    const s = stateAt('OPENER');
+    const rule = { ...specialIntentRule('tried_ai'), objectionBucket: 'interest' };
+    const next = transcriptFinal(s, "Not interested, and I don't trust AI robots", rule);
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'tried_ai');
+  });
+
+  it('Bug 1 regression: existing_coverage from BRIDGE + no-pain → SEED_EXIT', () => {
+    const s = stateAt('BRIDGE');
+    const next = transcriptFinal(s, "We don't miss calls, we're fully covered", specialIntentRule('existing_coverage'));
+    assert.equal(next.stage, 'SEED_EXIT');
+  });
+
+  it('Bug 1 positive: existing_coverage from BRIDGE + pain numbers → OBJECTION', () => {
+    const s = stateAt('BRIDGE');
+    const next = transcriptFinal(s, "We have a receptionist but we still miss about 5 calls a week", specialIntentRule('existing_coverage'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'existing_coverage');
+  });
+
+  it('Bug 2: same special intent twice → EXIT', () => {
+    const s = {
+      ...stateAt('OBJECTION'),
+      activeObjection: 'tried_ai',
+      objectionHistory: [{ bucket: 'tried_ai', atMs: T, utterance: 'robots are bad' }],
+    };
+    const next = transcriptFinal(s, "I already told you I don't trust AI", specialIntentRule('tried_ai'));
+    assert.equal(next.stage, 'EXIT');
+    assert.equal(next.outcome, 'not_booked');
+  });
+
+  it('Bug 2: different special intents chained → stays OBJECTION with new bucket', () => {
+    const s = {
+      ...stateAt('OBJECTION'),
+      activeObjection: 'tried_ai',
+      objectionHistory: [{ bucket: 'tried_ai', atMs: T, utterance: 'robots are bad' }],
+    };
+    const next = transcriptFinal(s, "Plus we already use an answering service", specialIntentRule('answering_service'));
+    assert.equal(next.stage, 'OBJECTION');
+    assert.equal(next.activeObjection, 'answering_service');
+  });
+});

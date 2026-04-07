@@ -263,6 +263,47 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
+      // Cross-stage special intent → OBJECTION
+      // These intents have dedicated objection cards and playbook scripts.
+      // Route from any non-terminal stage so the rep gets the right response.
+      const SPECIAL_INTENT_BUCKETS = ['tried_ai', 'existing_coverage', 'answering_service', 'referral_only', 'competitor_comparison'];
+      if (SPECIAL_INTENT_BUCKETS.includes(rule.detectedIntent)
+          && !['IDLE', 'EXIT', 'ENDED', 'BOOKED', 'SEED_EXIT', 'NON_CONNECT'].includes(state.stage)
+          && playbook.objections[rule.detectedIntent]) {
+        // BRIDGE guard: no-pain signals should exit gracefully via SEED_EXIT, not enter objection loop
+        const isBridgeNoPain = state.stage === 'BRIDGE' && (() => {
+          const utt = (action.turn?.text || '').toLowerCase();
+          const NO_PAIN = /\b(don'?t miss|we'?re covered|fully covered|we'?re good|we are good|not looking to change|not interested in changing|she handles everything|he handles everything|we do not miss)\b/;
+          return NO_PAIN.test(utt) && !/\b\d+\b/.test(utt);
+        })();
+        if (!isBridgeNoPain) {
+          const updatedHistory = [...nextState.objectionHistory, { bucket: rule.detectedIntent, atMs: action.atMs, utterance: action.turn.text }];
+          // Same special intent twice → prospect is firm, exit gracefully
+          if (state.stage === 'OBJECTION' && objectionCountForBucket(updatedHistory, rule.detectedIntent) >= 2) {
+            return {
+              ...nextState,
+              stage: 'EXIT',
+              outcome: 'not_booked',
+              objectionHistory: updatedHistory,
+              now: makeNow('EXIT', playbook.exit, rule.band, `Same special intent repeated: ${rule.detectedIntent}`, 'rules'),
+              metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1, objectionCount: nextState.metrics.objectionCount + 1 },
+              lastCommittedAtMs: action.atMs,
+            };
+          }
+          return {
+            ...nextState,
+            stage: 'OBJECTION',
+            lastObjectionBucket: rule.detectedIntent,
+            activeObjection: rule.detectedIntent,
+            objectionHistory: updatedHistory,
+            now: makeNow('OBJECTION', playbook.objections[rule.detectedIntent].reset, rule.band, rule.why || `Special intent: ${rule.detectedIntent}`, 'rules'),
+            metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1, objectionCount: nextState.metrics.objectionCount + 1 },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
+        // isBridgeNoPain: fall through to BRIDGE handler → SEED_EXIT
+      }
+
       // OPENER → EXIT on brush_off (DNC, wrong number, voicemail, hostile)
       if (state.stage === 'OPENER' && rule.detectedIntent === 'brush_off') {
         return {
