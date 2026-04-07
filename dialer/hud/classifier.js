@@ -566,6 +566,10 @@ export function detectNewIntents(utterance, stage) {
     'tried ai', 'used ai', 'had ai', 'ai before',
     'tried a robot', 'robot answering', 'tried chatbot',
     'tried one of those', 'tried something like that',
+    // Present-tense anti-AI sentiment
+    "don't want a robot", "don't want ai", "not putting a robot",
+    "not trying to stick", "not sticking a robot", "some robot",
+    "no robots", "no ai", "don't trust ai", "don't trust robots",
   ];
   const taiHits = countPhraseMatches(text, TRIED_AI_PHRASES);
   if (taiHits > 0) {
@@ -584,6 +588,7 @@ export function detectNewIntents(utterance, stage) {
 
   const COMPETITOR_COMPARISON_PHRASES = [
     'how is this different', 'what makes you different', 'why you',
+    'what makes this different', 'what makes this any different',
     'use sameday', 'use servicetitan', 'heard of sameday',
     "what's different", 'how are you different',
   ];
