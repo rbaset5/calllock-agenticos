@@ -1131,4 +1131,16 @@ describe('Special intent → OBJECTION cross-stage routing', () => {
     assert.equal(next.stage, 'OBJECTION');
     assert.equal(next.activeObjection, 'answering_service');
   });
+
+  it('Pain override: objection + bridge pain signals → BRIDGE (pain wins)', () => {
+    const s = {
+      ...stateAt('OBJECTION'),
+      activeObjection: 'competitor_comparison',
+      objectionHistory: [{ bucket: 'competitor_comparison', atMs: T, utterance: 'how is yours different' }],
+    };
+    const rule = { band: 'medium', confidence: 0.64, objectionBucket: 'interest', why: 'interest objection' };
+    const next = transcriptFinal(s, "We miss calls after hours. People leave a voicemail and call someone else. Weekends are worse. But I still don't want AI.", rule);
+    assert.equal(next.stage, 'BRIDGE');
+    assert.equal(next.bridgeAngle, 'after_hours');
+  });
 });

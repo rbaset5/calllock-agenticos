@@ -616,11 +616,37 @@ export function hudReducer(state, action, playbook) {
         const updatedHistory = [...nextState.objectionHistory, historyItem];
         const countSame = objectionCountForBucket(updatedHistory, rule.objectionBucket);
 
+        // Pain override: if the prospect's objection ALSO contains bridge/pain signals,
+        // exit to BRIDGE. Pain admission during an objection = engagement, not rejection.
+        // "We miss some calls after hours" + "I don't trust AI" → pain wins.
+        const utteranceText = (action.turn?.text || '').toLowerCase();
+        const BRIDGE_PAIN_SIGNALS = /\b(miss\w*\s+calls?|voicemail|go(es)?\s+to\s+voicemail|can't\s+answer|unanswered|after\s*hours?|weekends?|lose\s+(calls?|jobs?|customers?)|called\s+somebody\s+else|call\w*\s+someone\s+else|ring\s+them\s+back)\b/;
+        if (BRIDGE_PAIN_SIGNALS.test(utteranceText)) {
+          const bridgeAngle = /\b(after\s*hours?|weekends?)\b/.test(utteranceText) ? 'after_hours' : 'missed_calls';
+          return {
+            ...nextState,
+            stage: 'BRIDGE',
+            bridgeAngle,
+            objectionHistory: updatedHistory,
+            now: makeNow(
+              'BRIDGE',
+              resolveBridgeLine({ bridgeAngle }, playbook),
+              rule.band,
+              'Pain signal during objection — advancing to discovery',
+              'rules',
+            ),
+            metrics: {
+              ...nextState.metrics,
+              objectionCount: nextState.metrics.objectionCount + 1,
+              stageChanges: nextState.metrics.stageChanges + 1,
+            },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
+
         // same bucket twice → exit (prospect is firm, stop pushing)
-        // BUT: if the utterance also contains a bridge signal, pain overrides
         if (countSame >= 2) {
-          const utteranceText = (action.turn?.text || '').toLowerCase();
-          const hasBridgeSignal = /\b(miss\w*\s+calls?|voicemail|go(es)?\s+to\s+voicemail|can't\s+answer|unanswered)\b/.test(utteranceText);
+          const hasBridgeSignal = BRIDGE_PAIN_SIGNALS.test(utteranceText);
           if (hasBridgeSignal) {
             return {
               ...nextState,
