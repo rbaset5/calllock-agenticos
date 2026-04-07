@@ -232,7 +232,11 @@ export const GLOBAL_HOTKEYS = [
   { key: "Shift", label: "Hedge", description: "Request hedge (CLOSE/OBJ)" },
   { key: "Shift+F1", label: "End", description: "End call + reset" },
   { key: "?", label: "Legend", description: "Toggle hotkey bar" },
-  // Objection hotkeys (1-4 = bridge angles at BRIDGE/OPENER, objections elsewhere)
+];
+
+// Objection/bridge hotkeys (rendered in their own bar above the nav legend)
+// At BRIDGE/OPENER, 1-4 trigger bridge angles instead of objections.
+export const OBJECTION_HOTKEYS = [
   { key: "1", label: "Timing", description: "Timing objection reset" },
   { key: "2", label: "Interest", description: "Interest objection reset" },
   { key: "3", label: "Info", description: "Send info objection reset" },

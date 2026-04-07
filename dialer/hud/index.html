@@ -512,15 +512,19 @@
     /* ── Hotkey legend ──────────────────────────────── */
     .hotkey-bar {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      gap: 8px 20px;
-      min-height: 36px;
-      padding: 4px 20px;
+      gap: 20px;
+      height: 36px;
+      padding: 0 20px;
       background: #0d0d0d;
       border-top: 1px solid #1a1a1a;
       flex-shrink: 0;
+    }
+
+    .objection-hotkey-bar {
+      border-top: none;
+      border-bottom: 1px solid #1a1a1a;
     }
 
     .hotkey-item {
@@ -758,6 +762,7 @@
 
   <!-- Hotkey legend -->
   <div id="quick-pick-strip" class="quick-pick-strip"></div>
+  <div id="objection-hotkey-bar" class="hotkey-bar objection-hotkey-bar"></div>
   <div id="hotkey-bar" class="hotkey-bar"></div>
 
   <script type="module" src="./ui.js"></script>

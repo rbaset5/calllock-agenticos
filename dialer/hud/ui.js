@@ -10,7 +10,7 @@ import { assignTone, shouldUpdateTone } from './tone.js';
 import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
-import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS } from './taxonomy.js';
+import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS, OBJECTION_HOTKEYS } from './taxonomy.js';
 import { renderV2CenterPanel, renderProspectContext, renderPauseStrip, renderLeftPane, renderRightPane, renderCompactIdentity } from './render-v2.js';
 
 function _esc(str) {
@@ -105,6 +105,19 @@ for (const h of GLOBAL_HOTKEYS) {
   $hotkeyBar.appendChild(span);
 }
 $hotkeyBar.style.display = 'none';
+
+// Populate objection hotkey bar (separate row above nav legend)
+const $objHotkeyBar = document.getElementById('objection-hotkey-bar');
+for (const h of OBJECTION_HOTKEYS) {
+  const span = document.createElement('span');
+  span.className = 'hotkey-item';
+  const kbd = document.createElement('kbd');
+  kbd.textContent = h.key;
+  span.appendChild(kbd);
+  span.appendChild(document.createTextNode(h.label));
+  $objHotkeyBar.appendChild(span);
+}
+$objHotkeyBar.style.display = 'none';
 
 // ── Pause strip ──────────────────────────────────────────────
 
@@ -759,10 +772,12 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // ? — Toggle hotkey legend bar
+    // ? — Toggle hotkey legend bars (objection bar + nav bar)
     case e.key === '?': {
       e.preventDefault();
-      $hotkeyBar.style.display = $hotkeyBar.style.display === 'none' ? '' : 'none';
+      const show = $hotkeyBar.style.display === 'none';
+      $hotkeyBar.style.display = show ? '' : 'none';
+      $objHotkeyBar.style.display = show ? '' : 'none';
       break;
     }
 
