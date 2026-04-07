@@ -10,7 +10,7 @@ import { assignTone, shouldUpdateTone } from './tone.js';
 import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
-import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS, OBJECTION_HOTKEYS } from './taxonomy.js';
+import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS, OBJECTION_HOTKEYS, BRIDGE_HOTKEYS } from './taxonomy.js';
 import { renderV2CenterPanel, renderProspectContext, renderPauseStrip, renderLeftPane, renderRightPane, renderCompactIdentity } from './render-v2.js';
 
 function _esc(str) {
@@ -106,16 +106,31 @@ for (const h of GLOBAL_HOTKEYS) {
 }
 $hotkeyBar.style.display = 'none';
 
-// Populate objection hotkey bar
+// Dynamic hotkey bar — changes based on current stage
 const $objHotkeyBar = document.getElementById('objection-hotkey-bar');
-for (const h of OBJECTION_HOTKEYS) {
-  const span = document.createElement('span');
-  span.className = 'hotkey-item';
-  const kbd = document.createElement('kbd');
-  kbd.textContent = h.key;
-  span.appendChild(kbd);
-  span.appendChild(document.createTextNode(h.label));
-  $objHotkeyBar.appendChild(span);
+let _lastHotkeyStage = null;
+let _hotkeyBarVisible = false;
+
+function renderHotkeyBar(stage) {
+  if (stage === _lastHotkeyStage) return;
+  _lastHotkeyStage = stage;
+  $objHotkeyBar.replaceChildren();
+
+  const isBridge = stage === 'BRIDGE' || stage === 'OPENER';
+  const items = isBridge
+    ? BRIDGE_HOTKEYS
+    : OBJECTION_HOTKEYS;
+
+  for (const h of items) {
+    const span = document.createElement('span');
+    span.className = 'hotkey-item';
+    const kbd = document.createElement('kbd');
+    kbd.textContent = h.key;
+    span.appendChild(kbd);
+    span.appendChild(document.createTextNode(h.label));
+    $objHotkeyBar.appendChild(span);
+  }
+  $objHotkeyBar.style.display = _hotkeyBarVisible ? '' : 'none';
 }
 $objHotkeyBar.style.display = 'none';
 
@@ -275,8 +290,10 @@ function dispatch(action) {
   const prevState = state;
   state = hudReducer(state, action, PLAYBOOK);
   if (state.stage !== prevState.stage && state.stage !== 'IDLE') {
-    // Keep round history across stage changes (Option B from plan)
+    // Clear round history on stage change — rounds are per-stage context
+    rounds = [];
     roundIndex = -1;
+    renderRoundStrip();
     // Delay pause strip by 3s so rep can read the line first
     clearTimeout(pauseStripTimer);
     clearTimeout(pauseStripSilenceTimer);
@@ -706,16 +723,25 @@ document.addEventListener('keydown', (e) => {
     // ← — Step back through rounds, then go back a stage
     case e.key === 'ArrowLeft': {
       e.preventDefault();
-      const effectiveIdx = roundIndex === -1 ? rounds.length - 1 : roundIndex;
-      if (rounds.length > 0 && effectiveIdx > 0) {
-        roundIndex = effectiveIdx - 1;
+      // If in live mode and rounds exist, enter history at last round first
+      if (roundIndex === -1 && rounds.length > 0) {
+        roundIndex = rounds.length - 1;
         const round = rounds[roundIndex];
         $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
         $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
         renderRoundStrip();
         return;
       }
-      // No more rounds — go back a stage
+      // Step back through round history
+      if (roundIndex > 0) {
+        roundIndex--;
+        const round = rounds[roundIndex];
+        $nowLine.textContent = round.source === 'custom' ? '(off-script response)' : round.line;
+        $nowWhy.textContent = `Round ${roundIndex + 1} — ${round.source}`;
+        renderRoundStrip();
+        return;
+      }
+      // At round 0 or no rounds — go back a stage
       const BACK_MAP = {
         BOOKED:      'CLOSE',
         SEED_EXIT:   'QUALIFIER',
@@ -884,9 +910,9 @@ document.addEventListener('keydown', (e) => {
     // ? — Toggle hotkey legend bars (objection + nav)
     case e.key === '?': {
       e.preventDefault();
-      const show = $hotkeyBar.style.display === 'none';
-      $hotkeyBar.style.display = show ? '' : 'none';
-      $objHotkeyBar.style.display = show ? '' : 'none';
+      _hotkeyBarVisible = !_hotkeyBarVisible;
+      $hotkeyBar.style.display = _hotkeyBarVisible ? '' : 'none';
+      $objHotkeyBar.style.display = _hotkeyBarVisible ? '' : 'none';
       break;
     }
 
@@ -1036,6 +1062,7 @@ function render() {
 
   // Stage bar
   renderStageBar();
+  renderHotkeyBar(state.stage);
   renderContextStrip();
 
   // Compose active card FIRST (needed by both center panel and side panes)
