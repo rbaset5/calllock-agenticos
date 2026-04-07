@@ -1110,7 +1110,7 @@ describe('Special intent → OBJECTION cross-stage routing', () => {
     assert.equal(next.activeObjection, 'existing_coverage');
   });
 
-  it('Bug 2: same special intent twice → EXIT', () => {
+  it('Bug 2: same special intent twice (no pain) → EXIT', () => {
     const s = {
       ...stateAt('OBJECTION'),
       activeObjection: 'tried_ai',
@@ -1119,6 +1119,17 @@ describe('Special intent → OBJECTION cross-stage routing', () => {
     const next = transcriptFinal(s, "I already told you I don't trust AI", specialIntentRule('tried_ai'));
     assert.equal(next.stage, 'EXIT');
     assert.equal(next.outcome, 'not_booked');
+  });
+
+  it('Bug 2 + pain override: same special intent twice WITH pain signals → BRIDGE', () => {
+    const s = {
+      ...stateAt('OBJECTION'),
+      activeObjection: 'tried_ai',
+      objectionHistory: [{ bucket: 'tried_ai', atMs: T, utterance: 'robots are bad' }],
+    };
+    const next = transcriptFinal(s, "I still don't want AI but we miss calls after hours and weekends are worse", specialIntentRule('tried_ai'));
+    assert.equal(next.stage, 'BRIDGE');
+    assert.equal(next.bridgeAngle, 'after_hours');
   });
 
   it('Bug 2: different special intents chained → stays OBJECTION with new bucket', () => {

@@ -279,7 +279,22 @@ export function hudReducer(state, action, playbook) {
         if (!isBridgeNoPain) {
           const updatedHistory = [...nextState.objectionHistory, { bucket: rule.detectedIntent, atMs: action.atMs, utterance: action.turn.text }];
           // Same special intent twice → prospect is firm, exit gracefully
+          // BUT: if the utterance also contains pain signals, pain overrides — advance to BRIDGE
           if (state.stage === 'OBJECTION' && objectionCountForBucket(updatedHistory, rule.detectedIntent) >= 2) {
+            const utt = (action.turn?.text || '').toLowerCase();
+            const BRIDGE_PAIN = /\b(miss\w*\s+calls?|voicemail|go(es)?\s+to\s+voicemail|can't\s+answer|unanswered|after\s*hours?|weekends?|lose\s+(calls?|jobs?|customers?)|called\s+somebody\s+else|call\w*\s+someone\s+else|ring\s+them\s+back)\b/;
+            if (BRIDGE_PAIN.test(utt)) {
+              const bridgeAngle = /\b(after\s*hours?|weekends?)\b/.test(utt) ? 'after_hours' : 'missed_calls';
+              return {
+                ...nextState,
+                stage: 'BRIDGE',
+                bridgeAngle,
+                objectionHistory: updatedHistory,
+                now: makeNow('BRIDGE', resolveBridgeLine({ bridgeAngle }, playbook), rule.band, 'Pain signal overrides repeated special intent — advancing', 'rules'),
+                metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1, objectionCount: nextState.metrics.objectionCount + 1 },
+                lastCommittedAtMs: action.atMs,
+              };
+            }
             return {
               ...nextState,
               stage: 'EXIT',
