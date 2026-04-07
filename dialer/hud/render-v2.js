@@ -212,10 +212,10 @@ export function renderRightPane(stage, activeCard, deps) {
       case 'bridgeAngles':
         if (objFeed && deps.buildSection) {
           const bridgeItems = [
-            { label: '1 Missed calls', line: deps.playbook.bridge.missed_calls.voicemail },
-            { label: '2 Competition', line: deps.playbook.bridge.competition.firstResponder },
-            { label: '3 Overwhelmed', line: deps.playbook.bridge.overwhelmed.cantKeepUp },
-            { label: '4 Ad spend', line: deps.playbook.bridge.ad_spend.lsa },
+            { label: 'Missed calls', line: deps.playbook.bridge.missed_calls.voicemail },
+            { label: 'Competition', line: deps.playbook.bridge.competition.firstResponder },
+            { label: 'Overwhelmed', line: deps.playbook.bridge.overwhelmed.cantKeepUp },
+            { label: 'Ad spend', line: deps.playbook.bridge.ad_spend.lsa },
             { label: 'After hours', line: deps.playbook.bridge.missed_calls.afterHours },
           ];
           objFeed.appendChild(deps.buildSection('BRIDGE ANGLES', bridgeItems, 'stage', 'lines'));
