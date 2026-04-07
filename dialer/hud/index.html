@@ -545,6 +545,73 @@
       margin-right: 3px;
     }
 
+    /* ── FAQ box ────────────────────────────────────── */
+    #faq-box {
+      max-height: 40vh;
+      overflow-y: auto;
+      background: #111;
+      border-top: 1px solid #22c55e33;
+      padding: 8px 12px;
+      flex-shrink: 0;
+    }
+    #faq-box::-webkit-scrollbar { width: 4px; }
+    #faq-box::-webkit-scrollbar-track { background: transparent; }
+    #faq-box::-webkit-scrollbar-thumb { background: #22c55e44; border-radius: 2px; }
+    .faq-header {
+      font-size: 10px;
+      font-weight: 700;
+      color: #22c55e;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .faq-item {
+      cursor: pointer;
+      padding: 3px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .faq-question {
+      font-size: 11px;
+      color: #a1a1aa;
+      font-weight: 600;
+    }
+    .faq-answer {
+      font-size: 11px;
+      color: #71717a;
+      display: none;
+      padding: 2px 0 4px;
+      line-height: 1.4;
+    }
+    .faq-item.expanded .faq-answer { display: block; }
+    .faq-item.faq-highlight {
+      animation: faq-pulse 3s ease-out;
+    }
+    .faq-item.faq-highlight .faq-answer { display: block; }
+    @keyframes faq-pulse {
+      0% { border-left: 3px solid #22c55e; padding-left: 8px; background: #22c55e11; }
+      100% { border-left: 3px solid transparent; padding-left: 8px; background: transparent; }
+    }
+    .faq-competitor-section {
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid #22c55e22;
+    }
+    .faq-competitor-header {
+      font-size: 10px;
+      font-weight: 700;
+      color: #eab308;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .faq-competitor-item {
+      font-size: 10px;
+      color: #71717a;
+      padding: 2px 0;
+    }
+    .faq-competitor-name {
+      color: #eab308;
+      font-weight: 600;
+    }
+
     /* ── Stage transition flash ────────────────────── */
     @keyframes flash-green {
       0% { box-shadow: inset 0 0 0 2px #22c55e; }
@@ -727,6 +794,7 @@
       </div>
       <div class="side-panel-header">LINES</div>
       <div class="side-panel-feed" id="linesFeed"></div>
+      <div id="faq-box"></div>
     </div>
     <div class="now-panel" id="nowPanel" data-stage="IDLE">
       <div class="preview-hint" id="previewHint"></div>

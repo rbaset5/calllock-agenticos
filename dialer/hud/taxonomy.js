@@ -232,6 +232,7 @@ export const GLOBAL_HOTKEYS = [
   { key: "Shift", label: "Hedge", description: "Request hedge (CLOSE/OBJ)" },
   { key: "Shift+F1", label: "End", description: "End call + reset" },
   { key: "?", label: "Legend", description: "Toggle hotkey bar" },
+  { key: "`", label: "FAQ", description: "Jump to quick answers" },
 ];
 
 // Objection/bridge hotkeys (rendered in their own bar above the nav legend)

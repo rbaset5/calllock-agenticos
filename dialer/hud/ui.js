@@ -119,6 +119,105 @@ for (const h of OBJECTION_HOTKEYS) {
 }
 $objHotkeyBar.style.display = 'none';
 
+// ── FAQ box (always-on, rendered once) ───────────────────────
+
+const $faqBox = document.getElementById('faq-box');
+
+// Intent/objection → FAQ item id mapping for smart highlight
+const FAQ_HIGHLIGHT_MAP = {
+  // Intents (from processTurn phase 2)
+  pricing_question: 'price',
+  confusion: 'what',
+  // Objection buckets (from state.activeObjection)
+  existing_coverage: 'switch',
+  answering_service: 'vs_answering',
+  tried_ai: 'tried_ai',
+};
+
+let _faqHighlightTimer = null;
+
+function renderFaqBox(prospectCtx) {
+  if (!$faqBox) return;
+  $faqBox.textContent = '';
+
+  const header = document.createElement('div');
+  header.className = 'faq-header';
+  header.id = 'faq-header';
+  header.textContent = 'QUICK ANSWERS';
+  $faqBox.appendChild(header);
+
+  for (const item of PLAYBOOK.faq) {
+    const row = document.createElement('div');
+    row.className = 'faq-item';
+    row.dataset.faqId = item.id;
+
+    const q = document.createElement('div');
+    q.className = 'faq-question';
+    q.textContent = item.question;
+
+    const a = document.createElement('div');
+    a.className = 'faq-answer';
+    // Personalize if prospect context available
+    let answerText = item.answer;
+    if (prospectCtx) {
+      if (prospectCtx.trade && item.id === 'what') {
+        answerText = answerText.replace('your phone', prospectCtx.trade + ' calls');
+      }
+      if (prospectCtx.fsm_tool && item.id === 'system') {
+        answerText = 'Works with ' + prospectCtx.fsm_tool + '. No switching required.';
+      }
+      if (prospectCtx.location && item.id === 'afterhours') {
+        answerText = answerText.replace("when you're on a job", "when you're on a job in " + prospectCtx.location);
+      }
+    }
+    a.textContent = answerText;
+
+    row.appendChild(q);
+    row.appendChild(a);
+    row.addEventListener('click', () => row.classList.toggle('expanded'));
+    $faqBox.appendChild(row);
+  }
+
+  // Competitor cheat sheet (conditional)
+  if (prospectCtx && prospectCtx.competitor && PLAYBOOK.competitors[prospectCtx.competitor]) {
+    const comp = PLAYBOOK.competitors[prospectCtx.competitor];
+    const section = document.createElement('div');
+    section.className = 'faq-competitor-section';
+
+    const compHeader = document.createElement('div');
+    compHeader.className = 'faq-competitor-header';
+    compHeader.textContent = 'VS. ' + comp.name.toUpperCase();
+    section.appendChild(compHeader);
+
+    const compLine = document.createElement('div');
+    compLine.className = 'faq-competitor-item';
+    compLine.textContent = comp.line;
+    section.appendChild(compLine);
+
+    $faqBox.appendChild(section);
+  }
+}
+
+function highlightFaqItem(faqId) {
+  if (!$faqBox || !faqId) return;
+  // Clear previous
+  clearTimeout(_faqHighlightTimer);
+  const prev = $faqBox.querySelector('.faq-highlight');
+  if (prev) prev.classList.remove('faq-highlight');
+
+  const target = $faqBox.querySelector(`[data-faq-id="${faqId}"]`);
+  if (!target) return;
+  target.classList.add('faq-highlight');
+  target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+  _faqHighlightTimer = setTimeout(() => {
+    target.classList.remove('faq-highlight');
+  }, 3000);
+}
+
+// Render FAQ on init (will re-render when prospect context arrives)
+renderFaqBox(null);
+
 // ── Pause strip ──────────────────────────────────────────────
 
 function activatePauseStrip() {
@@ -248,6 +347,7 @@ channel.addEventListener('message', (event) => {
         dispatch({ type: 'SET_PROSPECT_CONTEXT', callSid: msg.callSid, prospectContext: msg.prospectContext });
       }
       renderProspectContext(msg.prospectContext || null);
+      renderFaqBox(msg.prospectContext || null);
       break;
     }
 
@@ -781,6 +881,19 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
+    // ` (backtick) — Jump to FAQ box
+    case e.key === '`' && !e.ctrlKey && !e.altKey && !e.metaKey: {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) break;
+      e.preventDefault();
+      const faqHeader = document.getElementById('faq-header');
+      if (faqHeader) {
+        faqHeader.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        faqHeader.style.color = '#fff';
+        setTimeout(() => { faqHeader.style.color = ''; }, 1500);
+      }
+      break;
+    }
+
   }
 });
 
@@ -875,6 +988,9 @@ function processTurn(utterance, classification) {
     } else if (targetStage === 'EXIT' && state.stage !== 'EXIT') {
       dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'EXIT', atMs: Date.now() });
     }
+    // Smart highlight: intent-driven FAQ highlight
+    const faqTarget = FAQ_HIGHLIGHT_MAP[classification.detectedIntent];
+    if (faqTarget) highlightFaqItem(faqTarget);
   }
 
   // Steps 6-8 (compose + render + log) happen in render() which is called by dispatch
@@ -933,6 +1049,12 @@ function render() {
   // NOW panel
   $nowPanel.setAttribute('data-stage', state.stage);
   renderObjectionPicker();
+
+  // Smart highlight: check activeObjection for FAQ match
+  if (state.activeObjection && FAQ_HIGHLIGHT_MAP[state.activeObjection]) {
+    highlightFaqItem(FAQ_HIGHLIGHT_MAP[state.activeObjection]);
+  }
+
   if (roundIndex === -1) {
     const rawLine = state.now?.line || 'Waiting for call...';
     const dedupedLine = dedupProbeLine(rawLine);

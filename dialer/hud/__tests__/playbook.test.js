@@ -73,6 +73,35 @@ describe('lineForStage', () => {
   });
 });
 
+describe('PLAYBOOK.faq', () => {
+  it('has 8 FAQ items', () => {
+    assert.equal(PLAYBOOK.faq.length, 8);
+  });
+
+  it('every item has id, question, and answer', () => {
+    for (const item of PLAYBOOK.faq) {
+      assert.ok(typeof item.id === 'string' && item.id.length > 0, 'missing id');
+      assert.ok(typeof item.question === 'string' && item.question.length > 0, 'missing question');
+      assert.ok(typeof item.answer === 'string' && item.answer.length > 0, 'missing answer');
+    }
+  });
+
+  it('FAQ ids are unique', () => {
+    const ids = PLAYBOOK.faq.map(f => f.id);
+    assert.equal(new Set(ids).size, ids.length, 'duplicate FAQ ids');
+  });
+});
+
+describe('PLAYBOOK.competitors', () => {
+  it('has entries for known competitors', () => {
+    for (const key of ['servicetitan', 'sameday', 'smithai', 'answering_service']) {
+      assert.ok(key in PLAYBOOK.competitors, `missing competitor: ${key}`);
+      assert.ok(PLAYBOOK.competitors[key].name, `${key} missing name`);
+      assert.ok(PLAYBOOK.competitors[key].line, `${key} missing line`);
+    }
+  });
+});
+
 describe('fillLineTemplate', () => {
   it('fills prospect placeholders with context values', () => {
     const line = fillLineTemplate(PLAYBOOK.booked, {

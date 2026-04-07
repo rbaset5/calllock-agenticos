@@ -54,6 +54,27 @@ export const PLAYBOOK = {
       'How many calls a week do you think slip through? At your ticket size, even one or two a month adds up fast.',
   },
 
+  // ── FAQ — always-on quick answers for prospect questions ────────
+
+  faq: [
+    { id: 'what', question: 'What do you do?', answer: "We answer your phone and book jobs when you can't — nights, weekends, when you're on a job." },
+    { id: 'how', question: 'How does it work?', answer: "When a call comes in and you can't pick up, it answers live. Asks what they need, where they are, gets their info, books them in. You see it in your calendar." },
+    { id: 'price', question: 'How much?', answer: '$297/mo. One booked job covers it. Less than a part-time receptionist.' },
+    { id: 'system', question: 'Does it work with my system?', answer: 'Works with Housecall Pro, Jobber, or pen-and-paper. No ServiceTitan required.' },
+    { id: 'afterhours', question: 'What about after hours?', answer: "That's when we catch most calls. After 5 PM, weekends, when you're on a job." },
+    { id: 'vs_answering', question: 'How is this different from an answering service?', answer: 'An answering service takes a message. We qualify the caller and book the job on the first call.' },
+    { id: 'tried_ai', question: 'I tried AI before and it was bad.', answer: "Most AI phone stuff is generic chatbots. We're built for contractor calls — scheduling, dispatch, quoting." },
+    { id: 'switch', question: 'Why should I switch?', answer: "You don't switch anything. Keep your tools. We just catch what falls through." },
+  ],
+
+  // ── Competitor cheat sheet (conditional, from enrichment) ───────
+
+  competitors: {
+    servicetitan: { name: 'ServiceTitan', line: 'We work with any FSM. $297 vs $500+/mo. No platform lock-in.' },
+    sameday: { name: 'Sameday', line: 'Similar price. We specialize in after-hours. Works with any FSM.' },
+    smithai: { name: 'Smith.ai / Ruby', line: 'We book jobs, not take messages. Unlimited calls, no per-minute billing.' },
+    answering_service: { name: 'Answering Service', line: 'We qualify and book. They take messages. First-call resolution.' },
+  },
 
   // ── Bridge angles ───────────────────────────────────────────────
 
