@@ -10,7 +10,7 @@ import { assignTone, shouldUpdateTone } from './tone.js';
 import { computeRisk, updateTrajectory } from './risk.js';
 import { composeActiveCard, generateNowSummary } from './composer.js';
 import { NATIVE_STAGE_CARDS, NATIVE_OBJECTION_CARDS } from './cards.js';
-import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS, OBJECTION_HOTKEYS, BRIDGE_HOTKEYS } from './taxonomy.js';
+import { INTENT_STAGE_MAP, GLOBAL_HOTKEYS, OBJECTION_HOTKEYS } from './taxonomy.js';
 import { renderV2CenterPanel, renderProspectContext, renderPauseStrip, renderLeftPane, renderRightPane, renderCompactIdentity } from './render-v2.js';
 
 function _esc(str) {
@@ -106,27 +106,7 @@ for (const h of GLOBAL_HOTKEYS) {
 }
 $hotkeyBar.style.display = 'none';
 
-// Populate bridge hotkey bar (top row — keys 1-4 at BRIDGE/OPENER)
-const $bridgeHotkeyBar = document.getElementById('bridge-hotkey-bar');
-for (const h of BRIDGE_HOTKEYS) {
-  const span = document.createElement('span');
-  span.className = 'hotkey-item';
-  const kbd = document.createElement('kbd');
-  kbd.textContent = h.key;
-  span.appendChild(kbd);
-  span.appendChild(document.createTextNode(h.label));
-  $bridgeHotkeyBar.appendChild(span);
-}
-// Add a label to distinguish from objection row
-const bridgeLabel = document.createElement('span');
-bridgeLabel.className = 'hotkey-item';
-bridgeLabel.style.color = '#3b82f6';
-bridgeLabel.style.fontWeight = '700';
-bridgeLabel.textContent = '(at BRIDGE)';
-$bridgeHotkeyBar.appendChild(bridgeLabel);
-$bridgeHotkeyBar.style.display = 'none';
-
-// Populate objection hotkey bar (middle row)
+// Populate objection hotkey bar
 const $objHotkeyBar = document.getElementById('objection-hotkey-bar');
 for (const h of OBJECTION_HOTKEYS) {
   const span = document.createElement('span');
@@ -899,13 +879,12 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // ? — Toggle hotkey legend bars (bridge + objection + nav)
+    // ? — Toggle hotkey legend bars (objection + nav)
     case e.key === '?': {
       e.preventDefault();
       const show = $hotkeyBar.style.display === 'none';
       $hotkeyBar.style.display = show ? '' : 'none';
       $objHotkeyBar.style.display = show ? '' : 'none';
-      $bridgeHotkeyBar.style.display = show ? '' : 'none';
       break;
     }
 
