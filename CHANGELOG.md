@@ -2,6 +2,19 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.5.0] - 2026-04-07
+
+### Fixed
+- "Who is this?" and "Who is calling?" now correctly trigger mini-pitch (was returning low confidence, freezing HUD)
+- Stage reversal bug: processTurn no longer routes back to a stage the reducer just advanced past
+
+### Added
+- Word number detection in qualifier: "three", "five", "couple", "several" now count as pain signals
+- Pain count templated into close line: "3-5 calls a week slipping through... that adds up fast"
+- PRICING stage classifier: prospect answers to pricing redirect ("three, maybe five") now exit pricing directly to CLOSE
+- Callback booking: "call me Thursday" from CLOSE/OBJECTION goes to BOOKED with callback-specific coaching
+- BOOKED stage coaching cards: callback confirm, lock it down (get email), set expectations, end warm
+
 ## [0.1.4.2] - 2026-04-06
 
 ### Changed
