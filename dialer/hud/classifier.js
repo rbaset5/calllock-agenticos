@@ -589,6 +589,9 @@ export function detectNewIntents(utterance, stage) {
   const COMPETITOR_COMPARISON_PHRASES = [
     'how is this different', 'what makes you different', 'why you',
     'what makes this different', 'what makes this any different',
+    'how is yours different', 'what makes yours different',
+    'how is that different', 'same thing with a different',
+    'not just the same', 'just the same thing',
     'use sameday', 'use servicetitan', 'heard of sameday',
     "what's different", 'how are you different',
   ];
