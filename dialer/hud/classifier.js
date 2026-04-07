@@ -330,7 +330,7 @@ const OBJECTION_BUCKETS = {
 
 const MINI_PITCH_PHRASES = [
   'what is this', 'what do you do', "what's this about", 'who are you',
-  'who is this', 'who is calling',
+  'who is this', 'who is calling', 'what do you want',
   'what company', 'what are you selling', 'what is this about',
   "i don't understand", "don't understand what", "what do you mean",
   "i don't get it", "what are you talking about",
@@ -881,20 +881,27 @@ export function classifyQualifier(utterance) {
   let noPainScore = 0;
   let unknownScore = 0;
 
-  painScore += countPhraseMatches(text, QUALIFIER_PAIN_PHRASES) * 3;
-  noPainScore += countPhraseMatches(text, QUALIFIER_NO_PAIN_PHRASES) * 3;
-  unknownScore += countPhraseMatches(text, QUALIFIER_UNKNOWN_PHRASES) * 3;
-
   const hasDigit = hasNumber(text);
   // Only count word numbers >= 2 as pain signals ("one" is often dismissive: "maybe one")
   const painWordNumbers = Object.entries(WORD_NUMBERS).filter(([, v]) => v >= 2);
   const hasWordNumber = painWordNumbers.some(([w]) => new RegExp(`\\b${w}\\b`).test(text));
+  // "three, four, five" etc. — concrete numbers beyond vague "few"/"couple"/"several"
+  const hasConcreteNumbers = hasDigit || painWordNumbers.some(([w]) => w !== 'few' && w !== 'couple' && w !== 'several' && new RegExp(`\\b${w}\\b`).test(text));
+
+  painScore += countPhraseMatches(text, QUALIFIER_PAIN_PHRASES) * 3;
+  // When prospect gives concrete numbers ("a few... three, four, five"), suppress
+  // dismissive phrase signals — the specifics override the vague opener.
+  if (!hasConcreteNumbers) {
+    noPainScore += countPhraseMatches(text, QUALIFIER_NO_PAIN_PHRASES) * 3;
+    unknownScore += countPhraseMatches(text, QUALIFIER_UNKNOWN_PHRASES) * 3;
+  }
+
   if (hasDigit || hasWordNumber) painScore += 2.25;
-  if (/\b(frustrat|losing|too many|lot)\b/.test(text)) painScore += 1.5;
+  if (/\b(frustrat|losing|too many|lot|slammed)\b/.test(text)) painScore += 1.5;
   // Boost for loss/miss + temporal context (e.g., "lose calls on weekends")
   if (/\b(lose|miss|lost|missed)\b/.test(text) && /\b(weekends?|after hours|sometimes|evenings?|nights?|busy)\b/.test(text)) painScore += 1.75;
-  if (/\b(few|covered|good|none)\b/.test(text)) noPainScore += 1.25;
-  if (/\b(depends|unsure|idea)\b/.test(text)) unknownScore += 1.25;
+  if (/\b(few|covered|good|none)\b/.test(text) && !hasConcreteNumbers) noPainScore += 1.25;
+  if (/\b(depends|unsure|idea)\b/.test(text) && !hasConcreteNumbers) unknownScore += 1.25;
 
   const scores = {
     pain: painScore,
