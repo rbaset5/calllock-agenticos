@@ -618,6 +618,30 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
+      // OBJECTION → BRIDGE when prospect hedges but utterance contains pain signals
+      // e.g., "I'm not interested IF it's just X, but voicemail is a problem" — pain wins over hedge
+      if (state.stage === 'OBJECTION' && !rule.objectionBucket) {
+        const utt = (action.turn?.text || '').toLowerCase();
+        const BRIDGE_PAIN = /\b(miss\w*\s+calls?|voicemail|go(es)?\s+to\s+voicemail|can't\s+answer|unanswered|after\s*hours?|weekends?|lose\s+(calls?|jobs?|customers?)|called\s+somebody\s+else|call\w*\s+someone\s+else|ring\s+them\s+back|on the schedule|book\w*\s+(the|a)?\s*(job|call|appointment))\b/;
+        if (BRIDGE_PAIN.test(utt)) {
+          const bridgeAngle = /\b(after\s*hours?|weekends?)\b/.test(utt) ? 'after_hours' : state.bridgeAngle || 'missed_calls';
+          return {
+            ...nextState,
+            stage: 'BRIDGE',
+            bridgeAngle,
+            now: makeNow(
+              'BRIDGE',
+              resolveBridgeLine({ bridgeAngle }, playbook),
+              rule.band,
+              'Pain signal in hedge/low-confidence response — advancing',
+              'rules',
+            ),
+            metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
+      }
+
       // OBJECTION → handle follow-up objections via rules
       if (state.stage === 'OBJECTION' && rule.objectionBucket) {
         const bucket =

@@ -1143,6 +1143,18 @@ describe('Special intent → OBJECTION cross-stage routing', () => {
     assert.equal(next.activeObjection, 'answering_service');
   });
 
+  it('Hedge with pain signals in OBJECTION → BRIDGE', () => {
+    const s = {
+      ...stateAt('OBJECTION'),
+      activeObjection: 'answering_service',
+      objectionHistory: [{ bucket: 'answering_service', atMs: T, utterance: 'we use an answering service' }],
+    };
+    // Hedge (no objectionBucket) but contains voicemail + schedule signals
+    const rule = { band: 'medium', confidence: 0.68, why: 'Hedge signal detected' };
+    const next = transcriptFinal(s, "Some calls go to voicemail. If it can get them on the schedule, that's different.", rule);
+    assert.equal(next.stage, 'BRIDGE');
+  });
+
   it('Pain override: objection + bridge pain signals → BRIDGE (pain wins)', () => {
     const s = {
       ...stateAt('OBJECTION'),
