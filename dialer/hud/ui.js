@@ -666,10 +666,10 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // 1-3 — Context-sensitive: bridge angles (BRIDGE/OPENER) or objections (CLOSE/OBJECTION)
+    // 1-4 — Context-sensitive: bridge angles (BRIDGE/OPENER) or objections (any other stage)
+    // Objections available everywhere except IDLE/ENDED — trust the operator.
     case e.key === '1' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      const objBlockStages1 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
-      if (objBlockStages1.includes(state.stage)) break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED') break;
       e.preventDefault();
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'missed_calls', atMs: now });
@@ -680,8 +680,7 @@ document.addEventListener('keydown', (e) => {
     }
 
     case e.key === '2' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      const objBlockStages2 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
-      if (objBlockStages2.includes(state.stage)) break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED') break;
       e.preventDefault();
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'competition', atMs: now });
@@ -692,8 +691,7 @@ document.addEventListener('keydown', (e) => {
     }
 
     case e.key === '3' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      const objBlockStages3 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
-      if (objBlockStages3.includes(state.stage)) break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED') break;
       e.preventDefault();
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'overwhelmed', atMs: now });
@@ -703,10 +701,8 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // 4 — Context-sensitive: ad_spend bridge (BRIDGE/OPENER) or authority objection
     case e.key === '4' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      const objBlockStages4 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT'];
-      if (objBlockStages4.includes(state.stage)) break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED') break;
       e.preventDefault();
       if (state.stage === 'BRIDGE' || state.stage === 'OPENER') {
         dispatch({ type: 'MANUAL_SET_BRIDGE_ANGLE', callSid: state.callId, angle: 'ad_spend', atMs: now });
@@ -716,19 +712,17 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // 5 — Objection: existing_coverage
+    // 5 — Objection: existing_coverage (any stage except IDLE/ENDED, BRIDGE/OPENER)
     case e.key === '5' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      const objBlockStages5 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
-      if (objBlockStages5.includes(state.stage)) break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED' || state.stage === 'BRIDGE' || state.stage === 'OPENER') break;
       e.preventDefault();
       dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'existing_coverage', atMs: now });
       break;
     }
 
-    // 6 — Objection: answering_service
+    // 6 — Objection: answering_service (any stage except IDLE/ENDED, BRIDGE/OPENER)
     case e.key === '6' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      const objBlockStages6 = ['PRICING', 'MINI_PITCH', 'WRONG_PERSON', 'PERMISSION_MOMENT', 'BRIDGE', 'OPENER'];
-      if (objBlockStages6.includes(state.stage)) break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED' || state.stage === 'BRIDGE' || state.stage === 'OPENER') break;
       e.preventDefault();
       dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'answering_service', atMs: now });
       break;
