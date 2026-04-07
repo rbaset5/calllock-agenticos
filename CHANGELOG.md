@@ -2,6 +2,25 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.4.2] - 2026-04-06
+
+### Changed
+- Sales HUD left rail deduped: each panel now shows complementary content instead of repeating the center panel
+- OPENER left rail shows pitch lines and after-hours angle for "what is this?" moments
+- MINI_PITCH left rail shows platform-agnostic and after-hours alternatives instead of competing pitch versions
+- BRIDGE left/right rails have zero overlap (8 unique angles across both panels)
+- CLOSE left rail shows next-step alternatives (callback close, diagnostic close, $297 anchor)
+- OBJECTION left rail smart-ordered by cold call frequency (existing coverage, timing, answering service, interest)
+- Follow-up text (textB) rewritten with pain quantification instead of repeating the opener
+
+### Added
+- Platform-agnostic wedge: "Works alongside Housecall Pro, Jobber, even pen-and-paper" in MINI_PITCH and competitor objections
+- After-hours framing across OPENER, MINI_PITCH, and BRIDGE stages
+- Price anchoring ($297/mo) surfaced in CLOSE and PRICING stages
+- Filled tactical fields (valueProp, proofPoint) for OPENER, QUALIFIER, CLOSE, timing, tried_ai, and competitor_comparison
+- OPENER STAGE_PANE_CONFIG now includes 'lines' component for pitch line quick-access
+- No-overlap invariant test and lineForStage coverage test
+
 ## [0.1.4.1] - 2026-04-06
 
 ### Fixed
