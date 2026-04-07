@@ -59,7 +59,6 @@ export const PLAYBOOK = {
   faq: [
     { id: 'what', question: 'What do you do?', answer: "We answer your phone and book jobs when you can't — nights, weekends, when you're on a job." },
     { id: 'how', question: 'How does it work?', answer: "When a call comes in and you can't pick up, it answers live. Asks what they need, where they are, gets their info, books them in. You see it in your calendar." },
-    { id: 'price', question: 'How much?', answer: '$297/mo. One booked job covers it. Less than a part-time receptionist.' },
     { id: 'system', question: 'Does it work with my system?', answer: 'Works with Housecall Pro, Jobber, or pen-and-paper. No ServiceTitan required.' },
     { id: 'afterhours', question: 'What about after hours?', answer: "That's when we catch most calls. After 5 PM, weekends, when you're on a job." },
     { id: 'vs_answering', question: 'How is this different from an answering service?', answer: 'An answering service takes a message. We qualify the caller and book the job on the first call.' },

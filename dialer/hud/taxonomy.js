@@ -235,9 +235,17 @@ export const GLOBAL_HOTKEYS = [
   { key: "`", label: "FAQ", description: "Jump to quick answers" },
 ];
 
-// Objection/bridge hotkeys (rendered in their own bar above the nav legend)
-// At BRIDGE/OPENER, 1-4 trigger bridge angles instead of objections.
+// Bridge angle hotkeys (shown at BRIDGE/OPENER stages, keys 1-4 do these instead of objections)
+export const BRIDGE_HOTKEYS = [
+  { key: "1", label: "Missed calls", description: "Missed calls bridge angle" },
+  { key: "2", label: "Competition", description: "Competition bridge angle" },
+  { key: "3", label: "Overwhelmed", description: "Overwhelmed bridge angle" },
+  { key: "4", label: "Ad spend", description: "Ad spend bridge angle" },
+];
+
+// Objection hotkeys (rendered in their own bar above the nav legend)
 export const OBJECTION_HOTKEYS = [
+  { key: "0", label: "Pricing", description: "Jump to pricing stage" },
   { key: "1", label: "Timing", description: "Timing objection reset" },
   { key: "2", label: "Interest", description: "Interest objection reset" },
   { key: "3", label: "Info", description: "Send info objection reset" },

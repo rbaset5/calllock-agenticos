@@ -522,6 +522,13 @@
       flex-shrink: 0;
     }
 
+    .bridge-hotkey-bar {
+      border-top: none;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .bridge-hotkey-bar .hotkey-item { color: #3b82f6; }
+    .bridge-hotkey-bar .hotkey-item kbd { border-color: #3b82f6; color: #3b82f6; }
+
     .objection-hotkey-bar {
       border-top: none;
       border-bottom: 1px solid #1a1a1a;
@@ -830,6 +837,7 @@
 
   <!-- Hotkey legend -->
   <div id="quick-pick-strip" class="quick-pick-strip"></div>
+  <div id="bridge-hotkey-bar" class="hotkey-bar bridge-hotkey-bar"></div>
   <div id="objection-hotkey-bar" class="hotkey-bar objection-hotkey-bar"></div>
   <div id="hotkey-bar" class="hotkey-bar"></div>
 

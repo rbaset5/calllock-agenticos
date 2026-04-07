@@ -74,8 +74,8 @@ describe('lineForStage', () => {
 });
 
 describe('PLAYBOOK.faq', () => {
-  it('has 8 FAQ items', () => {
-    assert.equal(PLAYBOOK.faq.length, 8);
+  it('has 7 FAQ items', () => {
+    assert.equal(PLAYBOOK.faq.length, 7);
   });
 
   it('every item has id, question, and answer', () => {
