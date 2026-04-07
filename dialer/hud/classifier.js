@@ -300,6 +300,7 @@ const OBJECTION_BUCKETS = {
 
 const MINI_PITCH_PHRASES = [
   'what is this', 'what do you do', "what's this about", 'who are you',
+  'who is this', 'who is calling',
   'what company', 'what are you selling', 'what is this about',
   "i don't understand", "don't understand what", "what do you mean",
   "i don't get it", "what are you talking about",
