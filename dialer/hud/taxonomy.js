@@ -129,6 +129,7 @@ export const ROUTING_PRECEDENCE = [
   "authority_mismatch",
   "brush_off",
   "time_pressure",
+  "callback_accepted",
 ];
 
 // -------------------------

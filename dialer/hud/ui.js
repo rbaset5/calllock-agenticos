@@ -524,6 +524,7 @@ function handleFinalProspectTranscript(msg) {
 
   if (isUsableDeterministicResult(result)) {
     // High/medium confidence: commit via reducer
+    const stageBeforeDispatch = state.stage;
     dispatch({
       type: 'TRANSCRIPT_FINAL',
       callSid: state.callId,
@@ -533,9 +534,10 @@ function handleFinalProspectTranscript(msg) {
       atMs: msg.atMs || Date.now(),
     });
     // v2: run turn lifecycle after dispatch updates state
-    processTurn(msg.text, result);
+    processTurn(msg.text, result, stageBeforeDispatch);
   } else {
     // Low confidence: add transcript but don't change state
+    const stageBeforeDispatch = state.stage;
     dispatch({
       type: 'TRANSCRIPT_FINAL',
       callSid: state.callId,
@@ -545,7 +547,7 @@ function handleFinalProspectTranscript(msg) {
       atMs: msg.atMs || Date.now(),
     });
     // v2: run turn lifecycle even for low-confidence (tone/risk still useful)
-    processTurn(msg.text, result);
+    processTurn(msg.text, result, stageBeforeDispatch);
 
     // Try LLM fallback — pass rules result so we can fall through on 503
     if (shouldCallLlmFallback(result)) {
@@ -925,7 +927,7 @@ document.addEventListener('keyup', (e) => {
  * @param {string} utterance - the prospect's utterance text
  * @param {object} classification - result from classifyUtterance
  */
-function processTurn(utterance, classification) {
+function processTurn(utterance, classification, stageBeforeDispatch) {
   // Step 1: classification already done by caller
 
   // Step 2: Assign tone (rules-based)
@@ -984,9 +986,16 @@ function processTurn(utterance, classification) {
   });
 
   // Step 5: Check for dedicated stage routing via INTENT_STAGE_MAP
+  // Guard: don't route back to a stage the reducer just advanced FROM.
+  // Example: prospect in MINI_PITCH says "after hours goes to voicemail, what are you selling?"
+  // Reducer advances MINI_PITCH → BRIDGE (pain signal), but confusion intent would pull back
+  // to MINI_PITCH. The advance should win.
   if (classification.detectedIntent && INTENT_STAGE_MAP[classification.detectedIntent]) {
     const targetStage = INTENT_STAGE_MAP[classification.detectedIntent];
-    if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
+    const justCameFrom = stageBeforeDispatch === targetStage && state.stage !== targetStage;
+    if (justCameFrom) {
+      // Stage just advanced past targetStage — don't reverse it
+    } else if (targetStage === 'PRICING' && state.stage !== 'PRICING') {
       dispatch({ type: 'PRICING_INTERRUPT', callSid: state.callId });
     } else if (targetStage === 'MINI_PITCH' && state.stage !== 'MINI_PITCH') {
       dispatch({ type: 'MANUAL_SET_STAGE', callSid: state.callId, stage: 'MINI_PITCH', atMs: Date.now() });

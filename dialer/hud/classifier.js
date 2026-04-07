@@ -38,6 +38,36 @@ export function hasNumber(text) {
   return /\b\d+\b/.test(text);
 }
 
+// Word-to-digit map for extracting spoken numbers
+const WORD_NUMBERS = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
+  nine: 9, ten: 10, fifteen: 15, twenty: 20, couple: 2, few: 3, several: 5,
+};
+
+/**
+ * Extract a pain count string from qualifier utterance.
+ * "three, maybe five" → "3–5"
+ * "about 10 a week" → "10"
+ * "a couple" → "2"
+ */
+export function extractPainCount(text) {
+  const nums = [];
+  // Match digit numbers
+  for (const m of text.matchAll(/\b(\d+)\b/g)) {
+    nums.push(parseInt(m[1], 10));
+  }
+  // Match word numbers
+  for (const [word, val] of Object.entries(WORD_NUMBERS)) {
+    if (new RegExp(`\\b${word}\\b`).test(text)) {
+      if (!nums.includes(val)) nums.push(val);
+    }
+  }
+  if (nums.length === 0) return null;
+  nums.sort((a, b) => a - b);
+  if (nums.length === 1) return String(nums[0]);
+  return `${nums[0]}–${nums[nums.length - 1]}`;
+}
+
 function clamp01(n) {
   return Math.max(0, Math.min(1, n));
 }
@@ -300,6 +330,7 @@ const OBJECTION_BUCKETS = {
 
 const MINI_PITCH_PHRASES = [
   'what is this', 'what do you do', "what's this about", 'who are you',
+  'who is this', 'who is calling',
   'what company', 'what are you selling', 'what is this about',
   "i don't understand", "don't understand what", "what do you mean",
   "i don't get it", "what are you talking about",
@@ -598,6 +629,22 @@ export function detectNewIntents(utterance, stage) {
     }
   }
 
+  // Callback accepted — prospect offers a specific follow-up time ("call me Thursday",
+  // "try me next week", "follow up Friday"). This is a soft booking, not a hard yes.
+  // Only detect in CLOSE/OBJECTION where it represents a real concession.
+  if (['CLOSE', 'OBJECTION'].includes(stage)) {
+    const CALLBACK_ACCEPTED_PHRASES = [
+      'call me', 'call back', 'follow up', 'try me', 'try again',
+      'reach me', 'call again', 'hit me up', 'give me a call',
+      'ring me', 'try back',
+    ];
+    const DAY_PATTERN = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|next week|this week|after|morning|afternoon)\b/;
+    const cbHits = countPhraseMatches(text, CALLBACK_ACCEPTED_PHRASES);
+    if (cbHits > 0 && DAY_PATTERN.test(text)) {
+      return { intent: 'callback_accepted', confidence: clamp01(0.80 + (cbHits - 1) * 0.08) };
+    }
+  }
+
   // Yes/booking intent — fallback for non-booking stages (OPENER, OBJECTION, etc.)
   if (yesHitsEarly > 0) {
     const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
@@ -679,6 +726,19 @@ export function classifyUtterance(utterance, { stage } = {}) {
 
     case "QUALIFIER":
       return classifyQualifier(utterance);
+
+    case "PRICING": {
+      // Pricing redirect asks "how many calls go unanswered?" — prospect may
+      // answer with qualifier data. Route numbers/pain signals to qualifier
+      // classifier so PRICING can exit back to the discovery flow.
+      const qualResult = classifyQualifier(utterance);
+      if (qualResult.confidence >= 0.5) {
+        return qualResult;
+      }
+      // Non-qualifier responses (e.g., "just tell me the price") stay low
+      // confidence so LLM fallback or manual advance handles them.
+      return lowConfidenceUnknown(utterance, 'PRICING: no qualifier signal, awaiting response');
+    }
 
     case "CLOSE":
     case "OBJECTION":
@@ -825,7 +885,11 @@ export function classifyQualifier(utterance) {
   noPainScore += countPhraseMatches(text, QUALIFIER_NO_PAIN_PHRASES) * 3;
   unknownScore += countPhraseMatches(text, QUALIFIER_UNKNOWN_PHRASES) * 3;
 
-  if (hasNumber(text)) painScore += 2.25;
+  const hasDigit = hasNumber(text);
+  // Only count word numbers >= 2 as pain signals ("one" is often dismissive: "maybe one")
+  const painWordNumbers = Object.entries(WORD_NUMBERS).filter(([, v]) => v >= 2);
+  const hasWordNumber = painWordNumbers.some(([w]) => new RegExp(`\\b${w}\\b`).test(text));
+  if (hasDigit || hasWordNumber) painScore += 2.25;
   if (/\b(frustrat|losing|too many|lot)\b/.test(text)) painScore += 1.5;
   // Boost for loss/miss + temporal context (e.g., "lose calls on weekends")
   if (/\b(lose|miss|lost|missed)\b/.test(text) && /\b(weekends?|after hours|sometimes|evenings?|nights?|busy)\b/.test(text)) painScore += 1.75;
@@ -863,9 +927,13 @@ export function classifyQualifier(utterance) {
     });
   }
 
+  // Extract the number the prospect gave (e.g., "three, maybe five" → "3-5")
+  const painCount = winner === 'pain' ? extractPainCount(text) : null;
+
   return makeResult(utterance, {
     confidence,
     qualifierRead: winner === "unknown" ? "unknown_pain" : winner,
+    painCount,
     why: `Qualifier read: ${winner}`,
   });
 }

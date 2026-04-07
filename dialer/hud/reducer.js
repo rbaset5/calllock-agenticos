@@ -250,6 +250,19 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
+      // Callback accepted: prospect offers a specific follow-up time from CLOSE/OBJECTION.
+      // This is a soft booking — confirm the day, get the number, keep it short.
+      if (['CLOSE', 'OBJECTION'].includes(state.stage) && rule.detectedIntent === 'callback_accepted') {
+        return {
+          ...nextState,
+          stage: 'BOOKED',
+          outcome: 'callback_booked',
+          now: makeNow('BOOKED', playbook.callbackBooked, rule.band, 'Callback accepted — confirm and close', 'rules'),
+          metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+          lastCommittedAtMs: action.atMs,
+        };
+      }
+
       // OPENER → EXIT on brush_off (DNC, wrong number, voicemail, hostile)
       if (state.stage === 'OPENER' && rule.detectedIntent === 'brush_off') {
         return {
@@ -312,8 +325,26 @@ export function hudReducer(state, action, playbook) {
         };
       }
 
-      // PRICING → return to previousStage (pricing handled, move on)
+      // PRICING → CLOSE if qualifier pain data present, otherwise return to previousStage
       if (state.stage === 'PRICING') {
+        // If the pricing redirect yielded qualifier pain (prospect answered "how many calls?"),
+        // skip back to QUALIFIER and go straight to CLOSE with their number.
+        if (rule.qualifierRead === 'pain') {
+          const painCount = rule.painCount || null;
+          const closeLine = painCount
+            ? `${painCount} calls a week slipping through... that adds up fast. Worth 15 minutes? Thursday or Friday?`
+            : playbook.close;
+          return {
+            ...nextState,
+            stage: 'CLOSE',
+            previousStage: null,
+            qualifierRead: 'pain',
+            painCount,
+            now: makeNow('CLOSE', closeLine, rule.band, 'Pain quantified during pricing redirect', 'rules'),
+            metrics: { ...nextState.metrics, stageChanges: nextState.metrics.stageChanges + 1 },
+            lastCommittedAtMs: action.atMs,
+          };
+        }
         const returnStage = state.previousStage || 'QUALIFIER';
         return {
           ...nextState,
@@ -418,11 +449,16 @@ export function hudReducer(state, action, playbook) {
       // QUALIFIER → CLOSE / SEED_EXIT
       if (state.stage === 'QUALIFIER') {
         if (rule.qualifierRead === 'pain') {
+          const painCount = rule.painCount || null;
+          const closeLine = painCount
+            ? `${painCount} calls a week slipping through... that adds up fast. Worth 15 minutes? Thursday or Friday?`
+            : playbook.close;
           return {
             ...nextState,
             stage: 'CLOSE',
             qualifierRead: 'pain',
-            now: makeNow('CLOSE', playbook.close, rule.band, 'Pain detected', 'rules'),
+            painCount,
+            now: makeNow('CLOSE', closeLine, rule.band, 'Pain detected', 'rules'),
             metrics: {
               ...nextState.metrics,
               stageChanges: nextState.metrics.stageChanges + 1,
