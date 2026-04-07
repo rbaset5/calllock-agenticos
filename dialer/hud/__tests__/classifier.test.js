@@ -588,6 +588,18 @@ describe('Anti-AI and competitor phrases', () => {
     assert.ok(r.confidence >= 0.65);
   });
 
+  test('"AI voice things" → tried_ai', () => {
+    const r = detectNewIntents("is this a real person answering, or is this one of those AI voice things?", 'MINI_PITCH');
+    assert.equal(r.intent, 'tried_ai');
+    assert.ok(r.confidence >= 0.65);
+  });
+
+  test('tried_ai wins over "take a message" wrong_person collision', () => {
+    const r = detectNewIntents("What usually happens is they take a message, screw up the details. Is this one of those AI voice things?", 'MINI_PITCH');
+    assert.equal(r.intent, 'tried_ai');
+    assert.notEqual(r.intent, 'authority_mismatch');
+  });
+
   test('"what makes this any different" → competitor_comparison', () => {
     const r = detectNewIntents("what makes this any different from the last guy who called", 'MINI_PITCH');
     assert.equal(r.intent, 'competitor_comparison');

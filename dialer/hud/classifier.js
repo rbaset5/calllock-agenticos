@@ -513,34 +513,9 @@ export function detectNewIntents(utterance, stage) {
     return { intent: 'engaged_answer', confidence: 0.65 };
   }
 
-  // Check wrong person
-  const wpHits = countPhraseMatches(text, WRONG_PERSON_PHRASES);
-  if (wpHits > 0) {
-    return { intent: 'authority_mismatch', confidence: clamp01(0.70 + (wpHits - 1) * 0.1) };
-  }
-
-  // Check pricing question
-  const pqHits = countPhraseMatches(text, PRICING_QUESTION_PHRASES);
-  if (pqHits > 0) {
-    const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
-    return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
-  }
-
-  // Check pricing resistance
-  const prHits = countPhraseMatches(text, PRICING_RESISTANCE_PHRASES);
-  if (prHits > 0) {
-    return { intent: 'pricing_resistance', confidence: clamp01(0.65 + (prHits - 1) * 0.08) };
-  }
-
-  // Yes/booking intent — checked BEFORE objection intents in booking-relevant stages
-  // so "we have a receptionist but yeah Thursday works" captures the booking, not the objection.
-  const yesHitsEarly = countPhraseMatches(text, YES_PHRASES);
-  if (yesHitsEarly > 0 && ['CLOSE', 'QUALIFIER', 'BRIDGE', 'PRICING'].includes(stage)) {
-    const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
-    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (yesHitsEarly - 1) * 0.08) };
-  }
-
-  // Check existing coverage / answering service / tried AI / referral only / competitor comparison
+  // Special intents BEFORE wrong_person — these are more specific signals.
+  // "they take a message, screw up the details... is this one of those AI voice things?"
+  // contains "take a message" (wrong_person phrase) but the real signal is tried_ai.
   const EXISTING_COVERAGE_PHRASES = [
     'have a receptionist', 'we have a receptionist', 'receptionist handles',
     'wife answers', 'my wife answers', 'my wife handles',
@@ -570,6 +545,13 @@ export function detectNewIntents(utterance, stage) {
     "don't want a robot", "don't want ai", "not putting a robot",
     "not trying to stick", "not sticking a robot", "some robot",
     "no robots", "no ai", "don't trust ai", "don't trust robots",
+    // Product-is-AI concern
+    "ai voice", "ai thing", "ai phone", "ai answering",
+    "one of those ai", "is this ai", "is it ai", "this is ai",
+    "a bot", "a robot answering", "robot on the phone",
+    // Quality complaints about AI
+    "sounds robotic", "sounded robotic", "feels fake", "felt fake",
+    "talked over", "talks over",
   ];
   const taiHits = countPhraseMatches(text, TRIED_AI_PHRASES);
   if (taiHits > 0) {
@@ -589,7 +571,7 @@ export function detectNewIntents(utterance, stage) {
   const COMPETITOR_COMPARISON_PHRASES = [
     'how is this different', 'what makes you different', 'why you',
     'what makes this different', 'what makes this any different',
-    'how is yours different', 'what makes yours different',
+    'how is yours different', 'what makes yours different', 'what makes yours any different',
     'how is that different', 'same thing with a different',
     'not just the same', 'just the same thing',
     'use sameday', 'use servicetitan', 'heard of sameday',
@@ -598,6 +580,34 @@ export function detectNewIntents(utterance, stage) {
   const ccHits = countPhraseMatches(text, COMPETITOR_COMPARISON_PHRASES);
   if (ccHits > 0) {
     return { intent: 'competitor_comparison', confidence: clamp01(0.68 + (ccHits - 1) * 0.08) };
+  }
+
+  // Check wrong person (after special intents — "take a message" in context of
+  // complaining about answering services should not trigger authority_mismatch)
+  const wpHits = countPhraseMatches(text, WRONG_PERSON_PHRASES);
+  if (wpHits > 0) {
+    return { intent: 'authority_mismatch', confidence: clamp01(0.70 + (wpHits - 1) * 0.1) };
+  }
+
+  // Check pricing question
+  const pqHits = countPhraseMatches(text, PRICING_QUESTION_PHRASES);
+  if (pqHits > 0) {
+    const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
+    return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
+  }
+
+  // Check pricing resistance
+  const prHits = countPhraseMatches(text, PRICING_RESISTANCE_PHRASES);
+  if (prHits > 0) {
+    return { intent: 'pricing_resistance', confidence: clamp01(0.65 + (prHits - 1) * 0.08) };
+  }
+
+  // Yes/booking intent — checked BEFORE curiosity in booking-relevant stages
+  // so "we have a receptionist but yeah Thursday works" captures the booking, not the objection.
+  const yesHitsEarly = countPhraseMatches(text, YES_PHRASES);
+  if (yesHitsEarly > 0 && ['CLOSE', 'QUALIFIER', 'BRIDGE', 'PRICING'].includes(stage)) {
+    const stageBoost = ['CLOSE', 'QUALIFIER'].includes(stage) ? 0.1 : 0;
+    return { intent: 'yes', confidence: clamp01(0.65 + stageBoost + (yesHitsEarly - 1) * 0.08) };
   }
 
   // Check curiosity / engagement (helps advance from OPENER and BRIDGE)
