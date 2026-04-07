@@ -317,14 +317,15 @@ describe("NATIVE_STAGE_CARDS", () => {
 
 const ALL_OBJECTION_KEYS = [
   'timing', 'interest', 'info', 'authority', 'existing_coverage', 'answering_service',
+  'tried_ai', 'referral_only', 'competitor_comparison',
 ];
 
 describe("NATIVE_OBJECTION_CARDS", () => {
-  it("exports all 6 objection cards", () => {
+  it("exports all 9 objection cards", () => {
     for (const key of ALL_OBJECTION_KEYS) {
       assert.ok(key in NATIVE_OBJECTION_CARDS, `missing objection card: ${key}`);
     }
-    assert.equal(Object.keys(NATIVE_OBJECTION_CARDS).length, 6);
+    assert.equal(Object.keys(NATIVE_OBJECTION_CARDS).length, 9);
   });
 
   it("every card has id matching its key", () => {

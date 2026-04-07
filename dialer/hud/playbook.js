@@ -2,6 +2,8 @@
 // Canonical v2 playbook data + line resolution helpers.
 // Vanilla JS ES module — no build step, no TypeScript.
 
+import { NATIVE_STAGE_CARDS } from './cards.js';
+
 export const PLAYBOOK = {
   version: '3.0-founder-final',
 
@@ -39,7 +41,7 @@ export const PLAYBOOK = {
     'Hey {NAME} — Rashid here. Left you a voicemail. I help {TRADE} contractors handle calls when they\'re on a job. Worth 2 minutes?',
 
   textB:
-    'Hey {NAME} — quick question: when a call comes in while you\'re on a job, what happens to it?',
+    'Hey {NAME} — most {TRADE} contractors I talk to lose 3-5 calls a week after hours. At your ticket size, that adds up fast. Worth a quick look?',
 
   // ── Pitch lines (what CallLock does — any stage) ────────────────
 
@@ -242,7 +244,7 @@ export function lineForStage(stage, playbook) {
     case 'GATEKEEPER':        return playbook.gatekeeper.reach;
     case 'OPENER':            return playbook.opener;
     case 'PERMISSION_MOMENT': return 'Can I ask you a quick question about new customer calls?';
-    case 'MINI_PITCH':        return "We help contractors make sure inbound calls get handled when the team can't answer live.";
+    case 'MINI_PITCH':        return NATIVE_STAGE_CARDS.MINI_PITCH.primaryLine;
     case 'WRONG_PERSON':      return "Makes sense. What's the best way to reach the person who handles that?";
     case 'PRICING':           return "Happy to cover that — first I want to make sure this is even a problem worth solving on your side. When calls come in and nobody can grab them, what usually happens?";
     case 'BRIDGE':            return playbook.bridge.fallback;
@@ -282,10 +284,8 @@ export function linesForStage(stage, playbook) {
       ];
     case 'OPENER':
       return [
-        { label: '📞 Opener', line: playbook.opener },
-        { label: '🎯 Elevator pitch', line: playbook.pitchLines.elevator },
-        { label: '🔧 How it works', line: playbook.pitchLines.howItWorks },
-        { label: '💰 Why you need it', line: playbook.pitchLines.whyYouNeed },
+        ...pitchLines(playbook),
+        { label: '🌙 After-hours angle', line: "Most contractors I talk to have daytime covered. It's the 6 PM call on a Tuesday that disappears. Sound familiar?" },
       ];
     case 'PERMISSION_MOMENT':
       return [
@@ -294,10 +294,10 @@ export function linesForStage(stage, playbook) {
       ];
     case 'MINI_PITCH':
       return [
-        { label: 'Mini pitch', line: "We help contractors make sure inbound calls get handled when the team can't answer live." },
-        { label: 'Backup', line: "We help contractors avoid losing jobs when calls come in and nobody can grab the phone." },
-        { label: 'Clarify', line: 'How are you handling that today?' },
-        { label: 'Redirect', line: "So when a call comes in and you can't grab it, what happens?" },
+        { label: '🔌 Platform-agnostic', line: "Works alongside whatever you've got — Housecall Pro, Jobber, even pen-and-paper. We just catch what falls through." },
+        { label: '🌙 After hours', line: "Most of the calls we catch come in after 5 or on weekends — the ones nobody's around to answer." },
+        { label: '🔍 Clarify', line: 'How are you handling that today?' },
+        { label: '↩️ Redirect', line: "So when a call comes in and you can't grab it, what happens?" },
       ];
     case 'WRONG_PERSON':
       return [
@@ -312,38 +312,39 @@ export function linesForStage(stage, playbook) {
         { label: 'Frequency', line: 'How often do you think a good inbound call comes in when nobody can answer it properly?' },
       ];
     case 'BRIDGE':
-      // Bridge angle quick picks are in the right rail — left rail shows only
-      // the after-hours and fallback variants not covered by the 4 angle picks.
+      // Right rail shows: afterHours, firstResponder, cantKeepUp, lsa.
+      // Left rail shows the OTHER angles — zero overlap.
       return [
-        { label: '❌ Missed/after hours', line: playbook.bridge.missed_calls.afterHours },
+        { label: '❌ Missed/voicemail', line: playbook.bridge.missed_calls.voicemail },
         { label: '❌ Missed/staff', line: playbook.bridge.missed_calls.staff },
-        { label: '📊 Comp/shared leads', line: playbook.bridge.competition.shared },
-        { label: '❓ Fallback', line: playbook.bridge.fallback },
+        { label: '📊 Shared leads', line: playbook.bridge.competition.shared },
+        { label: '💸 Wasted ad spend', line: playbook.bridge.ad_spend.wasted },
       ];
     case 'QUALIFIER':
-      // Pitch lines are in the right rail — left rail shows only qualifier-specific lines
+      // Pitch lines are in the right rail — left rail shows qualifier-specific only
       return [
         { label: '📞 Ask the question', line: playbook.qualifier },
         { label: '🔍 Unknown pain bridge', line: playbook.qualifierReads.unknown_pain.bridge_line },
       ];
     case 'CLOSE':
-      // Objection picks are in the right rail — left rail shows close-specific lines
+      // Center panel shows close + hedge. Left rail shows next-step alternatives.
       return [
-        { label: '🤝 Close', line: playbook.close },
-        { label: '🛡️ Hedge', line: playbook.hedge },
         { label: '✅ Yes followup', line: playbook.yesFollowup },
+        { label: '📞 Callback close', line: NATIVE_STAGE_CARDS.CALLBACK_CLOSE.primaryLine },
+        { label: '📊 Diagnostic close', line: NATIVE_STAGE_CARDS.DIAGNOSTIC_CLOSE.primaryLine },
+        { label: '💰 $297 anchor', line: "It's $297 a month. At your ticket size, one booked job covers that." },
       ];
     case 'SEED_EXIT':
       return [
         { label: 'seedExit', line: playbook.seedExit },
       ];
     case 'OBJECTION':
-      // Recovery lines are in the right rail — left rail shows objection reset lines only
+      // Static, smart-ordered by cold call frequency. Hotkeys 1-4 provide manual override.
       return [
-        { label: '⏰ Timing reset', line: playbook.objections.timing.reset },
-        { label: '🚫 Interest reset', line: playbook.objections.interest.reset },
-        { label: '📧 Info reset', line: playbook.objections.info.reset },
-        { label: '👤 Authority reset', line: playbook.objections.authority.reset },
+        { label: '🏠 EXISTING COVERAGE reset', line: playbook.objections.existing_coverage.reset },
+        { label: '⏰ TIMING reset', line: playbook.objections.timing.reset },
+        { label: '📞 ANSWERING SERVICE reset', line: playbook.objections.answering_service.reset },
+        { label: '🚫 INTEREST reset', line: playbook.objections.interest.reset },
       ];
     case 'NON_CONNECT':
       return [

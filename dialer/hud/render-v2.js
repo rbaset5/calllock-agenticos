@@ -10,7 +10,7 @@ import { linesForStage } from './playbook.js';
 
 export const STAGE_PANE_CONFIG = {
   IDLE:              { left: ['compactId'],                             right: [],                           leftHeader: null,         rightHeader: null },
-  OPENER:            { left: ['compactId', 'prospectFull', 'briefing'], right: ['tactical', 'powerLines'],   leftHeader: 'PROSPECT',   rightHeader: 'SUPPORT' },
+  OPENER:            { left: ['compactId', 'prospectFull', 'briefing', 'lines'], right: ['tactical', 'powerLines'],   leftHeader: 'PROSPECT',   rightHeader: 'SUPPORT' },
   GATEKEEPER:        { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
   PERMISSION_MOMENT: { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
   MINI_PITCH:        { left: ['compactId', 'briefing', 'lines'],       right: ['tactical'],                 leftHeader: 'PLAYBOOK',   rightHeader: 'SUPPORT' },
@@ -212,7 +212,7 @@ export function renderRightPane(stage, activeCard, deps) {
       case 'bridgeAngles':
         if (objFeed && deps.buildSection) {
           const bridgeItems = [
-            { label: 'Missed calls', line: deps.playbook.bridge.fallback },
+            { label: 'After hours', line: deps.playbook.bridge.missed_calls.afterHours },
             { label: 'Competition', line: deps.playbook.bridge.competition.firstResponder },
             { label: 'Overwhelmed', line: deps.playbook.bridge.overwhelmed.cantKeepUp },
             { label: 'Ad spend', line: deps.playbook.bridge.ad_spend.lsa },
