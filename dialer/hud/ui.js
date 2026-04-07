@@ -725,17 +725,17 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // 5 — Objection: existing_coverage (any stage except IDLE/ENDED, BRIDGE/OPENER)
+    // 5 — Objection: existing_coverage
     case e.key === '5' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      if (state.stage === 'IDLE' || state.stage === 'ENDED' || state.stage === 'BRIDGE' || state.stage === 'OPENER') break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED') break;
       e.preventDefault();
       dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'existing_coverage', atMs: now });
       break;
     }
 
-    // 6 — Objection: answering_service (any stage except IDLE/ENDED, BRIDGE/OPENER)
+    // 6 — Objection: answering_service
     case e.key === '6' && !e.ctrlKey && !e.altKey && !e.metaKey: {
-      if (state.stage === 'IDLE' || state.stage === 'ENDED' || state.stage === 'BRIDGE' || state.stage === 'OPENER') break;
+      if (state.stage === 'IDLE' || state.stage === 'ENDED') break;
       e.preventDefault();
       dispatch({ type: 'MANUAL_SET_OBJECTION', callSid: state.callId, bucket: 'answering_service', atMs: now });
       break;
