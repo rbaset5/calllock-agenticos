@@ -232,6 +232,13 @@ export const GLOBAL_HOTKEYS = [
   { key: "Shift", label: "Hedge", description: "Request hedge (CLOSE/OBJ)" },
   { key: "Shift+F1", label: "End", description: "End call + reset" },
   { key: "?", label: "Legend", description: "Toggle hotkey bar" },
+  // Objection hotkeys (1-4 = bridge angles at BRIDGE/OPENER, objections elsewhere)
+  { key: "1", label: "Timing", description: "Timing objection reset" },
+  { key: "2", label: "Interest", description: "Interest objection reset" },
+  { key: "3", label: "Info", description: "Send info objection reset" },
+  { key: "4", label: "Authority", description: "Authority objection reset" },
+  { key: "5", label: "Coverage", description: "Existing coverage objection" },
+  { key: "6", label: "Ans. Svc", description: "Answering service objection" },
 ];
 
 // -------------------------
