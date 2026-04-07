@@ -34,6 +34,8 @@ export const PLAYBOOK = {
 
   booked: 'Perfect — invite heading your way. Talk {DAY}!',
 
+  callbackBooked: 'Thursday afternoon works. I\'ll call back then. What\'s the best number to reach you both?',
+
   voicemail:
     'Hey {NAME}, Rashid calling from Houston — I work with contractors on what happens to their calls when they\'re tied up on a job. Worth a quick conversation. Call me back at {NUMBER}, or I\'ll try you again {DAY}.',
 
@@ -373,7 +375,13 @@ export function linesForStage(stage, playbook) {
         { label: 'textB', line: playbook.textB },
       ];
     case 'BOOKED':
-      return [{ label: 'booked', line: playbook.booked }];
+      return [
+        { label: '✅ Booked', line: playbook.booked },
+        { label: '📞 Callback confirm', line: playbook.callbackBooked },
+        { label: '📧 Lock it down', line: "What's the best email so I can send a quick note before the call?" },
+        { label: '⏱️ Set expectations', line: "15 minutes max. If it's not a fit, I'll say so." },
+        { label: '🤝 End warm', line: "Appreciate the time — talk {DAY}." },
+      ];
     case 'EXIT':
       return [{ label: 'exit', line: playbook.exit }];
     default:
