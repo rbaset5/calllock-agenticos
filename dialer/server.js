@@ -1,4 +1,5 @@
-// Local dev: load parent .env.local so dialer picks up shared credentials
+// Load local .env, then parent .env.local (first wins via dotenv, manual loader skips existing)
+require('dotenv').config();
 const _fs = require('fs');
 const _envPath = require('path').join(__dirname, '..', '.env.local');
 if (_fs.existsSync(_envPath)) {

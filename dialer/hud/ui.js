@@ -25,7 +25,16 @@ let state = createInitialState(PLAYBOOK);
 let manualModeActive = false;
 let prospectName = '';
 let prospectBusiness = '';
+let prospectMetro = '';
 let prospectId = null;
+
+const METRO_CITY = {
+  TX: 'Houston',
+  FL: 'Orlando',
+  MI: 'West Bloomfield',
+  IL: 'Chicago',
+  AZ: 'Phoenix',
+};
 let callTimerInterval = null;
 let callStartTime = null;
 let shiftOnlyPressed = false;
@@ -340,6 +349,7 @@ channel.addEventListener('message', (event) => {
       lastDedupedOutput = null;
       prospectName = msg.prospectName || '';
       prospectBusiness = msg.businessName || '';
+      prospectMetro = msg.metro || '';
       prospectId = msg.prospectId || null;
       manualModeActive = false;
 
@@ -893,6 +903,7 @@ document.addEventListener('keydown', (e) => {
         roundIndex = -1;
         prospectName = '';
         prospectBusiness = '';
+        prospectMetro = '';
         prospectId = null;
         manualModeActive = false;
         state = createInitialState(PLAYBOOK);
@@ -1345,6 +1356,7 @@ function currentLineContext() {
     name: prospectName,
     business: prospectBusiness,
     day: state.scheduledDay,
+    location: METRO_CITY[prospectMetro] || 'Detroit',
   };
 }
 

@@ -15,7 +15,7 @@ export const PLAYBOOK = {
   // ── Scripted lines ──────────────────────────────────────────────
 
   opener:
-    'Hey {NAME}, this is Rashid over in Houston — cold call, quick question: when a call comes in while you\'re on a job, what happens to it?',
+    'Hey {NAME}, this is Rashid over in {LOCATION} — cold call, quick question: when a call comes in while you\'re on a job, what happens to it?',
 
   qualifier: 'How many calls a week do you think go unanswered?',
 
@@ -37,7 +37,7 @@ export const PLAYBOOK = {
   callbackBooked: 'Thursday afternoon works. I\'ll call back then. What\'s the best number to reach you both?',
 
   voicemail:
-    'Hey {NAME}, Rashid calling from Houston — I work with contractors on what happens to their calls when they\'re tied up on a job. Worth a quick conversation. Call me back at {NUMBER}, or I\'ll try you again {DAY}.',
+    'Hey {NAME}, Rashid calling from {LOCATION} — I work with contractors on what happens to their calls when they\'re tied up on a job. Worth a quick conversation. Call me back at {NUMBER}, or I\'ll try you again {DAY}.',
 
   textA:
     'Hey {NAME} — Rashid here. Left you a voicemail. I help {TRADE} contractors handle calls when they\'re on a job. Worth 2 minutes?',
@@ -401,6 +401,7 @@ export function fillLineTemplate(line, context = {}) {
     NUMBER: context.number || context.phone || 'the number you have for me',
     DAY: context.day || 'later this week',
     TRADE: context.trade || 'home service',
+    LOCATION: context.location || 'Detroit',
   };
 
   return line.replace(/\{([A-Z]+)\}/g, (match, token) => replacements[token] || match);

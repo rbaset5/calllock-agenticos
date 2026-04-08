@@ -110,4 +110,25 @@ describe('fillLineTemplate', () => {
     });
     assert.equal(line, 'Perfect — invite heading your way. Talk Thursday!');
   });
+
+  it('fills {LOCATION} with provided location', () => {
+    const line = fillLineTemplate('Rashid over in {LOCATION}', { location: 'Houston' });
+    assert.equal(line, 'Rashid over in Houston');
+  });
+
+  it('falls back to Detroit when no location provided', () => {
+    const line = fillLineTemplate('Rashid over in {LOCATION}', {});
+    assert.equal(line, 'Rashid over in Detroit');
+  });
+
+  it('fills both {NAME} and {LOCATION} in opener', () => {
+    const line = fillLineTemplate(PLAYBOOK.opener, {
+      name: 'Mike',
+      location: 'Orlando',
+    });
+    assert.ok(line.includes('Hey Mike'));
+    assert.ok(line.includes('over in Orlando'));
+    assert.ok(!line.includes('{NAME}'));
+    assert.ok(!line.includes('{LOCATION}'));
+  });
 });
