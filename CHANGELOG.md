@@ -2,6 +2,18 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.6.0] - 2026-04-08
+
+### Fixed
+- `/combo` no longer stalls behind a missing Twilio status callback route, browser-side dead clicks, or false local ringing before the remote phone is actually ringing
+- Keypad and queue dial flows now fail fast when microphone access is unavailable instead of hanging on `Connecting...`
+- Twilio SDK audio autoplay noise is suppressed so post-call behavior no longer floods the console or degrades the combined dialer view
+
+### Added
+- Twilio status callback capture for parent and child legs, so browser calls leave useful `ringing`, `busy`, `no-answer`, and completion telemetry
+- Readiness, audio, call-feedback, combo-loader, and microphone-permission helpers with targeted Node test coverage for the dialer call path
+- `/combo` microphone warning UI and a full-page stacked dialer/HUD wrapper that keeps both apps accessible in a single scrollable page
+
 ## [0.1.5.0] - 2026-04-07
 
 ### Fixed

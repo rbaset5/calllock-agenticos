@@ -162,6 +162,7 @@
 
     .twilio-badge.ready { background: #1e3a5f; color: #60a5fa; }
     .twilio-badge.connecting { background: #78350f; color: #fbbf24; }
+    .twilio-badge.idle { background: #262626; color: #d4d4d4; }
     .twilio-badge.error { background: #7f1d1d; color: #fca5a5; }
 
     main {
@@ -525,6 +526,16 @@
     }
     .state-filter-btn:hover { border-color: #555; color: #fff; }
     .state-filter-btn.active { background: #22c55e; color: #000; border-color: #22c55e; font-weight: 600; }
+
+    /* Timezone clock strip */
+    .tz-strip {
+      display: flex; justify-content: center; gap: 24px; padding: 6px 16px;
+      background: #0d0d0d; border-bottom: 1px solid #1a1a1a; font-size: 11px;
+    }
+    .tz-clock { color: #525252; }
+    .tz-clock .tz-label { color: #737373; margin-right: 4px; font-weight: 600; }
+    .tz-clock .tz-time { font-variant-numeric: tabular-nums; }
+
     .batch-indicator {
       margin-left: auto; font-size: 12px; color: #525252;
     }
@@ -637,6 +648,10 @@
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2/dist/twilio.min.js"></script>
+  <script src="/twilio-client.js"></script>
+  <script src="/twilio-audio.js"></script>
+  <script src="/call-feedback.js"></script>
+  <script src="/media-permissions.js"></script>
   <!-- Deepgram: using raw WebSocket (not SDK) for audio capture -->
 </head>
 <body>
@@ -669,6 +684,13 @@
 
   <div id="tab-dial" class="tab-content active">
     <div class="state-filter-row" id="state-filter-row" style="display:none"></div>
+    <div class="tz-strip" id="tz-strip">
+      <span class="tz-clock"><span class="tz-label">TX</span><span class="tz-time" id="tz-tx"></span></span>
+      <span class="tz-clock"><span class="tz-label">FL</span><span class="tz-time" id="tz-fl"></span></span>
+      <span class="tz-clock"><span class="tz-label">IL</span><span class="tz-time" id="tz-il"></span></span>
+      <span class="tz-clock"><span class="tz-label">MI</span><span class="tz-time" id="tz-mi"></span></span>
+      <span class="tz-clock"><span class="tz-label">AZ</span><span class="tz-time" id="tz-az"></span></span>
+    </div>
     <main id="main-content">
       <div class="empty-state" id="empty-state">
         <h2>Loading ranked prospects</h2>
@@ -744,7 +766,48 @@
     let isDialing = false;
     let modalOutcome = null;
     let twilioDevice = null;
+    const twilioReadyGate = window.CallLockTwilioClient.createTwilioReadyGate();
     let activeCall = null;
+
+    // ── Ringtone (US ringback: 440+480 Hz, 2s on / 4s off) ──────
+    let ringAudioCtx = null;
+    let ringOsc1 = null;
+    let ringOsc2 = null;
+    let ringGain = null;
+    let ringInterval = null;
+
+    function startRingtone() {
+      stopRingtone();
+      ringAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      ringGain = ringAudioCtx.createGain();
+      ringGain.gain.value = 0;
+      ringGain.connect(ringAudioCtx.destination);
+      ringOsc1 = ringAudioCtx.createOscillator();
+      ringOsc1.frequency.value = 440;
+      ringOsc1.connect(ringGain);
+      ringOsc1.start();
+      ringOsc2 = ringAudioCtx.createOscillator();
+      ringOsc2.frequency.value = 480;
+      ringOsc2.connect(ringGain);
+      ringOsc2.start();
+      // 2s on, 4s off cycle
+      function cycle() {
+        if (!ringGain) return;
+        ringGain.gain.setValueAtTime(0.15, ringAudioCtx.currentTime);
+        ringGain.gain.setValueAtTime(0, ringAudioCtx.currentTime + 2);
+      }
+      cycle();
+      ringInterval = setInterval(cycle, 6000);
+    }
+
+    function stopRingtone() {
+      clearInterval(ringInterval);
+      ringInterval = null;
+      if (ringOsc1) { try { ringOsc1.stop(); } catch(e) {} ringOsc1 = null; }
+      if (ringOsc2) { try { ringOsc2.stop(); } catch(e) {} ringOsc2 = null; }
+      if (ringGain) { ringGain = null; }
+      if (ringAudioCtx) { ringAudioCtx.close().catch(() => {}); ringAudioCtx = null; }
+    }
     let lastCallSid = null;
     let lastDialStartedId = null;
     let callStartTime = null;
@@ -899,6 +962,7 @@
 
     async function initTwilioDevice() {
       updateTwilioBadge('connecting');
+      twilioReadyGate.setState('connecting');
       try {
         const response = await fetch(`${CALL_SERVER}/token`);
         if (!response.ok) throw new Error(`Token fetch failed: ${response.status}`);
@@ -907,12 +971,21 @@
         twilioDevice = new Twilio.Device(token, {
           codecPreferences: ['opus', 'pcmu'],
           edge: 'ashburn',
+          disableAudioContextSounds: true,
         });
+        window.CallLockTwilioAudio.configureTwilioAudio(twilioDevice);
 
-        twilioDevice.on('registered', () => updateTwilioBadge('ready'));
-        twilioDevice.on('unregistered', () => updateTwilioBadge('connecting'));
+        twilioDevice.on('registered', () => {
+          twilioReadyGate.setState('ready');
+          updateTwilioBadge('ready');
+        });
+        twilioDevice.on('unregistered', () => {
+          twilioReadyGate.setState('connecting');
+          updateTwilioBadge('connecting');
+        });
         twilioDevice.on('error', (error) => {
           console.error('[twilio] Device error:', error);
+          twilioReadyGate.setState('error');
           updateTwilioBadge('error');
           showToast(`Twilio error: ${error.message}`);
           // Auto-recover from expired token (20104)
@@ -937,6 +1010,7 @@
         await twilioDevice.register();
       } catch (error) {
         console.error('[twilio] init failed:', error);
+        twilioReadyGate.setState('error');
         updateTwilioBadge('error');
       }
     }
@@ -944,7 +1018,11 @@
     function updateTwilioBadge(state) {
       const badge = document.getElementById('twilio-badge');
       badge.className = `twilio-badge ${state}`;
-      badge.textContent = state === 'ready' ? 'Voice Ready' : state === 'connecting' ? 'Connecting...' : 'Voice Error';
+      badge.textContent =
+        state === 'ready' ? 'Voice Ready' :
+        state === 'connecting' ? 'Connecting...' :
+        state === 'idle' ? 'Tap to Enable Voice' :
+        'Voice Error';
     }
 
     function renderLead() {
@@ -1179,10 +1257,27 @@
       const button = document.getElementById('dial-btn');
 
       if (!isDialing) {
-        if (!twilioDevice) {
-          showToast('Twilio not ready');
+        updateCallStatus('Requesting microphone...');
+        const hasMicrophone = await window.CallLockMediaPermissions.ensureMicrophonePermission({
+          mediaDevices: navigator.mediaDevices,
+          permissions: navigator.permissions,
+          showToast,
+        });
+        if (!hasMicrophone) {
+          updateCallStatus('Microphone required');
           return;
         }
+
+        const ready = await window.CallLockTwilioClient.ensureTwilioDeviceReady({
+          gate: twilioReadyGate,
+          initDevice: initTwilioDevice,
+          showToast,
+        });
+        if (!ready || !twilioDevice) {
+          updateCallStatus('Voice not ready');
+          return;
+        }
+        updateCallStatus('Starting call...');
 
         try {
           // Fire-and-forget: don't block the call on dial-started logging
@@ -1195,25 +1290,31 @@
           }).catch(() => {});
 
           activeCall = await twilioDevice.connect({ params: { To: lead.phone, ProspectState: lead.metro || '' } });
+          const feedback = window.CallLockCallFeedback.createCallFeedbackController({
+            setStatus: updateCallStatus,
+            startRingtone,
+            stopRingtone,
+          });
+          hudChannel.postMessage({ type: 'CALL_CONNECTING', seq: hudNextSeq() });
           button.classList.add('dialing');
           isDialing = true;
           stats.dialed += 1;
           updateStats();
           refreshScoreboard();
-          updateCallStatus('Connecting...');
+          feedback.onConnecting();
 
-          activeCall.on('ringing', () => updateCallStatus('Ringing...'));
+          activeCall.on('ringing', () => feedback.onRinging());
           activeCall.on('accept', () => {
             callStartTime = Date.now();
             lastCallSid = activeCall.parameters.CallSid;
-            updateCallStatus('Connected');
+            feedback.onAccepted();
             startCallTimer();
             // Sales HUD: notify HUD page + start audio capture
             hudOnCallAccept();
           });
           activeCall.on('disconnect', () => {
             const duration = callStartTime ? Math.round((Date.now() - callStartTime) / 1000) : 0;
-            updateCallStatus(`Ended (${duration}s)`);
+            feedback.onDisconnected(duration);
             stopCallTimer();
             // Sales HUD: notify HUD page + stop audio capture
             hudOnCallDisconnect();
@@ -1230,7 +1331,7 @@
             button.classList.remove('dialing');
             isDialing = false;
             activeCall = null;
-            updateCallStatus('');
+            feedback.onError();
             showToast(`Call error: ${error.message}`);
           });
         } catch (error) {
@@ -2025,24 +2126,55 @@
         return;
       }
 
-      if (!twilioDevice) {
-        showToast('Twilio not ready');
+      statusEl.textContent = 'Requesting microphone...';
+      const hasMicrophone = await window.CallLockMediaPermissions.ensureMicrophonePermission({
+        mediaDevices: navigator.mediaDevices,
+        permissions: navigator.permissions,
+        showToast,
+      });
+      if (!hasMicrophone) {
+        statusEl.textContent = 'Microphone required';
+        return;
+      }
+
+      const ready = await window.CallLockTwilioClient.ensureTwilioDeviceReady({
+        gate: twilioReadyGate,
+        initDevice: initTwilioDevice,
+        showToast,
+      });
+      if (!ready || !twilioDevice) {
+        statusEl.textContent = 'Voice not ready';
         return;
       }
 
       const numberToDial = digits.startsWith('1') ? `+${digits}` : `+1${digits}`;
+      statusEl.textContent = 'Starting call...';
 
       try {
         keypadCall = await twilioDevice.connect({ params: { To: numberToDial } });
+        const feedback = window.CallLockCallFeedback.createCallFeedbackController({
+          setStatus: (value) => { statusEl.textContent = value; },
+          startRingtone,
+          stopRingtone,
+        });
+        hudChannel.postMessage({ type: 'CALL_CONNECTING', seq: hudNextSeq() });
         isDialing = true;
         btn.classList.add('active');
-        statusEl.textContent = 'Connecting...';
+        feedback.onConnecting();
 
-        keypadCall.on('ringing', () => { statusEl.textContent = 'Ringing...'; });
+        // Timeout: if no ringing/accept after 30s, warn the user
+        const connectTimeout = setTimeout(() => {
+          if (statusEl.textContent === 'Connecting...') {
+            statusEl.textContent = 'No answer — try hanging up';
+          }
+        }, 30000);
+
+        keypadCall.on('ringing', () => { clearTimeout(connectTimeout); feedback.onRinging(); });
         keypadCall.on('accept', () => {
+          clearTimeout(connectTimeout);
           keypadCallStart = Date.now();
           lastCallSid = keypadCall.parameters.CallSid;
-          statusEl.textContent = 'Connected';
+          feedback.onAccepted();
           timerEl.style.display = 'block';
           keypadTimerInterval = setInterval(() => {
             const elapsed = Math.round((Date.now() - keypadCallStart) / 1000);
@@ -2056,12 +2188,14 @@
           startAudioCapture();
         });
         keypadCall.on('disconnect', () => {
+          clearTimeout(connectTimeout);
           const dur = keypadCallStart ? Math.round((Date.now() - keypadCallStart) / 1000) : 0;
-          statusEl.textContent = `Ended (${dur}s)`;
+          feedback.onDisconnected(dur);
           keypadCallCleanup();
         });
         keypadCall.on('error', (error) => {
-          statusEl.textContent = '';
+          clearTimeout(connectTimeout);
+          feedback.onError();
           showToast(`Call error: ${error.message}`);
           keypadCallCleanup();
         });
@@ -2094,7 +2228,30 @@
     });
     // ── End Manual Keypad ─────────────────────────────────────────
 
-    initTwilioDevice();
+    // ── Timezone clocks ─────────────────────────────────────────
+    const TZ_MAP = {
+      tx: 'America/Chicago',
+      fl: 'America/New_York',
+      il: 'America/Chicago',
+      mi: 'America/Detroit',
+      az: 'America/Phoenix',
+    };
+    function tickClocks() {
+      const now = new Date();
+      for (const [id, tz] of Object.entries(TZ_MAP)) {
+        const el = document.getElementById('tz-' + id);
+        if (el) el.textContent = now.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true });
+      }
+    }
+    tickClocks();
+    setInterval(tickClocks, 10000);
+
+    twilioReadyGate.setState('idle');
+    updateTwilioBadge('idle');
+    window.CallLockTwilioClient.attachLazyTwilioInit({
+      target: document,
+      initDevice: initTwilioDevice,
+    });
     loadLeads();
     refreshScoreboard();
   </script>

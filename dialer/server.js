@@ -15,6 +15,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const twilio = require('twilio');
 const { createClient } = require('@supabase/supabase-js');
+const { registerStatusCallbackRoute } = require('./status-callbacks');
 
 const OUTBOUND_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const OUTBOUND_CALL_OUTCOME_EVENT = 'outbound/call.outcome-logged';
@@ -229,6 +230,12 @@ function setHudCookie(res) {
     path: '/',
   });
 }
+
+registerStatusCallbackRoute(app, {
+  validateTwilioSignature,
+  storeCall,
+  logger: console,
+});
 
 async function stageHudSession(twilioCallSid, prospectId, hudSession) {
   if (supabase) {
@@ -591,6 +598,31 @@ app.get('/', (req, res) => {
 
 app.get('/combo', (req, res) => {
   res.sendFile(path.join(__dirname, 'combo.html'));
+});
+
+app.get('/twilio-client.js', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'twilio-client.js'));
+});
+
+app.get('/combo-loader.js', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'combo-loader.js'));
+});
+
+app.get('/twilio-audio.js', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'twilio-audio.js'));
+});
+
+app.get('/call-feedback.js', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'call-feedback.js'));
+});
+
+app.get('/media-permissions.js', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'media-permissions.js'));
 });
 
 app.get('/hud', (req, res) => {
