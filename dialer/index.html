@@ -1289,7 +1289,7 @@
             if (p) lastDialStartedId = p.id || null;
           }).catch(() => {});
 
-          activeCall = await twilioDevice.connect({ params: { To: lead.phone, ProspectState: lead.metro || '' } });
+          activeCall = await twilioDevice.connect({ params: { To: lead.phone, ProspectState: lead.metro || '', ProspectAddress: lead.address || '' } });
           const feedback = window.CallLockCallFeedback.createCallFeedbackController({
             setStatus: updateCallStatus,
             startRingtone,

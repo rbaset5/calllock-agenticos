@@ -67,7 +67,36 @@ const LOCAL_PRESENCE_NUMBERS = {
   IL: '+13097412672',
   TX: '+13252164094',
   AZ: '+19287560437',
+  // MT: '+1XXXXXXXXXX', // TODO: buy a Montana Twilio number for Missoula local presence
 };
+
+// Metro city name → state code for caller ID resolution.
+// The prospect metro field stores city names (e.g., "Phoenix"), not state codes.
+const METRO_TO_STATE = {
+  phoenix: 'AZ', mesa: 'AZ', scottsdale: 'AZ', tempe: 'AZ', tucson: 'AZ', chandler: 'AZ', gilbert: 'AZ', glendale: 'AZ',
+  chicago: 'IL', naperville: 'IL', aurora: 'IL', joliet: 'IL', rockford: 'IL', springfield: 'IL', peoria: 'IL', elgin: 'IL',
+  detroit: 'MI', 'grand rapids': 'MI', warren: 'MI', 'sterling heights': 'MI', lansing: 'MI', 'ann arbor': 'MI', flint: 'MI', dearborn: 'MI', kalamazoo: 'MI',
+  houston: 'TX', dallas: 'TX', austin: 'TX', 'san antonio': 'TX', 'fort worth': 'TX', 'el paso': 'TX', arlington: 'TX', plano: 'TX', lubbock: 'TX', abilene: 'TX',
+  miami: 'FL', orlando: 'FL', tampa: 'FL', jacksonville: 'FL', 'st. petersburg': 'FL', 'fort lauderdale': 'FL', tallahassee: 'FL', gainesville: 'FL', ocala: 'FL',
+  missoula: 'MT', billings: 'MT', 'great falls': 'MT', helena: 'MT', bozeman: 'MT', butte: 'MT',
+};
+
+// Resolve 2-letter state code from metro name, address, or raw input.
+function resolveState(metro, address) {
+  // 1. Direct metro city lookup
+  const cityKey = (metro || '').toLowerCase().trim();
+  if (METRO_TO_STATE[cityKey]) return METRO_TO_STATE[cityKey];
+
+  // 2. Try extracting state abbreviation from address (e.g., "123 Main St, Phoenix, AZ 85001")
+  const addrMatch = (address || '').toUpperCase().match(/\b([A-Z]{2})\s+\d{5}\b/);
+  if (addrMatch && LOCAL_PRESENCE_NUMBERS[addrMatch[1]]) return addrMatch[1];
+
+  // 3. Try raw metro as state code (in case it's already "AZ", "MI", etc.)
+  const upper = cityKey.toUpperCase();
+  if (LOCAL_PRESENCE_NUMBERS[upper]) return upper;
+
+  return null;
+}
 const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -756,8 +785,11 @@ app.post('/twiml', validateTwilioSignature, (req, res) => {
     return;
   }
 
-  const prospectState = (req.body.ProspectState || '').toUpperCase();
-  const callerId = LOCAL_PRESENCE_NUMBERS[prospectState] || TWILIO_PHONE_NUMBER;
+  const metro = req.body.ProspectState || '';
+  const address = req.body.ProspectAddress || '';
+  const prospectState = resolveState(metro, address);
+  const callerId = (prospectState && LOCAL_PRESENCE_NUMBERS[prospectState]) || TWILIO_PHONE_NUMBER;
+  console.log(`[twiml] metro="${metro}" addr="${address.slice(0, 40)}" → state=${prospectState} → callerId=${callerId}`);
 
   const VoiceResponse = twilio.twiml.VoiceResponse;
   const response = new VoiceResponse();
