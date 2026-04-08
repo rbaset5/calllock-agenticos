@@ -360,7 +360,7 @@ describe('hudReducer', () => {
     }, PLAYBOOK);
     assert.equal(next.stage, 'NON_CONNECT');
     assert.equal(next.outcome, 'non_connect');
-    assert.ok(next.now.line.includes('Rashid calling from Houston'));
+    assert.ok(next.now.line.includes('Rashid calling from {LOCATION}'));
   });
 
   // 17. HEDGE_REQUESTED only in CLOSE
