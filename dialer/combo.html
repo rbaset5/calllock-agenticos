@@ -6,17 +6,128 @@
   <title>CallLock — Dialer + HUD</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a0a; }
+    body {
+      background: #0a0a0a;
+      min-height: 100vh;
+      color: #e5e5e5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      padding-top: 72px;
+    }
+    .combo-pane {
+      width: 100%;
+      margin: 0;
+      border-top: 1px solid #1f2937;
+      border-bottom: 1px solid #1f2937;
+      overflow: hidden;
+      background: #050505;
+      min-height: 100vh;
+    }
     iframe {
       display: block;
       width: 100%;
       height: 100vh;
       border: none;
+      background: #0a0a0a;
+    }
+    .combo-gate {
+      position: fixed;
+      z-index: 1000;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(420px, calc(100vw - 32px));
+    }
+    .combo-gate[hidden] {
+      display: none;
+    }
+    .combo-gate-card {
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid #262626;
+      background: rgba(17, 17, 17, 0.96);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+    .combo-gate-card h1 {
+      font-size: 18px;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+    .combo-gate-card p {
+      font-size: 13px;
+      color: #a3a3a3;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .combo-gate-button {
+      border: none;
+      border-radius: 999px;
+      background: #22c55e;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 18px;
+      cursor: pointer;
+    }
+    .combo-gate-status {
+      min-height: 20px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #d4d4d4;
+    }
+    @media (max-width: 980px) {
+      .combo-gate {
+        top: 12px;
+      }
+      iframe {
+        height: 100vh;
+      }
     }
   </style>
 </head>
 <body>
-  <iframe src="/" id="dialer-frame"></iframe>
-  <iframe src="/hud" id="hud-frame"></iframe>
+  <div class="combo-gate" id="combo-mic-gate">
+    <div class="combo-gate-card">
+      <h1>Enable Microphone</h1>
+      <p>Grant microphone access once for `localhost:3004` before using the dialer in this combined view.</p>
+      <button class="combo-gate-button" id="combo-mic-button">Enable Voice</button>
+      <div class="combo-gate-status" id="combo-mic-status"></div>
+    </div>
+  </div>
+  <section class="combo-pane">
+    <iframe src="/" id="dialer-frame" allow="microphone; autoplay"></iframe>
+  </section>
+  <section class="combo-pane">
+    <iframe src="/hud/" data-src="/hud/" id="hud-frame" allow="microphone; autoplay"></iframe>
+  </section>
+  <script src="/combo-loader.js"></script>
+  <script>
+    const dialerFrame = document.getElementById('dialer-frame');
+    const hudFrame = document.getElementById('hud-frame');
+    const micGate = document.getElementById('combo-mic-gate');
+    const micButton = document.getElementById('combo-mic-button');
+    const micStatus = document.getElementById('combo-mic-status');
+    window.CallLockComboLoader.bootstrapComboFrames({ dialerFrame, hudFrame });
+    window.CallLockComboLoader.bootstrapMicrophoneGate({
+      overlay: micGate,
+      button: micButton,
+      statusEl: micStatus,
+    });
+
+    // Auto-focus whichever iframe is most visible on screen
+    const frames = document.querySelectorAll('iframe');
+    const observer = new IntersectionObserver((entries) => {
+      let best = null;
+      let bestRatio = 0;
+      for (const e of entries) {
+        if (e.intersectionRatio > bestRatio) {
+          bestRatio = e.intersectionRatio;
+          best = e.target;
+        }
+      }
+      if (best) best.contentWindow.focus();
+    }, { threshold: [0.3, 0.5, 0.7] });
+    frames.forEach(f => observer.observe(f));
+  </script>
 </body>
 </html>
