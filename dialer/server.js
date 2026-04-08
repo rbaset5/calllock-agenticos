@@ -589,6 +589,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+app.get('/combo', (req, res) => {
+  res.sendFile(path.join(__dirname, 'combo.html'));
+});
+
 app.get('/hud', (req, res) => {
   // Only set the cookie if the request provides the token via query param
   // (from a deep link). Don't stamp it on every unauthenticated page load.

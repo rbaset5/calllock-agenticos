@@ -69,7 +69,7 @@ describe("generateReplayTimeline", () => {
   it("sorts mixed events by offsetMs", () => {
     // Log two events in sequence
     logDecision(
-      { type: "KEYPRESS_LOG", stage: "OPENER", key: "1", action: "MANUAL_SET_BRIDGE_ANGLE", value: "missed_calls", isOverride: false },
+      { type: "KEYPRESS_LOG", stage: "OPENER", key: "1", action: "MANUAL_SET_OBJECTION", value: "timing", isOverride: false },
       { stage: "OPENER", now: null },
       { stage: "OPENER", now: null }
     );

@@ -143,9 +143,20 @@ describe("blocked stages in HOTKEY_CONFIG", () => {
 });
 
 describe("BRIDGE_STAGES", () => {
-  it("contains BRIDGE and OPENER", () => {
-    assert.strictEqual(BRIDGE_STAGES.length, 2);
+  it("contains BRIDGE only (OPENER uses objection keys)", () => {
+    assert.strictEqual(BRIDGE_STAGES.length, 1);
     assert.ok(BRIDGE_STAGES.includes("BRIDGE"));
-    assert.ok(BRIDGE_STAGES.includes("OPENER"));
+    assert.ok(!BRIDGE_STAGES.includes("OPENER"));
+  });
+});
+
+describe("OPENER hotkeys", () => {
+  it("OPENER has objection-type entries, not bridge", () => {
+    const entries = HOTKEY_CONFIG["OPENER"];
+    assert.strictEqual(entries.length, 4);
+    for (const entry of entries) {
+      assert.strictEqual(entry.type, "objection", "OPENER entries should be objection type");
+      assert.strictEqual(entry.action, "MANUAL_SET_OBJECTION");
+    }
   });
 });

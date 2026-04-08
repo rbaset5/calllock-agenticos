@@ -157,7 +157,7 @@ export const OVERLAY_INTENTS = ["existing_coverage", "answering_service"];
 // Bridge stages (stages that show bridge angle hotkeys)
 // -------------------------
 
-export const BRIDGE_STAGES = ["BRIDGE", "OPENER"];
+export const BRIDGE_STAGES = ["BRIDGE"];
 
 // -------------------------
 // Hotkey config — single source of truth for legend, handler, telemetry, replay.
@@ -172,9 +172,10 @@ export const HOTKEY_CONFIG = {
     { key: "3", label: "Overwhelm", action: "MANUAL_SET_BRIDGE_ANGLE", value: "overwhelmed", type: "bridge", cues: "busy, stretched, do it all, rushed" },
   ],
   OPENER: [
-    { key: "1", label: "Missed", action: "MANUAL_SET_BRIDGE_ANGLE", value: "missed_calls", type: "bridge", cues: "voicemail, callback, wife, office" },
-    { key: "2", label: "Comp", action: "MANUAL_SET_BRIDGE_ANGLE", value: "competition", type: "bridge", cues: "slow, growth, competitor, losing" },
-    { key: "3", label: "Overwhelm", action: "MANUAL_SET_BRIDGE_ANGLE", value: "overwhelmed", type: "bridge", cues: "busy, stretched, do it all, rushed" },
+    { key: "1", label: "Timing", action: "MANUAL_SET_OBJECTION", value: "timing", type: "objection", cues: "busy, bad time, not now, call back" },
+    { key: "2", label: "Interest", action: "MANUAL_SET_OBJECTION", value: "interest", type: "objection", cues: "not interested, we're set, don't need" },
+    { key: "3", label: "Info", action: "MANUAL_SET_OBJECTION", value: "info", type: "objection", cues: "send me info, email me, website" },
+    { key: "4", label: "Authority", action: "MANUAL_SET_OBJECTION", value: "authority", type: "objection", cues: "not my decision, wife handles, partner" },
   ],
   // Stages with objection keys (1-4)
   CLOSE: [

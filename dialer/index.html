@@ -915,11 +915,23 @@
           console.error('[twilio] Device error:', error);
           updateTwilioBadge('error');
           showToast(`Twilio error: ${error.message}`);
+          // Auto-recover from expired token (20104)
+          if (error.code === 20104 || (error.message && error.message.includes('expired'))) {
+            console.log('[twilio] Token expired, re-initializing device...');
+            setTimeout(() => initTwilioDevice(), 1000);
+          }
         });
         twilioDevice.on('tokenWillExpire', async () => {
-          const tokenResponse = await fetch(`${CALL_SERVER}/token`);
-          const { token: nextToken } = await tokenResponse.json();
-          twilioDevice.updateToken(nextToken);
+          try {
+            const tokenResponse = await fetch(`${CALL_SERVER}/token`);
+            if (!tokenResponse.ok) throw new Error(`Token refresh failed: ${tokenResponse.status}`);
+            const { token: nextToken } = await tokenResponse.json();
+            twilioDevice.updateToken(nextToken);
+            console.log('[twilio] Token refreshed successfully');
+          } catch (err) {
+            console.error('[twilio] Token refresh failed, re-initializing:', err);
+            setTimeout(() => initTwilioDevice(), 1000);
+          }
         });
 
         await twilioDevice.register();

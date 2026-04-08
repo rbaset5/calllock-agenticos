@@ -115,33 +115,30 @@ for (const h of GLOBAL_HOTKEYS) {
 }
 $hotkeyBar.style.display = 'none';
 
-// Dynamic hotkey bar — changes based on current stage
+// Static hotkey bars — render once, always visible
 const $objHotkeyBar = document.getElementById('objection-hotkey-bar');
-let _lastHotkeyStage = null;
+const $bridgeHotkeyBar = document.getElementById('bridge-hotkey-bar');
 let _hotkeyBarVisible = false;
 
-function renderHotkeyBar(stage) {
-  if (stage === _lastHotkeyStage) return;
-  _lastHotkeyStage = stage;
-  $objHotkeyBar.replaceChildren();
-
-  const isBridge = stage === 'BRIDGE' || stage === 'OPENER';
-  const items = isBridge
-    ? BRIDGE_HOTKEYS
-    : OBJECTION_HOTKEYS;
-
-  for (const h of items) {
-    const span = document.createElement('span');
-    span.className = 'hotkey-item';
-    const kbd = document.createElement('kbd');
-    kbd.textContent = h.key;
-    span.appendChild(kbd);
-    span.appendChild(document.createTextNode(h.label));
-    $objHotkeyBar.appendChild(span);
-  }
-  $objHotkeyBar.style.display = _hotkeyBarVisible ? '' : 'none';
+for (const h of OBJECTION_HOTKEYS) {
+  const span = document.createElement('span');
+  span.className = 'hotkey-item';
+  const kbd = document.createElement('kbd');
+  kbd.textContent = h.key;
+  span.appendChild(kbd);
+  span.appendChild(document.createTextNode(h.label));
+  $objHotkeyBar.appendChild(span);
 }
-$objHotkeyBar.style.display = 'none';
+
+for (const h of BRIDGE_HOTKEYS) {
+  const span = document.createElement('span');
+  span.className = 'hotkey-item';
+  const kbd = document.createElement('kbd');
+  kbd.textContent = h.key;
+  span.appendChild(kbd);
+  span.appendChild(document.createTextNode(h.label));
+  $bridgeHotkeyBar.appendChild(span);
+}
 
 // ── FAQ box (always-on, rendered once) ───────────────────────
 
@@ -918,12 +915,11 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
-    // ? — Toggle hotkey legend bars (objection + nav)
+    // ? — Toggle global nav legend (objection bar is always visible)
     case e.key === '?': {
       e.preventDefault();
       _hotkeyBarVisible = !_hotkeyBarVisible;
       $hotkeyBar.style.display = _hotkeyBarVisible ? '' : 'none';
-      $objHotkeyBar.style.display = _hotkeyBarVisible ? '' : 'none';
       break;
     }
 
@@ -1073,7 +1069,6 @@ function render() {
 
   // Stage bar
   renderStageBar();
-  renderHotkeyBar(state.stage);
   renderContextStrip();
 
   // Compose active card FIRST (needed by both center panel and side panes)
