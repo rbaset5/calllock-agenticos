@@ -143,6 +143,7 @@ def test_full_fixture_end_to_end(tmp_path: Path) -> None:
     assert sample["tenant_id"] == OUTBOUND_TENANT_ID
     assert sample["source"] == "maps_scraper"
     assert sample["stage"] == "call_ready"
+    assert sample["metro"] == "MI"
     assert sample["raw_source"]["cohort"] == "a"
     assert sample["raw_source"]["scraper_source"] == "gosom/google-maps-scraper"
     assert sample["timezone"] == "America/Detroit"

@@ -278,6 +278,11 @@ def build_record(
         "address": extract_address(row),
         "website": extract_website(row),
         "source": "maps_scraper",
+        # metro is the 2-letter state code — the Speed Dialer groups prospects
+        # by this field for the state-filter tabs (dialer/index.html:1115).
+        # Setting it to the uppercase state code keeps maps_scraper rows from
+        # landing in the "Other" bucket.
+        "metro": state.upper(),
         "timezone": extract_timezone(row, state),
         "raw_source": {
             "cohort": "a",
