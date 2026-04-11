@@ -639,6 +639,20 @@ app.get('/hud', (req, res) => {
   res.sendFile(path.join(__dirname, 'hud', 'index.html'));
 });
 
+// Pure hotkey HUD — no classifier, no BroadcastChannel, no auto-transitions.
+// Driven entirely by keystrokes. See dialer/hud/hotkey.html.
+app.get('/hotkey', (req, res) => {
+  const tokenParam = req.query.token;
+  if (tokenParam && HUD_INTERNAL_TOKEN) {
+    const a = Buffer.from(tokenParam);
+    const b = Buffer.from(HUD_INTERNAL_TOKEN);
+    if (a.length === b.length && require('crypto').timingSafeEqual(a, b)) {
+      setHudCookie(res);
+    }
+  }
+  res.sendFile(path.join(__dirname, 'hud', 'hotkey.html'));
+});
+
 app.get('/token', validateHudToken, (_req, res) => {
   const AccessToken = twilio.jwt.AccessToken;
   const VoiceGrant = AccessToken.VoiceGrant;

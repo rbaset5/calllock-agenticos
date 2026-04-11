@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CallLock — Hotkey HUD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      height: 100vh;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid #1a1a1a;
+      background: #0d0d0d;
+      height: 56px;
+    }
+    .top-bar-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #a78bfa;
+      text-transform: uppercase;
+    }
+    .top-bar-right {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      font-size: 12px;
+      color: #666;
+    }
+    .bookmark-count {
+      background: #1a1a1a;
+      padding: 4px 10px;
+      border-radius: 12px;
+      color: #a78bfa;
+      font-weight: 600;
+      transition: all 180ms;
+    }
+    .bookmark-count.flash {
+      background: #a78bfa;
+      color: #0a0a0a;
+    }
+
+    .stage-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 28px;
+      border-bottom: 1px solid #1a1a1a;
+      background: #0b0b0b;
+      height: 68px;
+    }
+    .stage-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: #555;
+      background: #141414;
+      border: 1px solid #1f1f1f;
+      cursor: pointer;
+      user-select: none;
+      transition: all 120ms ease;
+    }
+    .stage-pill .stage-num {
+      font-size: 10px;
+      opacity: 0.5;
+      background: #1f1f1f;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .stage-pill.past {
+      color: #888;
+      background: #0f0f0f;
+    }
+    .stage-pill.current {
+      color: #0a0a0a;
+      background: #a78bfa;
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+    }
+    .stage-pill.current .stage-num {
+      background: rgba(0, 0, 0, 0.2);
+      color: #0a0a0a;
+      opacity: 0.8;
+    }
+    .stage-pill.quantify.current {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+    }
+
+    .math-strip {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), transparent 70%);
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .math-strip.active { display: flex; }
+    .math-strip label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #888;
+    }
+    .math-strip input {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      color: #f59e0b;
+      font-size: 22px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 8px;
+      width: 120px;
+      text-align: center;
+      font-family: inherit;
+    }
+    .math-strip input:focus {
+      outline: none;
+      border-color: #f59e0b;
+    }
+    .math-strip .operator {
+      font-size: 20px;
+      color: #666;
+      font-weight: 400;
+    }
+    .math-strip .result {
+      font-size: 26px;
+      font-weight: 700;
+      color: #f59e0b;
+      min-width: 140px;
+    }
+    .math-strip .result.zero { color: #444; }
+    .math-strip .hint {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #linesPanel { display: none; }
+
+    /* ── QUICK ROW — horizontal F-key strip that mirrors the keyboard ──
+       Width and horizontal offset are live-tunable via [ ] , . hotkeys and
+       persisted to localStorage. No amount of code-level guessing aligns
+       screen chips with physical F-keys across machines — so the user
+       calibrates it once and forgets it. ── */
+    :root {
+      --quick-width: 900px;
+      --quick-offset: 0px;
+    }
+    .quick-row-wrap {
+      background: #0c0c0c;
+      border-top: 1px solid #1a1a1a;
+      padding: 8px 0;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .quick-row {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 5px;
+      padding: 0 14px;
+      width: var(--quick-width);
+      max-width: 100%;
+      margin: 0 auto;
+      transform: translateX(var(--quick-offset));
+      height: 44px;
+      align-items: stretch;
+      transition: width 120ms ease, transform 120ms ease;
+    }
+    .calibration-hint { display: none; }
+
+    /* ── ARROW ROW — hidden. Calibration is locked in. ── */
+    .arrow-row { display: none; }
+    .arrow-row-unused {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 5px;
+      padding: 6px 14px 2px;
+      width: var(--quick-width);
+      max-width: 100%;
+      margin: 0 auto;
+      transform: translateX(var(--quick-offset));
+      height: 20px;
+      align-items: start;
+    }
+    .arrow-marker {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      cursor: ew-resize;
+      user-select: none;
+      touch-action: none;
+      padding: 2px 0;
+    }
+    .arrow-triangle {
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 11px solid #ef4444;
+      transform: translateX(var(--arrow-offset, 0px));
+      transition: transform 80ms ease;
+      filter: drop-shadow(0 1px 2px rgba(239, 68, 68, 0.4));
+    }
+    .arrow-marker.dragging .arrow-triangle {
+      border-top-color: #fbbf24;
+      transition: none;
+      filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.6));
+    }
+    .arrow-marker:hover .arrow-triangle {
+      border-top-color: #f87171;
+    }
+    .quick-chip {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 4px 8px;
+      background: #131313;
+      border: 1px solid #1a1a1a;
+      border-top: 2px solid #1f1f1f;
+      border-radius: 5px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 120ms;
+      min-width: 0;
+    }
+    .quick-chip:hover {
+      border-color: #2a2a2a;
+      border-top-color: #3a3a3a;
+    }
+    .quick-chip.empty {
+      background: #0d0d0d;
+      border-color: #141414;
+      cursor: default;
+    }
+    .quick-chip.active {
+      background: rgba(167, 139, 250, 0.12);
+      border-color: #a78bfa;
+      border-top-color: #a78bfa;
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
+    }
+    .quick-fkey {
+      font-family: "SF Mono", Monaco, monospace;
+      font-size: 9px;
+      font-weight: 700;
+      color: #666;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    .quick-chip.active .quick-fkey {
+      color: #a78bfa;
+    }
+    .quick-chip.empty .quick-fkey {
+      color: #333;
+    }
+    .quick-trigger {
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+    .quick-chip.active .quick-trigger {
+      color: #fff;
+      font-weight: 600;
+    }
+    .quick-chip.empty .quick-trigger {
+      color: #2a2a2a;
+    }
+    .panel {
+      overflow-y: auto;
+      border-right: 1px solid #1a1a1a;
+    }
+    .panel:last-child { border-right: none; border-left: 1px solid #1a1a1a; }
+    .panel-header {
+      padding: 14px 20px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: #666;
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+      background: #0a0a0a;
+    }
+
+    .line-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px 20px;
+      margin: 6px 14px;
+      border-radius: 8px;
+      background: #101010;
+      border: 1px solid #1a1a1a;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      transition: all 120ms;
+    }
+    .line-item:nth-child(even) {
+      background: #161616;
+    }
+    .line-item:hover {
+      border-color: #2a2a2a;
+      border-left-color: #3a3a3a;
+    }
+    .line-item.active,
+    .line-item.active:nth-child(even) {
+      border-color: #a78bfa;
+      border-left-color: #a78bfa;
+      background: rgba(167, 139, 250, 0.1);
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.15);
+    }
+    .fkey-badge {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+      font-weight: 700;
+      color: #777;
+      background: #1d1d1d;
+      padding: 4px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      border: 1px solid #262626;
+      min-width: 28px;
+      text-align: center;
+      line-height: 1;
+    }
+    .line-item.active .fkey-badge {
+      background: #a78bfa;
+      color: #0a0a0a;
+      border-color: #a78bfa;
+    }
+    .line-trigger {
+      flex: 1;
+      font-size: 15px;
+      color: #bbb;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .line-item.active .line-trigger {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .now-panel {
+      padding: 40px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 20px;
+      background: radial-gradient(ellipse at center, rgba(167, 139, 250, 0.03), transparent 70%);
+    }
+    .now-stage-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #a78bfa;
+      font-weight: 700;
+    }
+    .now-line {
+      font-size: 28px;
+      line-height: 1.38;
+      color: #fff;
+      font-weight: 500;
+      max-width: 780px;
+    }
+    .now-why {
+      font-size: 13px;
+      color: #666;
+      font-style: italic;
+    }
+    .now-round {
+      font-size: 11px;
+      color: #444;
+      letter-spacing: 0.08em;
+    }
+
+    .overlay-ribbon {
+      display: none;
+      align-self: stretch;
+      padding: 6px 14px;
+      background: rgba(245, 158, 11, 0.12);
+      border-left: 3px solid #f59e0b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #f59e0b;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .overlay-ribbon.active { display: block; }
+
+    .drawer-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: #444;
+      font-size: 12px;
+      font-style: italic;
+    }
+    .drawer-empty kbd {
+      background: #1a1a1a;
+      color: #a78bfa;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+    }
+    .drawer-header {
+      padding: 16px 20px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #f59e0b;
+      text-transform: uppercase;
+      border-bottom: 1px solid #1a1a1a;
+      margin-bottom: 10px;
+    }
+    .drawer-item {
+      padding: 14px 20px;
+      margin: 6px 14px;
+      border-radius: 8px;
+      background: #111;
+      border: 1px solid #1a1a1a;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #bbb;
+    }
+    .drawer-item.first {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.05);
+      color: #fff;
+    }
+
+    .hotkey-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 28px;
+      border-top: 1px solid #1a1a1a;
+      background: #0d0d0d;
+      height: 44px;
+      font-size: 11px;
+      color: #666;
+      flex-shrink: 0;
+    }
+    .hotkey-bar.hidden { display: none; }
+    .hotkey-group { display: flex; gap: 14px; }
+    .hotkey-item { display: flex; align-items: center; gap: 5px; }
+    .hotkey-item kbd {
+      background: #1a1a1a;
+      color: #a78bfa;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+      border: 1px solid #2a2a2a;
+      font-weight: 600;
+    }
+
+    .help-inline kbd {
+      background: #1a1a1a;
+      color: #a78bfa;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="top-bar-label">SALES HUD — HOTKEY</div>
+    <div class="top-bar-right">
+      <span id="callTimer">00:00</span>
+      <span class="bookmark-count" id="bookmarkCount">★ 0</span>
+      <span class="help-inline"><kbd>?</kbd> toggle hotkey bar</span>
+    </div>
+  </div>
+
+  <div class="stage-bar" id="stageBar"></div>
+
+  <div class="math-strip" id="mathStrip">
+    <label>Sat calls</label>
+    <input type="number" id="mathCalls" placeholder="?" min="0">
+    <span class="operator">×</span>
+    <label>$ / job</label>
+    <input type="number" id="mathValue" placeholder="?" min="0">
+    <span class="operator">=</span>
+    <span class="result zero" id="mathResult">$ —</span>
+    <span class="hint">(weekend leak)</span>
+  </div>
+
+  <div class="main">
+    <div class="panel" id="linesPanel">
+      <div class="panel-header">LINES — <span id="linesStageName">OPEN</span></div>
+      <div id="linesList"></div>
+    </div>
+
+    <div class="panel now-panel" id="nowPanel">
+      <div class="overlay-ribbon" id="overlayRibbon">OVERLAY ACTIVE</div>
+      <div class="now-stage-label" id="nowStageLabel">OPEN</div>
+      <div class="now-line" id="nowLine">—</div>
+      <div class="now-why" id="nowWhy"></div>
+      <div class="now-round" id="nowRound"></div>
+    </div>
+
+    <div class="panel" id="drawerPanel">
+      <div class="panel-header">OVERLAY DRAWER</div>
+      <div class="drawer-empty" id="drawerEmpty">
+        No overlay active.<br><br>
+        <kbd>G</kbd> gatekeeper &middot;
+        <kbd>O</kbd> objection &middot;
+        <kbd>$</kbd> price &middot;
+        <kbd>W</kbd> wrong &middot;
+        <kbd>X</kbd> exit
+      </div>
+      <div id="drawerContent" style="display:none;">
+        <div class="drawer-header" id="drawerHeader">—</div>
+        <div id="drawerList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hotkey-bar hidden">
+    <div class="hotkey-group">
+      <div class="hotkey-item"><kbd>1–6</kbd> stage</div>
+      <div class="hotkey-item"><kbd>F1–F9</kbd> pick line</div>
+      <div class="hotkey-item"><kbd>←→</kbd> step line</div>
+      <div class="hotkey-item"><kbd>G O $ W X</kbd> drawer</div>
+      <div class="hotkey-item"><kbd>Esc</kbd> close</div>
+      <div class="hotkey-item"><kbd>Space</kbd> bookmark</div>
+    </div>
+    <div class="hotkey-group">
+      <div class="hotkey-item"><kbd>R</kbd> reset call</div>
+      <div class="hotkey-item"><kbd>E</kbd> export log</div>
+    </div>
+  </div>
+
+  <div class="quick-row-wrap">
+    <div class="quick-row" id="quickRow"></div>
+    <div class="arrow-row" id="arrowRow"></div>
+    <div class="calibration-hint" id="calibrationHint">900 / 0</div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // CONTENT — pure data, no classifier, no state machine
+    // ═══════════════════════════════════════════════════════════════
+
+    const STAGES = [
+      { key: 'OPEN',     num: 1, name: 'OPEN',
+        why: '§0 Opener — greeting + 20-second permission' },
+      { key: 'PIVOT',    num: 2, name: 'PIVOT', defaultRoundIdx: 4,
+        why: '§1 After-hours pivot — get them describing their setup' },
+      { key: 'QUANTIFY', num: 3, name: 'QUANTIFY',
+        why: '§2 Quantifier — get the number on the table' },
+      { key: 'PITCH',    num: 4, name: 'PITCH',
+        why: '§4 Pitch — short version of what CallLock does' },
+      { key: 'CLOSE',    num: 5, name: 'CLOSE',
+        why: '§5 Close — Thursday/Friday scheduling' },
+      { key: 'BOOKED',   num: 6, name: 'BOOKED',
+        why: 'Outcome — demo on calendar' },
+    ];
+
+    const LINES = {
+      OPEN: [
+        { trigger: 'Primary opener', text: "Hey [Name], Rashid here — cold call, you can hang up in 20 seconds if you want. Quick one: most HVAC shops I talk to are solid 8 to 5, but evenings and weekends get messy. How are you handling after-hours calls right now?" },
+        { trigger: 'Shorter variant', text: "Hey [Name], Rashid over in Houston. Cold call, 20 seconds — how are you handling calls after 5 and on weekends?" },
+        { trigger: 'Minimal variant', text: "Hey [Name], Rashid. Quick cold call — how are calls after hours getting handled at your shop?" },
+      ],
+      PIVOT: [
+        { trigger: '"We answer it"', text: "Totally — sounds like daytime's solid. What about after 5 and weekends? That's usually where I see shops leaking jobs they don't even know about." },
+        { trigger: '"Voicemail" / "We call back"', text: "Yeah, that's where it gets expensive. Rough guess — how many of those voicemails on a typical Saturday?" },
+        { trigger: '"My wife / CSR handles it"', text: "Makes sense. Is she actually on the phone at 9pm on a Saturday, or is it more like she checks voicemails in the morning?" },
+        { trigger: '"We have an answering service"', text: "Got it — are they actually booking jobs live, or mostly taking a message for you to call back Monday? Because the ones I've seen, by the time you call back, the customer's already booked with someone else." },
+        { trigger: '"We don\'t miss calls"', text: "That's impressive — are you picking up live at 9pm on a Saturday, or is it going somewhere? Just curious how you've got it set up." },
+        { trigger: '"Depends / it varies"', text: "Yeah, that's usually what I hear. Where do the misses mostly happen — nights, weekends, or when you're already slammed on a job?" },
+        { trigger: '"What is this?" / "What are you selling?"', text: "We help HVAC shops answer, qualify, and book inbound calls live when you can't pick up — especially after hours. I was just trying to see how you're handling that today. Mind if I ask?" },
+        { trigger: '"Not interested" / "I\'m busy"', text: "Totally fair — one question and I'll let you go: when a new customer calls you Saturday night, what actually happens to that call?" },
+        { trigger: '"I\'m on a job right now"', text: "I figured — that's actually why I called. When you're tied up like this and a new customer calls, where does it go?" },
+      ],
+      QUANTIFY: [
+        { trigger: 'Q1 — Saturday volume', text: "Rough guess — how many after-hours calls do you think come in on a typical weekend? Even just Saturday." },
+        { trigger: 'Q2 — Job value', text: "And what's one of those jobs worth on average — ballpark?" },
+        { trigger: 'Q3 — Deliver the number', text: "Okay — so even if half of those turn into real jobs, that's [$ amount] a weekend sitting in a voicemail box. Does that sound about right to you?" },
+        { trigger: 'If they push back', text: "Fair — what's your gut on the real number?" },
+      ],
+      PITCH: [
+        { trigger: 'Full pitch', text: "Got it. Here's what we do, short version: when a customer calls after hours and you can't pick up, our system answers live, sounds like a person, asks the same questions your best CSR would, and drops the booked job straight into your calendar. You wake up Monday with jobs instead of voicemails." },
+        { trigger: 'Short pitch', text: "We answer your after-hours calls live and book the job into your calendar. Takes 15 minutes to show you." },
+        { trigger: 'With the math in hand', text: "So that [$ amount] weekend leak — that's what this fixes. Calls get answered, qualified, booked. You wake up Monday with jobs instead of voicemails." },
+      ],
+      CLOSE: [
+        { trigger: 'Primary close', text: "Worth 15 minutes this week to see if it'd fit your setup? I can show you a real call from a shop like yours." },
+        { trigger: 'Two-option close', text: "I've got Thursday at 10 or Friday at 2 — which works?" },
+        { trigger: '"Send me info"', text: "Happy to — what's the best email? And just so I send the right thing, are you more worried about after-hours, overflow during the day, or both?" },
+        { trigger: '"Call me back next week"', text: "Will do — Tuesday or Wednesday better? I want to pin a day so I'm not chasing you." },
+        { trigger: '"Not right now"', text: "No problem. Can I send you one 30-second clip of a real after-hours call so you've got it when the timing's right?" },
+      ],
+      BOOKED: [
+        { trigger: 'Confirmation', text: "Perfect — invite heading your way. Talk Thursday." },
+        { trigger: 'With email capture', text: "Confirmed for Thursday at 10. I'll send a calendar invite to that email right now — you should see it in a minute." },
+      ],
+    };
+
+    const OVERLAYS = {
+      G: {
+        name: 'GATEKEEPER',
+        lines: [
+          "Hey, it's Rashid — I was trying to reach [Name] about their business calls. Is he around?",
+          "I help contractors handle calls when they're tied up on a job. Just wanted to ask him a quick question.",
+          "No worries. When's a good time to catch him?",
+        ],
+      },
+      O: {
+        name: 'OBJECTION',
+        lines: [
+          "Totally fair — last thing and I'll let you go: when a new customer calls you Saturday night, what actually happens to that call?",
+          "Fair — what's the one thing that would have to be true for this to be worth a look?",
+          "No problem. Can I send you a 30-second clip of a real after-hours call so you've got it when the timing's right?",
+        ],
+      },
+      $: {
+        name: 'PRICE',
+        lines: [
+          "Depends on volume — usually pays for itself in 2-3 booked jobs a month. Want me to run your numbers on the demo?",
+          "$297 a month — but back up a second. On the demo I show you what you're losing now vs what we catch. That's the comparison that matters.",
+          "Cheaper than missing one job a month. The demo makes that real — 15 minutes?",
+        ],
+      },
+      W: {
+        name: 'WRONG PERSON',
+        lines: [
+          "Makes sense. What's the best way to loop them in?",
+          "Got it — is there a better number for them, or is this the main line?",
+          "No worries — when's he usually reachable?",
+        ],
+      },
+      X: {
+        name: 'EXIT ATTEMPT',
+        lines: [
+          "Totally fair — one question and I'll let you go: when a new customer calls you Saturday night, what actually happens to that call?",
+          "No problem. Can I send you a 30-second clip of a real after-hours call so you've got it when the timing's right?",
+          "Understood. Last thing — what's the best email, so I can send you one thing and then leave you alone?",
+        ],
+      },
+    };
+    // ═══════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════
+
+    let state = {
+      stageIdx: 0,
+      roundIdx: 0,
+      overlay: null,
+      bookmarks: 0,
+      log: [],
+      callStart: Date.now(),
+    };
+
+    // ── Calibration — persists across reloads, tuned via [ ] , . keys ──
+    const CAL_KEY = 'hotkeyhud.calibration.v1';
+    let calibration = { width: 900, offset: 0 };
+    try {
+      const saved = localStorage.getItem(CAL_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.width === 'number')  calibration.width  = parsed.width;
+        if (typeof parsed.offset === 'number') calibration.offset = parsed.offset;
+      }
+    } catch (e) { /* ignore */ }
+
+    function applyCalibration() {
+      document.documentElement.style.setProperty('--quick-width',  calibration.width  + 'px');
+      document.documentElement.style.setProperty('--quick-offset', calibration.offset + 'px');
+    }
+    function saveCalibration() {
+      try { localStorage.setItem(CAL_KEY, JSON.stringify(calibration)); } catch (e) { /* ignore */ }
+    }
+    function flashCalibrationHint() {
+      const el = document.getElementById('calibrationHint');
+      if (!el) return;
+      el.textContent = calibration.width + 'px  /  ' + (calibration.offset >= 0 ? '+' : '') + calibration.offset + 'px';
+      el.classList.add('visible');
+      clearTimeout(flashCalibrationHint._t);
+      flashCalibrationHint._t = setTimeout(function() { el.classList.remove('visible'); }, 900);
+    }
+    function adjustQuickWidth(delta) {
+      calibration.width = Math.max(300, Math.min(1600, calibration.width + delta));
+      applyCalibration();
+      saveCalibration();
+      flashCalibrationHint();
+      logEvent('CAL_WIDTH', { width: calibration.width });
+    }
+    function adjustQuickOffset(delta) {
+      calibration.offset = Math.max(-400, Math.min(400, calibration.offset + delta));
+      applyCalibration();
+      saveCalibration();
+      flashCalibrationHint();
+      logEvent('CAL_OFFSET', { offset: calibration.offset });
+    }
+    applyCalibration();
+
+    // ── Arrow offsets — per-arrow horizontal position ──
+    const ARROW_KEY = 'hotkeyhud.arrows.v1';
+    let arrowOffsets = new Array(9).fill(0);
+    try {
+      const saved = localStorage.getItem(ARROW_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 9) {
+          arrowOffsets = parsed.map(function(n) { return typeof n === 'number' ? n : 0; });
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    function saveArrows() {
+      try { localStorage.setItem(ARROW_KEY, JSON.stringify(arrowOffsets)); } catch (e) { /* ignore */ }
+    }
+
+    function logEvent(action, payload) {
+      state.log.push({
+        t: Date.now() - state.callStart,
+        action: action,
+        payload: payload || {},
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // RENDER — using safe DOM construction (no innerHTML with data)
+    // ═══════════════════════════════════════════════════════════════
+
+    const $stageBar   = document.getElementById('stageBar');
+    const $linesList  = document.getElementById('linesList');
+    const $linesStageName = document.getElementById('linesStageName');
+    const $nowLine    = document.getElementById('nowLine');
+    const $nowWhy     = document.getElementById('nowWhy');
+    const $nowRound   = document.getElementById('nowRound');
+    const $nowStageLabel = document.getElementById('nowStageLabel');
+    const $overlayRibbon = document.getElementById('overlayRibbon');
+    const $drawerEmpty = document.getElementById('drawerEmpty');
+    const $drawerContent = document.getElementById('drawerContent');
+    const $drawerHeader = document.getElementById('drawerHeader');
+    const $drawerList = document.getElementById('drawerList');
+    const $mathStrip = document.getElementById('mathStrip');
+    const $mathCalls = document.getElementById('mathCalls');
+    const $mathValue = document.getElementById('mathValue');
+    const $mathResult = document.getElementById('mathResult');
+    const $bookmarkCount = document.getElementById('bookmarkCount');
+    const $callTimer = document.getElementById('callTimer');
+    const $quickRow = document.getElementById('quickRow');
+
+    function clearChildren(el) {
+      while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function renderStageBar() {
+      clearChildren($stageBar);
+      STAGES.forEach(function(s, i) {
+        const pill = document.createElement('span');
+        pill.className = 'stage-pill';
+        if (i < state.stageIdx) pill.classList.add('past');
+        if (i === state.stageIdx) pill.classList.add('current');
+        if (s.key === 'QUANTIFY') pill.classList.add('quantify');
+
+        const num = document.createElement('span');
+        num.className = 'stage-num';
+        num.textContent = String(s.num);
+        pill.appendChild(num);
+        pill.appendChild(document.createTextNode(s.name));
+
+        pill.addEventListener('click', function() { jumpToStage(i); });
+        $stageBar.appendChild(pill);
+      });
+    }
+
+    function renderLines() {
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      $linesStageName.textContent = stage.name;
+      clearChildren($linesList);
+      lines.forEach(function(line, i) {
+        const item = document.createElement('div');
+        item.className = 'line-item' + (i === state.roundIdx ? ' active' : '');
+
+        const fkey = document.createElement('span');
+        fkey.className = 'fkey-badge';
+        fkey.textContent = 'F' + (i + 1);
+
+        const trigger = document.createElement('span');
+        trigger.className = 'line-trigger';
+        trigger.textContent = line.trigger;
+
+        item.appendChild(fkey);
+        item.appendChild(trigger);
+        item.addEventListener('click', function() {
+          state.roundIdx = i;
+          logEvent('LINE_CLICK', { stage: stage.key, roundIdx: i });
+          renderNow();
+          renderLines();
+          renderQuickRow();
+        });
+        $linesList.appendChild(item);
+      });
+    }
+
+    function renderNow() {
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      const line = lines[state.roundIdx];
+
+      $nowStageLabel.textContent = stage.name;
+
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        $overlayRibbon.classList.add('active');
+        $overlayRibbon.textContent = '↯ OVERLAY: ' + overlay.name;
+        $nowLine.textContent = overlay.lines[0];
+        $nowWhy.textContent = 'Overlay handler — return to ' + stage.name + ' when resolved';
+        $nowRound.textContent = '';
+      } else {
+        $overlayRibbon.classList.remove('active');
+        if (line) {
+          $nowLine.textContent = line.text;
+          $nowWhy.textContent = stage.why + ' · ' + line.trigger;
+          $nowRound.textContent = 'Round ' + (state.roundIdx + 1) + ' of ' + lines.length;
+        } else {
+          $nowLine.textContent = '—';
+          $nowWhy.textContent = stage.why;
+          $nowRound.textContent = '';
+        }
+      }
+    }
+
+    function renderDrawer() {
+      if (!state.overlay) {
+        $drawerEmpty.style.display = 'block';
+        $drawerContent.style.display = 'none';
+        return;
+      }
+      const overlay = OVERLAYS[state.overlay];
+      $drawerEmpty.style.display = 'none';
+      $drawerContent.style.display = 'block';
+      $drawerHeader.textContent = '↯ ' + overlay.name;
+      clearChildren($drawerList);
+      overlay.lines.forEach(function(text, i) {
+        const item = document.createElement('div');
+        item.className = 'drawer-item' + (i === 0 ? ' first' : '');
+        item.textContent = text;
+        $drawerList.appendChild(item);
+      });
+    }
+
+    function renderArrows() {
+      const row = document.getElementById('arrowRow');
+      if (!row) return;
+      clearChildren(row);
+      for (let i = 0; i < 9; i++) {
+        const marker = document.createElement('div');
+        marker.className = 'arrow-marker';
+
+        const tri = document.createElement('div');
+        tri.className = 'arrow-triangle';
+        tri.style.setProperty('--arrow-offset', arrowOffsets[i] + 'px');
+        marker.appendChild(tri);
+
+        (function(idx) {
+          let dragging = false;
+          let startX = 0;
+          let startOffset = 0;
+
+          marker.addEventListener('pointerdown', function(e) {
+            dragging = true;
+            startX = e.clientX;
+            startOffset = arrowOffsets[idx];
+            marker.classList.add('dragging');
+            try { marker.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+            e.preventDefault();
+          });
+          marker.addEventListener('pointermove', function(e) {
+            if (!dragging) return;
+            const delta = e.clientX - startX;
+            arrowOffsets[idx] = Math.max(-200, Math.min(200, startOffset + delta));
+            tri.style.setProperty('--arrow-offset', arrowOffsets[idx] + 'px');
+          });
+          marker.addEventListener('pointerup', function(e) {
+            if (!dragging) return;
+            dragging = false;
+            marker.classList.remove('dragging');
+            saveArrows();
+            logEvent('ARROW_DRAG', { idx: idx, offset: arrowOffsets[idx] });
+          });
+          marker.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            arrowOffsets[idx] = 0;
+            tri.style.setProperty('--arrow-offset', '0px');
+            saveArrows();
+            logEvent('ARROW_RESET', { idx: idx });
+          });
+        })(i);
+
+        row.appendChild(marker);
+      }
+    }
+
+    function renderQuickRow() {
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      clearChildren($quickRow);
+      for (let i = 0; i < 9; i++) {
+        const line = lines[i];
+        const chip = document.createElement('div');
+        chip.className = 'quick-chip';
+        if (!line) chip.classList.add('empty');
+        if (line && i === state.roundIdx) chip.classList.add('active');
+
+        const fkey = document.createElement('div');
+        fkey.className = 'quick-fkey';
+        fkey.textContent = 'F' + (i + 1);
+
+        const trigger = document.createElement('div');
+        trigger.className = 'quick-trigger';
+        trigger.textContent = line ? line.trigger : '—';
+
+        chip.appendChild(fkey);
+        chip.appendChild(trigger);
+
+        if (line) {
+          chip.addEventListener('click', function() {
+            state.roundIdx = i;
+            logEvent('LINE_CLICK', { stage: stage.key, roundIdx: i, src: 'quickrow' });
+            renderNow();
+            renderLines();
+            renderQuickRow();
+          });
+        }
+
+        $quickRow.appendChild(chip);
+      }
+    }
+
+    function renderMath() {
+      const stage = STAGES[state.stageIdx];
+      if (stage.key === 'QUANTIFY') {
+        $mathStrip.classList.add('active');
+      } else {
+        $mathStrip.classList.remove('active');
+      }
+    }
+
+    function renderBookmarks() {
+      $bookmarkCount.textContent = '★ ' + state.bookmarks;
+    }
+
+    function render() {
+      renderStageBar();
+      renderLines();
+      renderQuickRow();
+      renderArrows();
+      renderNow();
+      renderDrawer();
+      renderMath();
+      renderBookmarks();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ACTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    function jumpToStage(idx) {
+      if (idx < 0 || idx >= STAGES.length) return;
+      state.stageIdx = idx;
+      state.roundIdx = STAGES[idx].defaultRoundIdx || 0;
+      logEvent('STAGE_JUMP', { stage: STAGES[idx].key, roundIdx: state.roundIdx });
+      render();
+    }
+
+    function stepLine(delta) {
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      const next = state.roundIdx + delta;
+      if (next < 0 || next >= lines.length) return;
+      state.roundIdx = next;
+      logEvent('LINE_STEP', { stage: stage.key, roundIdx: next });
+      renderNow();
+      renderLines();
+      renderQuickRow();
+    }
+
+    function selectLine(index) {
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      if (index < 0 || index >= lines.length) return;
+      state.roundIdx = index;
+      logEvent('LINE_SELECT', { stage: stage.key, roundIdx: index, key: 'F' + (index + 1) });
+      renderNow();
+      renderLines();
+      renderQuickRow();
+    }
+
+    function toggleOverlay(key) {
+      if (state.overlay === key) {
+        state.overlay = null;
+        logEvent('OVERLAY_CLOSE', { overlay: key });
+      } else {
+        state.overlay = key;
+        logEvent('OVERLAY_OPEN', { overlay: key });
+      }
+      renderNow();
+      renderDrawer();
+    }
+
+    function closeOverlay() {
+      if (state.overlay) {
+        logEvent('OVERLAY_CLOSE', { overlay: state.overlay });
+        state.overlay = null;
+        renderNow();
+        renderDrawer();
+      }
+    }
+
+    function bookmark() {
+      state.bookmarks++;
+      logEvent('BOOKMARK', { stage: STAGES[state.stageIdx].key });
+      renderBookmarks();
+      $bookmarkCount.classList.add('flash');
+      setTimeout(function() { $bookmarkCount.classList.remove('flash'); }, 180);
+    }
+
+    function resetCall() {
+      if (!confirm('Reset call — are you sure?')) return;
+      state = {
+        stageIdx: 0,
+        roundIdx: 0,
+        overlay: null,
+        bookmarks: 0,
+        log: [],
+        callStart: Date.now(),
+      };
+      $mathCalls.value = '';
+      $mathValue.value = '';
+      updateMath();
+      render();
+    }
+
+    function exportLog() {
+      const payload = {
+        callStart: new Date(state.callStart).toISOString(),
+        durationMs: Date.now() - state.callStart,
+        finalStage: STAGES[state.stageIdx].key,
+        bookmarks: state.bookmarks,
+        math: {
+          calls: $mathCalls.value ? Number($mathCalls.value) : null,
+          value: $mathValue.value ? Number($mathValue.value) : null,
+          leak:  ($mathCalls.value && $mathValue.value)
+            ? Number($mathCalls.value) * Number($mathValue.value)
+            : null,
+        },
+        events: state.log,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'call-log-' + new Date().toISOString().replace(/[:.]/g,'-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function toggleHotkeyBar() {
+      const bar = document.querySelector('.hotkey-bar');
+      if (!bar) return;
+      bar.classList.toggle('hidden');
+      logEvent('HOTKEY_BAR_TOGGLE', { hidden: bar.classList.contains('hidden') });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MATH STRIP
+    // ═══════════════════════════════════════════════════════════════
+
+    function updateMath() {
+      const c = Number($mathCalls.value) || 0;
+      const v = Number($mathValue.value) || 0;
+      const leak = c * v;
+      if (leak > 0) {
+        $mathResult.textContent = '$' + leak.toLocaleString();
+        $mathResult.classList.remove('zero');
+      } else {
+        $mathResult.textContent = '$ —';
+        $mathResult.classList.add('zero');
+      }
+      if (c && v) logEvent('MATH_UPDATE', { calls: c, value: v, leak: leak });
+    }
+    $mathCalls.addEventListener('input', updateMath);
+    $mathValue.addEventListener('input', updateMath);
+
+    // ═══════════════════════════════════════════════════════════════
+    // KEY BINDINGS
+    // ═══════════════════════════════════════════════════════════════
+
+    document.addEventListener('keydown', function(e) {
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        if (e.key === 'Escape') e.target.blur();
+        return;
+      }
+
+      if (e.key >= '1' && e.key <= '6') {
+        e.preventDefault();
+        jumpToStage(Number(e.key) - 1);
+        return;
+      }
+
+      // F1–F9 — pick a line directly by index in the current stage
+      const fkeyMatch = e.key.match(/^F([1-9])$/);
+      if (fkeyMatch) {
+        e.preventDefault();
+        selectLine(Number(fkeyMatch[1]) - 1);
+        return;
+      }
+
+      if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); jumpToStage(2); return; }
+      if (e.key === 'p' || e.key === 'P') { e.preventDefault(); jumpToStage(3); return; }
+      if (e.key === 'c' || e.key === 'C') { e.preventDefault(); jumpToStage(4); return; }
+
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); stepLine(-1); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); stepLine(1);  return; }
+
+      if (e.key === 'g' || e.key === 'G') { e.preventDefault(); toggleOverlay('G'); return; }
+      if (e.key === 'o' || e.key === 'O') { e.preventDefault(); toggleOverlay('O'); return; }
+      if (e.key === '$' || (e.shiftKey && e.key === '4')) { e.preventDefault(); toggleOverlay('$'); return; }
+      if (e.key === 'w' || e.key === 'W') { e.preventDefault(); toggleOverlay('W'); return; }
+      if (e.key === 'x' || e.key === 'X') { e.preventDefault(); toggleOverlay('X'); return; }
+
+      if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); return; }
+      if (e.key === ' ')      { e.preventDefault(); bookmark();     return; }
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); resetCall();  return; }
+      if (e.key === 'e' || e.key === 'E') { e.preventDefault(); exportLog();  return; }
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) { e.preventDefault(); toggleHotkeyBar(); return; }
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // CALL TIMER
+    // ═══════════════════════════════════════════════════════════════
+
+    setInterval(function() {
+      const ms = Date.now() - state.callStart;
+      const s = Math.floor(ms / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      $callTimer.textContent = mm + ':' + ss;
+    }, 500);
+
+    render();
+  </script>
+</body>
+</html>
