@@ -2,6 +2,21 @@
 
 All notable changes to CallLock AgentOS will be documented in this file.
 
+## [0.1.7.0] - 2026-04-11
+
+### Added
+- New `/hotkey` sales HUD at `localhost:3004/hotkey` — a pure keystroke-driven cheat sheet you read from during live cold calls. No classifier, no BroadcastChannel, no automatic stage transitions. Every move is a key you press.
+- Six-stage navigation (`OPEN → PIVOT → QUANTIFY → PITCH → CLOSE → BOOKED`), mapped to number keys `1`–`6` and mnemonics `Q`/`P`/`C`. PIVOT defaults to the "We don't miss calls" response on entry.
+- F1–F9 direct line selection inside each stage, with a narrow centered quick row that mirrors the physical F-key strip and is calibratable per-key (drag red arrow markers once, saved to localStorage, then hidden).
+- Five overlay drawers for live call events: gatekeeper (`G`), objection (`O`), price (`$`), wrong person (`W`), exit attempt (`X`). Drawers open on the right panel without losing your position in the main stage flow.
+- QUANTIFY stage gets a live math strip — type Saturday calls + job value, the weekend leak dollar amount computes in real time and is saved into the exported call log.
+- Bookmark any moment with `Space`, export the full keypress timeline as JSON with `E`, reset with `R`, toggle the bottom hotkey legend with `?` (hidden by default).
+- New positioning thesis document at `kb/wiki/positioning/after-hours-wedge.md` — formalizes after-hours (~73% of the calendar week) as CallLock's primary sales wedge, with quantified math, rules-in / rules-out, and kill criteria for when to revisit.
+- New cold-call playbook at `kb/wiki/playbooks/cold-call-hvac.md` — dial-ready decision tree for HVAC / plumbing / electrical ICP, with opener → after-hours pivot → quantifier → pitch → close flow and a one-page cheat sheet.
+
+### Changed
+- `kb/wiki/playbooks/icp-definition.md` — linked to the after-hours wedge thesis as the primary sales framing, flagged as a hypothesis under active validation.
+
 ## [0.1.6.0] - 2026-04-08
 
 ### Fixed
