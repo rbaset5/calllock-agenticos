@@ -10,13 +10,22 @@ source_refs:
   - wiki/playbooks/positioning-dunford.md
   - wiki/playbooks/lsa-acquisition-channel.md
   - wiki/competitors/yc-trend-analysis.md
-compiled_at: 2026-04-05T18:00:00Z
+  - wiki/positioning/after-hours-wedge.md
+compiled_at: 2026-04-11T00:00:00Z
 confidence: medium
 ---
 
 # CallLock Ideal Customer Profile (ICP)
 
 Synthesized from 13 articles of competitor research, positioning analysis, and channel mapping. Every attribute below is a hypothesis — zero contractors have validated any of it.
+
+## Primary wedge: after-hours coverage gap
+
+The ICP below is targeted through a single wedge: **after-hours (evenings + weekends) is ~73% of the calendar week and the primary gap CallLock is sold into.** Daytime overflow is a secondary wedge, used only as a follow-up after after-hours is established in the conversation.
+
+Every sales touch — cold call opener, ad copy, landing page hero, demo script, pricing anchor — should lead with after-hours before mentioning anything else. See [[positioning/after-hours-wedge]] for the full thesis, the math, the rules-in / rules-out list, and the kill criteria that would force a revision.
+
+*Status: thesis under test.* Hypothesis #4 in "What's Still Unvalidated" below (that after-hours is the real pain point vs. peak-hour overflow) explicitly tests this wedge. Do not treat it as settled until Phase 2 discovery interviews confirm it.
 
 ## The Buyer (unvalidated — discover in first 10 calls)
 
