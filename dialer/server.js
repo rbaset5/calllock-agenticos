@@ -25,6 +25,12 @@ const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+// ────────────────────────────────────────────────────────────────────
+// DEPRECATED — /hud v2 card-based HUD (static mount + routes below).
+// Superseded by /hotkey (see app.get('/hotkey') below). Scheduled for
+// deletion in a follow-up PR once /hotkey has battle-tested on 50+ real
+// dials. See TODOS.md "Sales HUD" section. DO NOT add new features here.
+// ────────────────────────────────────────────────────────────────────
 // Only serve the hud/ subdirectory as static (not the whole dialer/ dir which includes server.js)
 // no-cache for JS modules during development — prevents stale ES module imports
 app.use('/hud', express.static(path.join(__dirname, 'hud'), {
@@ -637,6 +643,20 @@ app.get('/hud', (req, res) => {
     }
   }
   res.sendFile(path.join(__dirname, 'hud', 'index.html'));
+});
+
+// Pure hotkey HUD — no classifier, no BroadcastChannel, no auto-transitions.
+// Driven entirely by keystrokes. See dialer/hud/hotkey.html.
+app.get('/hotkey', (req, res) => {
+  const tokenParam = req.query.token;
+  if (tokenParam && HUD_INTERNAL_TOKEN) {
+    const a = Buffer.from(tokenParam);
+    const b = Buffer.from(HUD_INTERNAL_TOKEN);
+    if (a.length === b.length && require('crypto').timingSafeEqual(a, b)) {
+      setHudCookie(res);
+    }
+  }
+  res.sendFile(path.join(__dirname, 'hud', 'hotkey.html'));
 });
 
 app.get('/token', validateHudToken, (_req, res) => {

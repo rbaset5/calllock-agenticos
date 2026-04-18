@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CallLock — Hotkey HUD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      height: 100vh;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid #1a1a1a;
+      background: #0d0d0d;
+      height: 56px;
+    }
+    .top-bar-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #a78bfa;
+      text-transform: uppercase;
+    }
+    .top-bar-right {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      font-size: 12px;
+      color: #666;
+    }
+    .bookmark-count {
+      background: #1a1a1a;
+      padding: 4px 10px;
+      border-radius: 12px;
+      color: #a78bfa;
+      font-weight: 600;
+      transition: all 180ms;
+    }
+    .bookmark-count.flash {
+      background: #a78bfa;
+      color: #0a0a0a;
+    }
+
+    .stage-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 28px;
+      border-bottom: 1px solid #1a1a1a;
+      background: #0b0b0b;
+      height: 68px;
+    }
+    .stage-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: #555;
+      background: #141414;
+      border: 1px solid #1f1f1f;
+      cursor: pointer;
+      user-select: none;
+      transition: all 120ms ease;
+    }
+    .stage-pill .stage-num {
+      font-size: 10px;
+      opacity: 0.5;
+      background: #1f1f1f;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .stage-pill.past {
+      color: #888;
+      background: #0f0f0f;
+    }
+    .stage-pill.current {
+      color: #0a0a0a;
+      background: #a78bfa;
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+    }
+    .stage-pill.current .stage-num {
+      background: rgba(0, 0, 0, 0.2);
+      color: #0a0a0a;
+      opacity: 0.8;
+    }
+    .stage-pill.quantify.current {
+      background: #f59e0b;
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+    }
+
+    .math-strip {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), transparent 70%);
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .math-strip.active { display: flex; }
+    .math-strip label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #888;
+    }
+    .math-strip input {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      color: #f59e0b;
+      font-size: 22px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 8px;
+      width: 120px;
+      text-align: center;
+      font-family: inherit;
+    }
+    .math-strip input:focus {
+      outline: none;
+      border-color: #f59e0b;
+    }
+    .math-strip .operator {
+      font-size: 20px;
+      color: #666;
+      font-weight: 400;
+    }
+    .math-strip .result {
+      font-size: 26px;
+      font-weight: 700;
+      color: #f59e0b;
+      min-width: 140px;
+    }
+    .math-strip .result.zero { color: #444; }
+    .math-strip .hint {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 340px 1fr 320px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    /* ── Left panel: stage playbook / coaching card ── */
+    #linesPanel {
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+    #coachCard {
+      padding: 14px 20px 20px;
+      color: #bbb;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .coach-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .coach-title .coach-num {
+      color: #a78bfa;
+      margin-right: 6px;
+    }
+    .coach-section {
+      margin-bottom: 14px;
+    }
+    .coach-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #a78bfa;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .coach-label.warn {
+      color: #fbbf24;
+    }
+    .coach-label.win {
+      color: #4ade80;
+    }
+    .coach-text {
+      color: #ccc;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .coach-text em {
+      color: #fbbf24;
+      font-style: normal;
+      background: rgba(251, 191, 36, 0.08);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .coach-rules {
+      margin-top: 22px;
+      padding: 14px 20px 18px;
+      border-top: 1px solid #1a1a1a;
+      color: #888;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .coach-rules-header {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .coach-rule {
+      margin-bottom: 10px;
+      padding-left: 18px;
+      position: relative;
+    }
+    .coach-rule::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #a78bfa;
+    }
+
+    /* ── QUICK ROW — horizontal F-key strip that mirrors the keyboard ──
+       Width and horizontal offset are live-tunable via [ ] , . hotkeys and
+       persisted to localStorage. No amount of code-level guessing aligns
+       screen chips with physical F-keys across machines — so the user
+       calibrates it once and forgets it. ── */
+    :root {
+      --quick-width: 900px;
+      --quick-offset: 0px;
+    }
+    .quick-row-wrap {
+      background: #0c0c0c;
+      border-top: 1px solid #1a1a1a;
+      padding: 8px 0;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .quick-row {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 5px;
+      padding: 0 14px;
+      width: var(--quick-width);
+      max-width: calc(100vw - 20px);
+      margin: 0 auto;
+      transform: translateX(var(--quick-offset));
+      height: 44px;
+      align-items: stretch;
+      transition: width 120ms ease, transform 120ms ease;
+    }
+    /* ── QUANTIFY group rings — subgrid wrappers for the main path (F1-F5) and pick-one (F1-F2) ── */
+    .quantify-main-path {
+      grid-column: 1 / 6;
+      display: grid;
+      grid-template-columns: subgrid;
+      gap: 5px;
+      outline: 2px dashed rgba(167, 139, 250, 0.55);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+    .quantify-pick-one {
+      grid-column: 1 / 3;
+      display: grid;
+      grid-template-columns: subgrid;
+      gap: 5px;
+      outline: 2px dashed rgba(251, 191, 36, 0.65);
+      outline-offset: 1px;
+      border-radius: 6px;
+    }
+    /* ── PIVOT gap-zone ring — spotlights F8–F11 (partial → explicit VM → SMS → current gap admissions) ── */
+    .pivot-gap-zone {
+      grid-column: 8 / 12;
+      display: grid;
+      grid-template-columns: subgrid;
+      gap: 5px;
+      outline: 2px dashed rgba(251, 191, 36, 0.55);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+    .calibration-hint { display: none; }
+
+    /* ── ARROW ROW — hidden. Calibration is locked in. ── */
+    .arrow-row { display: none; }
+    .arrow-row-unused {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 5px;
+      padding: 6px 14px 2px;
+      width: var(--quick-width);
+      max-width: 100%;
+      margin: 0 auto;
+      transform: translateX(var(--quick-offset));
+      height: 20px;
+      align-items: start;
+    }
+    .arrow-marker {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      cursor: ew-resize;
+      user-select: none;
+      touch-action: none;
+      padding: 2px 0;
+    }
+    .arrow-triangle {
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 11px solid #ef4444;
+      transform: translateX(var(--arrow-offset, 0px));
+      transition: transform 80ms ease;
+      filter: drop-shadow(0 1px 2px rgba(239, 68, 68, 0.4));
+    }
+    .arrow-marker.dragging .arrow-triangle {
+      border-top-color: #fbbf24;
+      transition: none;
+      filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.6));
+    }
+    .arrow-marker:hover .arrow-triangle {
+      border-top-color: #f87171;
+    }
+    .quick-chip {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 4px 8px;
+      background: #131313;
+      border: 1px solid #1a1a1a;
+      border-top: 2px solid #1f1f1f;
+      border-radius: 5px;
+      overflow: hidden;
+      cursor: pointer;
+      /* Only animate hover border-color; active-state snaps instantly so rapid arrow stepping feels tight. */
+      transition: border-color 80ms ease;
+      min-width: 0;
+    }
+    .quick-chip:hover {
+      border-color: #2a2a2a;
+      border-top-color: #3a3a3a;
+    }
+    .quick-chip.empty {
+      background: #0d0d0d;
+      border-color: #141414;
+      cursor: default;
+    }
+    .quick-chip.active {
+      background: rgba(167, 139, 250, 0.12);
+      border-color: #a78bfa;
+      border-top-color: #a78bfa;
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
+    }
+    .quick-fkey {
+      font-family: "SF Mono", Monaco, monospace;
+      font-size: 9px;
+      font-weight: 700;
+      color: #666;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    .quick-chip.active .quick-fkey {
+      color: #a78bfa;
+    }
+    .quick-chip.empty .quick-fkey {
+      color: #333;
+    }
+    .quick-trigger {
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+    .quick-chip.active .quick-trigger {
+      color: #fff;
+      font-weight: 600;
+    }
+    .quick-chip.empty .quick-trigger {
+      color: #2a2a2a;
+    }
+    .panel {
+      overflow-y: auto;
+      border-right: 1px solid #1a1a1a;
+    }
+    .panel:last-child { border-right: none; border-left: 1px solid #1a1a1a; }
+    .panel-header {
+      padding: 14px 20px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: #666;
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+      background: #0a0a0a;
+    }
+
+    .line-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px 20px;
+      margin: 6px 14px;
+      border-radius: 8px;
+      background: #101010;
+      border: 1px solid #1a1a1a;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      transition: all 120ms;
+    }
+    .line-item:nth-child(even) {
+      background: #161616;
+    }
+    .line-item:hover {
+      border-color: #2a2a2a;
+      border-left-color: #3a3a3a;
+    }
+    .line-item.active,
+    .line-item.active:nth-child(even) {
+      border-color: #a78bfa;
+      border-left-color: #a78bfa;
+      background: rgba(167, 139, 250, 0.1);
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.15);
+    }
+    .fkey-badge {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+      font-weight: 700;
+      color: #777;
+      background: #1d1d1d;
+      padding: 4px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+      border: 1px solid #262626;
+      min-width: 28px;
+      text-align: center;
+      line-height: 1;
+    }
+    .line-item.active .fkey-badge {
+      background: #a78bfa;
+      color: #0a0a0a;
+      border-color: #a78bfa;
+    }
+    .line-trigger {
+      flex: 1;
+      font-size: 15px;
+      color: #bbb;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .line-item.active .line-trigger {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .now-panel {
+      padding: 40px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 20px;
+      background: radial-gradient(ellipse at center, rgba(167, 139, 250, 0.03), transparent 70%);
+    }
+    .now-stage-hint {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      font-style: italic;
+      margin-bottom: 2px;
+    }
+    .now-stage-hint:empty { display: none; }
+    .now-stage-hint { white-space: pre-line; line-height: 2.2; }
+    .now-stage-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #a78bfa;
+      font-weight: 700;
+    }
+    .now-line {
+      font-size: 28px;
+      line-height: 1.38;
+      color: #fff;
+      font-weight: 500;
+      max-width: 780px;
+    }
+    .reframe-token {
+      display: inline-block;
+      background: rgba(251, 191, 36, 0.14);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      border-radius: 6px;
+      padding: 2px 10px;
+      margin: 0 2px;
+      font-size: 0.78em;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      vertical-align: middle;
+    }
+    .now-cue {
+      font-size: 13px;
+      color: #6b7280;
+      font-style: italic;
+      margin-top: 8px;
+      letter-spacing: 0.01em;
+    }
+    .now-cue:empty { display: none; }
+    .now-why {
+      font-size: 13px;
+      color: #666;
+      font-style: italic;
+    }
+    .now-round {
+      font-size: 11px;
+      color: #444;
+      letter-spacing: 0.08em;
+    }
+
+    .overlay-ribbon {
+      display: none;
+      align-self: stretch;
+      padding: 6px 14px;
+      background: rgba(245, 158, 11, 0.12);
+      border-left: 3px solid #f59e0b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #f59e0b;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .overlay-ribbon.active { display: block; }
+
+    .drawer-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: #444;
+      font-size: 12px;
+      font-style: italic;
+    }
+    .drawer-empty kbd {
+      background: #1a1a1a;
+      color: #a78bfa;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+    }
+    .drawer-hint-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .drawer-hint-item {
+      font-style: normal;
+    }
+    .drawer-header {
+      padding: 16px 20px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #f59e0b;
+      text-transform: uppercase;
+      border-bottom: 1px solid #1a1a1a;
+      margin-bottom: 10px;
+    }
+    .drawer-item {
+      padding: 14px 20px;
+      margin: 6px 14px;
+      border-radius: 8px;
+      background: #111;
+      border: 1px solid #1a1a1a;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #bbb;
+    }
+    .drawer-item.first {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.05);
+      color: #fff;
+    }
+
+    .hotkey-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 28px;
+      border-top: 1px solid #1a1a1a;
+      background: #0d0d0d;
+      height: 44px;
+      font-size: 11px;
+      color: #666;
+      flex-shrink: 0;
+    }
+    .hotkey-bar.hidden { display: none; }
+    .hotkey-group { display: flex; gap: 14px; }
+    .hotkey-item { display: flex; align-items: center; gap: 5px; }
+    .hotkey-item kbd {
+      background: #1a1a1a;
+      color: #a78bfa;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+      border: 1px solid #2a2a2a;
+      font-weight: 600;
+    }
+
+    .help-inline kbd {
+      background: #1a1a1a;
+      color: #a78bfa;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-family: "SF Mono", Monaco, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="top-bar-label">SALES HUD — HOTKEY</div>
+    <div class="top-bar-right">
+      <span id="callTimer">00:00</span>
+      <span class="bookmark-count" id="bookmarkCount">★ 0</span>
+      <span class="help-inline"><kbd>?</kbd> toggle hotkey bar</span>
+    </div>
+  </div>
+
+  <div class="stage-bar" id="stageBar"></div>
+
+  <div class="math-strip" id="mathStrip">
+    <label>VMs/day</label>
+    <input type="number" id="mathCalls" placeholder="?" min="0">
+    <span class="operator">×</span>
+    <label>$/job</label>
+    <input type="number" id="mathValue" placeholder="?" min="0">
+    <span class="operator">× 20d × 20%</span>
+    <span class="operator">=</span>
+    <span class="result zero" id="mathResult">$ —</span>
+    <span class="hint">(monthly voicemail leak — real miss is ~1.67×)</span>
+  </div>
+
+  <div class="main">
+    <div class="panel" id="linesPanel">
+      <div class="panel-header">PLAYBOOK</div>
+      <div id="coachCard"></div>
+      <div class="coach-rules" id="coachRules"></div>
+    </div>
+
+    <div class="panel now-panel" id="nowPanel">
+      <div class="overlay-ribbon" id="overlayRibbon">OVERLAY ACTIVE</div>
+      <div class="now-stage-hint" id="nowStageHint"></div>
+      <div class="now-stage-label" id="nowStageLabel">OPEN</div>
+      <div class="now-line" id="nowLine">—</div>
+      <div class="now-cue" id="nowCue"></div>
+      <div class="now-why" id="nowWhy"></div>
+      <div class="now-round" id="nowRound"></div>
+    </div>
+
+    <div class="panel" id="drawerPanel">
+      <div class="panel-header">OVERLAY DRAWER</div>
+      <div class="drawer-empty" id="drawerEmpty">
+        No overlay active.
+        <div class="drawer-hint-list">
+          <div class="drawer-hint-item"><kbd>G</kbd> gatekeeper</div>
+          <div class="drawer-hint-item"><kbd>O</kbd> objection</div>
+          <div class="drawer-hint-item"><kbd>$</kbd> price</div>
+          <div class="drawer-hint-item"><kbd>W</kbd> wrong</div>
+          <div class="drawer-hint-item"><kbd>X</kbd> exit</div>
+          <div class="drawer-hint-item"><kbd>H</kbd> hostile</div>
+          <div class="drawer-hint-item"><kbd>D</kbd> disqualify</div>
+        </div>
+      </div>
+      <div id="drawerContent" style="display:none;">
+        <div class="drawer-header" id="drawerHeader">—</div>
+        <div id="drawerList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hotkey-bar hidden">
+    <div class="hotkey-group">
+      <div class="hotkey-item"><kbd>1–6</kbd> stage</div>
+      <div class="hotkey-item"><kbd>F1–F13</kbd> pick line</div>
+      <div class="hotkey-item"><kbd>←→</kbd> step line</div>
+      <div class="hotkey-item"><kbd>G O $ W X H D V B</kbd> drawer</div>
+      <div class="hotkey-item"><kbd>Esc</kbd> close</div>
+      <div class="hotkey-item"><kbd>Space</kbd> bookmark</div>
+    </div>
+    <div class="hotkey-group">
+      <div class="hotkey-item"><kbd>R</kbd> reset call</div>
+      <div class="hotkey-item"><kbd>E</kbd> export log</div>
+    </div>
+  </div>
+
+  <div class="quick-row-wrap">
+    <div class="quick-row" id="quickRow"></div>
+    <div class="arrow-row" id="arrowRow"></div>
+    <div class="calibration-hint" id="calibrationHint">900 / 0</div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // CONTENT — pure data, no classifier, no state machine
+    // ═══════════════════════════════════════════════════════════════
+
+    const STAGES = [
+      { key: 'OPEN',     num: 1, name: 'OPEN',
+        why: '§0 Opener — greeting + 20-second permission' },
+      { key: 'PIVOT',    num: 2, name: 'PIVOT', defaultRoundIdx: 4,
+        hint: 'what happens to calls you can\'t answer?\nmove once they\'ve described a miss GAP (any time, not just after-hours)',
+        why: '§1 Miss exposure — surface the calls they don\'t know they\'re losing' },
+      { key: 'QUANTIFY', num: 3, name: 'QUANTIFY VM LEAK', short: 'QUANTIFY',
+        why: '§2 Quantifier — voicemail count × ticket × close × invisible-miss' },
+      { key: 'PITCH',    num: 4, name: 'PITCH',
+        why: '§4 Pitch — tie back to THEIR $ leak. Sell live answer + booked calendar, NOT AI features. Default F3 if math landed, F2 if interrupted, F1 cold, F4 on control fear, F5 vs answering service.' },
+      { key: 'CLOSE',    num: 5, name: 'CLOSE',
+        why: '§5 Close — Thursday/Friday scheduling' },
+      { key: 'BOOKED',   num: 6, name: 'BOOKED',
+        why: 'Outcome — demo on calendar' },
+    ];
+
+    const LINES = {
+      OPEN: [
+        { trigger: 'Primary opener', text: "Hey [Name], Rashid — quick one. When the phone rings and you're on a job, who grabs it?" },
+        { trigger: 'Shorter variant', text: "Hey [Name], Rashid. When a call comes in and you're on a job, who picks it up?" },
+        { trigger: 'Minimal variant', text: "Hey [Name], Rashid. Phone rings while you're on a job — who grabs it?" },
+      ],
+      PIVOT: [
+        // ── Coverage claims (F1–F4): specific → generic ──
+        { trigger: 'We answer', text: "Got it. But if the phone rings while you're on a job, what happens to that call?" },
+        { trigger: 'Wife/CSR', text: "Makes sense. When a brand-new caller catches you mid-job and nobody's free, is she picking up live or checking voicemails after?" },
+        { trigger: 'Ans svc', cue: "→ add the follow-up probe if they claim live booking", text: "Got it — are they actually booking jobs onto your calendar, or taking messages for you to call back? And roughly how many of yesterday's calls actually hit your calendar?" },
+        { trigger: 'No miss', cue: "→ pure audit, do NOT spend the F9 card here", text: "Maybe. How are you tracking that right now?" },
+        // ── Dismissals (F5–F6): thoughtful → reflex. F5 is default landing. ──
+        { trigger: 'No need', cue: "→ strips category, keeps disarm", text: "Fair enough. Mind if I ask what you've got set up today? If it's airtight I'll leave you alone." },
+        { trigger: 'Not int', cue: "→ buying 15 sec — usually routes to F8/F9", text: "Hear you — one question and I'll let you go: when a new customer calls and you can't pick up, what actually happens to that call?" },
+        // ── Meta (F7): prospect asking for context ──
+        { trigger: 'What is?', cue: "→ short pitch, then probe for gap", text: "Short version: missed-call follow-up for shops like yours. Quick one — when a new customer calls and you can't pick up, what happens to that call?" },
+        // ── Gap admissions (F8–F10): partial → explicit → current (the productive zone) ──
+        { trigger: 'Depends', cue: "→ if they say \"both\", follow up: \"which one pisses you off more?\"", text: "Yeah, that's usually what I hear. Where do the misses mostly happen — when you're slammed on a job, when the shop's quiet and nobody's by the phone, or both?" },
+        { trigger: 'VM/cb ⭐', cue: "→ the patience-filter reframe — highest-leverage line, bridges straight to QUANTIFY", text: "Got it — quick thing: voicemail's a patience filter. Urgent jobs hang up in 10 seconds and call the next shop. How many voicemails you get on a normal day?" },
+        { trigger: 'SMS back', cue: "→ same patience-filter logic as VM — Podium/GHL/Thryv auto-reply", text: "Smart — catches the patient ones. But the furnace-dead Saturday caller isn't waiting on a text, they're calling the next guy on Google. The ones who reply to your text are tune-ups, not emergencies. How many voicemails you get on a normal day?" },
+        { trigger: 'On job', text: "I figured — that's actually why I called. When you're tied up like this and a new customer calls, where does it go?" },
+        // ── Credibility probes + operational + minimizer (F11–F15) ──
+        // Three pre-engagement probes clustered first (identity/list/motivation),
+        // operational next, minimizer last (bridges into QUANTIFY).
+        { trigger: 'Who r u?', cue: "→ identity probe — name + company + disarm + repeat the opener", text: "Rashid with CallLock — small company, we help HVAC shops with the calls they miss when they're on a job. Not trying to waste your time. Quick one though — when the phone rings and you're on a job, who grabs it?" },
+        { trigger: 'Where #?', cue: "→ list-source probe — fast, plain, no defensiveness", text: "Fair question — found you on LSA / Google. Totally fine to tell me to buzz off." },
+        { trigger: 'Why?', cue: "→ motivation probe — honest answer + frame hint + repeat the opener", text: "Because most HVAC shops I talk to are losing jobs to voicemail and don't see it. Trying to figure out if that's you. When the phone rings and you're on a job, who grabs it?" },
+        { trigger: 'Fwd→cell', cue: "→ sounds solved; probe the operational reality", text: "Got it — and when you're under a sink or on a ladder, does it still get answered live?" },
+        { trigger: 'Just few', cue: "→ soft stall — bridge straight to QUANTIFY", text: "Maybe. Rough guess, how many voicemails do you get on a normal day, not counting spam?" },
+      ],
+      QUANTIFY: [
+        // ── Core path (F1–F5) — compressed 4-line architecture post-adversarial review ──
+        // No 1.67x second dollar figure on air. Floor number only. Patient-enough is qualitative.
+        { trigger: 'Confirm #', cue: "→ use when PIVOT F9 already extracted the number", text: "You said about [N] a day, right? Not counting spam." },
+        { trigger: 'Ask #', cue: "→ use when F9 didn't fire or got no answer", text: "Rough guess — how many voicemails do you get on a typical day? Not counting spam." },
+        { trigger: 'Ticket', text: "And what's an average everyday service call — not installs, just repairs and diagnostics?" },
+        { trigger: 'Deliver ⭐', cue: "→ load-bearing line — NO second dollar figure; patient-enough is qualitative only", text: "So off voicemail alone, that's about [$ amount] a month. And that's just the people patient enough to leave one. Real number's usually higher. Is that ballpark or way off?" },
+        { trigger: '→ Pitch', cue: "→ bridge to PITCH", text: "That's why I called. We answer those calls live." },
+        // ── Handlers (F6–F12) — prospect-response patterns in PIVOT quote style ──
+        { trigger: '"Dunno"', cue: "→ \"I don't know\" — anchor two options, force a pick", text: "Ballpark's fine — five? ten?" },
+        { trigger: 'Still dunno', cue: "→ second \"I don't know\" — exit the deposition", text: "No problem. Then don't marry the number. The only question is whether enough good calls hit voicemail that you'd want them answered live." },
+        { trigger: '"30 a day"', cue: "→ giant number — qualify before accepting", text: "If that's 30 real new-customer voicemails, that's enormous. Most guys mean total missed calls — callbacks, spam, vendors. Which is it?" },
+        { trigger: 'Topic jump', cue: "→ subject change mid-math — hold the thread", text: "One sec, let me finish this number — this is the part that matters." },
+        { trigger: '"Just pitch"', cue: "→ \"just tell me what you're selling\" — emergency pitch w/ floor", text: "Fair. Screen says about [$ amount] a month just from voicemails. What I do about it — we answer those calls live and book the job into your calendar." },
+        { trigger: '"$X vs $Y?"', cue: "→ numbers-person audit — own the guess, disown the base", text: "You're right — [$ amount] is voicemail-only. I don't load it with hangups on the screen. If you want to count the ones who never left a message, add to taste — the floor is still [$ amount]." },
+        { trigger: '"My rate?"', cue: "→ \"mine is higher than 20%\" — own the floor", text: "Yeah — 20% is my floor so I don't overstate it. Your real leak is bigger than what I'm showing." },
+      ],
+      PITCH: [
+        // F1 — Full pitch. "Best CSR" frame killed (most ICP shops have no CSR).
+        // "Elbow-deep" puts the operator in the buyer's day, not in a SaaS metaphor.
+        { trigger: 'Full pitch', text: "Got it. Here's the version: when a customer calls and you can't pick up — doesn't matter if it's 2pm Tuesday or 9pm Saturday — we answer live, ask what you'd ask if you weren't elbow-deep in a furnace, and drop the booked job into your calendar. 30-second text with the details." },
+        // F2 — Short pitch. "Every one" overclaim killed — "real jobs" pre-qualifies
+        // (excludes spam/wrong-number/warranty without surfacing them).
+        { trigger: 'Short pitch', text: "We catch the calls voicemail is killing — answer them live, book the real jobs into your calendar. 15 minutes to show you on a real call." },
+        // F3 — Math-tied. "Fixes" → "plug" (mechanical-buyer language).
+        // "Every call → booked" overclaim killed — "real customers, vetted, booked" is honest.
+        { trigger: 'With the math in hand ⭐', cue: "→ default after QUANTIFY landed math", text: "So that [$ amount] a month leaking to voicemail — that's the hole we plug. Real customers, vetted, booked. You see it on your phone before the customer hangs up." },
+        // F4 — VETO frame. Highest-leverage add: defends against calendar-control fear,
+        // the deepest objection from owner-operators burned by AI receptionist vendors.
+        { trigger: 'Veto frame', cue: "→ fire when prospect signals control fear or auto-book pushback", text: "And you're the final yes — booking lands on your phone, you've got 30 seconds to thumbs-down it. We do the work. You keep the veto." },
+        // F5 — Answering-service wedge. The single sharpest differentiator for ICP.
+        // Most prospects' mental model of "phone help" is an answering service.
+        // This line snaps that frame in 9 words.
+        { trigger: 'vs ans svc', cue: "→ fire on \"we use an answering service\" or any message-taking comparison", text: "Answering services take messages. We book the job. On the demo I run the same call through both — you'll see the gap in 30 seconds." },
+      ],
+      CLOSE: [
+        { trigger: 'Primary close', text: "Worth 15 minutes this week to see if it'd fit your setup? I can show you a real call from a shop like yours." },
+        { trigger: 'Two-option close', text: "I've got Thursday at 10 or Friday at 2 — which works?" },
+        { trigger: '"Send me info"', text: "Happy to — what's the best email? Let me send you one short clip of an actual missed call we caught, so you can hear what it sounds like." },
+        { trigger: '"Call me back next week"', text: "Will do — Tuesday or Wednesday better? I want to pin a day so I'm not chasing you." },
+        { trigger: '"Not right now"', text: "No problem. Can I send you one 30-second clip of a real call we caught so you've got it when the timing's right?" },
+      ],
+      BOOKED: [
+        { trigger: 'Confirmation', text: "Perfect — invite heading your way. Talk Thursday." },
+        { trigger: 'With email capture', text: "Confirmed for Thursday at 10. I'll send a calendar invite to that email right now — you should see it in a minute." },
+      ],
+    };
+
+    const OVERLAYS = {
+      G: {
+        name: 'GATEKEEPER',
+        lines: [
+          "Hey, it's Rashid — I was trying to reach [Name] about their business calls. Is he around?",
+          "I help contractors handle calls when they're tied up on a job. Just wanted to ask him a quick question.",
+          "No worries. When's a good time to catch him?",
+        ],
+      },
+      O: {
+        name: 'OBJECTION',
+        lines: [
+          "Totally fair — last thing and I'll let you go: when a new customer calls and you can't pick up, what actually happens to that call?",
+          "Fair — what's the one thing that would have to be true for this to be worth a look?",
+          "No problem. Can I send you a 30-second clip of a real call we caught so you've got it when the timing's right?",
+        ],
+      },
+      $: {
+        // Reordered: ROI deflection first (preserves momentum), buyer-native frame second,
+        // explicit $297 LAST (only when prospect insists on a number — late-stage commitment signal).
+        name: 'PRICE',
+        lines: [
+          "Depends on volume — usually pays for itself in 2-3 booked jobs a month. Want me to run your numbers on the demo?",
+          "Cheaper than missing one job a month. The demo makes that real — 15 minutes?",
+          "$297 a month. Most shops we audit are leaking $3K to $12K to voicemail — $297 against that is rounding error. The demo shows you exactly where you sit.",
+        ],
+      },
+      W: {
+        name: 'WRONG PERSON',
+        lines: [
+          "Got it — are you the one who usually handles vendor stuff like this, or is that more [Owner]'s side?",
+          "Makes sense. Best way to catch him — is there a time he's usually off jobs, or a better number?",
+          "Totally — one quick thing while I've got you: when a new customer calls and you can't reach him, do you know what happens to that call? Just trying to see if there's even a reason to bug him about it.",
+        ],
+      },
+      X: {
+        name: 'EXIT ATTEMPT',
+        lines: [
+          "No worries — one question and I'll let you go: when a new customer calls and you can't pick up, what actually happens to that call?",
+          "No problem. Can I send you a 30-second clip of a real call we caught so you've got it when the timing's right?",
+          "Understood. Last thing — what's the best email, so I can send you one thing and then leave you alone?",
+        ],
+      },
+      H: {
+        name: 'HOSTILE',
+        lines: [
+          "You got it — taking you off now. Sorry for the interruption, have a good one.",
+          "Understood — won't call again. Before I go, mind telling me what would've made this call not suck? I'm trying to get better at this.",
+          "Totally — removing you. Thanks for picking up.",
+        ],
+      },
+      V: {
+        // Calendar-control / "I don't trust software with my customers" handler.
+        // Fires from any stage when the prospect surfaces auto-book fear, AI distrust,
+        // or "what if it screws up." This is the deepest fear in HVAC owner-operator
+        // psychology — burned by 6+ AI receptionist vendors since 2023.
+        name: 'VETO',
+        lines: [
+          "You're the final yes. Booking lands on your phone, you've got 30 seconds to thumbs-down it. We do the work. You keep the veto.",
+          "One bad call matters more than ten good ones in your business — I get it. That's why on the demo we start with the calls you can't afford to screw up, not the easy ones.",
+          "You decide the guardrails day one: just answer, answer plus qualify, or answer plus book only the call types you trust us with. Most shops start narrow and widen it.",
+        ],
+      },
+      B: {
+        // Anti-BS Risk-Reversal — call-saving reset for prospects who lost trust mid-pitch.
+        // Fires when the operator can feel the call dying and needs to strip every claim
+        // and start over from the operator's scar tissue, not the founder's pitch.
+        name: 'ANTI-BS',
+        lines: [
+          "You should assume I'm overstating it. Strip the claims down: I'm not asking you to trust a demo, and we don't auto-book day one. Give me one missed-call scenario you care about — I'll show you exactly how we'd handle it. If it sounds wrong, we stop there.",
+          "Forget every number I just gave you. They're directional, not promises. The only honest question is whether even a fraction of those voicemails are real customers worth answering live. Want to test that on three real calls from your shop?",
+          "Fair. Let me try this differently — what's the one thing the last vendor that pitched you got wrong? I'll tell you straight whether we'd do the same thing or not.",
+        ],
+      },
+      D: {
+        name: 'DISQUALIFY',
+        lines: [
+          // ── ServiceTitan (original) ──
+          "Oh — you're on ServiceTitan? Honestly then we're not a fit. Their native stuff is solid and I'm not going to try to talk you off it. Appreciate the honesty.",
+          "Got it — ST shop. We work mostly with Housecall Pro / Jobber / pen-and-paper folks who don't have that built in. Best of luck this season.",
+          "Makes sense. If you ever spin up a second brand or know a buddy not on ST, I'd love a shout — but I'll get out of your hair.",
+          // ── Booked-out (added after adversarial review — F9 is wrong for shops turning work away) ──
+          "Honestly, sounds like you're in a good spot — we help shops leaving jobs on the table, not shops turning work away. If things ever slow down, give me a shout. I'll get out of your hair.",
+          // ── Commercial-focused (F9 overstated: B2B callers leave detailed voicemails as SOP) ──
+          "Got it — commercial's a different beast. Your callers are used to leaving detailed voicemails, which isn't really the problem we solve. Not our lane. Appreciate the honesty, I'll let you go.",
+          // ── Maintenance-heavy (F9 weak: existing customers wait for callbacks, patience filter doesn't apply) ──
+          "Makes sense — if most of your callers are already your customers, they'll wait for a callback. Different spot than the shops we help. Sounds like you've built a good book — I'll get out of your hair.",
+        ],
+      },
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // COACHING — stage playbook shown in the left panel. Changes on stage jump.
+    // ═══════════════════════════════════════════════════════════════
+
+    const COACHING = {
+      OPEN: {
+        num: '1',
+        title: 'OPEN — earn 20 seconds',
+        sections: [
+          { label: 'What you do', text: "Greet by name, identify yourself in 3 words, and ask one question about how they handle the phone when they're on a job. <em>\"Hey [Name], Rashid — quick one. When the phone rings and you're on a job, who grabs it?\"</em>" },
+          { label: "What you're actually doing", text: "You are not pitching. You are buying the right to keep talking by sounding like a human who has a question, not a salesperson who has a script." },
+          { label: 'Win condition', text: "They answer the question instead of hanging up.", kind: 'win' },
+          { label: 'What happens next', text: "Their answer tells you which PIVOT line to fire. <em>\"My wife\"</em> → F2. <em>\"Answering service\"</em> → F3. <em>\"Voicemail\"</em> → you're already at the gold, skip ahead to F9." },
+        ],
+      },
+      PIVOT: {
+        num: '2',
+        title: 'PIVOT — surface the gap they didn\'t know they had',
+        sections: [
+          { label: 'What you do', text: "Take whatever they said in OPEN and turn it into a probe that exposes the missed call, not the answered one. <em>\"Got it — but if the phone rings while you're on a job, what happens to that call?\"</em>" },
+          { label: "What you're actually doing", text: "Most owners think they have phone coverage handled. PIVOT's job is to walk them off that confidence by getting them to admit out loud that some calls go to voicemail. The admission is the unlock — without it, the rest of the funnel doesn't work." },
+          { label: 'Win condition', text: "The prospect says some version of <em>\"yeah, those go to voicemail\"</em> or <em>\"I call them back later.\"</em> That's a gap admission.", kind: 'win' },
+          { label: 'What happens next', text: "The instant they admit voicemails OR SMS auto-reply happen, fire the matching card inside the amber gap-zone ring — F9 (<em>VM/cb ⭐</em>) for voicemail, F10 (<em>SMS back</em>) for Podium/GHL text-backs. Both use the patience-filter rebuttal and bridge straight into QUANTIFY by asking for a number." },
+        ],
+      },
+      QUANTIFY: {
+        num: '3',
+        title: 'QUANTIFY — put a dollar number on the table',
+        sections: [
+          { label: 'What you do', text: "Get two numbers: voicemails per day and average ticket. Then say the monthly leak out loud. <em>\"So off voicemail alone, that's about [$ amount] a month. And that's just the people patient enough to leave one. Real number's usually higher.\"</em>" },
+          { label: "What you're actually doing", text: "Converting abstract <em>\"we miss some calls\"</em> into concrete <em>\"I'm losing $2,400 a month\"</em> that the prospect cannot un-hear. The dollar figure must be theirs, from their numbers, stated as a floor (never inflated). The math strip computes it live so screen and mouth stay in sync." },
+          { label: 'Win condition', text: "They don't push back on the number. Even a grunt counts. <em>\"Ballpark sounds right\"</em> = you've won the call before you've pitched.", kind: 'win' },
+          { label: 'Trap to avoid', text: "Never quote a second, higher dollar number. Never say <em>\"and that's just voicemail — total losses are double that.\"</em> Smart owners detect inflation in 2 seconds and the rest of the call is dead.", kind: 'warn' },
+          { label: "If they ask 'where are you going with this?'", text: "Answer plain, name the outcome, offer the exit, ask permission. <em>\"Fair question. Short answer — I help HVAC shops recover the money they're leaking on missed calls after hours. I'm trying to see if that's even worth a real conversation for you. If it's not, I'll get out of your way. Mind if I ask one more thing?\"</em>\n\nTighter: <em>\"Totally fair. I'm trying to figure out if you're losing real money on missed calls. Two more questions and I'll know.\"</em>\n\nDon't: dodge, say <em>\"just a few more questions\"</em> (that's what triggered the pushback), or pitch the product. Name the outcome, offer the exit, ask permission.", kind: 'warn' },
+          { label: 'What happens next', text: "Fire QUANTIFY F5 — the bridge: <em>\"That's why I called. We answer those calls live.\"</em> — and you're in PITCH." },
+        ],
+      },
+      PITCH: {
+        num: '4',
+        title: 'PITCH — tie the product to their number',
+        sections: [
+          { label: 'What you do', text: "Default is F3 (math-tied): <em>\"So that [$ amount] a month leaking to voicemail — that's the hole we plug. Real customers, vetted, booked. You see it on your phone before the customer hangs up.\"</em> Control fear → F4 (veto). Answering service mention → F5. Cold → F1. Impatient → F2." },
+          { label: "What you're actually doing", text: "You are not describing a product. You are saying <em>\"the dollar number you just admitted is the thing this fixes.\"</em> Pitching before QUANTIFY is fatal — without the dollar hook, PITCH is just feature copy and they file you under <em>AI receptionist</em>." },
+          { label: 'Win condition', text: "They don't interrupt with an objection. Silence after F3 = won.", kind: 'win' },
+          { label: 'Watch for', text: "The moment of fear when they hear <em>\"before the customer hangs up\"</em> — that's calendar-control fear. Fire F4 (veto) immediately.", kind: 'warn' },
+          { label: 'What happens next', text: "Move to CLOSE the second the pitch lands. Do not re-pitch. Do not feature-dump. Do not volunteer price — if they ask, hit the $ overlay, answer in one sentence, then close." },
+        ],
+      },
+      CLOSE: {
+        num: '5',
+        title: 'CLOSE — pin a day, never ask "when works for you"',
+        sections: [
+          { label: 'What you do', text: "Ask for 15 minutes with two specific options. <em>\"Worth 15 minutes this week to see if it'd fit your setup? I've got Thursday at 10 or Friday at 2 — which works?\"</em>" },
+          { label: "What you're actually doing", text: "Forcing a binary decision instead of an open-ended calendar negotiation. <em>Never</em> <em>\"when works for you\"</em> (paralyzes them). <em>Never</em> <em>\"can I get on your calendar\"</em> (sounds desperate). Stalls have specific recovery lines that pin a day or trade for an email." },
+          { label: 'Win condition', text: "A specific day and a specific time on the calendar. Consolation prizes in order: (a) a different day pinned, (b) email + 30-second clip sent, (c) <em>\"call me back Tuesday\"</em> with Tuesday confirmed. Anything fuzzier is a no.", kind: 'win' },
+          { label: 'What happens next', text: "Yes → BOOKED. Email → log and trigger follow-up sequence. Nothing → exit warm. Never burn the bridge — same shop might pick up in 6 months." },
+        ],
+      },
+      BOOKED: {
+        num: '6',
+        title: 'BOOKED — confirm fast, send the invite, get off the phone',
+        sections: [
+          { label: 'What you do', text: "<em>\"Perfect — invite heading your way. Talk Thursday.\"</em> Capture the email if you don't have it, send the calendar invite while still on the call, and end inside 30 seconds." },
+          { label: "What you're actually doing", text: "Removing every reason for them to back out between now and Thursday. The invite landing in their inbox before they hang up is the lock — without it, <em>\"yes\"</em> rots into <em>\"actually I'm slammed this week\"</em> by the next morning." },
+          { label: 'Win condition', text: "Calendar invite delivered, prospect confirmed they see it.", kind: 'win' },
+          { label: 'What happens next', text: "Log the call, mark the outcome, move to the next dial. Demo prep is a separate workflow — your job on this call ended the moment they said the time." },
+        ],
+      },
+    };
+
+    const PLAYBOOK_RULES = [
+      "Lead with a question, not a pitch. The opener earns 20 seconds — burn it on a process question, not a product line. The prospect telling you their problem is worth 10× you describing yours.",
+      "Never pitch before the dollar number is on the table. No PITCH until QUANTIFY produced a $/month voicemail leak the prospect didn't push back on. The number is the whole sale; the product is just what fixes it.",
+      "If you've been pitched, get pitched. <em>\"I tried Numa/Rosie/Goodcall\"</em> → ask <em>\"what did they get wrong?\"</em> — the prospect coaches you for free.",
+      "Price comes up only once. Answer in one sentence, then close. Do not reopen the product explanation after price hits the table; momentum dies there.",
+      'A "no" is a lead if you get the email. Default exit: <em>"Can I send you one 30-second clip of a real call we caught?"</em> Even cold prospects will trade an email for a clip.',
+    ];
+
+    // ═══════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════
+
+    let state = {
+      stageIdx: 0,
+      roundIdx: 0,
+      overlay: null,
+      overlayLineIdx: 0,
+      bookmarks: 0,
+      log: [],
+      callStart: Date.now(),
+    };
+
+    // ── Calibration — persists across reloads, tuned via [ ] , . keys ──
+    // Default widened 900 → 1500 after PIVOT expanded to 14 cards and QUANTIFY to 12.
+    // At 1500px: PIVOT cards ≈ 107px each, QUANTIFY ≈ 125px each — readable.
+    // Grid uses minmax(100px, 1fr) so chips never shrink below a readable floor.
+    const CAL_KEY = 'hotkeyhud.calibration.v1';
+    const MIN_READABLE_WIDTH = 1100;
+    let calibration = { width: 1500, offset: 0 };
+    try {
+      const saved = localStorage.getItem(CAL_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.width === 'number')  calibration.width  = parsed.width;
+        if (typeof parsed.offset === 'number') calibration.offset = parsed.offset;
+      }
+    } catch (e) { /* ignore */ }
+    // One-shot migration: if the saved width predates the label expansion, bump it so
+    // cards aren't cramped. Offset calibration is preserved.
+    if (calibration.width < MIN_READABLE_WIDTH) {
+      calibration.width = 1500;
+      try { localStorage.setItem(CAL_KEY, JSON.stringify(calibration)); } catch (e) { /* ignore */ }
+    }
+
+    function applyCalibration() {
+      document.documentElement.style.setProperty('--quick-width',  calibration.width  + 'px');
+      document.documentElement.style.setProperty('--quick-offset', calibration.offset + 'px');
+    }
+    function saveCalibration() {
+      try { localStorage.setItem(CAL_KEY, JSON.stringify(calibration)); } catch (e) { /* ignore */ }
+    }
+    function flashCalibrationHint() {
+      const el = document.getElementById('calibrationHint');
+      if (!el) return;
+      el.textContent = calibration.width + 'px  /  ' + (calibration.offset >= 0 ? '+' : '') + calibration.offset + 'px';
+      el.classList.add('visible');
+      clearTimeout(flashCalibrationHint._t);
+      flashCalibrationHint._t = setTimeout(function() { el.classList.remove('visible'); }, 900);
+    }
+    function adjustQuickWidth(delta) {
+      calibration.width = Math.max(300, Math.min(1600, calibration.width + delta));
+      applyCalibration();
+      saveCalibration();
+      flashCalibrationHint();
+      logEvent('CAL_WIDTH', { width: calibration.width });
+    }
+    function adjustQuickOffset(delta) {
+      calibration.offset = Math.max(-400, Math.min(400, calibration.offset + delta));
+      applyCalibration();
+      saveCalibration();
+      flashCalibrationHint();
+      logEvent('CAL_OFFSET', { offset: calibration.offset });
+    }
+    applyCalibration();
+
+    // ── Arrow offsets — per-arrow horizontal position ──
+    const ARROW_KEY = 'hotkeyhud.arrows.v1';
+    let arrowOffsets = new Array(10).fill(0);
+    try {
+      const saved = localStorage.getItem(ARROW_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const coerced = parsed.map(function(n) { return typeof n === 'number' ? n : 0; });
+          for (let i = 0; i < 10; i++) arrowOffsets[i] = coerced[i] || 0;
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    function saveArrows() {
+      try { localStorage.setItem(ARROW_KEY, JSON.stringify(arrowOffsets)); } catch (e) { /* ignore */ }
+    }
+
+    function logEvent(action, payload) {
+      state.log.push({
+        t: Date.now() - state.callStart,
+        action: action,
+        payload: payload || {},
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // RENDER — using safe DOM construction (no innerHTML with data)
+    // ═══════════════════════════════════════════════════════════════
+
+    const $stageBar   = document.getElementById('stageBar');
+    const $coachCard  = document.getElementById('coachCard');
+    const $coachRules = document.getElementById('coachRules');
+    const $nowLine    = document.getElementById('nowLine');
+    const $nowCue     = document.getElementById('nowCue');
+    const $nowWhy     = document.getElementById('nowWhy');
+    const $nowRound   = document.getElementById('nowRound');
+    const $nowStageHint = document.getElementById('nowStageHint');
+    const $nowStageLabel = document.getElementById('nowStageLabel');
+    const $overlayRibbon = document.getElementById('overlayRibbon');
+    const $drawerEmpty = document.getElementById('drawerEmpty');
+    const $drawerContent = document.getElementById('drawerContent');
+    const $drawerHeader = document.getElementById('drawerHeader');
+    const $drawerList = document.getElementById('drawerList');
+    const $mathStrip = document.getElementById('mathStrip');
+    const $mathCalls = document.getElementById('mathCalls');
+    const $mathValue = document.getElementById('mathValue');
+    const $mathResult = document.getElementById('mathResult');
+    const $bookmarkCount = document.getElementById('bookmarkCount');
+    const $callTimer = document.getElementById('callTimer');
+    const $quickRow = document.getElementById('quickRow');
+
+    function clearChildren(el) {
+      while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function renderStageBar() {
+      clearChildren($stageBar);
+      STAGES.forEach(function(s, i) {
+        const pill = document.createElement('span');
+        pill.className = 'stage-pill';
+        if (i < state.stageIdx) pill.classList.add('past');
+        if (i === state.stageIdx) pill.classList.add('current');
+        if (s.key === 'QUANTIFY') pill.classList.add('quantify');
+
+        const num = document.createElement('span');
+        num.className = 'stage-num';
+        num.textContent = String(s.num);
+        pill.appendChild(num);
+        pill.appendChild(document.createTextNode(s.short || s.name));
+
+        pill.addEventListener('click', function() { jumpToStage(i); });
+        $stageBar.appendChild(pill);
+      });
+    }
+
+    // Safe mini-parser: renders coach-text with <em>...</em> as DOM nodes.
+    // Only <em> tags are honored; everything else is plain text. No innerHTML.
+    // Newlines ("\n") are rendered as <br> so sections can contain paragraph breaks.
+    function appendCoachText(container, str) {
+      const parts = String(str).split(/(<em>[\s\S]*?<\/em>)/g);
+      parts.forEach(function(part) {
+        if (!part) return;
+        const emMatch = part.match(/^<em>([\s\S]*?)<\/em>$/);
+        if (emMatch) {
+          const em = document.createElement('em');
+          em.textContent = emMatch[1];
+          container.appendChild(em);
+        } else {
+          const lines = part.split('\n');
+          lines.forEach(function(line, i) {
+            if (i > 0) container.appendChild(document.createElement('br'));
+            if (line) container.appendChild(document.createTextNode(line));
+          });
+        }
+      });
+    }
+
+    function renderCoaching() {
+      const stage = STAGES[state.stageIdx];
+      const coach = COACHING[stage.key];
+      clearChildren($coachCard);
+      if (!coach) return;
+
+      const title = document.createElement('div');
+      title.className = 'coach-title';
+      const num = document.createElement('span');
+      num.className = 'coach-num';
+      num.textContent = coach.num + '.';
+      title.appendChild(num);
+      title.appendChild(document.createTextNode(coach.title));
+      $coachCard.appendChild(title);
+
+      coach.sections.forEach(function(section) {
+        const block = document.createElement('div');
+        block.className = 'coach-section';
+
+        const label = document.createElement('div');
+        label.className = 'coach-label' + (section.kind ? ' ' + section.kind : '');
+        label.textContent = section.label;
+
+        const text = document.createElement('div');
+        text.className = 'coach-text';
+        appendCoachText(text, section.text);
+
+        block.appendChild(label);
+        block.appendChild(text);
+        $coachCard.appendChild(block);
+      });
+
+      // Render the universal rules once (stage-independent).
+      if ($coachRules && !$coachRules.dataset.rendered) {
+        const header = document.createElement('div');
+        header.className = 'coach-rules-header';
+        header.textContent = 'Playbook rules';
+        $coachRules.appendChild(header);
+        PLAYBOOK_RULES.forEach(function(rule) {
+          const r = document.createElement('div');
+          r.className = 'coach-rule';
+          appendCoachText(r, rule);
+          $coachRules.appendChild(r);
+        });
+        $coachRules.dataset.rendered = '1';
+      }
+    }
+
+    // Alias — existing callsites keep working with the new coaching panel.
+    function renderLines() { renderCoaching(); }
+
+    // Render line text with [REFRAME: hint] markers as styled amber tokens.
+    // The rest of the text renders as plain text nodes.
+    function setNowLineText(text) {
+      clearChildren($nowLine);
+      const parts = String(text).split(/(\[REFRAME(?::[^\]]*)?\])/);
+      parts.forEach(function(part) {
+        if (!part) return;
+        if (/^\[REFRAME/.test(part)) {
+          const span = document.createElement('span');
+          span.className = 'reframe-token';
+          span.textContent = part.replace(/^\[|\]$/g, '');
+          $nowLine.appendChild(span);
+        } else {
+          $nowLine.appendChild(document.createTextNode(part));
+        }
+      });
+    }
+
+    function renderNow() {
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      const line = lines[state.roundIdx];
+
+      $nowStageHint.textContent = stage.hint || '';
+      $nowStageLabel.textContent = stage.name;
+
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        const oIdx = state.overlayLineIdx;
+        $overlayRibbon.classList.add('active');
+        $overlayRibbon.textContent = '↯ OVERLAY: ' + overlay.name;
+        setNowLineText(overlay.lines[oIdx] || overlay.lines[0]);
+        $nowCue.textContent = '';
+        $nowWhy.textContent = 'Overlay handler — return to ' + stage.name + ' when resolved';
+        $nowRound.textContent = 'Line ' + (oIdx + 1) + ' of ' + overlay.lines.length;
+      } else {
+        $overlayRibbon.classList.remove('active');
+        if (line) {
+          setNowLineText(line.text);
+          $nowCue.textContent = line.cue || '';
+          $nowWhy.textContent = stage.why + ' · ' + line.trigger;
+          $nowRound.textContent = 'Round ' + (state.roundIdx + 1) + ' of ' + lines.length;
+        } else {
+          setNowLineText('—');
+          $nowCue.textContent = '';
+          $nowWhy.textContent = stage.why;
+          $nowRound.textContent = '';
+        }
+      }
+    }
+
+    function renderDrawer() {
+      if (!state.overlay) {
+        $drawerEmpty.style.display = 'block';
+        $drawerContent.style.display = 'none';
+        return;
+      }
+      const overlay = OVERLAYS[state.overlay];
+      $drawerEmpty.style.display = 'none';
+      $drawerContent.style.display = 'block';
+      $drawerHeader.textContent = '↯ ' + overlay.name;
+      clearChildren($drawerList);
+      overlay.lines.forEach(function(text, i) {
+        const item = document.createElement('div');
+        item.className = 'drawer-item' + (i === state.overlayLineIdx ? ' first' : '');
+        item.textContent = text;
+        $drawerList.appendChild(item);
+      });
+    }
+
+    function renderArrows() {
+      const row = document.getElementById('arrowRow');
+      if (!row) return;
+      clearChildren(row);
+      for (let i = 0; i < 10; i++) {
+        const marker = document.createElement('div');
+        marker.className = 'arrow-marker';
+
+        const tri = document.createElement('div');
+        tri.className = 'arrow-triangle';
+        tri.style.setProperty('--arrow-offset', arrowOffsets[i] + 'px');
+        marker.appendChild(tri);
+
+        (function(idx) {
+          let dragging = false;
+          let startX = 0;
+          let startOffset = 0;
+
+          marker.addEventListener('pointerdown', function(e) {
+            dragging = true;
+            startX = e.clientX;
+            startOffset = arrowOffsets[idx];
+            marker.classList.add('dragging');
+            try { marker.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+            e.preventDefault();
+          });
+          marker.addEventListener('pointermove', function(e) {
+            if (!dragging) return;
+            const delta = e.clientX - startX;
+            arrowOffsets[idx] = Math.max(-200, Math.min(200, startOffset + delta));
+            tri.style.setProperty('--arrow-offset', arrowOffsets[idx] + 'px');
+          });
+          marker.addEventListener('pointerup', function(e) {
+            if (!dragging) return;
+            dragging = false;
+            marker.classList.remove('dragging');
+            saveArrows();
+            logEvent('ARROW_DRAG', { idx: idx, offset: arrowOffsets[idx] });
+          });
+          marker.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            arrowOffsets[idx] = 0;
+            tri.style.setProperty('--arrow-offset', '0px');
+            saveArrows();
+            logEvent('ARROW_RESET', { idx: idx });
+          });
+        })(i);
+
+        row.appendChild(marker);
+      }
+    }
+
+    function renderQuickRow() {
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      clearChildren($quickRow);
+      const isQuantify = stage.key === 'QUANTIFY';
+
+      // Dynamic grid columns based on the stage's actual line count.
+      // PIVOT becomes 14 cols, QUANTIFY 12, OPEN 3, etc. Overrides the default
+      // `grid-template-columns: repeat(10, 1fr)` from the base CSS.
+      // minmax(100px, 1fr) enforces readable chip width — if the row is narrower
+      // than N × 100, chips stay 100px and the row overflows horizontally.
+      const colCount = Math.max(1, lines.length);
+      $quickRow.style.gridTemplateColumns = 'repeat(' + colCount + ', minmax(100px, 1fr))';
+
+      // Build one chip per actual line — no hardcoded 10.
+      const chips = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const chip = document.createElement('div');
+        chip.className = 'quick-chip';
+        if (i === state.roundIdx) chip.classList.add('active');
+
+        const fkey = document.createElement('div');
+        fkey.className = 'quick-fkey';
+        fkey.textContent = 'F' + (i + 1);
+
+        const trigger = document.createElement('div');
+        trigger.className = 'quick-trigger';
+        trigger.textContent = line.trigger;
+
+        chip.appendChild(fkey);
+        chip.appendChild(trigger);
+
+        (function(idx) {
+          chip.addEventListener('click', function() {
+            state.roundIdx = idx;
+            logEvent('LINE_CLICK', { stage: stage.key, roundIdx: idx, src: 'quickrow' });
+            renderNow();
+            renderLines();
+            renderQuickRow();
+          });
+        })(i);
+
+        chips.push(chip);
+      }
+
+      if (isQuantify) {
+        // F1-F5 wrapped in main-path ring; F1-F2 wrapped in pick-one ring (nested).
+        const mainPath = document.createElement('div');
+        mainPath.className = 'quantify-main-path';
+        const pickOne = document.createElement('div');
+        pickOne.className = 'quantify-pick-one';
+        pickOne.appendChild(chips[0]);
+        pickOne.appendChild(chips[1]);
+        mainPath.appendChild(pickOne);
+        mainPath.appendChild(chips[2]);
+        mainPath.appendChild(chips[3]);
+        mainPath.appendChild(chips[4]);
+        $quickRow.appendChild(mainPath);
+        for (let i = 5; i < chips.length; i++) {
+          $quickRow.appendChild(chips[i]);
+        }
+      } else if (stage.key === 'PIVOT') {
+        // F1-F7 flat, F8-F11 wrapped in gap-zone ring (Depends / VM / SMS / On job), F12+ flat after.
+        for (let i = 0; i < 7; i++) {
+          $quickRow.appendChild(chips[i]);
+        }
+        const gapZone = document.createElement('div');
+        gapZone.className = 'pivot-gap-zone';
+        gapZone.appendChild(chips[7]);
+        gapZone.appendChild(chips[8]);
+        gapZone.appendChild(chips[9]);
+        gapZone.appendChild(chips[10]);
+        $quickRow.appendChild(gapZone);
+        for (let i = 11; i < chips.length; i++) {
+          $quickRow.appendChild(chips[i]);
+        }
+      } else {
+        chips.forEach(function(chip) { $quickRow.appendChild(chip); });
+      }
+    }
+
+    function renderMath() {
+      const stage = STAGES[state.stageIdx];
+      if (stage.key === 'QUANTIFY') {
+        $mathStrip.classList.add('active');
+      } else {
+        $mathStrip.classList.remove('active');
+      }
+    }
+
+    function renderBookmarks() {
+      $bookmarkCount.textContent = '★ ' + state.bookmarks;
+    }
+
+    function render() {
+      renderStageBar();
+      renderLines();
+      renderQuickRow();
+      renderArrows();
+      renderNow();
+      renderDrawer();
+      renderMath();
+      renderBookmarks();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ACTIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    function jumpToStage(idx) {
+      if (idx < 0 || idx >= STAGES.length) return;
+      state.stageIdx = idx;
+      state.roundIdx = STAGES[idx].defaultRoundIdx || 0;
+      logEvent('STAGE_JUMP', { stage: STAGES[idx].key, roundIdx: state.roundIdx });
+      render();
+    }
+
+    function clampLineIdx(idx, total) {
+      if (total <= 0) return 0;
+      if (idx < 0) return 0;
+      if (idx >= total) return total - 1;
+      return idx;
+    }
+
+    function stepLine(delta) {
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        const next = clampLineIdx(state.overlayLineIdx + delta, overlay.lines.length);
+        if (next === state.overlayLineIdx) return;
+        state.overlayLineIdx = next;
+        logEvent('OVERLAY_LINE_STEP', { overlay: state.overlay, overlayLineIdx: next });
+        renderNow();
+        renderDrawer();
+        return;
+      }
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      const next = clampLineIdx(state.roundIdx + delta, lines.length);
+      if (next === state.roundIdx) return;
+      state.roundIdx = next;
+      logEvent('LINE_STEP', { stage: stage.key, roundIdx: next });
+      renderNow();
+      renderLines();
+      renderQuickRow();
+    }
+
+    function jumpLine(target) {
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        const next = clampLineIdx(target, overlay.lines.length);
+        if (next === state.overlayLineIdx) return;
+        state.overlayLineIdx = next;
+        logEvent('OVERLAY_LINE_JUMP', { overlay: state.overlay, overlayLineIdx: next });
+        renderNow();
+        renderDrawer();
+        return;
+      }
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      const next = clampLineIdx(target, lines.length);
+      if (next === state.roundIdx) return;
+      state.roundIdx = next;
+      logEvent('LINE_JUMP', { stage: stage.key, roundIdx: next });
+      renderNow();
+      renderLines();
+      renderQuickRow();
+    }
+
+    function selectLine(index) {
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        if (index < 0 || index >= overlay.lines.length) return;
+        state.overlayLineIdx = index;
+        logEvent('OVERLAY_LINE_SELECT', { overlay: state.overlay, overlayLineIdx: index, key: 'F' + (index + 1) });
+        renderNow();
+        renderDrawer();
+        return;
+      }
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      if (index < 0 || index >= lines.length) return;
+      state.roundIdx = index;
+      logEvent('LINE_SELECT', { stage: stage.key, roundIdx: index, key: 'F' + (index + 1) });
+      renderNow();
+      renderLines();
+      renderQuickRow();
+    }
+
+    function toggleOverlay(key) {
+      if (state.overlay === key) {
+        state.overlay = null;
+        state.overlayLineIdx = 0;
+        logEvent('OVERLAY_CLOSE', { overlay: key });
+      } else {
+        state.overlay = key;
+        state.overlayLineIdx = 0;
+        logEvent('OVERLAY_OPEN', { overlay: key });
+      }
+      renderNow();
+      renderDrawer();
+    }
+
+    function closeOverlay() {
+      if (state.overlay) {
+        logEvent('OVERLAY_CLOSE', { overlay: state.overlay });
+        state.overlay = null;
+        state.overlayLineIdx = 0;
+        renderNow();
+        renderDrawer();
+      }
+    }
+
+    function bookmark() {
+      state.bookmarks++;
+      logEvent('BOOKMARK', { stage: STAGES[state.stageIdx].key });
+      renderBookmarks();
+      $bookmarkCount.classList.add('flash');
+      setTimeout(function() { $bookmarkCount.classList.remove('flash'); }, 180);
+    }
+
+    function resetCall() {
+      if (!confirm('Reset call — are you sure?')) return;
+      state = {
+        stageIdx: 0,
+        roundIdx: 0,
+        overlay: null,
+        overlayLineIdx: 0,
+        bookmarks: 0,
+        log: [],
+        callStart: Date.now(),
+      };
+      $mathCalls.value = '';
+      $mathValue.value = '';
+      updateMath();
+      render();
+    }
+
+    function exportLog() {
+      const payload = {
+        callStart: new Date(state.callStart).toISOString(),
+        durationMs: Date.now() - state.callStart,
+        finalStage: STAGES[state.stageIdx].key,
+        bookmarks: state.bookmarks,
+        math: {
+          calls: $mathCalls.value ? Number($mathCalls.value) : null,
+          value: $mathValue.value ? Number($mathValue.value) : null,
+          leak:  ($mathCalls.value && $mathValue.value)
+            ? computeMonthlyLeak($mathCalls.value, $mathValue.value)
+            : null,
+        },
+        events: state.log,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'call-log-' + new Date().toISOString().replace(/[:.]/g,'-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function toggleHotkeyBar() {
+      const bar = document.querySelector('.hotkey-bar');
+      if (!bar) return;
+      bar.classList.toggle('hidden');
+      logEvent('HOTKEY_BAR_TOGGLE', { hidden: bar.classList.contains('hidden') });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MATH STRIP — monthly voicemail leak
+    // VMs/day × $/job × 20 workdays × 20% close-rate floor.
+    // Displayed figure and logged figure must agree — single source.
+    // ═══════════════════════════════════════════════════════════════
+
+    function computeMonthlyLeak(calls, value) {
+      const c = Number(calls) || 0;
+      const v = Number(value) || 0;
+      return c * v * 20 * 0.2;
+    }
+
+    function updateMath() {
+      const leak = computeMonthlyLeak($mathCalls.value, $mathValue.value);
+      if (leak > 0) {
+        $mathResult.textContent = '$' + leak.toLocaleString();
+        $mathResult.classList.remove('zero');
+      } else {
+        $mathResult.textContent = '$ —';
+        $mathResult.classList.add('zero');
+      }
+      if ($mathCalls.value && $mathValue.value) {
+        logEvent('MATH_UPDATE', {
+          calls: Number($mathCalls.value),
+          value: Number($mathValue.value),
+          leak: leak,
+        });
+      }
+    }
+    $mathCalls.addEventListener('input', updateMath);
+    $mathValue.addEventListener('input', updateMath);
+
+    // ═══════════════════════════════════════════════════════════════
+    // KEY BINDINGS
+    // ═══════════════════════════════════════════════════════════════
+
+    document.addEventListener('keydown', function(e) {
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        if (e.key === 'Escape') e.target.blur();
+        return;
+      }
+
+      if (e.key >= '1' && e.key <= '6') {
+        e.preventDefault();
+        jumpToStage(Number(e.key) - 1);
+        return;
+      }
+
+      // F1–F15 — pick a line directly by index in the current stage.
+      // Extended past F10 for PIVOT missing-trigger handlers (F11–F15).
+      // Note: F11 and F12 would normally open browser fullscreen/devtools —
+      // preventDefault here suppresses that during a live dial session.
+      const fkeyMatch = e.key.match(/^F([1-9]|1[0-5])$/);
+      if (fkeyMatch) {
+        e.preventDefault();
+        selectLine(Number(fkeyMatch[1]) - 1);
+        return;
+      }
+
+      if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); jumpToStage(2); return; }
+      if (e.key === 'p' || e.key === 'P') { e.preventDefault(); jumpToStage(3); return; }
+      if (e.key === 'c' || e.key === 'C') { e.preventDefault(); jumpToStage(4); return; }
+
+      // Shift + Arrow: step between STAGES (OPEN → PIVOT → QUANTIFY → PITCH → CLOSE → BOOKED).
+      // Checked BEFORE plain Arrow so Shift intercepts. Same effect as pressing the number key.
+      if (e.shiftKey && e.key === 'ArrowLeft')  { e.preventDefault(); jumpToStage(state.stageIdx - 1); return; }
+      if (e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); jumpToStage(state.stageIdx + 1); return; }
+      // ArrowLeft/Right: step one line. Alt/Option+Arrow: jump 5 at a time. Home/End: jump to edges.
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); stepLine(e.altKey ? -5 : -1); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); stepLine(e.altKey ?  5 :  1); return; }
+      if (e.key === 'Home')       { e.preventDefault(); jumpLine(0); return; }
+      if (e.key === 'End')        { e.preventDefault(); jumpLine(Infinity); return; }
+
+      if (e.key === 'g' || e.key === 'G') { e.preventDefault(); toggleOverlay('G'); return; }
+      if (e.key === 'o' || e.key === 'O') { e.preventDefault(); toggleOverlay('O'); return; }
+      if (e.key === '$' || (e.shiftKey && e.key === '4')) { e.preventDefault(); toggleOverlay('$'); return; }
+      if (e.key === 'w' || e.key === 'W') { e.preventDefault(); toggleOverlay('W'); return; }
+      if (e.key === 'x' || e.key === 'X') { e.preventDefault(); toggleOverlay('X'); return; }
+      if (e.key === 'h' || e.key === 'H') { e.preventDefault(); toggleOverlay('H'); return; }
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleOverlay('D'); return; }
+      if (e.key === 'v' || e.key === 'V') { e.preventDefault(); toggleOverlay('V'); return; }
+      if (e.key === 'b' || e.key === 'B') { e.preventDefault(); toggleOverlay('B'); return; }
+
+      if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); return; }
+      if (e.key === ' ')      { e.preventDefault(); bookmark();     return; }
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); resetCall();  return; }
+      if (e.key === 'e' || e.key === 'E') { e.preventDefault(); exportLog();  return; }
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) { e.preventDefault(); toggleHotkeyBar(); return; }
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // CALL TIMER
+    // ═══════════════════════════════════════════════════════════════
+
+    setInterval(function() {
+      const ms = Date.now() - state.callStart;
+      const s = Math.floor(ms / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      $callTimer.textContent = mm + ':' + ss;
+    }, 500);
+
+    render();
+  </script>
+</body>
+</html>

@@ -6,6 +6,8 @@ checkpoint_date: 2026-04-19
 dossiers:
   - competitors    # battlecards on competing voice AI products
   - voice-ai       # technical papers, implementation patterns, API capabilities
+  - positioning    # Dunford-style category framing, ICP, messaging
+  - product        # canon on what CallLock is: features, offering, pitch
   - playbooks      # sales objection handling, qualification logic, GTM strategies
 
 conventions:
