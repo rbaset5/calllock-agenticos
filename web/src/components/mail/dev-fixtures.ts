@@ -36,6 +36,9 @@ function makeFixture(id: string, overrides: Partial<Call>, minutesAgo: number): 
     revenueTier: null,
     extractionStatus: null,
     callRecordingUrl: null,
+    bookingStatus: null,
+    bookingStatusAt: null,
+    bookingNotes: null,
     createdAt: new Date(BASE_TIME - minutesAgo * 60_000).toISOString(),
     ...overrides,
   }
