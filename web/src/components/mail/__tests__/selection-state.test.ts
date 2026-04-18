@@ -26,6 +26,7 @@ function makeCall(overrides: Partial<TriageableCall> = {}): TriageableCall {
     route: null,
     revenueTier: null,
     extractionStatus: null,
+    bookingStatus: null,
     createdAt: new Date().toISOString(),
     ...overrides,
   }

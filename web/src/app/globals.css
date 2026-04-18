@@ -189,3 +189,122 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ------------------------------------------------------------------
+ * Marketing token layer (scoped to .marketing wrapper only).
+ *
+ * IMPORTANT: these tokens are founder-guess fallbacks against Wise's
+ * public brand. Replace every value below verbatim from web/DESIGN.md
+ * once the user runs `npx getdesign@latest add wise`.
+ *
+ * Placed outside @theme inline on purpose: tokens in @theme become
+ * Tailwind utility classes for the whole app, which would leak the
+ * marketing namespace into Mail UI utility class scope. Keeping this
+ * as a plain CSS rule scopes everything to descendants of .marketing.
+ * ------------------------------------------------------------------ */
+.marketing {
+  --mk-bg-field: #163300;
+  --mk-bg-elevated: #1a3d08;
+  --mk-accent: #9FE870;
+  --mk-accent-ink: #163300;
+  --mk-cream: #DCFF7B;
+  --mk-fg-primary: #FFFFFF;
+  --mk-fg-secondary: rgba(255, 255, 255, 0.72);
+  --mk-fg-muted: rgba(255, 255, 255, 0.48);
+  --mk-border: rgba(255, 255, 255, 0.08);
+
+  --mk-radius-sm: 8px;
+  --mk-radius-md: 16px;
+
+  --mk-measure: 38rem;
+
+  background: var(--mk-bg-field);
+  color: var(--mk-fg-primary);
+  scroll-behavior: smooth;
+  font-family: var(--mk-font-body), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+.marketing h1,
+.marketing h2,
+.marketing h3,
+.marketing .mk-display {
+  font-family: var(--mk-font-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.marketing h1 {
+  font-size: clamp(44px, 8vw, 112px);
+  line-height: 0.95;
+  font-weight: 700;
+}
+
+.marketing h2 {
+  font-size: clamp(32px, 5vw, 64px);
+  line-height: 1.02;
+  font-weight: 700;
+}
+
+.marketing :focus-visible {
+  outline: 2px solid var(--mk-cream);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.marketing .mk-micro-cta-arrow {
+  display: inline-block;
+  transition: transform 150ms ease-out;
+}
+.marketing .mk-micro-cta:hover .mk-micro-cta-arrow {
+  transform: translateX(4px);
+}
+
+.marketing .mk-button:hover {
+  background-color: var(--mk-accent);
+  color: var(--mk-accent-ink);
+}
+
+.marketing .mk-button-primary {
+  background-color: var(--mk-accent);
+  color: var(--mk-accent-ink);
+  border: 1px solid var(--mk-accent);
+}
+.marketing .mk-button-primary:hover {
+  background-color: var(--mk-cream);
+  border-color: var(--mk-cream);
+}
+
+@media (min-width: 1024px) {
+  .marketing .mk-hero-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+  .marketing .mk-block-1 {
+    grid-template-columns: 1.35fr 0.65fr;
+    align-items: start;
+  }
+  .marketing .mk-block-3 {
+    grid-template-columns: 0.65fr 1.35fr;
+    align-items: center;
+  }
+}
+
+/* ROI sidebar becomes a full-bleed band above the feature body
+   at <1024px — element order flip via grid row placement. */
+@media (max-width: 1023.98px) {
+  .marketing .mk-block-1-sidebar {
+    order: -1;
+    margin-bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing *,
+  .marketing *::before,
+  .marketing *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

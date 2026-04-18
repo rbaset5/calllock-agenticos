@@ -33,6 +33,9 @@ function makeCall(overrides: Partial<Call> = {}): Call {
     revenueTier: null,
     extractionStatus: null,
     callRecordingUrl: null,
+    bookingStatus: null,
+    bookingStatusAt: null,
+    bookingNotes: null,
     createdAt: new Date().toISOString(),
     ...overrides,
   }

@@ -32,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         {process.env.NODE_ENV === "development" && (
           <Script
@@ -43,7 +43,7 @@ export default function RootLayout({
         )}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} h-screen overflow-hidden antialiased bg-[#0e0e0e] text-[#e7e5e4]`}
+        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} min-h-dvh antialiased`}
       >
         {children}
         <Toaster theme="dark" position="bottom-center" />
