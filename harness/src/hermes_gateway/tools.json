@@ -1,0 +1,506 @@
+{
+  "tools": [
+    {
+      "description": "Send a task to any worker in the agent roster.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "feature_flags": {
+            "additionalProperties": true,
+            "default": {},
+            "type": "object"
+          },
+          "problem_description": {
+            "default": "",
+            "type": "string"
+          },
+          "task_type": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "description": "Tenant ID or slug.",
+            "type": "string"
+          },
+          "worker_id": {
+            "description": "Worker ID from knowledge/worker-specs.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "worker_id",
+          "tenant_id",
+          "task_type"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "dispatch_worker"
+    },
+    {
+      "description": "Read pending approval requests.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "default": "pending",
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "check_quest_log"
+    },
+    {
+      "description": "Approve a blocked dispatch or quest.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_id": {
+            "type": "string"
+          },
+          "approved_by": {
+            "default": "founder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approval_id"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "approve_quest"
+    },
+    {
+      "description": "Extract and save a skill from a completed run.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "promoted_by": {
+            "default": "founder",
+            "type": "string"
+          },
+          "skill_body": {
+            "type": "string"
+          },
+          "skill_title": {
+            "type": "string"
+          },
+          "universal": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "skill_title",
+          "skill_body"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "promote_skill"
+    },
+    {
+      "description": "Mark a skill candidate as reviewed and dismissed.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "dismiss_skill_candidate"
+    },
+    {
+      "description": "Get aggregated status across all agents.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id"
+        ],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "read_daily_memo"
+    },
+    {
+      "description": "Read from the knowledge graph.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "Path relative to knowledge/.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "query_knowledge"
+    },
+    {
+      "description": "Check current state of agents (idle/active/queued).",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "worker_id": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "check_agent_status"
+    },
+    {
+      "description": "Read recent command audit log entries.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "type": "string"
+          },
+          "limit": {
+            "default": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "tenant_id": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "read_audit_log"
+    },
+    {
+      "description": "Kick off a voice pipeline evaluation run.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "trigger_voice_eval"
+    },
+    {
+      "description": "Summarize outbound pipeline funnel metrics for a recent time window.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "default": 7,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "outbound_funnel_summary"
+    },
+    {
+      "description": "Look up a specific prospect's outbound history by business name or phone.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "business_name": {
+            "default": "",
+            "type": "string"
+          },
+          "phone": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "outbound_prospect_lookup"
+    },
+    {
+      "description": "Compare outbound signal types by positive call outcome rate.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "outbound_signal_effectiveness"
+    },
+    {
+      "description": "Compare outbound metros by answer rate and interest rate.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "outbound_metro_performance"
+    },
+    {
+      "description": "Add or remove a target outbound metro in repo memory.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "add",
+              "remove"
+            ],
+            "type": "string"
+          },
+          "metro": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "metro"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "outbound_manage_metros"
+    },
+    {
+      "description": "Analyze a founder problem, detect domain, search prior art, and recommend the next tool action.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "raw_input": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "raw_input"
+        ],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "decompose_problem"
+    },
+    {
+      "description": "Search the decisions index for prior decisions matching a query.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "enum": [
+              "voice-pipeline",
+              "product",
+              "architecture"
+            ],
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "check_decisions"
+    },
+    {
+      "description": "Write a new decision record to the repo and update decisions/_index.md.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "consequences": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string"
+          },
+          "domain": {
+            "enum": [
+              "voice-pipeline",
+              "product",
+              "architecture"
+            ],
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "status": {
+            "default": "active",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "domain",
+          "context",
+          "options",
+          "decision",
+          "consequences"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "create_decision"
+    },
+    {
+      "description": "Search the errors index for known error patterns matching a query.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "enum": [
+              "voice-pipeline",
+              "product",
+              "architecture"
+            ],
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "mutating": false,
+      "name": "check_errors"
+    },
+    {
+      "description": "Create or update an error pattern and bump occurrences for repeats.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "enum": [
+              "voice-pipeline",
+              "product",
+              "architecture"
+            ],
+            "type": "string"
+          },
+          "fix": {
+            "default": "",
+            "type": "string"
+          },
+          "pattern_notes": {
+            "default": "",
+            "type": "string"
+          },
+          "root_cause": {
+            "default": "",
+            "type": "string"
+          },
+          "status": {
+            "default": "logged",
+            "type": "string"
+          },
+          "symptoms": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "domain",
+          "symptoms"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "log_error"
+    },
+    {
+      "description": "Write or append content to a file under knowledge/.",
+      "json_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "append": {
+            "default": false,
+            "type": "boolean"
+          },
+          "content": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "type": "object"
+      },
+      "mutating": true,
+      "name": "update_knowledge"
+    }
+  ]
+}

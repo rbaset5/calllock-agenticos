@@ -130,6 +130,22 @@ class TestLooseWebhookModels:
         assert request.call_id == "ret-call-001"
         assert "surprise_field" in caplog.text
 
+    def test_retell_tool_call_request_accepts_nested_call_shape(self) -> None:
+        request = RetellToolCallRequest.model_validate(
+            {
+                "name": "lookup_caller",
+                "args": {"phone_number": "+15125550101"},
+                "call": {
+                    "call_id": "ret-call-002",
+                    "metadata": {"tenant_id": "tenant-ace-001"},
+                },
+            }
+        )
+
+        assert request.call_id == "ret-call-002"
+        assert request.tool_name == "lookup_caller"
+        assert request.metadata == {"tenant_id": "tenant-ace-001"}
+
     def test_retell_call_ended_payload_accepts_alias_and_extra_fields(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
@@ -147,6 +163,24 @@ class TestLooseWebhookModels:
 
         assert payload.dynamic_variables == {"customer_name": "John Smith"}
         assert "unknown_flag" in caplog.text
+
+    def test_retell_call_ended_payload_accepts_event_wrapper(self) -> None:
+        payload = RetellCallEndedPayload.model_validate(
+            {
+                "event": "call_ended",
+                "call": {
+                    "call_id": "ret-call-003",
+                    "transcript": "Customer needs help",
+                    "metadata": {"tenant_id": "tenant-ace-001"},
+                    "retell_llm_dynamic_variables": {"customer_name": "John Smith"},
+                },
+            }
+        )
+
+        assert payload.event == "call_ended"
+        assert payload.call_id == "ret-call-003"
+        assert payload.custom_metadata == {"tenant_id": "tenant-ace-001"}
+        assert payload.dynamic_variables == {"customer_name": "John Smith"}
 
 
 class TestDashboardPayload:

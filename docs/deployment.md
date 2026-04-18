@@ -52,3 +52,28 @@ Use `scripts/check-live-stack.py` with:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `HARNESS_EVENT_SECRET` if the harness event endpoint is protected
+
+## Hermes CEO Gateway
+
+Phase one is local/dev-first. VPS deployment and always-on hosting are explicitly deferred beyond this phase.
+
+Required local environment:
+
+- `DISCORD_BOT_TOKEN`
+- `DISCORD_ALLOWED_USERS`
+- `CALLLOCK_GATEWAY_WRITE_ENABLED=1` only when you intentionally want mutating gateway tools enabled
+
+Bootstrap flow:
+
+1. Run `python scripts/bootstrap-hermes-gateway.py --check` to detect drift.
+2. Run `python scripts/bootstrap-hermes-gateway.py --write` to sync the repo-owned prompt/config assets into `~/.hermes/` and install the MCP server entry.
+3. Verify the server manually with `cd harness && PYTHONPATH=src ./.venv/bin/python -m harness.mcp_server`.
+4. Start Hermes with `hermes gateway`.
+
+Phase-one defaults:
+
+- Discord enabled and primary
+- Telegram disabled
+- Persistent Hermes memory disabled
+- Cross-platform continuity disabled
+- Cron blocks remain template-only and opt-in for later always-on deployment

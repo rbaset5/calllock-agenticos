@@ -10,6 +10,7 @@ Synchronous path:
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -290,14 +291,55 @@ async def handle_call_ended(
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     try:
-        payload = RetellCallEndedPayload.model_validate_json(body)
-    except ValidationError as exc:
+        raw = json.loads(body)
+    except (TypeError, ValueError, json.JSONDecodeError):
         return JSONResponse(
             status_code=400,
-            content={
-                "error": "Invalid payload",
-                "details": exc.errors(include_input=False),
+            content={"error": "Invalid payload", "details": "Malformed JSON"},
+        )
+
+    try:
+        payload = RetellCallEndedPayload.model_validate(raw)
+    except ValidationError as exc:
+        raw_summary = raw if isinstance(raw, dict) else {"payload_type": type(raw).__name__}
+        logger.error(
+            "post_call.validation_error",
+            extra={
+                "raw_payload_summary": {
+                    "event": raw_summary.get("event"),
+                    "has_call": isinstance(raw_summary.get("call"), dict),
+                    "call_id": (
+                        raw_summary.get("call_id")
+                        or (
+                            raw_summary.get("call", {}).get("call_id")
+                            if isinstance(raw_summary.get("call"), dict)
+                            else None
+                        )
+                    ),
+                    "to_number": (
+                        raw_summary.get("to_number")
+                        or (
+                            raw_summary.get("call", {}).get("to_number")
+                            if isinstance(raw_summary.get("call"), dict)
+                            else None
+                        )
+                    ),
+                },
+                "errors": exc.errors(include_input=False),
             },
+        )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "skipped",
+                "reason": "invalid_payload",
+            },
+        )
+
+    if payload.event and payload.event != "call_ended":
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Unexpected event type: {payload.event}"},
         )
 
     tenant_id = payload.custom_metadata.get("tenant_id", "")
@@ -305,12 +347,12 @@ async def handle_call_ended(
 
     if not tenant_id:
         logger.error(
-            "post_call.missing_tenant_id",
-            extra={"retell_call_id": retell_call_id},
+            "post_call.tenant_missing",
+            extra={"call_id": retell_call_id, "to_number": payload.to_number},
         )
         return JSONResponse(
-            status_code=400,
-            content={"error": "Missing tenant_id in custom_metadata"},
+            status_code=200,
+            content={"status": "skipped", "reason": "no_tenant_id"},
         )
 
     call_id = retell_call_id

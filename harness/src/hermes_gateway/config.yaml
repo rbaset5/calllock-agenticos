@@ -1,0 +1,50 @@
+# Phase 1 Hermes CEO Gateway template.
+#
+# This file is repo-owned documentation and bootstrap input, not the live
+# Hermes runtime config. Use scripts/bootstrap-hermes-gateway.py to sync the
+# relevant assets into ~/.hermes/ and to install the MCP server entry.
+
+phase: "phase-one"
+mode: "local-dev-first"
+
+agent:
+  name: "CallLock CEO Agent"
+  model: "anthropic/claude-opus-4-6"
+  max_iterations: 20
+  prompt_source: "./system_prompt.md"
+
+gateway:
+  discord:
+    enabled: true
+    notes:
+      - "Primary founder interface for phase one."
+      - "Use DISCORD_ALLOWED_USERS to restrict access."
+      - "Prefer free-response founder channels over reaction-based approvals."
+  telegram:
+    enabled: false
+    notes:
+      - "Deferred beyond phase one."
+
+runtime:
+  persistent_memory_enabled: false
+  cross_platform_continuity_enabled: false
+  repo_memory_is_authoritative: true
+  direct_repo_writes_require_env: "CALLLOCK_GATEWAY_WRITE_ENABLED=1"
+
+tools:
+  source: "./tools.json"
+  count: 21
+
+cron:
+  opt_in_for_always_on_deployments: true
+  local_dev_acceptance_requires_cron: false
+  schedules:
+    morning_briefing:
+      schedule: "0 6 * * *"
+      description: "Summarize overnight activity."
+    evening_digest:
+      schedule: "0 18 * * *"
+      description: "Day summary and status."
+    weekly_retro:
+      schedule: "0 9 * * 0"
+      description: "Weekly analysis and trends."

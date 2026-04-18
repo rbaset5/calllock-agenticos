@@ -9,6 +9,8 @@ services:
     envVars:
       - key: HARNESS_EVENT_SECRET
         sync: false
+      - key: INNGEST_EVENT_URL
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
@@ -30,6 +32,10 @@ services:
       - key: HARNESS_BASE_URL
         sync: false
       - key: HARNESS_EVENT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: INNGEST_EVENT_KEY
         sync: false

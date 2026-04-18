@@ -11,35 +11,48 @@ from voice.auth import HMACVerificationError, InvalidAPIKeyError, verify_api_key
 
 class TestRetellHMAC:
     def test_valid_signature(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+        monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
         body = b'{"call_id": "123"}'
-        timestamp = str(int(time.time()))
-        message = timestamp.encode() + b"." + body
-        signature = hmac.new(b"test-secret", message, hashlib.sha256).hexdigest()
+        timestamp_ms = int(time.time() * 1000)
+        message = body + str(timestamp_ms).encode()
+        digest = hmac.new(b"test-api-key", message, hashlib.sha256).hexdigest()
+        signature = f"v={timestamp_ms},d={digest}"
 
-        verify_retell_hmac(body, signature, timestamp)
+        verify_retell_hmac(body, signature)
 
     def test_invalid_signature_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+        monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
 
         with pytest.raises(HMACVerificationError):
-            verify_retell_hmac(b"body", "bad-sig", str(int(time.time())))
+            verify_retell_hmac(b"body", "bad-signature")
 
     def test_expired_timestamp_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
-        old_ts = str(int(time.time()) - 600)
+        monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
+        old_ts = int(time.time() * 1000) - 600_000
         body = b"body"
-        message = old_ts.encode() + b"." + body
-        signature = hmac.new(b"test-secret", message, hashlib.sha256).hexdigest()
+        message = body + str(old_ts).encode()
+        digest = hmac.new(b"test-api-key", message, hashlib.sha256).hexdigest()
+        signature = f"v={old_ts},d={digest}"
 
         with pytest.raises(HMACVerificationError, match="expired"):
-            verify_retell_hmac(body, signature, old_ts)
+            verify_retell_hmac(body, signature)
 
-    def test_missing_secret_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_missing_api_key_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("RETELL_API_KEY", raising=False)
         monkeypatch.delenv("RETELL_WEBHOOK_SECRET", raising=False)
 
         with pytest.raises(RuntimeError):
-            verify_retell_hmac(b"body", "sig", str(int(time.time())))
+            verify_retell_hmac(b"body", "v=1,d=sig")
+
+    def test_legacy_signature_still_supported(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("RETELL_API_KEY", raising=False)
+        monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "legacy-secret")
+        body = b'{"call_id":"legacy"}'
+        timestamp = str(int(time.time()))
+        message = timestamp.encode() + b"." + body
+        signature = hmac.new(b"legacy-secret", message, hashlib.sha256).hexdigest()
+
+        verify_retell_hmac(body, signature, timestamp)
 
 
 class TestAPIKeyAuth:

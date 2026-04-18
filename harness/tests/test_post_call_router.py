@@ -19,7 +19,7 @@ def _reset_state() -> None:
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("RETELL_WEBHOOK_SECRET", "test-secret")
+    monkeypatch.setenv("RETELL_API_KEY", "test-api-key")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     from harness.server import app
@@ -27,11 +27,11 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     return TestClient(app)
 
 
-def _sign_body(body: bytes, secret: str = "test-secret") -> tuple[str, str]:
-    timestamp = str(int(time.time()))
-    message = timestamp.encode() + b"." + body
-    signature = hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
-    return signature, timestamp
+def _sign_body(body: bytes, secret: str = "test-api-key") -> str:
+    timestamp_ms = int(time.time() * 1000)
+    message = body + str(timestamp_ms).encode()
+    digest = hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
+    return f"v={timestamp_ms},d={digest}"
 
 
 def _payload(
@@ -40,34 +40,36 @@ def _payload(
     tenant_id: str = "tenant-ace-001",
 ) -> dict[str, object]:
     return {
-        "call_id": call_id,
-        "transcript": "Agent: Thanks for calling. User: My AC is broken.",
-        "transcript_object": [],
-        "call_summary": "Customer reports broken AC.",
-        "custom_metadata": {"tenant_id": tenant_id},
-        "from_number": "+15125550101",
-        "to_number": "+15125559999",
-        "direction": "inbound",
-        "duration_ms": 120000,
-        "recording_url": "https://retell.ai/recordings/test.mp3",
-        "disconnection_reason": "agent_hangup",
-        "retell_llm_dynamic_variables": {
-            "customer_name": "John Smith",
-            "service_address": "123 Oak St, Austin TX 78701",
+        "event": "call_ended",
+        "call": {
+            "call_id": call_id,
+            "transcript": "Agent: Thanks for calling. User: My AC is broken.",
+            "transcript_object": [],
+            "call_summary": "Customer reports broken AC.",
+            "metadata": {"tenant_id": tenant_id},
+            "from_number": "+15125550101",
+            "to_number": "+15125559999",
+            "direction": "inbound",
+            "duration_ms": 120000,
+            "recording_url": "https://retell.ai/recordings/test.mp3",
+            "disconnection_reason": "agent_hangup",
+            "retell_llm_dynamic_variables": {
+                "customer_name": "John Smith",
+                "service_address": "123 Oak St, Austin TX 78701",
+            },
+            "tool_call_results": [],
         },
-        "tool_call_results": [],
     }
 
 
 def _post(client: TestClient, payload: dict[str, object]) -> TestClient:
     body = json.dumps(payload).encode()
-    signature, timestamp = _sign_body(body)
+    signature = _sign_body(body)
     return client.post(
         "/webhook/retell/call-ended",
         content=body,
         headers={
             "x-retell-signature": signature,
-            "x-retell-timestamp": timestamp,
             "content-type": "application/json",
         },
     )
@@ -75,7 +77,7 @@ def _post(client: TestClient, payload: dict[str, object]) -> TestClient:
 
 def test_handle_call_ended_returns_200_immediately(client: TestClient) -> None:
     body = json.dumps(_payload()).encode()
-    signature, timestamp = _sign_body(body)
+    signature = _sign_body(body)
 
     with patch("voice.post_call_router.BackgroundTasks.add_task") as mock_add_task:
         response = client.post(
@@ -83,7 +85,6 @@ def test_handle_call_ended_returns_200_immediately(client: TestClient) -> None:
             content=body,
             headers={
                 "x-retell-signature": signature,
-                "x-retell-timestamp": timestamp,
                 "content-type": "application/json",
             },
         )
@@ -101,7 +102,6 @@ def test_handle_call_ended_returns_401_on_invalid_hmac(client: TestClient) -> No
         content=json.dumps(_payload()).encode(),
         headers={
             "x-retell-signature": "bad",
-            "x-retell-timestamp": str(int(time.time())),
             "content-type": "application/json",
         },
     )
@@ -109,29 +109,30 @@ def test_handle_call_ended_returns_401_on_invalid_hmac(client: TestClient) -> No
     assert response.status_code == 401
 
 
-def test_handle_call_ended_returns_400_on_malformed_payload(client: TestClient) -> None:
-    body = b'{"call_id":'
-    signature, timestamp = _sign_body(body)
+def test_handle_call_ended_skips_on_malformed_payload(client: TestClient) -> None:
+    body = json.dumps({"event": "call_ended", "call": {"metadata": {"tenant_id": "tenant-ace-001"}}}).encode()
+    signature = _sign_body(body)
 
     response = client.post(
         "/webhook/retell/call-ended",
         content=body,
         headers={
             "x-retell-signature": signature,
-            "x-retell-timestamp": timestamp,
             "content-type": "application/json",
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["error"] == "Invalid payload"
+    assert response.status_code == 200
+    assert response.json() == {"status": "skipped", "reason": "invalid_payload"}
+    assert len(_state()["call_records"]) == 0
 
 
-def test_handle_call_ended_returns_400_on_missing_tenant_id(client: TestClient) -> None:
+def test_handle_call_ended_skips_on_missing_tenant_id(client: TestClient) -> None:
     response = _post(client, _payload(tenant_id=""))
 
-    assert response.status_code == 400
-    assert response.json()["error"] == "Missing tenant_id in custom_metadata"
+    assert response.status_code == 200
+    assert response.json() == {"status": "skipped", "reason": "no_tenant_id"}
+    assert len(_state()["call_records"]) == 0
 
 
 def test_handle_call_ended_returns_duplicate_when_insert_skips(client: TestClient) -> None:

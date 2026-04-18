@@ -4,6 +4,7 @@ httpx>=0.28
 langgraph>=0.2
 langsmith>=0.1
 litellm>=1.60
+mcp>=1.26,<2
 pydantic>=2.10
 pytest>=8.4
 pytest-asyncio>=0.25

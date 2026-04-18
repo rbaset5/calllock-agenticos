@@ -119,10 +119,32 @@ class RetellToolCallRequest(LooseModel):
     args: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_retell_payload(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        call = normalized.get("call")
+        if isinstance(call, dict):
+            if "call_id" not in normalized and call.get("call_id"):
+                normalized["call_id"] = call["call_id"]
+            if ("metadata" not in normalized or not isinstance(normalized.get("metadata"), dict)) and isinstance(
+                call.get("metadata"), dict
+            ):
+                normalized["metadata"] = call["metadata"]
+
+        if "tool_name" not in normalized and isinstance(normalized.get("name"), str):
+            normalized["tool_name"] = normalized["name"]
+
+        return normalized
+
 
 class RetellCallEndedPayload(LooseModel):
     """Incoming Retell call-ended webhook payload."""
 
+    event: str | None = None
     call_id: str
     transcript: str = ""
     transcript_object: list[TranscriptMessage] = Field(default_factory=list)
@@ -139,6 +161,27 @@ class RetellCallEndedPayload(LooseModel):
     disconnection_reason: str | None = None
     dynamic_variables: dict[str, str] = Field(default_factory=dict, alias="retell_llm_dynamic_variables")
     tool_call_results: list[dict[str, Any]] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_retell_payload(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        call = data.get("call")
+        if not isinstance(call, dict):
+            return data
+
+        normalized = dict(call)
+        normalized["event"] = data.get("event")
+        if "custom_metadata" not in normalized and isinstance(call.get("metadata"), dict):
+            normalized["custom_metadata"] = call["metadata"]
+        normalized.pop("metadata", None)
+        if "call_summary" not in normalized and isinstance(call.get("call_analysis"), dict):
+            summary = call["call_analysis"].get("call_summary")
+            if isinstance(summary, str):
+                normalized["call_summary"] = summary
+        return normalized
 
 
 class CallEndedEvent(BaseModel):
