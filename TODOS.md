@@ -565,3 +565,19 @@ Items marked `Status: Contract locked in docs` now have an implementation-safe s
 **Priority:** P2 (validation, not implementation)
 **Depends on:** HUD hotkey expansion shipped + 5-10 real calls with Alt+1-4 usage.
 **Source:** Eng review + Codex outside voice, 2026-04-04.
+
+## Sales HUD
+
+### Retire /hud v2 card-based HUD after /hotkey battle-test
+**What:** Delete 14 files in `dialer/hud/` (`cards.js`, `classifier.js`, `composer.js`, `index.html`, `llm.js`, `playbook.js`, `reducer.js`, `render-v2.js`, `risk.js`, `session.js`, `session-save-coordinator.js`, `taxonomy.js`, `test-call.html`, `tone.js`, `ui.js`), delete the 11 `__tests__/*.test.js` files that depend on them, and remove 5 server routes in `dialer/server.js` (L30 static mount, `app.get('/hud')` landing, `/hud/deepgram-token`, `/hud/groq-classify`, `/hud/session-log`). Keep `hotkey.html` and its independent `/hotkey` route (`server.js:644`).
+**Why:** `/hotkey` at `server.js:644` is the successor sales HUD surface. `/hud` v2 was deprecated 2026-04-14 (see `feat/hotkey-hud` branch — deprecation banner + `server.js` comment landed). Keeping both surfaces alive creates positioning drift (both carried after-hours framing that is obsolete under the new missed-call-revenue-recovery positioning) and doubles the maintenance burden on every KB update.
+**Pros:** ~14 files / ~227 tests / 5 routes removed. Single canonical sales HUD. No cross-surface positioning inconsistency.
+**Cons:** Irreversible. `/hud/deepgram-token` and `/hud/groq-classify` are live LLM/ASR endpoints — external consumers must be identified first. 227 tests go away.
+**Effort:** M (CC: ~45 min — file deletion + route removal + test verification)
+**Priority:** P2 (positioning consistency and maintenance cleanup, not a blocker)
+**Depends on / blocked by:**
+  1. `/hotkey` proven on 50+ real dials (smoke-tested, no content regressions, new positioning lands)
+  2. Grep + external tooling audit confirming no consumer of `/hud/groq-classify`, `/hud/session-log`, `/hud/deepgram-token` outside the deprecated `dialer/hud/*.js` files (check `harness/`, n8n workflows, internal scripts)
+  3. Confirmation that the 227 deprecated tests have no value worth preserving (most likely, since they cover v2 logic we're deleting)
+**Context:** On 2026-04-14 we reframed `/hotkey` from "after-hours wedge" to "missed-call revenue recovery" (see `kb/wiki/positioning/positioning-dunford.md`). The `/hud` v2 surface carried the same old framing (`cards.js:288–289`, `playbook.js:62–320`, including a literal "🌙 After hours" bridge angle from commit `9196115`). We chose to deprecate `/hud` rather than reframe it — the reframe cost is high and `/hotkey` is the long-term surface.
+**Source:** `/plan-eng-review` on feat/hotkey-hud, 2026-04-14.

@@ -25,6 +25,12 @@ const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+// ────────────────────────────────────────────────────────────────────
+// DEPRECATED — /hud v2 card-based HUD (static mount + routes below).
+// Superseded by /hotkey (see app.get('/hotkey') below). Scheduled for
+// deletion in a follow-up PR once /hotkey has battle-tested on 50+ real
+// dials. See TODOS.md "Sales HUD" section. DO NOT add new features here.
+// ────────────────────────────────────────────────────────────────────
 // Only serve the hud/ subdirectory as static (not the whole dialer/ dir which includes server.js)
 // no-cache for JS modules during development — prevents stale ES module imports
 app.use('/hud', express.static(path.join(__dirname, 'hud'), {

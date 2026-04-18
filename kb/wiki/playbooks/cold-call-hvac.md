@@ -4,10 +4,9 @@ title: Cold Call Playbook — HVAC / Plumbing / Electrical
 dossier: playbooks
 tags: [sales, cold-call, script, playbook, hvac]
 source_refs:
-  - wiki/positioning/after-hours-wedge.md
-  - wiki/playbooks/icp-definition.md
+  - wiki/positioning/positioning-dunford.md
   - wiki/competitors/answering-services.md
-derived_from: wiki/positioning/after-hours-wedge.md
+derived_from: wiki/positioning/positioning-dunford.md
 compiled_at: 2026-04-11T00:00:00Z
 confidence: medium
 status: living
@@ -19,7 +18,7 @@ conversion_notes: TBD — update after first 20 dials
 
 Dial-ready decision tree. Read top to bottom. Indent = their response. **Bold** = your line.
 
-> **Thesis anchor:** this playbook operationalizes [[positioning/after-hours-wedge]]. Every branch funnels toward the after-hours gap before pitching. If you find yourself pitching in §1, stop and go to §2.
+> **Thesis anchor:** this playbook operationalizes [[positioning/positioning-dunford]]. Every branch funnels toward the missed-call revenue frame before pitching. If you find yourself pitching in §1, stop and go to §2.
 
 ---
 
@@ -42,6 +41,10 @@ Whatever they say, your goal is to get them describing their after-hours setup i
 ### → "We have an answering service"
 **"Got it — are they actually booking jobs live, or mostly taking a message for you to call back Monday? Because the ones I've seen, by the time you call back the customer's already booked with someone else."**
 → If "taking messages" → §2. If "they book live" → §3.
+
+### → "We do SMS follow-ups" / "We text them back" / "Podium / GoHighLevel auto-replies"
+**"Smart — that catches the patient ones. Honest question though: when someone's furnace is dead on a Saturday night, are they waiting around for a text reply, or are they already dialing the next guy on Google? The ones who text back tend to be the tune-up crowd, not the emergency calls. That's the gap we fill — live answer for the urgent ones so they don't bounce."**
+→ Go to §2. *Same structural failure as voicemail: SMS is a patience filter. The impatient, high-urgency, high-ticket caller is gone before the text lands.*
 
 ### → "My wife / dispatcher / CSR handles it"
 **"Makes sense. Is she actually on the phone at 9pm on a Saturday, or is it more like she checks voicemails in the morning?"**
@@ -160,7 +163,7 @@ QUANTIFY → "How many Saturday calls?" + "What's a job worth?"
 
 MATH → "That's $X sitting in voicemail. Sound right?"
 
-PITCH → "Answers live, books the job, calendar Monday morning."
+PITCH → "When you can't pick up — answers live, books the job, calendar Monday morning."
 
 CLOSE → "Thursday 10 or Friday 2?"
 
@@ -168,6 +171,21 @@ FALLBACK → "Can I send you a 30-sec clip?"
 ```
 
 ---
+
+## 7.5 CALL WINDOWS
+
+Owner-operators in HVAC/plumbing/electrical are in their truck most of the day. They are reachable in two narrow windows — everything else is voicemail or rushed.
+
+| Window | Local time | Why it works |
+|--------|-----------|--------------|
+| Morning | **7:00–9:00 AM** | Before the first job of the day. Coffee, route planning, still at home or the shop. Most receptive window overall. |
+| Late afternoon | **4:00–6:00 PM** | Wrapping the last job, heading back, paperwork time. Second-best window. |
+| Avoid | 9:30 AM–3:30 PM | On a job site. You'll either get voicemail or a 20-second brush-off. |
+| Avoid | After 6:30 PM | They're home with family. Calling here burns trust you can't earn back. |
+
+Dial blocks should be scheduled against these windows, not against your own calendar. If the morning block slips past 9 AM, the dials that follow convert at a fraction of the rate — stop and reschedule rather than power through.
+
+Time zones matter: a 7 AM Phoenix call from Eastern time means a 10 AM ET start. Batch prospects by target time zone before the block, not during it.
 
 ## 8. UPDATE LOG
 
@@ -179,6 +197,6 @@ Keep a running log of what's converting and what isn't. Update after every diali
 
 ## 9. Related
 
-- [[positioning/after-hours-wedge]] — the thesis this playbook operationalizes
+- [[positioning/positioning-dunford]] — the thesis this playbook operationalizes
 - [[playbooks/icp-definition]] — who to dial in the first place
 - [[competitors/answering-services]] — wedge detail for §3 branches

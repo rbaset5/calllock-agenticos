@@ -4,6 +4,22 @@ LLM-compiled research intelligence for CallLock. This wiki is maintained by the 
 
 **Checkpoint: April 19, 2026** — Has this KB influenced 3+ concrete product decisions?
 
+## Canon vs. Derived
+
+Not all wiki content is equal. Two categories:
+
+- **Canon** (source of truth — edit carefully, everything inherits from these):
+  - `positioning/` — ICP, category, wedge, Dunford framework
+  - `product/` — what CallLock *is* (feature set, offering, pitch)
+
+- **Derived / research / operational** (inherit from canon — safe to churn):
+  - `competitors/` — market research, not authored positioning
+  - `playbooks/` — operational scripts derived from positioning
+  - `marketing/` — homepage, ads, emails, pages (outputs derived from canon)
+  - `voice-ai/` — technical research
+
+If you change canon, re-check every derived file for drift. If you change a derived file, canon is unaffected.
+
 ## Dossiers
 
 ### Competitors
@@ -36,13 +52,25 @@ Battlecards on competing voice AI products.
 Technical papers, implementation patterns, API capabilities.
 - _No articles yet_
 
+### Product
+What CallLock *is* for the SMB ICP — features, offering, pitch.
+- [[product/smb-feature-set]] — SMB feature set ranked by deal-closing power: Core 5, Next 3 differentiators, 2 demo winners, explicit non-goals, and the one-sentence offer.
+
+### Positioning
+Product positioning, category framing, ICP, and messaging foundations.
+- [[positioning/icp]] — SMB home services ICP. 1–5 trucks, $300K–$2M, owner-operator buyer, 10+ calls/wk, $300+ ticket, 20%+ missed. Source of truth for qualification.
+- [[positioning/positioning-dunford]] — Dunford five-component positioning built on the ICP. Category: "missed-call revenue recovery for home services contractors." Anchors price against lost revenue, not $150/mo human services.
+
 ### Playbooks
-Sales objection handling, qualification logic, GTM strategies for home services.
-- [[playbooks/positioning-dunford]] — Product positioning using Dunford framework. Category: "AI call agent for home service companies." Tagline: "Stop losing after-hours calls to voicemail."
-- [[playbooks/lsa-acquisition-channel]] — Google LSA as acquisition channel. LSA contractors are spending $1-5K/mo on ads and missing 20%+ of calls.
-- [[playbooks/icp-definition]] — Ideal Customer Profile. Owner-led HVAC/plumbing, 3-15 people, LSA ads, Housecall Pro/Jobber, losing after-hours calls to voicemail.
+Sales objection handling, qualification logic, GTM strategies for home services. *(Derived from positioning.)*
+- [[playbooks/cold-call-hvac]] — Dial-ready cold call decision tree for HVAC/plumbing/electrical. Operationalizes [[positioning/positioning-dunford]].
+- [[playbooks/missed-call-audit]] — 15-minute math-only audit. The canonical conversion flow: 3 inputs, voicemail-filter insight, personalized dollar figure. Every marketing surface and sales channel inherits from this spec.
+
+### Marketing
+Homepage, landing pages, ads, email copy. *(Derived outputs of positioning + product. Not canon.)*
+- [[marketing/homepage-v3]] — Homepage copy v3.2. Voicemail-filter thesis, math-only audit CTA. Inherits from [[positioning/positioning-dunford]] §3.5, [[product/smb-feature-set]], and [[playbooks/missed-call-audit]].
 
 ## Stats
-- Total articles: 14 (10 battlecards + 1 synthesis + 3 playbooks)
+- Total articles: 17 (10 battlecards + 1 synthesis + 2 positioning + 2 playbooks + 1 product + 1 marketing)
 - Raw sources: 9
-- Last ingest: 2026-04-05
+- Last ingest: 2026-04-14

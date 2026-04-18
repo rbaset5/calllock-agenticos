@@ -50,13 +50,33 @@ Tool-specific files (CLAUDE.md, GEMINI.md, CODEX.md) point here plus add tool-sp
 The `kb/` directory is an LLM-compiled research wiki — separate from the curated `knowledge/` system.
 
 - `kb/raw/` contains immutable source documents. The LLM reads but never modifies these.
-- `kb/wiki/` contains LLM-compiled articles organized into 3 dossier types: `competitors/`, `voice-ai/`, `playbooks/`.
+- `kb/wiki/` contains LLM-compiled articles organized into dossier types: `positioning/`, `product/`, `competitors/`, `playbooks/`, `marketing/`, `voice-ai/`.
 - Start at `kb/wiki/_index.md` for a catalog of all articles.
 - Use `/kb-ingest` to process new raw sources into wiki articles.
 - Use `/kb-query` to ask research questions against the wiki.
 - Use `/kb-status` to check wiki health and size.
 - Articles use `[[wiki-links]]` that resolve within `kb/wiki/`. To reference curated knowledge, use relative paths like `[[../../knowledge/product/overview]]`.
 - The wiki is the LLM's domain — users rarely edit it directly.
+
+### Canon vs. Derived in kb/wiki/
+
+Not all dossiers are equal. Changes to canon ripple through derived artifacts; changes to derived artifacts do not affect canon.
+
+- **Canon** (source of truth — everything else inherits from these):
+  - `positioning/` — ICP, Dunford framework, category, wedge, messaging foundations
+  - `product/` — what CallLock *is* (feature set, offering, pitch)
+
+- **Derived / research / operational** (inherit from canon — safe to churn):
+  - `competitors/` — market intelligence, not authored positioning
+  - `playbooks/` — operational scripts derived from positioning
+  - `marketing/` — homepage, ads, emails, landing pages (outputs derived from canon)
+  - `voice-ai/` — technical research
+
+**Rule (forward ripple-check):** When you change anything in `positioning/` or `product/`, grep every file in `competitors/`, `playbooks/`, `marketing/` for phrases that may have drifted, and fix them in the same commit. When you change a derived file, canon is unaffected.
+
+**Rule (reverse ripple-check — fix canon first):** When drafting a derived artifact exposes a claim that isn't in canon, contradicts canon, or surfaces a new insight about the market/positioning/product, **stop and fix canon first.** Then re-sync the derived artifact against the corrected canon. Do not patch the derived artifact and leave canon drifting — next time someone drafts a different derived artifact from the same canon, they'll hit the same gap.
+
+**Pattern: drafting derived artifacts is a canon stress-test.** Writing marketing copy, playbooks, or other derived artifacts is the single best way to surface gaps and drift in canon — because it forces you to put claims into sentences and defend them. Treat every drafting session as an opportunity to audit and improve canon, not just an opportunity to produce the derived artifact. If a derived draft produced more canon improvements than it did derived content, that's a feature, not a failure.
 
 ## Decomposition Protocol
 

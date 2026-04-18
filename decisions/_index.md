@@ -16,6 +16,7 @@ Structured decision records for CallLock AgentOS. Check here before proposing ch
 - [Terminology: App not Dashboard](product/DEC-2026-03-18-terminology.md) — never call the CallLock App "the dashboard"
 - [Outbound pipeline is single-worker Scout](product/DEC-2026-03-21-outbound-single-worker.md) — eliminated Composer, deferred email to v2
 - [SMS follow-ups postponed; callback cadence replaces](product/DEC-2026-04-04-sms-postponed.md) — iMessage dormant, 3-attempt callback cadence enforced via lifecycle sweep
+- [SMB GTM model: published pricing, templated setup, compressed cycle](product/DEC-2026-04-14-smb-gtm-model.md) — inverts Bravi's enterprise model for CallLock's 3-15 employee ICP
 
 ## Architecture
 

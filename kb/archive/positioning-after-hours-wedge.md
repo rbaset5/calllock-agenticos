@@ -19,7 +19,7 @@ After-hours is not an edge case for CallLock — it is the primary wedge. Every 
 
 ## The math
 
-A non-24/7 business with standard trade hours (8a–5p M–F) is staffed roughly **45 hours per week** and unstaffed roughly **123 hours per week**. That means **~73% of the calendar week** is a coverage gap by default. For HVAC, plumbing, and electrical — where emergencies drive the highest-ticket jobs — that 73% is where the money actually lives.
+A non-24/7 business with standard trade hours (8a–5p M–F) is staffed roughly **45 hours per week** and unstaffed roughly **123 hours per week**. That means **~73% of the calendar week** is a coverage gap by default. For HVAC, plumbing, electrical, garage door, drain, and water treatment — where emergencies drive the highest-ticket jobs — that 73% is where the money actually lives.
 
 ## The blind spot
 

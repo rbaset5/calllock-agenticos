@@ -159,12 +159,92 @@
 
     .main {
       display: grid;
-      grid-template-columns: 1fr 320px;
+      grid-template-columns: 340px 1fr 320px;
       flex: 1;
       min-height: 0;
       overflow: hidden;
     }
-    #linesPanel { display: none; }
+    /* ── Left panel: stage playbook / coaching card ── */
+    #linesPanel {
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+    #coachCard {
+      padding: 14px 20px 20px;
+      color: #bbb;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .coach-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .coach-title .coach-num {
+      color: #a78bfa;
+      margin-right: 6px;
+    }
+    .coach-section {
+      margin-bottom: 14px;
+    }
+    .coach-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #a78bfa;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .coach-label.warn {
+      color: #fbbf24;
+    }
+    .coach-label.win {
+      color: #4ade80;
+    }
+    .coach-text {
+      color: #ccc;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .coach-text em {
+      color: #fbbf24;
+      font-style: normal;
+      background: rgba(251, 191, 36, 0.08);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .coach-rules {
+      margin-top: 22px;
+      padding: 14px 20px 18px;
+      border-top: 1px solid #1a1a1a;
+      color: #888;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .coach-rules-header {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .coach-rule {
+      margin-bottom: 10px;
+      padding-left: 18px;
+      position: relative;
+    }
+    .coach-rule::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #a78bfa;
+    }
 
     /* ── QUICK ROW — horizontal F-key strip that mirrors the keyboard ──
        Width and horizontal offset are live-tunable via [ ] , . hotkeys and
@@ -184,16 +264,45 @@
     }
     .quick-row {
       display: grid;
-      grid-template-columns: repeat(9, 1fr);
+      grid-template-columns: repeat(10, 1fr);
       gap: 5px;
       padding: 0 14px;
       width: var(--quick-width);
-      max-width: 100%;
+      max-width: calc(100vw - 20px);
       margin: 0 auto;
       transform: translateX(var(--quick-offset));
       height: 44px;
       align-items: stretch;
       transition: width 120ms ease, transform 120ms ease;
+    }
+    /* ── QUANTIFY group rings — subgrid wrappers for the main path (F1-F5) and pick-one (F1-F2) ── */
+    .quantify-main-path {
+      grid-column: 1 / 6;
+      display: grid;
+      grid-template-columns: subgrid;
+      gap: 5px;
+      outline: 2px dashed rgba(167, 139, 250, 0.55);
+      outline-offset: 3px;
+      border-radius: 8px;
+    }
+    .quantify-pick-one {
+      grid-column: 1 / 3;
+      display: grid;
+      grid-template-columns: subgrid;
+      gap: 5px;
+      outline: 2px dashed rgba(251, 191, 36, 0.65);
+      outline-offset: 1px;
+      border-radius: 6px;
+    }
+    /* ── PIVOT gap-zone ring — spotlights F8–F11 (partial → explicit VM → SMS → current gap admissions) ── */
+    .pivot-gap-zone {
+      grid-column: 8 / 12;
+      display: grid;
+      grid-template-columns: subgrid;
+      gap: 5px;
+      outline: 2px dashed rgba(251, 191, 36, 0.55);
+      outline-offset: 3px;
+      border-radius: 8px;
     }
     .calibration-hint { display: none; }
 
@@ -201,7 +310,7 @@
     .arrow-row { display: none; }
     .arrow-row-unused {
       display: grid;
-      grid-template-columns: repeat(9, 1fr);
+      grid-template-columns: repeat(10, 1fr);
       gap: 5px;
       padding: 6px 14px 2px;
       width: var(--quick-width);
@@ -249,7 +358,8 @@
       border-radius: 5px;
       overflow: hidden;
       cursor: pointer;
-      transition: all 120ms;
+      /* Only animate hover border-color; active-state snaps instantly so rapid arrow stepping feels tight. */
+      transition: border-color 80ms ease;
       min-width: 0;
     }
     .quick-chip:hover {
@@ -383,6 +493,14 @@
       gap: 20px;
       background: radial-gradient(ellipse at center, rgba(167, 139, 250, 0.03), transparent 70%);
     }
+    .now-stage-hint {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      font-style: italic;
+      margin-bottom: 2px;
+    }
+    .now-stage-hint:empty { display: none; }
+    .now-stage-hint { white-space: pre-line; line-height: 2.2; }
     .now-stage-label {
       font-size: 11px;
       letter-spacing: 0.16em;
@@ -397,6 +515,27 @@
       font-weight: 500;
       max-width: 780px;
     }
+    .reframe-token {
+      display: inline-block;
+      background: rgba(251, 191, 36, 0.14);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      border-radius: 6px;
+      padding: 2px 10px;
+      margin: 0 2px;
+      font-size: 0.78em;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      vertical-align: middle;
+    }
+    .now-cue {
+      font-size: 13px;
+      color: #6b7280;
+      font-style: italic;
+      margin-top: 8px;
+      letter-spacing: 0.01em;
+    }
+    .now-cue:empty { display: none; }
     .now-why {
       font-size: 13px;
       color: #666;
@@ -437,6 +576,15 @@
       border-radius: 4px;
       font-size: 10px;
       font-family: "SF Mono", Monaco, monospace;
+    }
+    .drawer-hint-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .drawer-hint-item {
+      font-style: normal;
     }
     .drawer-header {
       padding: 16px 20px 10px;
@@ -513,26 +661,30 @@
   <div class="stage-bar" id="stageBar"></div>
 
   <div class="math-strip" id="mathStrip">
-    <label>Sat calls</label>
+    <label>VMs/day</label>
     <input type="number" id="mathCalls" placeholder="?" min="0">
     <span class="operator">×</span>
-    <label>$ / job</label>
+    <label>$/job</label>
     <input type="number" id="mathValue" placeholder="?" min="0">
+    <span class="operator">× 20d × 20%</span>
     <span class="operator">=</span>
     <span class="result zero" id="mathResult">$ —</span>
-    <span class="hint">(weekend leak)</span>
+    <span class="hint">(monthly voicemail leak — real miss is ~1.67×)</span>
   </div>
 
   <div class="main">
     <div class="panel" id="linesPanel">
-      <div class="panel-header">LINES — <span id="linesStageName">OPEN</span></div>
-      <div id="linesList"></div>
+      <div class="panel-header">PLAYBOOK</div>
+      <div id="coachCard"></div>
+      <div class="coach-rules" id="coachRules"></div>
     </div>
 
     <div class="panel now-panel" id="nowPanel">
       <div class="overlay-ribbon" id="overlayRibbon">OVERLAY ACTIVE</div>
+      <div class="now-stage-hint" id="nowStageHint"></div>
       <div class="now-stage-label" id="nowStageLabel">OPEN</div>
       <div class="now-line" id="nowLine">—</div>
+      <div class="now-cue" id="nowCue"></div>
       <div class="now-why" id="nowWhy"></div>
       <div class="now-round" id="nowRound"></div>
     </div>
@@ -540,12 +692,16 @@
     <div class="panel" id="drawerPanel">
       <div class="panel-header">OVERLAY DRAWER</div>
       <div class="drawer-empty" id="drawerEmpty">
-        No overlay active.<br><br>
-        <kbd>G</kbd> gatekeeper &middot;
-        <kbd>O</kbd> objection &middot;
-        <kbd>$</kbd> price &middot;
-        <kbd>W</kbd> wrong &middot;
-        <kbd>X</kbd> exit
+        No overlay active.
+        <div class="drawer-hint-list">
+          <div class="drawer-hint-item"><kbd>G</kbd> gatekeeper</div>
+          <div class="drawer-hint-item"><kbd>O</kbd> objection</div>
+          <div class="drawer-hint-item"><kbd>$</kbd> price</div>
+          <div class="drawer-hint-item"><kbd>W</kbd> wrong</div>
+          <div class="drawer-hint-item"><kbd>X</kbd> exit</div>
+          <div class="drawer-hint-item"><kbd>H</kbd> hostile</div>
+          <div class="drawer-hint-item"><kbd>D</kbd> disqualify</div>
+        </div>
       </div>
       <div id="drawerContent" style="display:none;">
         <div class="drawer-header" id="drawerHeader">—</div>
@@ -557,9 +713,9 @@
   <div class="hotkey-bar hidden">
     <div class="hotkey-group">
       <div class="hotkey-item"><kbd>1–6</kbd> stage</div>
-      <div class="hotkey-item"><kbd>F1–F9</kbd> pick line</div>
+      <div class="hotkey-item"><kbd>F1–F13</kbd> pick line</div>
       <div class="hotkey-item"><kbd>←→</kbd> step line</div>
-      <div class="hotkey-item"><kbd>G O $ W X</kbd> drawer</div>
+      <div class="hotkey-item"><kbd>G O $ W X H D V B</kbd> drawer</div>
       <div class="hotkey-item"><kbd>Esc</kbd> close</div>
       <div class="hotkey-item"><kbd>Space</kbd> bookmark</div>
     </div>
@@ -584,11 +740,12 @@
       { key: 'OPEN',     num: 1, name: 'OPEN',
         why: '§0 Opener — greeting + 20-second permission' },
       { key: 'PIVOT',    num: 2, name: 'PIVOT', defaultRoundIdx: 4,
-        why: '§1 After-hours pivot — get them describing their setup' },
-      { key: 'QUANTIFY', num: 3, name: 'QUANTIFY',
-        why: '§2 Quantifier — get the number on the table' },
+        hint: 'what happens to calls you can\'t answer?\nmove once they\'ve described a miss GAP (any time, not just after-hours)',
+        why: '§1 Miss exposure — surface the calls they don\'t know they\'re losing' },
+      { key: 'QUANTIFY', num: 3, name: 'QUANTIFY VM LEAK', short: 'QUANTIFY',
+        why: '§2 Quantifier — voicemail count × ticket × close × invisible-miss' },
       { key: 'PITCH',    num: 4, name: 'PITCH',
-        why: '§4 Pitch — short version of what CallLock does' },
+        why: '§4 Pitch — tie back to THEIR $ leak. Sell live answer + booked calendar, NOT AI features. Default F3 if math landed, F2 if interrupted, F1 cold, F4 on control fear, F5 vs answering service.' },
       { key: 'CLOSE',    num: 5, name: 'CLOSE',
         why: '§5 Close — Thursday/Friday scheduling' },
       { key: 'BOOKED',   num: 6, name: 'BOOKED',
@@ -597,38 +754,76 @@
 
     const LINES = {
       OPEN: [
-        { trigger: 'Primary opener', text: "Hey [Name], Rashid here — cold call, you can hang up in 20 seconds if you want. Quick one: most HVAC shops I talk to are solid 8 to 5, but evenings and weekends get messy. How are you handling after-hours calls right now?" },
-        { trigger: 'Shorter variant', text: "Hey [Name], Rashid over in Houston. Cold call, 20 seconds — how are you handling calls after 5 and on weekends?" },
-        { trigger: 'Minimal variant', text: "Hey [Name], Rashid. Quick cold call — how are calls after hours getting handled at your shop?" },
+        { trigger: 'Primary opener', text: "Hey [Name], Rashid — quick one. When the phone rings and you're on a job, who grabs it?" },
+        { trigger: 'Shorter variant', text: "Hey [Name], Rashid. When a call comes in and you're on a job, who picks it up?" },
+        { trigger: 'Minimal variant', text: "Hey [Name], Rashid. Phone rings while you're on a job — who grabs it?" },
       ],
       PIVOT: [
-        { trigger: '"We answer it"', text: "Totally — sounds like daytime's solid. What about after 5 and weekends? That's usually where I see shops leaking jobs they don't even know about." },
-        { trigger: '"Voicemail" / "We call back"', text: "Yeah, that's where it gets expensive. Rough guess — how many of those voicemails on a typical Saturday?" },
-        { trigger: '"My wife / CSR handles it"', text: "Makes sense. Is she actually on the phone at 9pm on a Saturday, or is it more like she checks voicemails in the morning?" },
-        { trigger: '"We have an answering service"', text: "Got it — are they actually booking jobs live, or mostly taking a message for you to call back Monday? Because the ones I've seen, by the time you call back, the customer's already booked with someone else." },
-        { trigger: '"We don\'t miss calls"', text: "That's impressive — are you picking up live at 9pm on a Saturday, or is it going somewhere? Just curious how you've got it set up." },
-        { trigger: '"Depends / it varies"', text: "Yeah, that's usually what I hear. Where do the misses mostly happen — nights, weekends, or when you're already slammed on a job?" },
-        { trigger: '"What is this?" / "What are you selling?"', text: "We help HVAC shops answer, qualify, and book inbound calls live when you can't pick up — especially after hours. I was just trying to see how you're handling that today. Mind if I ask?" },
-        { trigger: '"Not interested" / "I\'m busy"', text: "Totally fair — one question and I'll let you go: when a new customer calls you Saturday night, what actually happens to that call?" },
-        { trigger: '"I\'m on a job right now"', text: "I figured — that's actually why I called. When you're tied up like this and a new customer calls, where does it go?" },
+        // ── Coverage claims (F1–F4): specific → generic ──
+        { trigger: 'We answer', text: "Got it. But if the phone rings while you're on a job, what happens to that call?" },
+        { trigger: 'Wife/CSR', text: "Makes sense. When a brand-new caller catches you mid-job and nobody's free, is she picking up live or checking voicemails after?" },
+        { trigger: 'Ans svc', cue: "→ add the follow-up probe if they claim live booking", text: "Got it — are they actually booking jobs onto your calendar, or taking messages for you to call back? And roughly how many of yesterday's calls actually hit your calendar?" },
+        { trigger: 'No miss', cue: "→ pure audit, do NOT spend the F9 card here", text: "Maybe. How are you tracking that right now?" },
+        // ── Dismissals (F5–F6): thoughtful → reflex. F5 is default landing. ──
+        { trigger: 'No need', cue: "→ strips category, keeps disarm", text: "Fair enough. Mind if I ask what you've got set up today? If it's airtight I'll leave you alone." },
+        { trigger: 'Not int', cue: "→ buying 15 sec — usually routes to F8/F9", text: "Hear you — one question and I'll let you go: when a new customer calls and you can't pick up, what actually happens to that call?" },
+        // ── Meta (F7): prospect asking for context ──
+        { trigger: 'What is?', cue: "→ short pitch, then probe for gap", text: "Short version: missed-call follow-up for shops like yours. Quick one — when a new customer calls and you can't pick up, what happens to that call?" },
+        // ── Gap admissions (F8–F10): partial → explicit → current (the productive zone) ──
+        { trigger: 'Depends', cue: "→ if they say \"both\", follow up: \"which one pisses you off more?\"", text: "Yeah, that's usually what I hear. Where do the misses mostly happen — when you're slammed on a job, when the shop's quiet and nobody's by the phone, or both?" },
+        { trigger: 'VM/cb ⭐', cue: "→ the patience-filter reframe — highest-leverage line, bridges straight to QUANTIFY", text: "Got it — quick thing: voicemail's a patience filter. Urgent jobs hang up in 10 seconds and call the next shop. How many voicemails you get on a normal day?" },
+        { trigger: 'SMS back', cue: "→ same patience-filter logic as VM — Podium/GHL/Thryv auto-reply", text: "Smart — catches the patient ones. But the furnace-dead Saturday caller isn't waiting on a text, they're calling the next guy on Google. The ones who reply to your text are tune-ups, not emergencies. How many voicemails you get on a normal day?" },
+        { trigger: 'On job', text: "I figured — that's actually why I called. When you're tied up like this and a new customer calls, where does it go?" },
+        // ── Credibility probes + operational + minimizer (F11–F15) ──
+        // Three pre-engagement probes clustered first (identity/list/motivation),
+        // operational next, minimizer last (bridges into QUANTIFY).
+        { trigger: 'Who r u?', cue: "→ identity probe — name + company + disarm + repeat the opener", text: "Rashid with CallLock — small company, we help HVAC shops with the calls they miss when they're on a job. Not trying to waste your time. Quick one though — when the phone rings and you're on a job, who grabs it?" },
+        { trigger: 'Where #?', cue: "→ list-source probe — fast, plain, no defensiveness", text: "Fair question — found you on LSA / Google. Totally fine to tell me to buzz off." },
+        { trigger: 'Why?', cue: "→ motivation probe — honest answer + frame hint + repeat the opener", text: "Because most HVAC shops I talk to are losing jobs to voicemail and don't see it. Trying to figure out if that's you. When the phone rings and you're on a job, who grabs it?" },
+        { trigger: 'Fwd→cell', cue: "→ sounds solved; probe the operational reality", text: "Got it — and when you're under a sink or on a ladder, does it still get answered live?" },
+        { trigger: 'Just few', cue: "→ soft stall — bridge straight to QUANTIFY", text: "Maybe. Rough guess, how many voicemails do you get on a normal day, not counting spam?" },
       ],
       QUANTIFY: [
-        { trigger: 'Q1 — Saturday volume', text: "Rough guess — how many after-hours calls do you think come in on a typical weekend? Even just Saturday." },
-        { trigger: 'Q2 — Job value', text: "And what's one of those jobs worth on average — ballpark?" },
-        { trigger: 'Q3 — Deliver the number', text: "Okay — so even if half of those turn into real jobs, that's [$ amount] a weekend sitting in a voicemail box. Does that sound about right to you?" },
-        { trigger: 'If they push back', text: "Fair — what's your gut on the real number?" },
+        // ── Core path (F1–F5) — compressed 4-line architecture post-adversarial review ──
+        // No 1.67x second dollar figure on air. Floor number only. Patient-enough is qualitative.
+        { trigger: 'Confirm #', cue: "→ use when PIVOT F9 already extracted the number", text: "You said about [N] a day, right? Not counting spam." },
+        { trigger: 'Ask #', cue: "→ use when F9 didn't fire or got no answer", text: "Rough guess — how many voicemails do you get on a typical day? Not counting spam." },
+        { trigger: 'Ticket', text: "And what's an average everyday service call — not installs, just repairs and diagnostics?" },
+        { trigger: 'Deliver ⭐', cue: "→ load-bearing line — NO second dollar figure; patient-enough is qualitative only", text: "So off voicemail alone, that's about [$ amount] a month. And that's just the people patient enough to leave one. Real number's usually higher. Is that ballpark or way off?" },
+        { trigger: '→ Pitch', cue: "→ bridge to PITCH", text: "That's why I called. We answer those calls live." },
+        // ── Handlers (F6–F12) — prospect-response patterns in PIVOT quote style ──
+        { trigger: '"Dunno"', cue: "→ \"I don't know\" — anchor two options, force a pick", text: "Ballpark's fine — five? ten?" },
+        { trigger: 'Still dunno', cue: "→ second \"I don't know\" — exit the deposition", text: "No problem. Then don't marry the number. The only question is whether enough good calls hit voicemail that you'd want them answered live." },
+        { trigger: '"30 a day"', cue: "→ giant number — qualify before accepting", text: "If that's 30 real new-customer voicemails, that's enormous. Most guys mean total missed calls — callbacks, spam, vendors. Which is it?" },
+        { trigger: 'Topic jump', cue: "→ subject change mid-math — hold the thread", text: "One sec, let me finish this number — this is the part that matters." },
+        { trigger: '"Just pitch"', cue: "→ \"just tell me what you're selling\" — emergency pitch w/ floor", text: "Fair. Screen says about [$ amount] a month just from voicemails. What I do about it — we answer those calls live and book the job into your calendar." },
+        { trigger: '"$X vs $Y?"', cue: "→ numbers-person audit — own the guess, disown the base", text: "You're right — [$ amount] is voicemail-only. I don't load it with hangups on the screen. If you want to count the ones who never left a message, add to taste — the floor is still [$ amount]." },
+        { trigger: '"My rate?"', cue: "→ \"mine is higher than 20%\" — own the floor", text: "Yeah — 20% is my floor so I don't overstate it. Your real leak is bigger than what I'm showing." },
       ],
       PITCH: [
-        { trigger: 'Full pitch', text: "Got it. Here's what we do, short version: when a customer calls after hours and you can't pick up, our system answers live, sounds like a person, asks the same questions your best CSR would, and drops the booked job straight into your calendar. You wake up Monday with jobs instead of voicemails." },
-        { trigger: 'Short pitch', text: "We answer your after-hours calls live and book the job into your calendar. Takes 15 minutes to show you." },
-        { trigger: 'With the math in hand', text: "So that [$ amount] weekend leak — that's what this fixes. Calls get answered, qualified, booked. You wake up Monday with jobs instead of voicemails." },
+        // F1 — Full pitch. "Best CSR" frame killed (most ICP shops have no CSR).
+        // "Elbow-deep" puts the operator in the buyer's day, not in a SaaS metaphor.
+        { trigger: 'Full pitch', text: "Got it. Here's the version: when a customer calls and you can't pick up — doesn't matter if it's 2pm Tuesday or 9pm Saturday — we answer live, ask what you'd ask if you weren't elbow-deep in a furnace, and drop the booked job into your calendar. 30-second text with the details." },
+        // F2 — Short pitch. "Every one" overclaim killed — "real jobs" pre-qualifies
+        // (excludes spam/wrong-number/warranty without surfacing them).
+        { trigger: 'Short pitch', text: "We catch the calls voicemail is killing — answer them live, book the real jobs into your calendar. 15 minutes to show you on a real call." },
+        // F3 — Math-tied. "Fixes" → "plug" (mechanical-buyer language).
+        // "Every call → booked" overclaim killed — "real customers, vetted, booked" is honest.
+        { trigger: 'With the math in hand ⭐', cue: "→ default after QUANTIFY landed math", text: "So that [$ amount] a month leaking to voicemail — that's the hole we plug. Real customers, vetted, booked. You see it on your phone before the customer hangs up." },
+        // F4 — VETO frame. Highest-leverage add: defends against calendar-control fear,
+        // the deepest objection from owner-operators burned by AI receptionist vendors.
+        { trigger: 'Veto frame', cue: "→ fire when prospect signals control fear or auto-book pushback", text: "And you're the final yes — booking lands on your phone, you've got 30 seconds to thumbs-down it. We do the work. You keep the veto." },
+        // F5 — Answering-service wedge. The single sharpest differentiator for ICP.
+        // Most prospects' mental model of "phone help" is an answering service.
+        // This line snaps that frame in 9 words.
+        { trigger: 'vs ans svc', cue: "→ fire on \"we use an answering service\" or any message-taking comparison", text: "Answering services take messages. We book the job. On the demo I run the same call through both — you'll see the gap in 30 seconds." },
       ],
       CLOSE: [
         { trigger: 'Primary close', text: "Worth 15 minutes this week to see if it'd fit your setup? I can show you a real call from a shop like yours." },
         { trigger: 'Two-option close', text: "I've got Thursday at 10 or Friday at 2 — which works?" },
-        { trigger: '"Send me info"', text: "Happy to — what's the best email? And just so I send the right thing, are you more worried about after-hours, overflow during the day, or both?" },
+        { trigger: '"Send me info"', text: "Happy to — what's the best email? Let me send you one short clip of an actual missed call we caught, so you can hear what it sounds like." },
         { trigger: '"Call me back next week"', text: "Will do — Tuesday or Wednesday better? I want to pin a day so I'm not chasing you." },
-        { trigger: '"Not right now"', text: "No problem. Can I send you one 30-second clip of a real after-hours call so you've got it when the timing's right?" },
+        { trigger: '"Not right now"', text: "No problem. Can I send you one 30-second clip of a real call we caught so you've got it when the timing's right?" },
       ],
       BOOKED: [
         { trigger: 'Confirmation', text: "Perfect — invite heading your way. Talk Thursday." },
@@ -648,36 +843,163 @@
       O: {
         name: 'OBJECTION',
         lines: [
-          "Totally fair — last thing and I'll let you go: when a new customer calls you Saturday night, what actually happens to that call?",
+          "Totally fair — last thing and I'll let you go: when a new customer calls and you can't pick up, what actually happens to that call?",
           "Fair — what's the one thing that would have to be true for this to be worth a look?",
-          "No problem. Can I send you a 30-second clip of a real after-hours call so you've got it when the timing's right?",
+          "No problem. Can I send you a 30-second clip of a real call we caught so you've got it when the timing's right?",
         ],
       },
       $: {
+        // Reordered: ROI deflection first (preserves momentum), buyer-native frame second,
+        // explicit $297 LAST (only when prospect insists on a number — late-stage commitment signal).
         name: 'PRICE',
         lines: [
           "Depends on volume — usually pays for itself in 2-3 booked jobs a month. Want me to run your numbers on the demo?",
-          "$297 a month — but back up a second. On the demo I show you what you're losing now vs what we catch. That's the comparison that matters.",
           "Cheaper than missing one job a month. The demo makes that real — 15 minutes?",
+          "$297 a month. Most shops we audit are leaking $3K to $12K to voicemail — $297 against that is rounding error. The demo shows you exactly where you sit.",
         ],
       },
       W: {
         name: 'WRONG PERSON',
         lines: [
-          "Makes sense. What's the best way to loop them in?",
-          "Got it — is there a better number for them, or is this the main line?",
-          "No worries — when's he usually reachable?",
+          "Got it — are you the one who usually handles vendor stuff like this, or is that more [Owner]'s side?",
+          "Makes sense. Best way to catch him — is there a time he's usually off jobs, or a better number?",
+          "Totally — one quick thing while I've got you: when a new customer calls and you can't reach him, do you know what happens to that call? Just trying to see if there's even a reason to bug him about it.",
         ],
       },
       X: {
         name: 'EXIT ATTEMPT',
         lines: [
-          "Totally fair — one question and I'll let you go: when a new customer calls you Saturday night, what actually happens to that call?",
-          "No problem. Can I send you a 30-second clip of a real after-hours call so you've got it when the timing's right?",
+          "No worries — one question and I'll let you go: when a new customer calls and you can't pick up, what actually happens to that call?",
+          "No problem. Can I send you a 30-second clip of a real call we caught so you've got it when the timing's right?",
           "Understood. Last thing — what's the best email, so I can send you one thing and then leave you alone?",
         ],
       },
+      H: {
+        name: 'HOSTILE',
+        lines: [
+          "You got it — taking you off now. Sorry for the interruption, have a good one.",
+          "Understood — won't call again. Before I go, mind telling me what would've made this call not suck? I'm trying to get better at this.",
+          "Totally — removing you. Thanks for picking up.",
+        ],
+      },
+      V: {
+        // Calendar-control / "I don't trust software with my customers" handler.
+        // Fires from any stage when the prospect surfaces auto-book fear, AI distrust,
+        // or "what if it screws up." This is the deepest fear in HVAC owner-operator
+        // psychology — burned by 6+ AI receptionist vendors since 2023.
+        name: 'VETO',
+        lines: [
+          "You're the final yes. Booking lands on your phone, you've got 30 seconds to thumbs-down it. We do the work. You keep the veto.",
+          "One bad call matters more than ten good ones in your business — I get it. That's why on the demo we start with the calls you can't afford to screw up, not the easy ones.",
+          "You decide the guardrails day one: just answer, answer plus qualify, or answer plus book only the call types you trust us with. Most shops start narrow and widen it.",
+        ],
+      },
+      B: {
+        // Anti-BS Risk-Reversal — call-saving reset for prospects who lost trust mid-pitch.
+        // Fires when the operator can feel the call dying and needs to strip every claim
+        // and start over from the operator's scar tissue, not the founder's pitch.
+        name: 'ANTI-BS',
+        lines: [
+          "You should assume I'm overstating it. Strip the claims down: I'm not asking you to trust a demo, and we don't auto-book day one. Give me one missed-call scenario you care about — I'll show you exactly how we'd handle it. If it sounds wrong, we stop there.",
+          "Forget every number I just gave you. They're directional, not promises. The only honest question is whether even a fraction of those voicemails are real customers worth answering live. Want to test that on three real calls from your shop?",
+          "Fair. Let me try this differently — what's the one thing the last vendor that pitched you got wrong? I'll tell you straight whether we'd do the same thing or not.",
+        ],
+      },
+      D: {
+        name: 'DISQUALIFY',
+        lines: [
+          // ── ServiceTitan (original) ──
+          "Oh — you're on ServiceTitan? Honestly then we're not a fit. Their native stuff is solid and I'm not going to try to talk you off it. Appreciate the honesty.",
+          "Got it — ST shop. We work mostly with Housecall Pro / Jobber / pen-and-paper folks who don't have that built in. Best of luck this season.",
+          "Makes sense. If you ever spin up a second brand or know a buddy not on ST, I'd love a shout — but I'll get out of your hair.",
+          // ── Booked-out (added after adversarial review — F9 is wrong for shops turning work away) ──
+          "Honestly, sounds like you're in a good spot — we help shops leaving jobs on the table, not shops turning work away. If things ever slow down, give me a shout. I'll get out of your hair.",
+          // ── Commercial-focused (F9 overstated: B2B callers leave detailed voicemails as SOP) ──
+          "Got it — commercial's a different beast. Your callers are used to leaving detailed voicemails, which isn't really the problem we solve. Not our lane. Appreciate the honesty, I'll let you go.",
+          // ── Maintenance-heavy (F9 weak: existing customers wait for callbacks, patience filter doesn't apply) ──
+          "Makes sense — if most of your callers are already your customers, they'll wait for a callback. Different spot than the shops we help. Sounds like you've built a good book — I'll get out of your hair.",
+        ],
+      },
     };
+
+    // ═══════════════════════════════════════════════════════════════
+    // COACHING — stage playbook shown in the left panel. Changes on stage jump.
+    // ═══════════════════════════════════════════════════════════════
+
+    const COACHING = {
+      OPEN: {
+        num: '1',
+        title: 'OPEN — earn 20 seconds',
+        sections: [
+          { label: 'What you do', text: "Greet by name, identify yourself in 3 words, and ask one question about how they handle the phone when they're on a job. <em>\"Hey [Name], Rashid — quick one. When the phone rings and you're on a job, who grabs it?\"</em>" },
+          { label: "What you're actually doing", text: "You are not pitching. You are buying the right to keep talking by sounding like a human who has a question, not a salesperson who has a script." },
+          { label: 'Win condition', text: "They answer the question instead of hanging up.", kind: 'win' },
+          { label: 'What happens next', text: "Their answer tells you which PIVOT line to fire. <em>\"My wife\"</em> → F2. <em>\"Answering service\"</em> → F3. <em>\"Voicemail\"</em> → you're already at the gold, skip ahead to F9." },
+        ],
+      },
+      PIVOT: {
+        num: '2',
+        title: 'PIVOT — surface the gap they didn\'t know they had',
+        sections: [
+          { label: 'What you do', text: "Take whatever they said in OPEN and turn it into a probe that exposes the missed call, not the answered one. <em>\"Got it — but if the phone rings while you're on a job, what happens to that call?\"</em>" },
+          { label: "What you're actually doing", text: "Most owners think they have phone coverage handled. PIVOT's job is to walk them off that confidence by getting them to admit out loud that some calls go to voicemail. The admission is the unlock — without it, the rest of the funnel doesn't work." },
+          { label: 'Win condition', text: "The prospect says some version of <em>\"yeah, those go to voicemail\"</em> or <em>\"I call them back later.\"</em> That's a gap admission.", kind: 'win' },
+          { label: 'What happens next', text: "The instant they admit voicemails OR SMS auto-reply happen, fire the matching card inside the amber gap-zone ring — F9 (<em>VM/cb ⭐</em>) for voicemail, F10 (<em>SMS back</em>) for Podium/GHL text-backs. Both use the patience-filter rebuttal and bridge straight into QUANTIFY by asking for a number." },
+        ],
+      },
+      QUANTIFY: {
+        num: '3',
+        title: 'QUANTIFY — put a dollar number on the table',
+        sections: [
+          { label: 'What you do', text: "Get two numbers: voicemails per day and average ticket. Then say the monthly leak out loud. <em>\"So off voicemail alone, that's about [$ amount] a month. And that's just the people patient enough to leave one. Real number's usually higher.\"</em>" },
+          { label: "What you're actually doing", text: "Converting abstract <em>\"we miss some calls\"</em> into concrete <em>\"I'm losing $2,400 a month\"</em> that the prospect cannot un-hear. The dollar figure must be theirs, from their numbers, stated as a floor (never inflated). The math strip computes it live so screen and mouth stay in sync." },
+          { label: 'Win condition', text: "They don't push back on the number. Even a grunt counts. <em>\"Ballpark sounds right\"</em> = you've won the call before you've pitched.", kind: 'win' },
+          { label: 'Trap to avoid', text: "Never quote a second, higher dollar number. Never say <em>\"and that's just voicemail — total losses are double that.\"</em> Smart owners detect inflation in 2 seconds and the rest of the call is dead.", kind: 'warn' },
+          { label: "If they ask 'where are you going with this?'", text: "Answer plain, name the outcome, offer the exit, ask permission. <em>\"Fair question. Short answer — I help HVAC shops recover the money they're leaking on missed calls after hours. I'm trying to see if that's even worth a real conversation for you. If it's not, I'll get out of your way. Mind if I ask one more thing?\"</em>\n\nTighter: <em>\"Totally fair. I'm trying to figure out if you're losing real money on missed calls. Two more questions and I'll know.\"</em>\n\nDon't: dodge, say <em>\"just a few more questions\"</em> (that's what triggered the pushback), or pitch the product. Name the outcome, offer the exit, ask permission.", kind: 'warn' },
+          { label: 'What happens next', text: "Fire QUANTIFY F5 — the bridge: <em>\"That's why I called. We answer those calls live.\"</em> — and you're in PITCH." },
+        ],
+      },
+      PITCH: {
+        num: '4',
+        title: 'PITCH — tie the product to their number',
+        sections: [
+          { label: 'What you do', text: "Default is F3 (math-tied): <em>\"So that [$ amount] a month leaking to voicemail — that's the hole we plug. Real customers, vetted, booked. You see it on your phone before the customer hangs up.\"</em> Control fear → F4 (veto). Answering service mention → F5. Cold → F1. Impatient → F2." },
+          { label: "What you're actually doing", text: "You are not describing a product. You are saying <em>\"the dollar number you just admitted is the thing this fixes.\"</em> Pitching before QUANTIFY is fatal — without the dollar hook, PITCH is just feature copy and they file you under <em>AI receptionist</em>." },
+          { label: 'Win condition', text: "They don't interrupt with an objection. Silence after F3 = won.", kind: 'win' },
+          { label: 'Watch for', text: "The moment of fear when they hear <em>\"before the customer hangs up\"</em> — that's calendar-control fear. Fire F4 (veto) immediately.", kind: 'warn' },
+          { label: 'What happens next', text: "Move to CLOSE the second the pitch lands. Do not re-pitch. Do not feature-dump. Do not volunteer price — if they ask, hit the $ overlay, answer in one sentence, then close." },
+        ],
+      },
+      CLOSE: {
+        num: '5',
+        title: 'CLOSE — pin a day, never ask "when works for you"',
+        sections: [
+          { label: 'What you do', text: "Ask for 15 minutes with two specific options. <em>\"Worth 15 minutes this week to see if it'd fit your setup? I've got Thursday at 10 or Friday at 2 — which works?\"</em>" },
+          { label: "What you're actually doing", text: "Forcing a binary decision instead of an open-ended calendar negotiation. <em>Never</em> <em>\"when works for you\"</em> (paralyzes them). <em>Never</em> <em>\"can I get on your calendar\"</em> (sounds desperate). Stalls have specific recovery lines that pin a day or trade for an email." },
+          { label: 'Win condition', text: "A specific day and a specific time on the calendar. Consolation prizes in order: (a) a different day pinned, (b) email + 30-second clip sent, (c) <em>\"call me back Tuesday\"</em> with Tuesday confirmed. Anything fuzzier is a no.", kind: 'win' },
+          { label: 'What happens next', text: "Yes → BOOKED. Email → log and trigger follow-up sequence. Nothing → exit warm. Never burn the bridge — same shop might pick up in 6 months." },
+        ],
+      },
+      BOOKED: {
+        num: '6',
+        title: 'BOOKED — confirm fast, send the invite, get off the phone',
+        sections: [
+          { label: 'What you do', text: "<em>\"Perfect — invite heading your way. Talk Thursday.\"</em> Capture the email if you don't have it, send the calendar invite while still on the call, and end inside 30 seconds." },
+          { label: "What you're actually doing", text: "Removing every reason for them to back out between now and Thursday. The invite landing in their inbox before they hang up is the lock — without it, <em>\"yes\"</em> rots into <em>\"actually I'm slammed this week\"</em> by the next morning." },
+          { label: 'Win condition', text: "Calendar invite delivered, prospect confirmed they see it.", kind: 'win' },
+          { label: 'What happens next', text: "Log the call, mark the outcome, move to the next dial. Demo prep is a separate workflow — your job on this call ended the moment they said the time." },
+        ],
+      },
+    };
+
+    const PLAYBOOK_RULES = [
+      "Lead with a question, not a pitch. The opener earns 20 seconds — burn it on a process question, not a product line. The prospect telling you their problem is worth 10× you describing yours.",
+      "Never pitch before the dollar number is on the table. No PITCH until QUANTIFY produced a $/month voicemail leak the prospect didn't push back on. The number is the whole sale; the product is just what fixes it.",
+      "If you've been pitched, get pitched. <em>\"I tried Numa/Rosie/Goodcall\"</em> → ask <em>\"what did they get wrong?\"</em> — the prospect coaches you for free.",
+      "Price comes up only once. Answer in one sentence, then close. Do not reopen the product explanation after price hits the table; momentum dies there.",
+      'A "no" is a lead if you get the email. Default exit: <em>"Can I send you one 30-second clip of a real call we caught?"</em> Even cold prospects will trade an email for a clip.',
+    ];
+
     // ═══════════════════════════════════════════════════════════════
     // STATE
     // ═══════════════════════════════════════════════════════════════
@@ -686,14 +1008,19 @@
       stageIdx: 0,
       roundIdx: 0,
       overlay: null,
+      overlayLineIdx: 0,
       bookmarks: 0,
       log: [],
       callStart: Date.now(),
     };
 
     // ── Calibration — persists across reloads, tuned via [ ] , . keys ──
+    // Default widened 900 → 1500 after PIVOT expanded to 14 cards and QUANTIFY to 12.
+    // At 1500px: PIVOT cards ≈ 107px each, QUANTIFY ≈ 125px each — readable.
+    // Grid uses minmax(100px, 1fr) so chips never shrink below a readable floor.
     const CAL_KEY = 'hotkeyhud.calibration.v1';
-    let calibration = { width: 900, offset: 0 };
+    const MIN_READABLE_WIDTH = 1100;
+    let calibration = { width: 1500, offset: 0 };
     try {
       const saved = localStorage.getItem(CAL_KEY);
       if (saved) {
@@ -702,6 +1029,12 @@
         if (typeof parsed.offset === 'number') calibration.offset = parsed.offset;
       }
     } catch (e) { /* ignore */ }
+    // One-shot migration: if the saved width predates the label expansion, bump it so
+    // cards aren't cramped. Offset calibration is preserved.
+    if (calibration.width < MIN_READABLE_WIDTH) {
+      calibration.width = 1500;
+      try { localStorage.setItem(CAL_KEY, JSON.stringify(calibration)); } catch (e) { /* ignore */ }
+    }
 
     function applyCalibration() {
       document.documentElement.style.setProperty('--quick-width',  calibration.width  + 'px');
@@ -736,13 +1069,14 @@
 
     // ── Arrow offsets — per-arrow horizontal position ──
     const ARROW_KEY = 'hotkeyhud.arrows.v1';
-    let arrowOffsets = new Array(9).fill(0);
+    let arrowOffsets = new Array(10).fill(0);
     try {
       const saved = localStorage.getItem(ARROW_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === 9) {
-          arrowOffsets = parsed.map(function(n) { return typeof n === 'number' ? n : 0; });
+        if (Array.isArray(parsed)) {
+          const coerced = parsed.map(function(n) { return typeof n === 'number' ? n : 0; });
+          for (let i = 0; i < 10; i++) arrowOffsets[i] = coerced[i] || 0;
         }
       }
     } catch (e) { /* ignore */ }
@@ -764,11 +1098,13 @@
     // ═══════════════════════════════════════════════════════════════
 
     const $stageBar   = document.getElementById('stageBar');
-    const $linesList  = document.getElementById('linesList');
-    const $linesStageName = document.getElementById('linesStageName');
+    const $coachCard  = document.getElementById('coachCard');
+    const $coachRules = document.getElementById('coachRules');
     const $nowLine    = document.getElementById('nowLine');
+    const $nowCue     = document.getElementById('nowCue');
     const $nowWhy     = document.getElementById('nowWhy');
     const $nowRound   = document.getElementById('nowRound');
+    const $nowStageHint = document.getElementById('nowStageHint');
     const $nowStageLabel = document.getElementById('nowStageLabel');
     const $overlayRibbon = document.getElementById('overlayRibbon');
     const $drawerEmpty = document.getElementById('drawerEmpty');
@@ -800,40 +1136,101 @@
         num.className = 'stage-num';
         num.textContent = String(s.num);
         pill.appendChild(num);
-        pill.appendChild(document.createTextNode(s.name));
+        pill.appendChild(document.createTextNode(s.short || s.name));
 
         pill.addEventListener('click', function() { jumpToStage(i); });
         $stageBar.appendChild(pill);
       });
     }
 
-    function renderLines() {
+    // Safe mini-parser: renders coach-text with <em>...</em> as DOM nodes.
+    // Only <em> tags are honored; everything else is plain text. No innerHTML.
+    // Newlines ("\n") are rendered as <br> so sections can contain paragraph breaks.
+    function appendCoachText(container, str) {
+      const parts = String(str).split(/(<em>[\s\S]*?<\/em>)/g);
+      parts.forEach(function(part) {
+        if (!part) return;
+        const emMatch = part.match(/^<em>([\s\S]*?)<\/em>$/);
+        if (emMatch) {
+          const em = document.createElement('em');
+          em.textContent = emMatch[1];
+          container.appendChild(em);
+        } else {
+          const lines = part.split('\n');
+          lines.forEach(function(line, i) {
+            if (i > 0) container.appendChild(document.createElement('br'));
+            if (line) container.appendChild(document.createTextNode(line));
+          });
+        }
+      });
+    }
+
+    function renderCoaching() {
       const stage = STAGES[state.stageIdx];
-      const lines = LINES[stage.key] || [];
-      $linesStageName.textContent = stage.name;
-      clearChildren($linesList);
-      lines.forEach(function(line, i) {
-        const item = document.createElement('div');
-        item.className = 'line-item' + (i === state.roundIdx ? ' active' : '');
+      const coach = COACHING[stage.key];
+      clearChildren($coachCard);
+      if (!coach) return;
 
-        const fkey = document.createElement('span');
-        fkey.className = 'fkey-badge';
-        fkey.textContent = 'F' + (i + 1);
+      const title = document.createElement('div');
+      title.className = 'coach-title';
+      const num = document.createElement('span');
+      num.className = 'coach-num';
+      num.textContent = coach.num + '.';
+      title.appendChild(num);
+      title.appendChild(document.createTextNode(coach.title));
+      $coachCard.appendChild(title);
 
-        const trigger = document.createElement('span');
-        trigger.className = 'line-trigger';
-        trigger.textContent = line.trigger;
+      coach.sections.forEach(function(section) {
+        const block = document.createElement('div');
+        block.className = 'coach-section';
 
-        item.appendChild(fkey);
-        item.appendChild(trigger);
-        item.addEventListener('click', function() {
-          state.roundIdx = i;
-          logEvent('LINE_CLICK', { stage: stage.key, roundIdx: i });
-          renderNow();
-          renderLines();
-          renderQuickRow();
+        const label = document.createElement('div');
+        label.className = 'coach-label' + (section.kind ? ' ' + section.kind : '');
+        label.textContent = section.label;
+
+        const text = document.createElement('div');
+        text.className = 'coach-text';
+        appendCoachText(text, section.text);
+
+        block.appendChild(label);
+        block.appendChild(text);
+        $coachCard.appendChild(block);
+      });
+
+      // Render the universal rules once (stage-independent).
+      if ($coachRules && !$coachRules.dataset.rendered) {
+        const header = document.createElement('div');
+        header.className = 'coach-rules-header';
+        header.textContent = 'Playbook rules';
+        $coachRules.appendChild(header);
+        PLAYBOOK_RULES.forEach(function(rule) {
+          const r = document.createElement('div');
+          r.className = 'coach-rule';
+          appendCoachText(r, rule);
+          $coachRules.appendChild(r);
         });
-        $linesList.appendChild(item);
+        $coachRules.dataset.rendered = '1';
+      }
+    }
+
+    // Alias — existing callsites keep working with the new coaching panel.
+    function renderLines() { renderCoaching(); }
+
+    // Render line text with [REFRAME: hint] markers as styled amber tokens.
+    // The rest of the text renders as plain text nodes.
+    function setNowLineText(text) {
+      clearChildren($nowLine);
+      const parts = String(text).split(/(\[REFRAME(?::[^\]]*)?\])/);
+      parts.forEach(function(part) {
+        if (!part) return;
+        if (/^\[REFRAME/.test(part)) {
+          const span = document.createElement('span');
+          span.className = 'reframe-token';
+          span.textContent = part.replace(/^\[|\]$/g, '');
+          $nowLine.appendChild(span);
+        } else {
+          $nowLine.appendChild(document.createTextNode(part));
+        }
       });
     }
 
@@ -842,23 +1239,28 @@
       const lines = LINES[stage.key] || [];
       const line = lines[state.roundIdx];
 
+      $nowStageHint.textContent = stage.hint || '';
       $nowStageLabel.textContent = stage.name;
 
       if (state.overlay) {
         const overlay = OVERLAYS[state.overlay];
+        const oIdx = state.overlayLineIdx;
         $overlayRibbon.classList.add('active');
         $overlayRibbon.textContent = '↯ OVERLAY: ' + overlay.name;
-        $nowLine.textContent = overlay.lines[0];
+        setNowLineText(overlay.lines[oIdx] || overlay.lines[0]);
+        $nowCue.textContent = '';
         $nowWhy.textContent = 'Overlay handler — return to ' + stage.name + ' when resolved';
-        $nowRound.textContent = '';
+        $nowRound.textContent = 'Line ' + (oIdx + 1) + ' of ' + overlay.lines.length;
       } else {
         $overlayRibbon.classList.remove('active');
         if (line) {
-          $nowLine.textContent = line.text;
+          setNowLineText(line.text);
+          $nowCue.textContent = line.cue || '';
           $nowWhy.textContent = stage.why + ' · ' + line.trigger;
           $nowRound.textContent = 'Round ' + (state.roundIdx + 1) + ' of ' + lines.length;
         } else {
-          $nowLine.textContent = '—';
+          setNowLineText('—');
+          $nowCue.textContent = '';
           $nowWhy.textContent = stage.why;
           $nowRound.textContent = '';
         }
@@ -878,7 +1280,7 @@
       clearChildren($drawerList);
       overlay.lines.forEach(function(text, i) {
         const item = document.createElement('div');
-        item.className = 'drawer-item' + (i === 0 ? ' first' : '');
+        item.className = 'drawer-item' + (i === state.overlayLineIdx ? ' first' : '');
         item.textContent = text;
         $drawerList.appendChild(item);
       });
@@ -888,7 +1290,7 @@
       const row = document.getElementById('arrowRow');
       if (!row) return;
       clearChildren(row);
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 10; i++) {
         const marker = document.createElement('div');
         marker.className = 'arrow-marker';
 
@@ -940,12 +1342,23 @@
       const stage = STAGES[state.stageIdx];
       const lines = LINES[stage.key] || [];
       clearChildren($quickRow);
-      for (let i = 0; i < 9; i++) {
+      const isQuantify = stage.key === 'QUANTIFY';
+
+      // Dynamic grid columns based on the stage's actual line count.
+      // PIVOT becomes 14 cols, QUANTIFY 12, OPEN 3, etc. Overrides the default
+      // `grid-template-columns: repeat(10, 1fr)` from the base CSS.
+      // minmax(100px, 1fr) enforces readable chip width — if the row is narrower
+      // than N × 100, chips stay 100px and the row overflows horizontally.
+      const colCount = Math.max(1, lines.length);
+      $quickRow.style.gridTemplateColumns = 'repeat(' + colCount + ', minmax(100px, 1fr))';
+
+      // Build one chip per actual line — no hardcoded 10.
+      const chips = [];
+      for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const chip = document.createElement('div');
         chip.className = 'quick-chip';
-        if (!line) chip.classList.add('empty');
-        if (line && i === state.roundIdx) chip.classList.add('active');
+        if (i === state.roundIdx) chip.classList.add('active');
 
         const fkey = document.createElement('div');
         fkey.className = 'quick-fkey';
@@ -953,22 +1366,57 @@
 
         const trigger = document.createElement('div');
         trigger.className = 'quick-trigger';
-        trigger.textContent = line ? line.trigger : '—';
+        trigger.textContent = line.trigger;
 
         chip.appendChild(fkey);
         chip.appendChild(trigger);
 
-        if (line) {
+        (function(idx) {
           chip.addEventListener('click', function() {
-            state.roundIdx = i;
-            logEvent('LINE_CLICK', { stage: stage.key, roundIdx: i, src: 'quickrow' });
+            state.roundIdx = idx;
+            logEvent('LINE_CLICK', { stage: stage.key, roundIdx: idx, src: 'quickrow' });
             renderNow();
             renderLines();
             renderQuickRow();
           });
-        }
+        })(i);
 
-        $quickRow.appendChild(chip);
+        chips.push(chip);
+      }
+
+      if (isQuantify) {
+        // F1-F5 wrapped in main-path ring; F1-F2 wrapped in pick-one ring (nested).
+        const mainPath = document.createElement('div');
+        mainPath.className = 'quantify-main-path';
+        const pickOne = document.createElement('div');
+        pickOne.className = 'quantify-pick-one';
+        pickOne.appendChild(chips[0]);
+        pickOne.appendChild(chips[1]);
+        mainPath.appendChild(pickOne);
+        mainPath.appendChild(chips[2]);
+        mainPath.appendChild(chips[3]);
+        mainPath.appendChild(chips[4]);
+        $quickRow.appendChild(mainPath);
+        for (let i = 5; i < chips.length; i++) {
+          $quickRow.appendChild(chips[i]);
+        }
+      } else if (stage.key === 'PIVOT') {
+        // F1-F7 flat, F8-F11 wrapped in gap-zone ring (Depends / VM / SMS / On job), F12+ flat after.
+        for (let i = 0; i < 7; i++) {
+          $quickRow.appendChild(chips[i]);
+        }
+        const gapZone = document.createElement('div');
+        gapZone.className = 'pivot-gap-zone';
+        gapZone.appendChild(chips[7]);
+        gapZone.appendChild(chips[8]);
+        gapZone.appendChild(chips[9]);
+        gapZone.appendChild(chips[10]);
+        $quickRow.appendChild(gapZone);
+        for (let i = 11; i < chips.length; i++) {
+          $quickRow.appendChild(chips[i]);
+        }
+      } else {
+        chips.forEach(function(chip) { $quickRow.appendChild(chip); });
       }
     }
 
@@ -1008,11 +1456,28 @@
       render();
     }
 
+    function clampLineIdx(idx, total) {
+      if (total <= 0) return 0;
+      if (idx < 0) return 0;
+      if (idx >= total) return total - 1;
+      return idx;
+    }
+
     function stepLine(delta) {
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        const next = clampLineIdx(state.overlayLineIdx + delta, overlay.lines.length);
+        if (next === state.overlayLineIdx) return;
+        state.overlayLineIdx = next;
+        logEvent('OVERLAY_LINE_STEP', { overlay: state.overlay, overlayLineIdx: next });
+        renderNow();
+        renderDrawer();
+        return;
+      }
       const stage = STAGES[state.stageIdx];
       const lines = LINES[stage.key] || [];
-      const next = state.roundIdx + delta;
-      if (next < 0 || next >= lines.length) return;
+      const next = clampLineIdx(state.roundIdx + delta, lines.length);
+      if (next === state.roundIdx) return;
       state.roundIdx = next;
       logEvent('LINE_STEP', { stage: stage.key, roundIdx: next });
       renderNow();
@@ -1020,7 +1485,38 @@
       renderQuickRow();
     }
 
+    function jumpLine(target) {
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        const next = clampLineIdx(target, overlay.lines.length);
+        if (next === state.overlayLineIdx) return;
+        state.overlayLineIdx = next;
+        logEvent('OVERLAY_LINE_JUMP', { overlay: state.overlay, overlayLineIdx: next });
+        renderNow();
+        renderDrawer();
+        return;
+      }
+      const stage = STAGES[state.stageIdx];
+      const lines = LINES[stage.key] || [];
+      const next = clampLineIdx(target, lines.length);
+      if (next === state.roundIdx) return;
+      state.roundIdx = next;
+      logEvent('LINE_JUMP', { stage: stage.key, roundIdx: next });
+      renderNow();
+      renderLines();
+      renderQuickRow();
+    }
+
     function selectLine(index) {
+      if (state.overlay) {
+        const overlay = OVERLAYS[state.overlay];
+        if (index < 0 || index >= overlay.lines.length) return;
+        state.overlayLineIdx = index;
+        logEvent('OVERLAY_LINE_SELECT', { overlay: state.overlay, overlayLineIdx: index, key: 'F' + (index + 1) });
+        renderNow();
+        renderDrawer();
+        return;
+      }
       const stage = STAGES[state.stageIdx];
       const lines = LINES[stage.key] || [];
       if (index < 0 || index >= lines.length) return;
@@ -1034,9 +1530,11 @@
     function toggleOverlay(key) {
       if (state.overlay === key) {
         state.overlay = null;
+        state.overlayLineIdx = 0;
         logEvent('OVERLAY_CLOSE', { overlay: key });
       } else {
         state.overlay = key;
+        state.overlayLineIdx = 0;
         logEvent('OVERLAY_OPEN', { overlay: key });
       }
       renderNow();
@@ -1047,6 +1545,7 @@
       if (state.overlay) {
         logEvent('OVERLAY_CLOSE', { overlay: state.overlay });
         state.overlay = null;
+        state.overlayLineIdx = 0;
         renderNow();
         renderDrawer();
       }
@@ -1066,6 +1565,7 @@
         stageIdx: 0,
         roundIdx: 0,
         overlay: null,
+        overlayLineIdx: 0,
         bookmarks: 0,
         log: [],
         callStart: Date.now(),
@@ -1086,7 +1586,7 @@
           calls: $mathCalls.value ? Number($mathCalls.value) : null,
           value: $mathValue.value ? Number($mathValue.value) : null,
           leak:  ($mathCalls.value && $mathValue.value)
-            ? Number($mathCalls.value) * Number($mathValue.value)
+            ? computeMonthlyLeak($mathCalls.value, $mathValue.value)
             : null,
         },
         events: state.log,
@@ -1108,13 +1608,19 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // MATH STRIP
+    // MATH STRIP — monthly voicemail leak
+    // VMs/day × $/job × 20 workdays × 20% close-rate floor.
+    // Displayed figure and logged figure must agree — single source.
     // ═══════════════════════════════════════════════════════════════
 
+    function computeMonthlyLeak(calls, value) {
+      const c = Number(calls) || 0;
+      const v = Number(value) || 0;
+      return c * v * 20 * 0.2;
+    }
+
     function updateMath() {
-      const c = Number($mathCalls.value) || 0;
-      const v = Number($mathValue.value) || 0;
-      const leak = c * v;
+      const leak = computeMonthlyLeak($mathCalls.value, $mathValue.value);
       if (leak > 0) {
         $mathResult.textContent = '$' + leak.toLocaleString();
         $mathResult.classList.remove('zero');
@@ -1122,7 +1628,13 @@
         $mathResult.textContent = '$ —';
         $mathResult.classList.add('zero');
       }
-      if (c && v) logEvent('MATH_UPDATE', { calls: c, value: v, leak: leak });
+      if ($mathCalls.value && $mathValue.value) {
+        logEvent('MATH_UPDATE', {
+          calls: Number($mathCalls.value),
+          value: Number($mathValue.value),
+          leak: leak,
+        });
+      }
     }
     $mathCalls.addEventListener('input', updateMath);
     $mathValue.addEventListener('input', updateMath);
@@ -1144,8 +1656,11 @@
         return;
       }
 
-      // F1–F9 — pick a line directly by index in the current stage
-      const fkeyMatch = e.key.match(/^F([1-9])$/);
+      // F1–F15 — pick a line directly by index in the current stage.
+      // Extended past F10 for PIVOT missing-trigger handlers (F11–F15).
+      // Note: F11 and F12 would normally open browser fullscreen/devtools —
+      // preventDefault here suppresses that during a live dial session.
+      const fkeyMatch = e.key.match(/^F([1-9]|1[0-5])$/);
       if (fkeyMatch) {
         e.preventDefault();
         selectLine(Number(fkeyMatch[1]) - 1);
@@ -1156,14 +1671,25 @@
       if (e.key === 'p' || e.key === 'P') { e.preventDefault(); jumpToStage(3); return; }
       if (e.key === 'c' || e.key === 'C') { e.preventDefault(); jumpToStage(4); return; }
 
-      if (e.key === 'ArrowLeft')  { e.preventDefault(); stepLine(-1); return; }
-      if (e.key === 'ArrowRight') { e.preventDefault(); stepLine(1);  return; }
+      // Shift + Arrow: step between STAGES (OPEN → PIVOT → QUANTIFY → PITCH → CLOSE → BOOKED).
+      // Checked BEFORE plain Arrow so Shift intercepts. Same effect as pressing the number key.
+      if (e.shiftKey && e.key === 'ArrowLeft')  { e.preventDefault(); jumpToStage(state.stageIdx - 1); return; }
+      if (e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); jumpToStage(state.stageIdx + 1); return; }
+      // ArrowLeft/Right: step one line. Alt/Option+Arrow: jump 5 at a time. Home/End: jump to edges.
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); stepLine(e.altKey ? -5 : -1); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); stepLine(e.altKey ?  5 :  1); return; }
+      if (e.key === 'Home')       { e.preventDefault(); jumpLine(0); return; }
+      if (e.key === 'End')        { e.preventDefault(); jumpLine(Infinity); return; }
 
       if (e.key === 'g' || e.key === 'G') { e.preventDefault(); toggleOverlay('G'); return; }
       if (e.key === 'o' || e.key === 'O') { e.preventDefault(); toggleOverlay('O'); return; }
       if (e.key === '$' || (e.shiftKey && e.key === '4')) { e.preventDefault(); toggleOverlay('$'); return; }
       if (e.key === 'w' || e.key === 'W') { e.preventDefault(); toggleOverlay('W'); return; }
       if (e.key === 'x' || e.key === 'X') { e.preventDefault(); toggleOverlay('X'); return; }
+      if (e.key === 'h' || e.key === 'H') { e.preventDefault(); toggleOverlay('H'); return; }
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleOverlay('D'); return; }
+      if (e.key === 'v' || e.key === 'V') { e.preventDefault(); toggleOverlay('V'); return; }
+      if (e.key === 'b' || e.key === 'B') { e.preventDefault(); toggleOverlay('B'); return; }
 
       if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); return; }
       if (e.key === ' ')      { e.preventDefault(); bookmark();     return; }

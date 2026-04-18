@@ -45,7 +45,27 @@ Key differences: Bravi leans into quoting automation and a B2B2C manufacturer ch
 3. The B2B2C manufacturer channel is worth watching -- if Bravi gains distribution through manufacturers, they bypass the SMB sales grind.
 4. CallLock should move fast on HVAC/plumbing positioning before Bravi expands beyond fenestration.
 
+## Model Translation to CallLock's ICP
+
+Bravi's ICP is one tier up from CallLock's (their floor is $1M revenue, $2K+ AOV, 10–100 employees; CallLock targets 3–15 employee HVAC/plumbing/electrical shops at $500K–$3M). The buyer psychology transfers; the firmographic filters and business-model mechanics do not.
+
+**Copy directly:**
+- Done-for-you setup framed as a *feature*, not a service. Owner-operators at any tier refuse to configure workflows.
+- Trigger-event list (lost a big lead, hired-and-lost a receptionist, seasonal surge, expanded hours) — identical at every revenue tier.
+- Vertical-focus discipline. Bravi owns fenestration before expanding; CallLock should own HVAC/plumbing/electrical before expanding.
+
+**Explicitly reject:**
+- Custom enterprise pricing ("book a demo for a quote"). Breaks SMB self-qualification math and signals "not for you" to a 2-truck operator.
+- Multi-week CSM-led onboarding. Can't pencil at sub-$10K ACV and 40+ customers/year.
+- LinkedIn-primary channel and trade conferences. Owner-operators are not on LinkedIn; they are in their truck.
+- Manufacturer + B2B2C "Squad" architecture. That world does not exist at the 2-truck tier.
+
+**Structural inversion:** Bravi optimizes for low-volume/high-ACV (~20 customers ≈ $200K ARR at $10K+ ACV). CallLock must optimize for high-volume/low-ACV (40+ customers at $3.5K–$9.5K ACV). Every GTM choice — pricing, setup, cycle length, channel — flows from that inversion.
+
+See [[decisions/product/DEC-2026-04-14-smb-gtm-model]] for the four commitments that operationalize this (published tiered pricing, 72-hour productized DFY setup, compressed sales cycle, target unit economics).
+
 ## See Also
 
+- [[decisions/product/DEC-2026-04-14-smb-gtm-model]] -- The GTM model that inverts Bravi's for CallLock's ICP
 - [[competitors/sameday-ai]] -- Primary direct competitor with 2M+ calls
 - [[competitors/drillbit]] -- Another YC-backed residential contractor platform
