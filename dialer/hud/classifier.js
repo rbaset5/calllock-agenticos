@@ -498,11 +498,27 @@ export function detectNewIntents(utterance, stage) {
     return { intent: 'confusion', confidence: clamp01(0.65 + stageBoost + (confusionHits - 1) * 0.1) };
   }
 
+  // Long-utterance guard: for monologues (>50 words), bridge/pain signals may
+  // co-occur with exit, authority, or pricing phrases. When bridge signals outnumber
+  // the competing intent, the prospect is venting — not exiting/redirecting/price-shopping.
+  // Compute once, reuse across all intent checks below.
+  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+  const isLongUtterance = wordCount > 50;
+  let _bridgeCountCache = null;
+  function bridgeDominates(intentHits) {
+    if (!isLongUtterance) return false;
+    if (_bridgeCountCache === null) {
+      _bridgeCountCache = Object.values(BRIDGE_KEYWORDS).reduce(
+        (sum, cfg) => sum + countPhraseMatches(text, cfg.phrases), 0);
+    }
+    return _bridgeCountCache > intentHits;
+  }
+
   // Exit-intent detection FIRST — DNC, wrong number, voicemail, hostile, closed.
   // Must run before wrong_person so "leave a message after the tone" matches as
   // voicemail exit, not gatekeeper/wrong_person.
   const exitHits = countPhraseMatches(text, EXIT_INTENT_PHRASES);
-  if (exitHits > 0) {
+  if (exitHits > 0 && !bridgeDominates(exitHits)) {
     return { intent: 'brush_off', confidence: clamp01(0.80 + (exitHits - 1) * 0.05) };
   }
 
@@ -585,13 +601,13 @@ export function detectNewIntents(utterance, stage) {
   // Check wrong person (after special intents — "take a message" in context of
   // complaining about answering services should not trigger authority_mismatch)
   const wpHits = countPhraseMatches(text, WRONG_PERSON_PHRASES);
-  if (wpHits > 0) {
+  if (wpHits > 0 && !bridgeDominates(wpHits)) {
     return { intent: 'authority_mismatch', confidence: clamp01(0.70 + (wpHits - 1) * 0.1) };
   }
 
   // Check pricing question
   const pqHits = countPhraseMatches(text, PRICING_QUESTION_PHRASES);
-  if (pqHits > 0) {
+  if (pqHits > 0 && !bridgeDominates(pqHits)) {
     const stageBoost = ['QUALIFIER', 'CLOSE', 'BRIDGE'].includes(stage) ? 0.1 : 0;
     return { intent: 'pricing_question', confidence: clamp01(0.68 + stageBoost + (pqHits - 1) * 0.08) };
   }
@@ -670,7 +686,6 @@ export function detectNewIntents(utterance, stage) {
   }
 
   // Short utterance heuristics (1-4 words, no other match found)
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
   if (wordCount <= 4) {
     const cleanText = text.replace(/[?.!,]/g, '').trim();
     const mapped = SHORT_UTTERANCE_MAP[cleanText];

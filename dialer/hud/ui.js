@@ -1372,6 +1372,8 @@ function dedupProbeLine(line) {
 
   // Only dedup probe/bridge/reset lines (not openers, closes, pitches, etc.)
   // Probes are the pain-discovery questions that can repeat across stages.
+  // Skip lines that start with "Hey " — these are opener intros, not probes.
+  if (/^Hey /i.test(line)) return line;
   const isProbe = /what (?:usually )?happens|when .+ calls? (?:come|comes) in/i.test(line);
   if (!isProbe) {
     lastDedupedInput = line;

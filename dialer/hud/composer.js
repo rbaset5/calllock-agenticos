@@ -83,7 +83,10 @@ export function generateNowSummary({ primaryIntent, tone = 'neutral', toneConfid
   }
   let summary = NOW_TEMPLATES[primaryIntent];
   if (tone && tone !== 'neutral' && tone !== 'unknown' && toneConfidence >= 0.6) {
-    summary += ` Sounds ${tone}.`;
+    const toneSuffix = `Sounds ${tone}.`;
+    if (!summary.includes(toneSuffix)) {
+      summary += ` ${toneSuffix}`;
+    }
   }
   return summary;
 }
