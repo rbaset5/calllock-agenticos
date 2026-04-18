@@ -547,6 +547,7 @@
 
     /* ── FAQ box ────────────────────────────────────── */
     #faq-box {
+      display: none;
       max-height: 40vh;
       overflow-y: auto;
       background: #111;
@@ -590,6 +591,66 @@
       0% { border-left: 3px solid #22c55e; padding-left: 8px; background: #22c55e11; }
       100% { border-left: 3px solid transparent; padding-left: 8px; background: transparent; }
     }
+    /* ── FAQ drop-drawer (Shift+Tab) ────────────────── */
+    #faq-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      pointer-events: none;
+    }
+    #faq-backdrop.active {
+      pointer-events: auto;
+    }
+    #faq-box.faq-popout {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100%);
+      width: 92vw;
+      max-width: 720px;
+      max-height: 80vh;
+      z-index: 1000;
+      border-radius: 0 0 16px 16px;
+      border: 1px solid #22c55e44;
+      border-top: none;
+      padding: 24px 32px 16px;
+      background: #0a0a0a;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    #faq-box.faq-popout.faq-drawer-open {
+      transform: translateX(-50%) translateY(0);
+    }
+    /* Drawer handle pill at bottom */
+    #faq-box.faq-popout::after {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      margin: 14px auto 0;
+    }
+    #faq-box.faq-popout .faq-header { display: none; }
+    #faq-box.faq-popout .faq-question {
+      font-size: 16px;
+      color: #e4e4e7;
+      font-weight: 600;
+    }
+    #faq-box.faq-popout .faq-answer {
+      display: block;
+      font-size: 15px;
+      color: #a1a1aa;
+      padding: 4px 0 12px;
+      line-height: 1.5;
+    }
+    #faq-box.faq-popout .faq-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    #faq-box.faq-popout .faq-item:last-child { border-bottom: none; }
+
     .faq-competitor-section {
       margin-top: 8px;
       padding-top: 6px;
@@ -794,6 +855,7 @@
       </div>
       <div class="side-panel-header">LINES</div>
       <div class="side-panel-feed" id="linesFeed"></div>
+      <div id="faq-backdrop"></div>
       <div id="faq-box"></div>
     </div>
     <div class="now-panel" id="nowPanel" data-stage="IDLE">

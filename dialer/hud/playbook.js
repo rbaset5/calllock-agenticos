@@ -15,7 +15,7 @@ export const PLAYBOOK = {
   // ── Scripted lines ──────────────────────────────────────────────
 
   opener:
-    'Hey {NAME}, this is Rashid over in {LOCATION} — cold call, quick question: when a call comes in while you\'re on a job, what happens to it?',
+    'Hey {NAME}, Rashid here — cold call, quick question: when a new customer calls and you can\'t pick up, what usually happens?',
 
   qualifier: 'How many calls a week do you think go unanswered?',
 
@@ -59,13 +59,14 @@ export const PLAYBOOK = {
   // ── FAQ — always-on quick answers for prospect questions ────────
 
   faq: [
-    { id: 'what', question: 'What do you do?', answer: "We answer your phone and book jobs when you can't — nights, weekends, when you're on a job." },
-    { id: 'how', question: 'How does it work?', answer: "When a call comes in and you can't pick up, it answers live. Asks what they need, where they are, gets their info, books them in. You see it in your calendar." },
-    { id: 'system', question: 'Does it work with my system?', answer: 'Works with Housecall Pro, Jobber, or pen-and-paper. No ServiceTitan required.' },
-    { id: 'afterhours', question: 'What about after hours?', answer: "That's when we catch most calls. After 5 PM, weekends, when you're on a job." },
-    { id: 'vs_answering', question: 'How is this different from an answering service?', answer: 'An answering service takes a message. We qualify the caller and book the job on the first call.' },
-    { id: 'tried_ai', question: 'I tried AI before and it was bad.', answer: "Most AI phone stuff is generic chatbots. We're built for contractor calls — scheduling, dispatch, quoting." },
-    { id: 'switch', question: 'Why should I switch?', answer: "You don't switch anything. Keep your tools. We just catch what falls through." },
+    { id: 'is_ai', question: 'Is it AI?', answer: "Yeah — but the point isn't the AI. The point is the customer gets handled live instead of hearing voicemail or waiting on a callback." },
+    { id: 'tried_ai', question: 'I tried AI before and it was bad.', answer: "Fair. Most AI phone tools sound robotic or break on real service calls. CallLock is built for contractor workflows — scheduling, urgency, routing, and booking." },
+    { id: 'vs_answering', question: 'How is this different from an answering service?', answer: "An answering service takes a message. CallLock handles the call. It qualifies the lead, books the job when appropriate, and escalates urgent issues instead of dropping a note in your inbox." },
+    { id: 'what', question: 'What do you do?', answer: "We're an AI receptionist for home-service businesses that answers, qualifies, books, and escalates in real time — so missed calls turn into handled jobs." },
+    { id: 'how', question: 'How does it work?', answer: "A customer calls. If you miss it, CallLock answers live, figures out what they need, collects the details, books the appointment or routes the call, and updates you right away." },
+    { id: 'afterhours', question: 'What about after hours?', answer: "That's where it helps most — nights, weekends, when you're on a job, or when the office is already tied up." },
+    { id: 'system', question: 'Does it work with my system?', answer: "Yes. It works with Housecall Pro, Jobber, ServiceTitan, Google Calendar, or even your current process. No rip-and-replace required." },
+    { id: 'switch', question: 'Why should I switch?', answer: "You don't need to rebuild your workflow. Keep your tools. CallLock sits behind what you already do and catches the jobs that would've gone unanswered." },
   ],
 
   // ── Competitor cheat sheet (conditional, from enrichment) ───────

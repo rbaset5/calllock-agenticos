@@ -432,13 +432,14 @@ async function emitInngestEvent(eventName, payload) {
   }
 }
 
-async function updateProspectStage(prospectId, outcome, demoScheduled) {
+async function updateProspectStage(prospectId, outcome, demoScheduled, callbackDate) {
   if (!supabase || !prospectId) return;
   const patch = {};
   if (outcome === 'answered_interested') {
     patch.stage = demoScheduled ? 'converted' : 'interested';
   } else if (outcome === 'answered_callback') {
     patch.stage = 'callback';
+    patch.next_action_date = callbackDate || null;
   } else if (outcome === 'wrong_number') {
     patch.stage = 'disqualified';
     patch.disqualification_reason = 'wrong_number';
@@ -573,12 +574,13 @@ async function writeOutcomeRecord(callSid) {
   await mergePendingHudSession(callSid);
 
   if (inserted && inserted.length > 0) {
-    await updateProspectStage(data.prospectId, mapped.outcome, mapped.demoScheduled);
+    await updateProspectStage(data.prospectId, mapped.outcome, mapped.demoScheduled, data.callbackDate);
     await emitInngestEvent(OUTBOUND_CALL_OUTCOME_EVENT, {
       tenant_id: OUTBOUND_TENANT_ID,
       prospect_id: data.prospectId,
       twilio_call_sid: callSid,
       outcome: mapped.outcome,
+      callback_date: data.callbackDate || null,
       source_version: OUTBOUND_SOURCE_VERSION,
     });
   }
@@ -598,6 +600,10 @@ app.get('/', (req, res) => {
 
 app.get('/combo', (req, res) => {
   res.sendFile(path.join(__dirname, 'combo.html'));
+});
+
+app.get('/study', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'study.html'));
 });
 
 app.get('/twilio-client.js', (_req, res) => {
@@ -695,7 +701,35 @@ app.get('/prospects', validateHudToken, async (_req, res) => {
       return;
     }
 
-    res.json({ prospects: (data || []).map(toFrontendProspect) });
+    // Fetch due callbacks (stage='callback' with next_action_date <= today)
+    let callbackProspects = [];
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: cbData } = await supabase
+        .from('outbound_prospects')
+        .select(`
+          id, business_name, phone, phone_normalized, website, address,
+          metro, timezone, total_score, score_tier, raw_source, next_action_date,
+          prospect_signals(signal_type, signal_tier, score, observed_at),
+          call_tests(result, called_at, local_time),
+          prospect_scores(total_score, tier, scored_at)
+        `)
+        .eq('tenant_id', OUTBOUND_TENANT_ID)
+        .eq('stage', 'callback')
+        .lte('next_action_date', today)
+        .order('next_action_date', { ascending: true })
+        .limit(50);
+      callbackProspects = (cbData || []).map((p) => ({
+        ...toFrontendProspect(p),
+        is_callback: true,
+        callback_date: p.next_action_date,
+      }));
+    } catch (cbErr) {
+      console.warn('[prospects] Callback query failed, returning call_ready only:', cbErr.message);
+    }
+
+    const freshProspects = (data || []).map(toFrontendProspect);
+    res.json({ prospects: [...callbackProspects, ...freshProspects] });
   } catch (err) {
     console.error('[prospects] Unexpected error:', err.message);
     res.status(500).json({ error: err.message });
@@ -1194,6 +1228,129 @@ app.post('/hud/session-log', validateHudToken, async (req, res) => {
 
   console.log('[hud/session-log] Staged pending hud_session for', twilio_call_sid);
   res.json({ ok: true, merged: false });
+});
+
+// =============================================================================
+// Inbound handlers — what happens when a prospect calls or texts back one of
+// our outbound caller-ID numbers (FL/MI/IL/TX/AZ).
+//
+// These routes are wired into Twilio per-number via the `voice_url` and
+// `sms_url` fields on each IncomingPhoneNumber. Set them to:
+//   Voice: ${CALL_SERVER_BASE_URL}/inbound/voice
+//   SMS:   ${CALL_SERVER_BASE_URL}/inbound/sms
+// =============================================================================
+
+// Forward inbound calls to Rashid's cell. If he doesn't pick up within 20s,
+// fall through to a recorded voicemail. Set INBOUND_FORWARD_TO in dialer/.env.
+const INBOUND_FORWARD_TO = process.env.INBOUND_FORWARD_TO || '';
+
+const INBOUND_VOICE_GREETING =
+  "Hi, you've reached CallLock. We couldn't get to the phone right now. " +
+  "Leave your name and a short message after the tone, and Rashid will call you back today.";
+// Inbound SMS is captured to Supabase but no auto-reply is sent — Rashid
+// replies personally so the first text the prospect sees is from a human.
+
+app.post('/inbound/voice', validateTwilioSignature, (req, res) => {
+  const { From, To, CallSid } = req.body;
+  console.log(`[inbound/voice] CallSid=${CallSid} From=${From} To=${To}`);
+
+  const VoiceResponse = twilio.twiml.VoiceResponse;
+  const response = new VoiceResponse();
+
+  if (INBOUND_FORWARD_TO) {
+    const dial = response.dial({ callerId: To, timeout: 20, answerOnBridge: true });
+    dial.number(INBOUND_FORWARD_TO);
+  }
+  // Fall-through: only reached if the dial above timed out / busy / no-answer.
+  response.say({ voice: 'Polly.Joanna' }, INBOUND_VOICE_GREETING);
+  response.record({
+    maxLength: 90,
+    playBeep: true,
+    transcribe: true,
+    transcribeCallback: `${CALL_SERVER_BASE_URL}/inbound/voicemail-transcription`,
+    action: `${CALL_SERVER_BASE_URL}/inbound/voicemail-complete`,
+  });
+  response.say({ voice: 'Polly.Joanna' }, "Thanks — we'll be in touch.");
+  response.hangup();
+
+  res.type('text/xml').send(response.toString());
+});
+
+// Twilio POSTs here when the recording finishes (or caller hangs up).
+app.post('/inbound/voicemail-complete', validateTwilioSignature, (req, res) => {
+  const { CallSid, From, To, RecordingSid, RecordingUrl, RecordingDuration } = req.body;
+  console.log(
+    `[inbound/voicemail] CallSid=${CallSid} From=${From} To=${To} ` +
+      `RecordingSid=${RecordingSid} duration=${RecordingDuration}s url=${RecordingUrl}`,
+  );
+
+  if (supabase) {
+    supabase
+      .from('inbound_missed_calls')
+      .insert({
+        kind: 'voice',
+        call_sid: CallSid,
+        from_number: From,
+        to_number: To,
+        recording_sid: RecordingSid,
+        recording_url: RecordingUrl,
+        duration_seconds: RecordingDuration ? parseInt(RecordingDuration, 10) : null,
+      })
+      .then(({ error }) => {
+        if (error) console.error('[inbound/voicemail] Supabase insert failed:', error.message);
+      });
+  }
+
+  const VoiceResponse = twilio.twiml.VoiceResponse;
+  const response = new VoiceResponse();
+  response.hangup();
+  res.type('text/xml').send(response.toString());
+});
+
+app.post('/inbound/voicemail-transcription', validateTwilioSignature, (req, res) => {
+  const { CallSid, RecordingSid, TranscriptionText, TranscriptionStatus } = req.body;
+  console.log(
+    `[inbound/voicemail-tx] CallSid=${CallSid} RecordingSid=${RecordingSid} ` +
+      `status=${TranscriptionStatus} text=${(TranscriptionText || '').slice(0, 200)}`,
+  );
+
+  if (supabase && TranscriptionStatus === 'completed' && TranscriptionText) {
+    supabase
+      .from('inbound_missed_calls')
+      .update({ transcription: TranscriptionText })
+      .eq('recording_sid', RecordingSid)
+      .then(({ error }) => {
+        if (error) console.error('[inbound/voicemail-tx] Supabase update failed:', error.message);
+      });
+  }
+
+  res.sendStatus(200);
+});
+
+app.post('/inbound/sms', validateTwilioSignature, (req, res) => {
+  const { From, To, Body, MessageSid } = req.body;
+  console.log(
+    `[inbound/sms] MessageSid=${MessageSid} From=${From} To=${To} body=${(Body || '').slice(0, 200)}`,
+  );
+
+  if (supabase) {
+    supabase
+      .from('inbound_missed_calls')
+      .insert({
+        kind: 'sms',
+        message_sid: MessageSid,
+        from_number: From,
+        to_number: To,
+        sms_body: Body || '',
+      })
+      .then(({ error }) => {
+        if (error) console.error('[inbound/sms] Supabase insert failed:', error.message);
+      });
+  }
+
+  // Empty MessagingResponse = no auto-reply. Rashid texts back personally.
+  const MessagingResponse = twilio.twiml.MessagingResponse;
+  res.type('text/xml').send(new MessagingResponse().toString());
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

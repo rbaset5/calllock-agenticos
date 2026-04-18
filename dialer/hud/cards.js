@@ -75,7 +75,7 @@ export const NATIVE_STAGE_CARDS = {
     moveType: 'ask',
     deliveryModifier: '',
     goal: 'Earn enough space to ask the first real question.',
-    primaryLine: "Hey {NAME}, this is Rashid over in {LOCATION} — cold call, quick question: when a call comes in while you're on a job, what happens to it?",
+    primaryLine: "Hey {NAME}, Rashid here — cold call, quick question: when a new customer calls and you can't pick up, what usually happens?",
     backupLine: "I know I'm catching you out of the blue — this'll take 20 seconds. When a new customer calls and you can't pick up, what usually happens?",
     why: 'The opener earns the right to continue. No pitch, just a question that makes them think.',
     listenFor: ['permission', 'impatience', 'what is this about', 'instant rejection'],

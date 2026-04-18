@@ -193,6 +193,18 @@
       margin-bottom: 8px;
     }
 
+    .callback-badge {
+      display: inline-block;
+      background: #854d0e;
+      color: #fbbf24;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
     .lead-company {
       font-size: 30px;
       font-weight: 700;
@@ -1045,6 +1057,7 @@
       main.innerHTML = `
         <div class="lead-card">
           <div class="lead-number">Lead ${currentIndex + 1} of ${leads.length}</div>
+          ${lead.is_callback ? `<div class="callback-badge">CALLBACK${lead.callback_date ? ' \u00B7 ' + lead.callback_date : ''}</div>` : ''}
           <div class="lead-company">${escapeHtml(lead.business_name || '')}</div>
           <div class="lead-phone">${formatPhone(lead.phone || '')}</div>
           <div class="lead-address">${escapeHtml(lead.address || '')}</div>
@@ -2034,15 +2047,24 @@
       // Check for remote stream (may already be captured by RTCPeerConnection patch)
       if (hudRemoteStream) {
         startProspectChannel();
-      } else {
-        // Wait up to 5s for remote track, then fallback to manual mode
-        setTimeout(() => {
-          if (!hudRemoteStream) {
-            console.warn('[hud-audio] No remote track after 5s, switching to manual mode');
-            hudChannel.postMessage({ type: 'AUDIO_MODE', mode: 'manual' });
-          }
-        }, 5000);
+        return;
       }
+      // Poll for remote track up to 15s before declaring manual mode.
+      // Twilio can take 5-10s to negotiate media on first call of a session,
+      // especially on combo page where the iframe reload races SDK init.
+      const pollStart = Date.now();
+      const pollTimer = setInterval(() => {
+        if (hudRemoteStream) {
+          clearInterval(pollTimer);
+          startProspectChannel();
+          return;
+        }
+        if (Date.now() - pollStart >= 15000) {
+          clearInterval(pollTimer);
+          console.warn('[hud-audio] MANUAL MODE LATCHED — no remote track after 15s. HUD will receive rep transcripts only.');
+          hudChannel.postMessage({ type: 'AUDIO_MODE', mode: 'manual' });
+        }
+      }, 1000);
     }
 
     function hudOnCallDisconnect() {

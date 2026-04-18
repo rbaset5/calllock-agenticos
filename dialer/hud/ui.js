@@ -140,6 +140,20 @@ for (const h of BRIDGE_HOTKEYS) {
   $bridgeHotkeyBar.appendChild(span);
 }
 
+// Stage → which hotkey bar is relevant.
+// IDLE and terminal stages hide both so the footer doesn't mislead the rep.
+const OBJECTION_BAR_STAGES = new Set(['OPENER', 'QUALIFIER', 'OBJECTION', 'GATEKEEPER', 'CLOSE', 'SEED_EXIT']);
+const BRIDGE_BAR_STAGES = new Set(['BRIDGE']);
+
+function updateHotkeyBarVisibility(stage) {
+  if (!$objHotkeyBar || !$bridgeHotkeyBar) return;
+  $objHotkeyBar.style.display = OBJECTION_BAR_STAGES.has(stage) ? '' : 'none';
+  $bridgeHotkeyBar.style.display = BRIDGE_BAR_STAGES.has(stage) ? '' : 'none';
+}
+
+// Initial state: IDLE → both hidden until first stage transition.
+updateHotkeyBarVisibility('IDLE');
+
 // ── FAQ box (always-on, rendered once) ───────────────────────
 
 const $faqBox = document.getElementById('faq-box');
@@ -237,6 +251,21 @@ function highlightFaqItem(faqId) {
 
 // Render FAQ on init (will re-render when prospect context arrives)
 renderFaqBox(null);
+
+// Backdrop click closes FAQ drawer
+const $faqBackdrop = document.getElementById('faq-backdrop');
+if ($faqBackdrop) {
+  $faqBackdrop.addEventListener('click', () => {
+    if ($faqBox && $faqBox.classList.contains('faq-drawer-open')) {
+      $faqBox.classList.remove('faq-drawer-open');
+      $faqBackdrop.classList.remove('active');
+      $faqBox.addEventListener('transitionend', function onEnd() {
+        $faqBox.removeEventListener('transitionend', onEnd);
+        $faqBox.classList.remove('faq-popout');
+      }, { once: true });
+    }
+  });
+}
 
 // ── Pause strip ──────────────────────────────────────────────
 
@@ -443,7 +472,6 @@ channel.addEventListener('message', (event) => {
 // ── Transcript handling ────────────────────────────────────────
 
 function handleInterimTranscript(msg) {
-  if (manualModeActive) return;
   if (msg.speaker !== 'prospect') return;
 
   // Run classifier for preview hint
@@ -534,8 +562,6 @@ async function loadSprintContext() {
 function handleFinalProspectTranscript(msg) {
   // Clear preview
   $previewHint.textContent = '';
-
-  if (manualModeActive) return;
 
   // Run rules classifier
   const result = classifyUtterance(msg.text, { stage: state.stage });
@@ -923,6 +949,33 @@ document.addEventListener('keydown', (e) => {
       break;
     }
 
+    // Shift+Tab — Toggle FAQ drop-drawer
+    case e.key === 'Tab' && e.shiftKey: {
+      e.preventDefault();
+      const backdrop = document.getElementById('faq-backdrop');
+      const isOpen = $faqBox && $faqBox.classList.contains('faq-drawer-open');
+      if (isOpen) {
+        // Slide up, then remove after transition
+        $faqBox.classList.remove('faq-drawer-open');
+        if (backdrop) backdrop.classList.remove('active');
+        $faqBox.addEventListener('transitionend', function onEnd() {
+          $faqBox.removeEventListener('transitionend', onEnd);
+          $faqBox.classList.remove('faq-popout');
+        }, { once: true });
+      } else if ($faqBox) {
+        // Add popout (offscreen), then slide in next frame
+        $faqBox.classList.add('faq-popout');
+        $faqBox.scrollTop = 0;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            $faqBox.classList.add('faq-drawer-open');
+            if (backdrop) backdrop.classList.add('active');
+          });
+        });
+      }
+      break;
+    }
+
     // ` (backtick) — Jump to FAQ box
     case e.key === '`' && !e.ctrlKey && !e.altKey && !e.metaKey: {
       if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) break;
@@ -1070,6 +1123,7 @@ function render() {
   // Stage bar
   renderStageBar();
   renderContextStrip();
+  updateHotkeyBarVisibility(state.stage);
 
   // Compose active card FIRST (needed by both center panel and side panes)
   const activeCard = composeActiveCard({

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CallLock — Study Mode</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Study mode banner (distinct purple so it can never be mistaken for live HUD) ── */
+    .study-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 36px;
+      padding: 0 20px;
+      background: linear-gradient(90deg, #4c1d95 0%, #6d28d9 50%, #4c1d95 100%);
+      border-bottom: 1px solid #7c3aed;
+      flex-shrink: 0;
+    }
+    .study-banner-label {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #ede9fe;
+      text-transform: uppercase;
+    }
+    .study-banner-hint {
+      font-size: 11px;
+      color: #c4b5fd;
+      letter-spacing: 0.3px;
+    }
+    .study-banner-controls {
+      display: flex;
+      gap: 8px;
+    }
+    .study-btn {
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid #a78bfa;
+      background: rgba(237, 233, 254, 0.12);
+      color: #ede9fe;
+      cursor: pointer;
+    }
+    .study-btn:hover {
+      background: rgba(237, 233, 254, 0.22);
+    }
+
+    /* ── Top bar ────────────────────────────────────── */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      padding: 0 20px;
+      background: #111;
+      border-bottom: 1px solid #262626;
+      flex-shrink: 0;
+    }
+    .top-bar-left { display: flex; align-items: center; gap: 16px; }
+    .top-bar-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #a78bfa;
+    }
+    .top-bar-right { display: flex; align-items: center; gap: 16px; }
+    .prospect-info { font-size: 13px; color: #a3a3a3; }
+    .prospect-info strong { color: #fff; font-weight: 600; }
+
+    /* ── Stage bar ──────────────────────────────────── */
+    .stage-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 64px;
+      padding: 0 20px;
+      background: #0f0f0f;
+      border-bottom: 1px solid #1a1a1a;
+      flex-shrink: 0;
+    }
+    .stage-pill {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid #333;
+      color: #525252;
+      background: transparent;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .stage-pill.past { color: #737373; border-color: #404040; background: #1a1a1a; }
+    .stage-pill.current {
+      color: #0a0a0a;
+      background: #a78bfa;
+      border-color: #a78bfa;
+      box-shadow: 0 0 12px rgba(167, 139, 250, 0.35);
+    }
+    .stage-pill.future { color: #404040; border-color: #2a2a2a; }
+
+    /* ── Main area ──────────────────────────────────── */
+    .main-area {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* Center panel — NOW card */
+    .now-panel {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      position: relative;
+      gap: 12px;
+    }
+    .now-goal {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #a78bfa;
+    }
+    .now-line {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      line-height: 1.35;
+      max-width: 740px;
+    }
+    .now-why {
+      font-size: 13px;
+      color: #737373;
+      max-width: 600px;
+      text-align: center;
+      font-style: italic;
+    }
+    .now-listen-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #525252;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+    .now-listen {
+      font-size: 12px;
+      color: #a3a3a3;
+      max-width: 600px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .now-selection {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .now-selection-chip {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 10px;
+      background: #78350f;
+      color: #fbbf24;
+      text-transform: uppercase;
+    }
+    .now-selection-chip.bridge {
+      background: #14532d;
+      color: #4ade80;
+    }
+
+    /* Side panels — Lines and Objections */
+    .side-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0d0d0d;
+      overflow: hidden;
+    }
+    .lines-panel { border-right: 1px solid #1a1a1a; }
+    .objections-panel { border-left: 1px solid #1a1a1a; }
+
+    .side-panel-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #525252;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1a1a1a;
+      flex-shrink: 0;
+    }
+    .side-panel-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .side-panel-feed::-webkit-scrollbar { width: 4px; }
+    .side-panel-feed::-webkit-scrollbar-track { background: transparent; }
+    .side-panel-feed::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+    .line-bank-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .line-bank-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: #525252;
+      padding: 0 4px;
+    }
+    .line-bank-row {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #262626;
+      border-left-width: 3px;
+      border-radius: 10px;
+      background: #111;
+      color: #e5e5e5;
+      text-align: left;
+    }
+    .line-bank-row.stage { border-left-color: #a78bfa; }
+    .line-bank-row.objection { border-left-color: #f59e0b; }
+    .line-bank-row.objection.active {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+    }
+    .line-bank-row.bridge { border-left-color: #22c55e; }
+    .line-bank-row.bridge.active {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.08);
+    }
+    .line-bank-label {
+      min-width: 140px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #a3a3a3;
+      text-transform: uppercase;
+    }
+    .line-bank-text {
+      font-size: 13px;
+      line-height: 1.4;
+      color: #f5f5f5;
+    }
+
+    /* ── Hotkey legend ──────────────────────────────── */
+    .hotkey-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      min-height: 36px;
+      padding: 6px 20px;
+      background: #0d0d0d;
+      border-top: 1px solid #1a1a1a;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .hotkey-bar.objection-hotkey-bar {
+      border-top: none;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .hotkey-item { font-size: 11px; color: #525252; }
+    .hotkey-item kbd {
+      display: inline-block;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #737373;
+      margin-right: 3px;
+    }
+
+    /* ── FAQ drawer ─────────────────────────────────── */
+    #faq-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
+      display: none;
+    }
+    #faq-backdrop.active { display: block; }
+    #faq-box {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100%);
+      width: 92vw;
+      max-width: 720px;
+      max-height: 80vh;
+      overflow-y: auto;
+      z-index: 1000;
+      border-radius: 0 0 16px 16px;
+      border: 1px solid #7c3aed;
+      border-top: none;
+      padding: 24px 32px 16px;
+      background: #0a0a0a;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    #faq-box.open {
+      display: block;
+      transform: translateX(-50%) translateY(0);
+    }
+    .faq-item {
+      padding: 10px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-question {
+      font-size: 15px;
+      color: #ede9fe;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .faq-answer {
+      font-size: 14px;
+      color: #a1a1aa;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Study mode banner -->
+  <div class="study-banner">
+    <div class="study-banner-label">📚 STUDY MODE · NO LIVE CALL</div>
+    <div class="study-banner-hint" id="studyHint">→ next stage · ← toggle primary/backup · ⇧← back stage · 1-4 drill · ` FAQ · n next lead · Esc reset</div>
+    <div class="study-banner-controls">
+      <button class="study-btn" id="btn-next-lead">Next lead</button>
+      <button class="study-btn" id="btn-reset">Reset</button>
+    </div>
+  </div>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <span class="top-bar-label">SALES HUD — DRILL</span>
+    </div>
+    <div class="top-bar-right">
+      <span class="prospect-info" id="prospectInfo">Loading lead…</span>
+    </div>
+  </div>
+
+  <!-- Stage bar -->
+  <div class="stage-bar" id="stageBar">
+    <span class="stage-pill future" data-stage="IDLE">IDLE</span>
+    <span class="stage-pill future" data-stage="GATEKEEPER">GK</span>
+    <span class="stage-pill future" data-stage="OPENER">OPEN</span>
+    <span class="stage-pill future" data-stage="PERMISSION_MOMENT">PERM</span>
+    <span class="stage-pill future" data-stage="MINI_PITCH">MINI</span>
+    <span class="stage-pill future" data-stage="WRONG_PERSON">WRONG</span>
+    <span class="stage-pill future" data-stage="BRIDGE">BRIDGE</span>
+    <span class="stage-pill future" data-stage="QUALIFIER">QUAL</span>
+    <span class="stage-pill future" data-stage="PRICING">PRICE</span>
+    <span class="stage-pill future" data-stage="CLOSE">CLOSE</span>
+    <span class="stage-pill future" data-stage="OBJECTION">OBJ</span>
+    <span class="stage-pill future" data-stage="EXIT">EXIT</span>
+    <span class="stage-pill future" data-stage="BOOKED">BOOKED</span>
+  </div>
+
+  <!-- Main area: 3-column layout -->
+  <div class="main-area">
+    <div class="side-panel lines-panel">
+      <div class="side-panel-header">LINES</div>
+      <div class="side-panel-feed" id="linesFeed"></div>
+    </div>
+    <div class="now-panel">
+      <div class="now-goal" id="nowGoal"></div>
+      <div class="now-line" id="nowLine">Press → to start drilling</div>
+      <div class="now-why" id="nowWhy"></div>
+      <div class="now-listen-label" id="nowListenLabel" style="display:none">LISTEN FOR</div>
+      <div class="now-listen" id="nowListen"></div>
+      <div class="now-selection" id="nowSelection"></div>
+    </div>
+    <div class="side-panel objections-panel">
+      <div class="side-panel-header">OBJECTIONS</div>
+      <div class="side-panel-feed" id="objectionsFeed"></div>
+    </div>
+  </div>
+
+  <!-- Hotkey legend -->
+  <div class="hotkey-bar objection-hotkey-bar" id="objection-hotkey-bar"></div>
+  <div class="hotkey-bar objection-hotkey-bar" id="bridge-hotkey-bar"></div>
+  <div class="hotkey-bar" id="hotkey-bar"></div>
+
+  <!-- FAQ drawer -->
+  <div id="faq-backdrop"></div>
+  <div id="faq-box"></div>
+
+  <script type="module" src="./hud/study.js"></script>
+</body>
+</html>
