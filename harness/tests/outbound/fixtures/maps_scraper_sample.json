@@ -1,0 +1,136 @@
+[
+  {
+    "title": "Cohort A Perfect 1",
+    "phone": "+12485550101",
+    "address": "100 Main St, Farmington Hills, MI 48331",
+    "website": "https://cohort-a-perfect-1.example",
+    "rating": 4.2,
+    "review_count": 75,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": [{"text": "Great service", "rating": 5, "timestamp": "2 weeks ago"}]
+  },
+  {
+    "title": "Cohort A Lower Rating Boundary",
+    "phone": "2485550102",
+    "address": "101 Main St, Troy, MI 48083",
+    "rating": 4.0,
+    "review_count": 50,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": [{"text": "Fine", "rating": 4, "timestamp": "1 month ago"}]
+  },
+  {
+    "title": "Cohort A Upper Rating Boundary",
+    "phone": "(248) 555-0103",
+    "address": "102 Main St, Royal Oak, MI 48067",
+    "rating": 4.5,
+    "review_count": 100,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": [{"text": "Good", "rating": 5, "timestamp": "3 days ago"}]
+  },
+  {
+    "title": "Rating Below Floor",
+    "phone": "+12485550104",
+    "address": "103 Main St, Troy, MI 48083",
+    "rating": 3.9,
+    "review_count": 60,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": [{"text": "Meh", "rating": 3, "timestamp": "1 week ago"}]
+  },
+  {
+    "title": "Rating Above Ceiling",
+    "phone": "+12485550105",
+    "address": "104 Main St, Troy, MI 48083",
+    "rating": 4.6,
+    "review_count": 60,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": [{"text": "Excellent", "rating": 5, "timestamp": "1 week ago"}]
+  },
+  {
+    "title": "Review Count Below Floor",
+    "phone": "+12485550106",
+    "address": "105 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "review_count": 49,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": []
+  },
+  {
+    "title": "Review Count Above Ceiling",
+    "phone": "+12485550107",
+    "address": "106 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "review_count": 101,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": []
+  },
+  {
+    "title": "Missing Phone",
+    "phone": "",
+    "address": "107 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "review_count": 75,
+    "open_hours": {"Monday": "Open 24 hours"},
+    "user_reviews": []
+  },
+  {
+    "title": "Toll Free Number",
+    "phone": "+18005550108",
+    "address": "108 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "review_count": 75,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": []
+  },
+  {
+    "title": "Missing Rating",
+    "phone": "+12485550109",
+    "address": "109 Main St, Troy, MI 48083",
+    "review_count": 75,
+    "open_hours": {"Monday": "Open 24 hours"},
+    "user_reviews": []
+  },
+  {
+    "title": "Missing Review Count",
+    "phone": "+12485550110",
+    "address": "110 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "open_hours": {"Monday": "Open 24 hours"},
+    "user_reviews": []
+  },
+  {
+    "title": "Empty Hours Dict",
+    "phone": "+12485550111",
+    "address": "111 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "review_count": 75,
+    "open_hours": {},
+    "user_reviews": []
+  },
+  {
+    "title": "LSA Overlap",
+    "phone": "+12485550112",
+    "address": "112 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "review_count": 75,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": []
+  },
+  {
+    "title": "Business Hours Only (no after-hours)",
+    "phone": "+12485550113",
+    "address": "113 Main St, Troy, MI 48083",
+    "rating": 4.2,
+    "review_count": 75,
+    "open_hours": {"Monday": "9 AM - 5 PM", "Tuesday": "9 AM - 5 PM", "Wednesday": "9 AM - 5 PM", "Thursday": "9 AM - 5 PM", "Friday": "9 AM - 5 PM"},
+    "user_reviews": []
+  },
+  {
+    "title": "Cohort A Perfect 2",
+    "phone": "+12485550114",
+    "address": "114 Main St, Troy, MI 48083",
+    "rating": 4.3,
+    "review_count": 80,
+    "open_hours": {"Monday": "Open 24 hours", "Tuesday": "Open 24 hours", "Wednesday": "Open 24 hours", "Thursday": "Open 24 hours", "Friday": "Open 24 hours", "Saturday": "Open 24 hours", "Sunday": "Open 24 hours"},
+    "user_reviews": [{"text": "Saved us on a hot day", "rating": 5, "timestamp": "5 days ago"}]
+  }
+]
