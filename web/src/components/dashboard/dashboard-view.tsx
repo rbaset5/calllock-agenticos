@@ -115,7 +115,7 @@ export function DashboardView({ calls }: DashboardViewProps) {
           </span>
           <nav className="hidden md:flex gap-6 items-center">
             <a
-              href="/"
+              href="/app"
               className="text-[#acabaa] text-sm cursor-pointer hover:text-[#e7e5e4] transition-colors"
             >
               Activity
@@ -166,7 +166,7 @@ export function DashboardView({ calls }: DashboardViewProps) {
               Refresh
             </button>
             <a
-              href="/"
+              href="/app"
               className="flex items-center gap-2 px-4 py-2 bg-[#c6c6c7] text-[#3f4041] rounded-lg font-bold text-sm hover:opacity-90 transition-all"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,7 +256,7 @@ export function DashboardView({ calls }: DashboardViewProps) {
                   Recent Activity
                 </h3>
                 <a
-                  href="/"
+                  href="/app"
                   className="text-xs text-[#c6c6c7] hover:underline font-bold"
                 >
                   View All
