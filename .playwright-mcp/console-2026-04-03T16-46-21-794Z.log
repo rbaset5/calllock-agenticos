@@ -1,0 +1,13 @@
+[      76ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   30869ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   30870ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   30870ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: MINI_PITCH: no clear bridge signal, awaiting LLM @ http://localhost:3004/hud/ui.js:466
+[   34058ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   34058ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   41374ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   41374ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   41374ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:466
+[   49509ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   49509ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   65003ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   65003ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

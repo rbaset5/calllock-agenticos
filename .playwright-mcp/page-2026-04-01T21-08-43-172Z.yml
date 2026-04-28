@@ -1,0 +1,676 @@
+- generic [active] [ref=e1]:
+  - link [ref=e2] [cursor=pointer]:
+    - /url: "#"
+    - text: ___
+  - generic [ref=e4]:
+    - navigation [ref=e5]:
+      - generic [ref=e8]:
+        - generic [ref=e13]:
+          - link "Angi Logo" [ref=e16] [cursor=pointer]:
+            - /url: https://angi.com
+            - img "Angi Logo" [ref=e17]
+          - generic [ref=e18]:
+            - link "Join as a Pro" [ref=e20] [cursor=pointer]:
+              - /url: https://signup.angi.com/pro
+            - generic [ref=e21]:
+              - link "Log In" [ref=e22] [cursor=pointer]:
+                - /url: https://www.angi.com/oauth2/start
+              - link "Sign Up" [ref=e23] [cursor=pointer]:
+                - /url: https://www.angi.com/create-account
+        - generic [ref=e29]:
+          - link "Interior" [ref=e32] [cursor=pointer]:
+            - /url: "#Interior"
+          - link "Exterior" [ref=e35] [cursor=pointer]:
+            - /url: "#Exterior"
+          - link "Lawn & Garden" [ref=e38] [cursor=pointer]:
+            - /url: "#Lawn & Garden"
+          - link "More" [ref=e41] [cursor=pointer]:
+            - /url: "#More"
+          - link "Articles & Advice" [ref=e44] [cursor=pointer]:
+            - /url: "#Articles & Advice"
+    - main [ref=e45]:
+      - generic [ref=e47]:
+        - generic "The one you trust to find the ones you trust." [ref=e50]:
+          - generic [ref=e53]:
+            - generic [ref=e55]:
+              - img "A contractor carries removed vinyl siding and trim pieces along the side of a house during an exterior renovation, walking on a narrow path beside the home." [ref=e57]
+              - img "A tree trimming professional wearing safety gear cuts a fallen tree trunk with a chainsaw in a grassy yard." [ref=e59]
+              - img "A roofer wearing safety gear works on a sloped roof using a harness and rope." [ref=e61]
+              - img "An electrician smiles while testing exposed wiring on the exterior wall of a home." [ref=e63]
+              - img "A contractor installs insulation on the exterior of a home using a power drill." [ref=e65]
+              - img "A contractor uses a power drill to fasten wooden boards while constructing an outdoor structure." [ref=e67]
+              - img "A pest control professional examines a crawl space under a home using a flashlight." [ref=e69]
+              - img "A professional cleans debris from a roof gutter while standing on a ladder beside a house." [ref=e71]
+              - img "A landscaping professional pushes a lawn mower along a garden path, trimming grass beside shrubs and trees." [ref=e73]
+            - generic [ref=e74]:
+              - heading "The one you trust to find the ones you trust." [level=1] [ref=e76]
+              - search [ref=e78]:
+                - generic [ref=e80]:
+                  - generic [ref=e81]:
+                    - generic [ref=e82]: What can we help you with?
+                    - textbox "What can we help you with?" [ref=e83]
+                  - generic [ref=e85]:
+                    - generic [ref=e87]:
+                      - button "Go to update ZIP" [ref=e88] [cursor=pointer]:
+                        - img [ref=e89]
+                      - generic [ref=e91]:
+                        - generic [ref=e92]: Zip Code
+                        - spinbutton "Zip Code" [ref=e93]: "48323"
+                    - button "Search" [ref=e95] [cursor=pointer]:
+                      - img "search" [ref=e96]
+        - generic [ref=e100]:
+          - link "Handyperson Handyperson" [ref=e101] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/task/39794
+            - img "Handyperson" [ref=e102]
+            - paragraph [ref=e103]: Handyperson
+          - link "Landscaping Landscaping" [ref=e104] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/12046
+            - img "Landscaping" [ref=e105]
+            - paragraph [ref=e106]: Landscaping
+          - link "Plumbing Plumbing" [ref=e107] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/12058
+            - img "Plumbing" [ref=e108]
+            - paragraph [ref=e109]: Plumbing
+          - link "Electrical Electrical" [ref=e110] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/12026
+            - img "Electrical" [ref=e111]
+            - paragraph [ref=e112]: Electrical
+          - link "Remodeling Remodeling" [ref=e113] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/12001
+            - img "Remodeling" [ref=e114]
+            - paragraph [ref=e115]: Remodeling
+          - link "Roofing Roofing" [ref=e116] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/10217
+            - img "Roofing" [ref=e117]
+            - paragraph [ref=e118]: Roofing
+          - link "Painting Painting" [ref=e119] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/12054
+            - img "Painting" [ref=e120]
+            - paragraph [ref=e121]: Painting
+          - link "Cleaning Cleaning" [ref=e122] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/10205
+            - img "Cleaning" [ref=e123]
+            - paragraph [ref=e124]: Cleaning
+          - link "HVAC HVAC" [ref=e125] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/10211
+            - img "HVAC" [ref=e126]
+            - paragraph [ref=e127]: HVAC
+          - link "Windows Windows" [ref=e128] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/12080
+            - img "Windows" [ref=e129]
+            - paragraph [ref=e130]: Windows
+          - link "Concrete Concrete" [ref=e131] [cursor=pointer]:
+            - /url: https://request.angi.com/service-request/category/12015
+            - img "Concrete" [ref=e132]
+            - paragraph [ref=e133]: Concrete
+        - generic [ref=e136]:
+          - heading "Most in-demand home services in 48323" [level=2] [ref=e138]
+          - generic [ref=e139]: Don't miss your chance to book a pro
+          - list [ref=e140]:
+            - listitem [ref=e141]:
+              - article [ref=e142]:
+                - link "View Cleaning &amp; Maid Services project details" [ref=e143] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12014
+                  - generic [ref=e144]:
+                    - img "Cleaning & Maid Services" [ref=e147]
+                    - generic [ref=e148]:
+                      - heading "Cleaning & Maid Services" [level=3] [ref=e149]
+                      - generic [ref=e151]:
+                        - img [ref=e152]
+                        - generic [ref=e154]:
+                          - generic [ref=e157]:
+                            - generic [ref=e161]:
+                              - generic [ref=e162]: "1"
+                              - generic [ref=e163]: "2"
+                            - generic [ref=e167]:
+                              - generic [ref=e168]: "3"
+                              - generic [ref=e169]: "4"
+                              - generic [ref=e170]: "5"
+                              - generic [ref=e171]: "6"
+                              - generic [ref=e172]: "7"
+                              - generic [ref=e173]: "8"
+                              - generic [ref=e174]: "9"
+                              - generic [ref=e175]: "0"
+                              - generic [ref=e176]: "1"
+                          - generic [ref=e177]: homeowners interested
+            - listitem [ref=e178]:
+              - article [ref=e179]:
+                - link "View Plumbing project details" [ref=e180] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12058
+                  - generic [ref=e181]:
+                    - img "Plumbing" [ref=e184]
+                    - generic [ref=e185]:
+                      - heading "Plumbing" [level=3] [ref=e186]
+                      - generic [ref=e188]:
+                        - img [ref=e189]
+                        - generic [ref=e191]:
+                          - generic [ref=e194]:
+                            - generic [ref=e198]:
+                              - generic [ref=e199]: "0"
+                              - generic [ref=e200]: "1"
+                            - generic [ref=e204]:
+                              - generic [ref=e205]: "4"
+                              - generic [ref=e206]: "5"
+                              - generic [ref=e207]: "6"
+                              - generic [ref=e208]: "7"
+                              - generic [ref=e209]: "8"
+                              - generic [ref=e210]: "9"
+                              - generic [ref=e211]: "0"
+                              - generic [ref=e212]: "1"
+                              - generic [ref=e213]: "2"
+                              - generic [ref=e214]: "3"
+                              - generic [ref=e215]: "4"
+                              - generic [ref=e216]: "5"
+                              - generic [ref=e217]: "6"
+                          - generic [ref=e218]: homeowners interested
+            - listitem [ref=e219]:
+              - article [ref=e220]:
+                - link "View Handyman Service project details" [ref=e221] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12039
+                  - generic [ref=e222]:
+                    - img "Handyman Service" [ref=e225]
+                    - generic [ref=e226]:
+                      - heading "Handyman Service" [level=3] [ref=e227]
+                      - generic [ref=e229]:
+                        - img [ref=e230]
+                        - generic [ref=e232]:
+                          - generic [ref=e235]:
+                            - generic [ref=e239]:
+                              - generic [ref=e240]: "0"
+                              - generic [ref=e241]: "1"
+                            - generic [ref=e245]:
+                              - generic [ref=e246]: "0"
+                              - generic [ref=e247]: "1"
+                              - generic [ref=e248]: "2"
+                              - generic [ref=e249]: "3"
+                              - generic [ref=e250]: "4"
+                              - generic [ref=e251]: "5"
+                              - generic [ref=e252]: "6"
+                              - generic [ref=e253]: "7"
+                              - generic [ref=e254]: "8"
+                              - generic [ref=e255]: "9"
+                              - generic [ref=e256]: "0"
+                              - generic [ref=e257]: "1"
+                              - generic [ref=e258]: "2"
+                              - generic [ref=e259]: "3"
+                              - generic [ref=e260]: "4"
+                              - generic [ref=e261]: "5"
+                          - generic [ref=e262]: homeowners interested
+            - listitem [ref=e263]:
+              - article [ref=e264]:
+                - link "View Roofing project details" [ref=e265] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12061
+                  - generic [ref=e266]:
+                    - img "Roofing" [ref=e269]
+                    - generic [ref=e270]:
+                      - heading "Roofing" [level=3] [ref=e271]
+                      - generic [ref=e273]:
+                        - img [ref=e274]
+                        - generic [ref=e276]:
+                          - generic [ref=e279]:
+                            - generic [ref=e283]:
+                              - generic [ref=e284]: "0"
+                              - generic [ref=e285]: "1"
+                            - generic [ref=e289]:
+                              - generic [ref=e290]: "0"
+                              - generic [ref=e291]: "1"
+                              - generic [ref=e292]: "2"
+                              - generic [ref=e293]: "3"
+                              - generic [ref=e294]: "4"
+                              - generic [ref=e295]: "5"
+                              - generic [ref=e296]: "6"
+                              - generic [ref=e297]: "7"
+                              - generic [ref=e298]: "8"
+                              - generic [ref=e299]: "9"
+                              - generic [ref=e300]: "0"
+                              - generic [ref=e301]: "1"
+                              - generic [ref=e302]: "2"
+                              - generic [ref=e303]: "3"
+                              - generic [ref=e304]: "4"
+                          - generic [ref=e305]: homeowners interested
+            - listitem [ref=e306]:
+              - article [ref=e307]:
+                - link "View Painting project details" [ref=e308] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12054
+                  - generic [ref=e309]:
+                    - img "Painting" [ref=e312]
+                    - generic [ref=e313]:
+                      - heading "Painting" [level=3] [ref=e314]
+                      - generic [ref=e316]:
+                        - img [ref=e317]
+                        - generic [ref=e319]:
+                          - generic [ref=e322]:
+                            - generic [ref=e326]:
+                              - generic [ref=e327]: "0"
+                              - generic [ref=e328]: "1"
+                            - generic [ref=e332]:
+                              - generic [ref=e333]: "0"
+                              - generic [ref=e334]: "1"
+                              - generic [ref=e335]: "2"
+                              - generic [ref=e336]: "3"
+                              - generic [ref=e337]: "4"
+                              - generic [ref=e338]: "5"
+                              - generic [ref=e339]: "6"
+                              - generic [ref=e340]: "7"
+                              - generic [ref=e341]: "8"
+                              - generic [ref=e342]: "9"
+                              - generic [ref=e343]: "0"
+                              - generic [ref=e344]: "1"
+                              - generic [ref=e345]: "2"
+                              - generic [ref=e346]: "3"
+                          - generic [ref=e347]: homeowners interested
+            - listitem [ref=e348]:
+              - article [ref=e349]:
+                - link "View Fencing Service project details" [ref=e350] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12030
+                  - generic [ref=e351]:
+                    - img "Fencing Service" [ref=e354]
+                    - generic [ref=e355]:
+                      - heading "Fencing Service" [level=3] [ref=e356]
+                      - generic [ref=e358]:
+                        - img [ref=e359]
+                        - generic [ref=e361]:
+                          - generic [ref=e364]:
+                            - generic [ref=e368]:
+                              - generic [ref=e369]: "0"
+                              - generic [ref=e370]: "1"
+                            - generic [ref=e374]:
+                              - generic [ref=e375]: "0"
+                              - generic [ref=e376]: "1"
+                              - generic [ref=e377]: "2"
+                              - generic [ref=e378]: "3"
+                              - generic [ref=e379]: "4"
+                              - generic [ref=e380]: "5"
+                              - generic [ref=e381]: "6"
+                              - generic [ref=e382]: "7"
+                              - generic [ref=e383]: "8"
+                              - generic [ref=e384]: "9"
+                              - generic [ref=e385]: "0"
+                              - generic [ref=e386]: "1"
+                              - generic [ref=e387]: "2"
+                          - generic [ref=e388]: homeowners interested
+            - listitem [ref=e389]:
+              - article [ref=e390]:
+                - link "View Addition and Remodeling project details" [ref=e391] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12001
+                  - generic [ref=e392]:
+                    - img "Addition and Remodeling" [ref=e395]
+                    - generic [ref=e396]:
+                      - heading "Addition and Remodeling" [level=3] [ref=e397]
+                      - generic [ref=e399]:
+                        - img [ref=e400]
+                        - generic [ref=e402]:
+                          - generic [ref=e405]:
+                            - generic [ref=e409]:
+                              - generic [ref=e410]: "0"
+                              - generic [ref=e411]: "1"
+                            - generic [ref=e415]:
+                              - generic [ref=e416]: "0"
+                              - generic [ref=e417]: "1"
+                              - generic [ref=e418]: "2"
+                              - generic [ref=e419]: "3"
+                              - generic [ref=e420]: "4"
+                              - generic [ref=e421]: "5"
+                              - generic [ref=e422]: "6"
+                              - generic [ref=e423]: "7"
+                              - generic [ref=e424]: "8"
+                              - generic [ref=e425]: "9"
+                              - generic [ref=e426]: "0"
+                              - generic [ref=e427]: "1"
+                          - generic [ref=e428]: homeowners interested
+            - listitem [ref=e429]:
+              - article [ref=e430]:
+                - link "View Electrical Service project details" [ref=e431] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/category/12026
+                  - generic [ref=e432]:
+                    - img "Electrical Service" [ref=e435]
+                    - generic [ref=e436]:
+                      - heading "Electrical Service" [level=3] [ref=e437]
+                      - generic [ref=e439]:
+                        - img [ref=e440]
+                        - generic [ref=e442]:
+                          - generic [ref=e445]:
+                            - generic [ref=e449]:
+                              - generic [ref=e450]: "0"
+                              - generic [ref=e451]: "1"
+                            - generic [ref=e455]:
+                              - generic [ref=e456]: "0"
+                              - generic [ref=e457]: "1"
+                              - generic [ref=e458]: "2"
+                              - generic [ref=e459]: "3"
+                              - generic [ref=e460]: "4"
+                              - generic [ref=e461]: "5"
+                              - generic [ref=e462]: "6"
+                              - generic [ref=e463]: "7"
+                              - generic [ref=e464]: "8"
+                              - generic [ref=e465]: "9"
+                              - generic [ref=e466]: "0"
+                              - generic [ref=e467]: "1"
+                          - generic [ref=e468]: homeowners interested
+        - generic [ref=e472]:
+          - generic [ref=e473]:
+            - generic [ref=e474]: Knowledge is priceless - so our cost guides are free.
+            - generic [ref=e475]: Sign up to get free project cost info in your inbox.
+          - generic [ref=e477]:
+            - generic [ref=e478]:
+              - generic [ref=e480]:
+                - img [ref=e482]
+                - textbox [ref=e486]:
+                  - /placeholder: Email address
+              - generic [ref=e488]:
+                - img [ref=e490]
+                - spinbutton [ref=e494]: "48323"
+            - button "Sign me up" [ref=e495] [cursor=pointer]
+        - generic [ref=e498]:
+          - heading "Popular home projects" [level=2] [ref=e500]
+          - list [ref=e502]:
+            - listitem [ref=e503]:
+              - article [ref=e504]:
+                - link "View Handyperson for Small Projects project details" [ref=e505] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/task/39794
+                  - generic [ref=e507]:
+                    - heading "Handyperson for Small Projects" [level=3] [ref=e508]
+                    - generic [ref=e509]:
+                      - img [ref=e510]:
+                        - img [ref=e511]
+                        - generic [ref=e513]:
+                          - generic [ref=e514]: "4.6"
+                          - generic [ref=e515]: (599k+)
+                      - generic [ref=e516]:
+                        - generic [ref=e517]: "|"
+                        - generic [ref=e518]: from $158
+                  - img "Person putting a wrench in their tool belt" [ref=e520]
+            - listitem [ref=e521]:
+              - article [ref=e522]:
+                - link "View One-time Cleaning Service project details" [ref=e523] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/task/40006
+                  - generic [ref=e525]:
+                    - heading "One-time Cleaning Service" [level=3] [ref=e526]
+                    - generic [ref=e527]:
+                      - img [ref=e528]:
+                        - img [ref=e529]
+                        - generic [ref=e531]:
+                          - generic [ref=e532]: "4.5"
+                          - generic [ref=e533]: (314k+)
+                      - generic [ref=e534]:
+                        - generic [ref=e535]: "|"
+                        - generic [ref=e536]: from $102
+                  - img "Cleaning" [ref=e538]
+            - listitem [ref=e539]:
+              - article [ref=e540]:
+                - link "View Air Conditioning Service &amp; Repair project details" [ref=e541] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/task/40074
+                  - generic [ref=e543]:
+                    - heading "Air Conditioning Service & Repair" [level=3] [ref=e544]
+                    - generic [ref=e545]:
+                      - img [ref=e546]:
+                        - img [ref=e547]
+                        - generic [ref=e549]:
+                          - generic [ref=e550]: "4.7"
+                          - generic [ref=e551]: (306k+)
+                      - generic [ref=e552]:
+                        - generic [ref=e553]: "|"
+                        - generic [ref=e554]: from $350
+                  - img "Central Air Conditioner" [ref=e556]
+        - generic [ref=e559]:
+          - heading "Keep your home in tip-top shape" [level=2] [ref=e561]
+          - list [ref=e563]:
+            - listitem [ref=e564]:
+              - article [ref=e565]:
+                - link "View Faucet &amp; Plumbing Repair Services project details" [ref=e566] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/task/40113
+                  - generic [ref=e568]:
+                    - heading "Faucet & Plumbing Repair Services" [level=3] [ref=e569]
+                    - generic [ref=e570]:
+                      - img [ref=e571]:
+                        - img [ref=e572]
+                        - generic [ref=e574]:
+                          - generic [ref=e575]: "4.6"
+                          - generic [ref=e576]: (568k+)
+                      - generic [ref=e577]:
+                        - generic [ref=e578]: "|"
+                        - generic [ref=e579]: from $226
+                  - img "Faucet fixture and pipes" [ref=e581]
+            - listitem [ref=e582]:
+              - article [ref=e583]:
+                - link "View Roof Installation &amp; Repair project details" [ref=e584] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/task/40133
+                  - generic [ref=e586]:
+                    - heading "Roof Installation & Repair" [level=3] [ref=e587]
+                    - generic [ref=e588]:
+                      - img [ref=e589]:
+                        - img [ref=e590]
+                        - generic [ref=e592]:
+                          - generic [ref=e593]: "4.7"
+                          - generic [ref=e594]: (325k+)
+                      - generic [ref=e595]:
+                        - generic [ref=e596]: "|"
+                        - generic [ref=e597]: from $471
+                  - img "Image of a house" [ref=e599]
+            - listitem [ref=e600]:
+              - article [ref=e601]:
+                - link "View Bathroom Remodel project details" [ref=e602] [cursor=pointer]:
+                  - /url: https://request.angi.com/service-request/task/40129
+                  - generic [ref=e604]:
+                    - heading "Bathroom Remodel" [level=3] [ref=e605]
+                    - generic [ref=e606]:
+                      - img [ref=e607]:
+                        - img [ref=e608]
+                        - generic [ref=e610]:
+                          - generic [ref=e611]: "4.4"
+                          - generic [ref=e612]: (180k+)
+                      - generic [ref=e613]:
+                        - generic [ref=e614]: "|"
+                        - generic [ref=e615]: from $2,500
+                  - img "Bathroom Remodel" [ref=e617]
+        - region "Popular cost guides" [ref=e620]:
+          - generic [ref=e621]:
+            - generic [ref=e622]:
+              - generic [ref=e623]:
+                - heading "Popular cost guides" [level=2] [ref=e624]
+                - paragraph [ref=e625]: From average costs to expert advice, get all the answers you need to get your job done.
+              - link "See all articles" [ref=e627] [cursor=pointer]:
+                - /url: https://www.angi.com/articles
+            - list [ref=e628]:
+              - listitem [ref=e629]:
+                - article [ref=e630]:
+                  - link [ref=e631] [cursor=pointer]:
+                    - /url: https://www.angi.com/articles/how-much-does-it-cost-install-new-furnace.htm
+                    - figure [ref=e634]:
+                      - img "woman, man, and child in cozy blankets huddled next to furnace in low light and smiling" [ref=e637]
+                  - generic [ref=e638]:
+                    - generic [ref=e639]:
+                      - link "Lauren Bongard" [ref=e641] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/author/lauren-bongard
+                      - generic [ref=e642]: •
+                      - time [ref=e643]: Mar 17, 2026
+                    - heading "How Much Does a New Furnace Cost? [2026 Data]" [level=3] [ref=e645]:
+                      - link "How Much Does a New Furnace Cost? [2026 Data]" [ref=e646] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/how-much-does-it-cost-install-new-furnace.htm
+                    - paragraph [ref=e647]: When it’s time to replace the furnace, review this guide for new furnace costs based on type, size, and efficiency, plus furnace installation costs.
+              - listitem [ref=e648]:
+                - article [ref=e649]:
+                  - link [ref=e650] [cursor=pointer]:
+                    - /url: https://www.angi.com/articles/roof-snow-removal-cost.htm
+                    - figure [ref=e653]:
+                      - img "A two-story house covered in snow" [ref=e656]
+                  - generic [ref=e657]:
+                    - generic [ref=e658]:
+                      - link "Angi" [ref=e660] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/author/angi
+                      - generic [ref=e661]: •
+                      - time [ref=e662]: Mar 5, 2026
+                    - heading "How Much Does Roof Snow Removal Cost? [2026 Data]" [level=3] [ref=e664]:
+                      - link "How Much Does Roof Snow Removal Cost? [2026 Data]" [ref=e665] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/roof-snow-removal-cost.htm
+                    - paragraph [ref=e666]: Discover the average cost of roof snow removal, key price factors, and ways to save. Get transparent estimates to protect your home this winter.
+              - listitem [ref=e667]:
+                - article [ref=e668]:
+                  - link [ref=e669] [cursor=pointer]:
+                    - /url: https://www.angi.com/articles/how-much-does-insulation-cost.htm
+                    - figure [ref=e672]:
+                      - img "A large, red brick house with a white portico is framed by trees with vibrant orange fall foliage." [ref=e675]
+                  - generic [ref=e676]:
+                    - generic [ref=e677]:
+                      - link "Rachel Hoffman" [ref=e679] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/author/rachel-hoffman
+                      - generic [ref=e680]: •
+                      - time [ref=e681]: Mar 17, 2026
+                    - heading "How Much Does Insulation Installation Cost? [2026 Data]" [level=3] [ref=e683]:
+                      - link "How Much Does Insulation Installation Cost? [2026 Data]" [ref=e684] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/how-much-does-insulation-cost.htm
+                    - paragraph [ref=e685]: New insulation can make your home more comfortable and boost energy efficiency. Use this insulation cost guide to get an accurate estimate for the installation.
+              - listitem [ref=e686]:
+                - article [ref=e687]:
+                  - link [ref=e688] [cursor=pointer]:
+                    - /url: https://www.angi.com/articles/plumber-cost.htm
+                    - figure [ref=e691]:
+                      - img "Kitchen sink with appliances and cabinets in background" [ref=e694]
+                  - generic [ref=e695]:
+                    - generic [ref=e696]:
+                      - link "Stephanie Mickelson" [ref=e698] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/author/stephanie-mickelson
+                      - generic [ref=e699]: •
+                      - time [ref=e700]: Mar 17, 2026
+                    - heading "How Much Does Plumbing Repair Cost? [2026 Data]" [level=3] [ref=e702]:
+                      - link "How Much Does Plumbing Repair Cost? [2026 Data]" [ref=e703] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/plumber-cost.htm
+                    - paragraph [ref=e704]: The costs for common plumbing issues are determined based on parts, labor, and expertise level. Read our guide to find out how much you should budget.
+              - listitem [ref=e705]:
+                - article [ref=e706]:
+                  - link [ref=e707] [cursor=pointer]:
+                    - /url: https://www.angi.com/articles/deep-cleaning-house-cost.htm
+                    - figure [ref=e710]:
+                      - img "woman cleaning shower" [ref=e713]
+                  - generic [ref=e714]:
+                    - generic [ref=e715]:
+                      - link "Angi" [ref=e717] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/author/angi
+                      - generic [ref=e718]: •
+                      - time [ref=e719]: Mar 17, 2026
+                    - heading "How Much Does Deep Cleaning a House Cost? [2026 Data]" [level=3] [ref=e721]:
+                      - link "How Much Does Deep Cleaning a House Cost? [2026 Data]" [ref=e722] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/deep-cleaning-house-cost.htm
+                    - paragraph [ref=e723]: Discover the average cost of deep cleaning a house, key price factors, and tips to save. Get accurate estimates to plan your next deep clean with confidence.
+              - listitem [ref=e724]:
+                - article [ref=e725]:
+                  - link [ref=e726] [cursor=pointer]:
+                    - /url: https://www.angi.com/articles/winterize-house-cost.htm
+                    - figure [ref=e729]:
+                      - img "Family sitting cozy at home looking out the window" [ref=e732]
+                  - generic [ref=e733]:
+                    - generic [ref=e734]:
+                      - link "Rachel Hoffman" [ref=e736] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/author/rachel-hoffman
+                      - generic [ref=e737]: •
+                      - time [ref=e738]: Mar 18, 2026
+                    - heading "How Much Does It Cost to Winterize a House? [2026 Data]" [level=3] [ref=e740]:
+                      - link "How Much Does It Cost to Winterize a House? [2026 Data]" [ref=e741] [cursor=pointer]:
+                        - /url: https://www.angi.com/articles/winterize-house-cost.htm
+                    - paragraph [ref=e742]: Winterizing a house depends on its type, size, location, and more. Our guide breaks down how much it costs to winterize a home.
+        - heading "Popular Categories" [level=3] [ref=e748]:
+          - button "Popular Categories" [ref=e749] [cursor=pointer]:
+            - text: Popular Categories
+            - img [ref=e751]
+    - contentinfo [ref=e754]:
+      - generic [ref=e759]:
+        - generic [ref=e760]:
+          - generic [ref=e762]:
+            - generic [ref=e763]:
+              - generic [ref=e764]: Knowledge is priceless - so our cost guides are free.
+              - generic [ref=e765]: Sign up to get free project cost info in your inbox.
+            - generic [ref=e767]:
+              - generic [ref=e768]:
+                - generic [ref=e770]:
+                  - img [ref=e772]
+                  - textbox [ref=e776]:
+                    - /placeholder: Email address
+                - generic [ref=e778]:
+                  - img [ref=e780]
+                  - spinbutton [ref=e784]: "48323"
+              - button "Sign me up" [ref=e785] [cursor=pointer]
+          - generic [ref=e786]:
+            - generic [ref=e787]: Download the app
+            - generic [ref=e788]:
+              - link "App Store" [ref=e790] [cursor=pointer]:
+                - /url: https://member.angi.com/app/text_to_download
+                - img "App Store" [ref=e791]
+              - link "Google Play" [ref=e793] [cursor=pointer]:
+                - /url: https://member.angi.com/app/text_to_download
+                - img "Google Play" [ref=e794]
+        - generic [ref=e795]:
+          - generic [ref=e796]:
+            - heading "Homeowner services" [level=4] [ref=e797]
+            - generic "Homeowner services" [ref=e798]:
+              - link "Find local businesses" [ref=e800] [cursor=pointer]:
+                - /url: https://www.angi.com/companylist/
+              - link "Services near me" [ref=e802] [cursor=pointer]:
+                - /url: https://www.angi.com/nearme/
+          - generic [ref=e803]:
+            - heading "For service pros" [level=4] [ref=e804]
+            - generic "For service pros" [ref=e805]:
+              - link "Register your business" [ref=e807] [cursor=pointer]:
+                - /url: https://signup.angi.com/pro
+              - link "Business center" [ref=e809] [cursor=pointer]:
+                - /url: https://signup.angi.com/pro
+          - generic [ref=e810]:
+            - heading "Resources" [level=4] [ref=e811]
+            - generic [ref=e812]:
+              - link "Solution center" [ref=e814] [cursor=pointer]:
+                - /url: https://www.angi.com/articles
+              - link "Project cost center" [ref=e816] [cursor=pointer]:
+                - /url: https://www.angi.com/articles/cost
+              - link "FAQs" [ref=e818] [cursor=pointer]:
+                - /url: https://www.angi.com/faq
+          - generic [ref=e819]:
+            - heading "About us" [level=4] [ref=e820]
+            - generic "About us" [ref=e821]:
+              - link "How it works" [ref=e823] [cursor=pointer]:
+                - /url: https://www.angi.com/how-it-works.htm
+              - link "Who we are" [ref=e825] [cursor=pointer]:
+                - /url: https://www.angi.com/aboutus.htm
+              - link "Careers" [ref=e827] [cursor=pointer]:
+                - /url: https://www.angi.com/careers
+              - link "Press" [ref=e829] [cursor=pointer]:
+                - /url: https://www.angi.com/in-the-press.htm
+              - link "Investor relations" [ref=e831] [cursor=pointer]:
+                - /url: https://ir.angi.com/
+              - link "Contact us" [ref=e833] [cursor=pointer]:
+                - /url: https://www.angi.com/contact-us
+              - link "Happiness guarantee" [ref=e835] [cursor=pointer]:
+                - /url: https://www.angi.com/happiness-guarantee.htm
+              - link "Affiliate partners" [ref=e837] [cursor=pointer]:
+                - /url: https://www.angi.com/landing/affiliatepartners
+        - generic [ref=e839]:
+          - img "Angi Logo" [ref=e840]
+          - generic [ref=e841]:
+            - generic [ref=e842]:
+              - link "Terms of Use" [ref=e843] [cursor=pointer]:
+                - /url: https://legal.angi.com/#contract-skmav5s0l
+              - generic [ref=e844]: "|"
+              - link "Privacy Policy" [ref=e845] [cursor=pointer]:
+                - /url: https://legal.angi.com/#privacy-policy
+            - generic [ref=e846]:
+              - generic [ref=e847]:
+                - button "Accessibility Tools" [ref=e849] [cursor=pointer]
+                - generic [ref=e850]: "|"
+              - link "Do Not Sell or Share My Personal Information" [ref=e851] [cursor=pointer]:
+                - /url: https://www.angi.com/do-not-sell
+            - generic [ref=e853]: © Copyright 1995-2026, Angi. All Rights Reserved.
+        - generic [ref=e855]:
+          - link "Twitter" [ref=e856] [cursor=pointer]:
+            - /url: https://x.com/angi_home
+            - img "Twitter" [ref=e857]
+          - link "Facebook" [ref=e858] [cursor=pointer]:
+            - /url: https://www.facebook.com/Angi/
+            - img "Facebook" [ref=e859]
+          - link "Pinterest" [ref=e860] [cursor=pointer]:
+            - /url: https://www.pinterest.com/angi/
+            - img "Pinterest" [ref=e861]
+          - link "YouTube" [ref=e862] [cursor=pointer]:
+            - /url: https://www.youtube.com/channel/UCzcJolZXhDi6VU77VI2cNDg
+            - img "YouTube" [ref=e863]
+          - link "Instagram" [ref=e864] [cursor=pointer]:
+            - /url: https://www.instagram.com/angi/
+            - img "Instagram" [ref=e865]
+  - alert [ref=e866]

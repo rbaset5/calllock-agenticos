@@ -1,0 +1,11 @@
+[     114ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   21518ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   21518ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   34356ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   34356ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   39865ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   39865ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   50368ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   50368ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   58373ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   58374ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

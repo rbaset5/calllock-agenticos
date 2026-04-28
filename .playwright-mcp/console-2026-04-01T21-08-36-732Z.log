@@ -1,0 +1,4 @@
+[     377ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://www.angi.com/near-me/heating-cooling:0
+[     707ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://www.clarity.ms/tag/:0
+[    1322ms] [INFO] [LaunchDarkly] LaunchDarkly client initialized @ https://www.angi.com/app/static/homepage-next-app/_next/static/chunks/pages/_app-b475184caa4566e1.js:0
+[    1323ms] [INFO] [LaunchDarkly] Opening stream connection to https://clientstream.launchdarkly.com/eval/6373e700279c83118162a146/eyJhbm9ueW1vdXMiOnRydWUsImtpbmQiOiJ1c2VyIiwia2V5IjoiZjM3MGVjYzAtMmUwZS0xMWYxLTkwMDctMDc1MTAzOTFmNzY4In0 @ https://www.angi.com/app/static/homepage-next-app/_next/static/chunks/pages/_app-b475184caa4566e1.js:0

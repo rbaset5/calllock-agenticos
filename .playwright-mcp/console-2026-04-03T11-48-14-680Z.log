@@ -1,0 +1,12 @@
+[     577ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1131
+[     659ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3004/favicon.ico:0
+[   53233ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   53235ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   55210ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   55210ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   57214ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   57214ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   59219ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   59219ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   62136ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   62136ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

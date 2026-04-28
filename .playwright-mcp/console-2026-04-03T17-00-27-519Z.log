@@ -1,0 +1,11 @@
+[     165ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[     233ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3004/favicon.ico:0
+[   41486ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   41486ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   48129ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   48129ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   48130ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: WRONG_PERSON: no clear bridge signal, awaiting LLM @ http://localhost:3004/hud/ui.js:466
+[   58763ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   58764ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   74769ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   74769ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

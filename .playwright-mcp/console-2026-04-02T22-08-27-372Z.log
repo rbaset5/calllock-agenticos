@@ -1,0 +1,19 @@
+[     627ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[   37358ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[   47022ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  120701ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  121440ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  121597ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  121764ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  121929ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  122133ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  237925ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  238742ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  239843ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  240456ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  240905ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  241223ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  241488ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1121
+[  246956ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3004/token:0
+[  246956ms] [ERROR] [twilio] init failed: Error: Token fetch failed: 500
+    at initTwilioDevice (http://localhost:3004/:788:33) @ http://localhost:3004/:810

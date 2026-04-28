@@ -1,0 +1,76 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: SALES HUD
+      - generic [ref=e5]: DUAL
+      - generic [ref=e6]: 00:00
+    - generic [ref=e8]: No active call
+  - generic [ref=e9]:
+    - generic [ref=e10]: IDLE
+    - generic [ref=e11]: GK
+    - generic [ref=e12]: OPEN
+    - generic [ref=e13]: BRIDGE
+    - generic [ref=e14]: QUAL
+    - generic [ref=e15]: CLOSE
+    - generic [ref=e16]: OBJ
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e21]: LINES
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: POWER LINES
+          - button "silence (pause — let them fill the silence)" [ref=e25] [cursor=pointer]:
+            - generic [ref=e26]: silence
+            - generic [ref=e27]: (pause — let them fill the silence)
+          - button "reframe Let me ask it differently — if you lost two jobs this week because nobody picked up, would you know?" [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: reframe
+            - generic [ref=e30]: Let me ask it differently — if you lost two jobs this week because nobody picked up, would you know?
+          - button "pattern-interrupt Can I be honest with you for a second?" [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]: pattern-interrupt
+            - generic [ref=e33]: Can I be honest with you for a second?
+          - button "validate That makes total sense." [ref=e34] [cursor=pointer]:
+            - generic [ref=e35]: validate
+            - generic [ref=e36]: That makes total sense.
+          - button "curiosity What would have to be true for this to be worth 15 minutes?" [ref=e37] [cursor=pointer]:
+            - generic [ref=e38]: curiosity
+            - generic [ref=e39]: What would have to be true for this to be worth 15 minutes?
+        - generic [ref=e40]:
+          - generic [ref=e41]: RECOVERY
+          - button "buy-time That's a great question." [ref=e42] [cursor=pointer]:
+            - generic [ref=e43]: buy-time
+            - generic [ref=e44]: That's a great question.
+          - button "acknowledge I hear you." [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]: acknowledge
+            - generic [ref=e47]: I hear you.
+          - button "validate Totally fair." [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]: validate
+            - generic [ref=e50]: Totally fair.
+          - button "social-proof Most guys I talk to say the same thing at first." [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]: social-proof
+            - generic [ref=e53]: Most guys I talk to say the same thing at first.
+          - button "redirect What would make this worth your time?" [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]: redirect
+            - generic [ref=e56]: What would make this worth your time?
+          - button "reframe Let me ask you this—" [ref=e57] [cursor=pointer]:
+            - generic [ref=e58]: reframe
+            - generic [ref=e59]: Let me ask you this—
+    - generic [ref=e60]:
+      - generic [ref=e61]: Press → to start call
+      - generic [ref=e63]: → opener script
+      - generic [ref=e65]: pause
+    - generic [ref=e66]:
+      - generic [ref=e68]: OBJECTIONS
+      - generic [ref=e70]:
+        - generic [ref=e71]: OBJECTION RESETS
+        - button "TIMING — busy, bad time, not now Totally fair. Quick question — when a call comes in while you're on a job, what happens to it?" [ref=e72] [cursor=pointer]:
+          - generic [ref=e73]: TIMING — busy, bad time, not now
+          - generic [ref=e74]: Totally fair. Quick question — when a call comes in while you're on a job, what happens to it?
+        - button "INTEREST — not interested, we're set, don't need Got it. What happens when two calls come in at once?" [ref=e75] [cursor=pointer]:
+          - generic [ref=e76]: INTEREST — not interested, we're set, don't need
+          - generic [ref=e77]: Got it. What happens when two calls come in at once?
+        - button "INFO — send me info, email me, send something Happy to. What's your email? ... Quick question while I have you — when a call comes in while you're on a job, what happens to it?" [ref=e78] [cursor=pointer]:
+          - generic [ref=e79]: INFO — send me info, email me, send something
+          - generic [ref=e80]: Happy to. What's your email? ... Quick question while I have you — when a call comes in while you're on a job, what happens to it?
+        - button "AUTHORITY — don't handle that, not my decision, talk to my Makes sense. What's the best way to loop them in?" [ref=e81] [cursor=pointer]:
+          - generic [ref=e82]: AUTHORITY — don't handle that, not my decision, talk to my
+          - generic [ref=e83]: Makes sense. What's the best way to loop them in?

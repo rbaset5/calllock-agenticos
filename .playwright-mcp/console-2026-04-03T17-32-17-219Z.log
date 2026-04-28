@@ -1,0 +1,7 @@
+[     129ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js?v=3:1209
+[   20427ms] [WARNING] [hud/llm] Server returned error flag @ http://localhost:3004/hud/llm.js:61
+[   20427ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js?v=3:466
+[   25945ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   25946ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   36304ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   36305ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

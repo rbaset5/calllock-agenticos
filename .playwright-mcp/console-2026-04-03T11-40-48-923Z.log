@@ -1,0 +1,29 @@
+[     534ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1131
+[   34979ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   34981ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   35222ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   35222ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   36530ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   36530ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   36804ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   36804ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   37557ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   37557ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   37745ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   37745ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   38574ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   38574ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   39581ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   39582ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   40575ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   40576ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   41614ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   41614ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   42335ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   42335ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   43279ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   43279ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   43364ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   43364ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   44107ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   44107ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

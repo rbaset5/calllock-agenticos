@@ -1,0 +1,84 @@
+[     389ms] [WARNING] [LaunchDarkly] Error on stream connection: {"isTrusted":true}, will continue retrying after 628 milliseconds. @ https://www.angi.com/app/static/homepage-next-app/_next/static/chunks/pages/_app-b475184caa4566e1.js:0
+[     390ms] [INFO] [LaunchDarkly] Closing stream connection @ https://www.angi.com/app/static/homepage-next-app/_next/static/chunks/pages/_app-b475184caa4566e1.js:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     408ms] [WARNING] <link rel=preload> has an invalid `href` value @ https://www.angi.com/:0
+[     413ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     413ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1769122496/Homepage_Update_-_Vinyl_Siding_V2.jpg" @ :0
+[     413ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     413ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1769122496/Homepage_Update_-_Vinyl_Siding_V2.jpg" @ :0
+[     413ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     413ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1769122496/Homepage_Update_-_Vinyl_Siding_V2.jpg" @ :0
+[     413ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     413ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1769122496/Homepage_Update_-_Vinyl_Siding_V2.jpg" @ :0
+[     413ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     413ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967037/Homepage_-_TreeTrimming.jpg" @ :0
+[     413ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     413ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967037/Homepage_-_TreeTrimming.jpg" @ :0
+[     413ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     413ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967037/Homepage_-_TreeTrimming.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967037/Homepage_-_TreeTrimming.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948546/compressedImage-8.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948546/compressedImage-8.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948546/compressedImage-8.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948546/compressedImage-8.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948576/compressedImage-9.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948576/compressedImage-9.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948576/compressedImage-9.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948576/compressedImage-9.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948508/compressedImage-7.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948508/compressedImage-7.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948508/compressedImage-7.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948508/compressedImage-7.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948470/compressedImage-6.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948470/compressedImage-6.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948470/compressedImage-6.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948470/compressedImage-6.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948281/compressedImage-2.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948281/compressedImage-2.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948281/compressedImage-2.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948281/compressedImage-2.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948233/compressedImage.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948233/compressedImage.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948233/compressedImage.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768948233/compressedImage.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967036/Homepage_-_Gardening.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967036/Homepage_-_Gardening.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967036/Homepage_-_Gardening.jpg" @ :0
+[     414ms] [WARNING] Failed parsing 'srcset' attribute value since its 'x' descriptor is invalid. @ :0
+[     414ms] [WARNING] Dropped srcset candidate "https://res.cloudinary.com/angi-prod/image/upload/v1768967036/Homepage_-_Gardening.jpg" @ :0
+[    1105ms] [WARNING] [Meta Pixel] - Duplicate Pixel ID: 283067868526010. @ https://lpfe-static-assets.angi.com/static/landing-pages-frontend/_next/static/chunks/1212.527311681502ebe2.js:0

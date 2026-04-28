@@ -1,0 +1,2 @@
+[     548ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://www.angi.com/companylist/detroit/heating-and-cooling.htm:0
+[    3601ms] [ERROR] Failed to load resource: net::ERR_FAILED @ chrome-extension://invalid/:0

@@ -1,0 +1,140 @@
+[     365ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   39633ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   43837ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   43838ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   43839ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[   46325ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   46325ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   46325ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[   53933ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   57964ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   57964ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   57964ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[   60470ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   60470ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   60470ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[   68089ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   82255ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   96406ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  111647ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  111647ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  154848ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  169041ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  173074ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  173074ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  173074ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:466
+[  175582ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  175582ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  175582ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:466
+[  183192ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  187223ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  187224ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  187224ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  189729ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  189729ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  189729ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  197344ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  211531ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  226284ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  226284ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  263410ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  277577ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  291745ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  305899ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  309931ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  309931ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  309931ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:466
+[  312434ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  312434ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  312434ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:466
+[  320047ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  334797ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  334797ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  372234ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  376263ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  376263ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  376263ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:466
+[  386387ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  400549ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  414740ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  421282ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  421282ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  421282ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  428896ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  443916ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  443916ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  487802ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  496971ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  506118ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  517763ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  521793ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  521793ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  521793ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:466
+[  524299ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  524299ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  524299ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:466
+[  529408ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  536032ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  540146ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  551791ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  555911ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  565043ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  572472ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  572473ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  617962ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  626984ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  626984ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  626984ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  629497ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  629497ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  629497ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  632084ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  636107ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  636107ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  636107ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:466
+[  643629ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  643629ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  643630ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:466
+[  646229ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  660383ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  674536ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  688692ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  702854ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  707231ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  722191ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  736348ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  751330ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  751331ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  808528ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  811734ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  811734ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  811734ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  812539ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  812539ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  812539ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  813358ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  813358ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  813358ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  814246ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  828367ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  840034ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  844075ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  844076ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  844076ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:466
+[  846647ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  855773ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  862304ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  862304ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  862304ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  864813ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  864813ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  864813ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  870041ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  876650ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[  876650ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[  876650ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:466
+[  896767ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  900897ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  915055ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[  927327ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  927328ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

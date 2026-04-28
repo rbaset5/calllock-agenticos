@@ -1,0 +1,19 @@
+[      89ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   52332ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   52332ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   59279ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   59279ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   59279ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:466
+[   67427ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   67427ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   83440ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   83440ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   90296ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   90297ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   90297ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: WRONG_PERSON: no clear bridge signal, awaiting LLM @ http://localhost:3004/hud/ui.js:466
+[  100959ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  100959ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  111459ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  111459ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  117448ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  117448ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

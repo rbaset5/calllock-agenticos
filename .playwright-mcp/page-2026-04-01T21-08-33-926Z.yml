@@ -1,0 +1,155 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e5]:
+      - generic [ref=e10]:
+        - link "Angi Logo" [ref=e13] [cursor=pointer]:
+          - /url: https://www.angi.com
+          - img "Angi Logo" [ref=e14]
+        - generic [ref=e15]:
+          - link "Join as a Pro" [ref=e17] [cursor=pointer]:
+            - /url: https://signup.angi.com/pro
+          - generic [ref=e18]:
+            - link "Log In" [ref=e19] [cursor=pointer]:
+              - /url: https://www.angi.com/oauth2/start
+            - link "Sign Up" [ref=e20] [cursor=pointer]:
+              - /url: https://www.angi.com/create-account
+      - generic [ref=e26]:
+        - link "Interior" [ref=e29] [cursor=pointer]:
+          - /url: "#Interior"
+        - link "Exterior" [ref=e32] [cursor=pointer]:
+          - /url: "#Exterior"
+        - link "Lawn & Garden" [ref=e35] [cursor=pointer]:
+          - /url: "#Lawn & Garden"
+        - link "More" [ref=e38] [cursor=pointer]:
+          - /url: "#More"
+        - link "Articles & Advice" [ref=e41] [cursor=pointer]:
+          - /url: "#Articles & Advice"
+  - generic [ref=e43]:
+    - heading "Hmm, we can't find the page you're looking for." [level=1] [ref=e44]
+    - heading "Start a new search or go to the homepage to get back on track." [level=5] [ref=e45]:
+      - text: Start a new search or go to the
+      - link "homepage" [ref=e47] [cursor=pointer]:
+        - /url: https://www.angi.com
+      - text: to get back on track.
+    - generic [ref=e53]:
+      - img [ref=e55]
+      - combobox [ref=e58]:
+        - search [ref=e59]:
+          - searchbox [ref=e61]
+      - button "Search" [ref=e62] [cursor=pointer]
+    - paragraph [ref=e64]: Popular projects near you
+    - list [ref=e65]:
+      - listitem [ref=e66]:
+        - link "Cleaning Services" [ref=e67] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/house-cleaning/
+      - listitem [ref=e68]:
+        - link "Handyperson Services" [ref=e69] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/handyman/
+      - listitem [ref=e70]:
+        - link "Plumbing Services" [ref=e71] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/plumbers/
+      - listitem [ref=e72]:
+        - link "Additions & Remodeling" [ref=e73] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/home-additions/
+    - list [ref=e74]:
+      - listitem [ref=e75]:
+        - link "Lawn & Garden Care" [ref=e76] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/lawn-care/
+      - listitem [ref=e77]:
+        - link "Painting Services" [ref=e78] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/interior-painting/
+      - listitem [ref=e79]:
+        - link "Moving Services" [ref=e80] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/local-moving-companies/
+      - listitem [ref=e81]:
+        - link "Electrical Services" [ref=e82] [cursor=pointer]:
+          - /url: https://www.angi.com/nearme/electrician/
+    - img [ref=e84]
+    - img [ref=e87]
+    - img [ref=e90]
+  - generic [ref=e96]:
+    - generic [ref=e98]:
+      - generic [ref=e99]: Download the app
+      - generic [ref=e100]:
+        - link "App Store" [ref=e102] [cursor=pointer]:
+          - /url: https://member.angi.com/app/text_to_download
+          - img "App Store" [ref=e103]
+        - link "Google Play" [ref=e105] [cursor=pointer]:
+          - /url: https://member.angi.com/app/text_to_download
+          - img "Google Play" [ref=e106]
+    - generic [ref=e107]:
+      - generic [ref=e108]:
+        - heading "Homeowner services" [level=4] [ref=e109]
+        - generic "Homeowner services" [ref=e110]:
+          - link "Find local businesses" [ref=e112] [cursor=pointer]:
+            - /url: https://www.angi.com/companylist/
+          - link "Services near me" [ref=e114] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/
+      - generic [ref=e115]:
+        - heading "For service pros" [level=4] [ref=e116]
+        - generic "For service pros" [ref=e117]:
+          - link "Register your business" [ref=e119] [cursor=pointer]:
+            - /url: https://signup.angi.com/pro
+          - link "Business center" [ref=e121] [cursor=pointer]:
+            - /url: https://signup.angi.com/pro
+      - generic [ref=e122]:
+        - heading "Resources" [level=4] [ref=e123]
+        - generic [ref=e124]:
+          - link "Solution center" [ref=e126] [cursor=pointer]:
+            - /url: https://www.angi.com/articles
+          - link "Project cost center" [ref=e128] [cursor=pointer]:
+            - /url: https://www.angi.com/articles/cost
+          - link "FAQs" [ref=e130] [cursor=pointer]:
+            - /url: https://www.angi.com/faq
+      - generic [ref=e131]:
+        - heading "About us" [level=4] [ref=e132]
+        - generic "About us" [ref=e133]:
+          - link "How it works" [ref=e135] [cursor=pointer]:
+            - /url: https://www.angi.com/how-it-works.htm
+          - link "Who we are" [ref=e137] [cursor=pointer]:
+            - /url: https://www.angi.com/aboutus.htm
+          - link "Careers" [ref=e139] [cursor=pointer]:
+            - /url: https://www.angi.com/careers
+          - link "Press" [ref=e141] [cursor=pointer]:
+            - /url: https://www.angi.com/in-the-press.htm
+          - link "Investor relations" [ref=e143] [cursor=pointer]:
+            - /url: https://ir.angi.com/
+          - link "Contact us" [ref=e145] [cursor=pointer]:
+            - /url: https://www.angi.com/contact-us
+          - link "Happiness guarantee" [ref=e147] [cursor=pointer]:
+            - /url: https://www.angi.com/happiness-guarantee.htm
+          - link "Affiliate partners" [ref=e149] [cursor=pointer]:
+            - /url: https://www.angi.com/landing/affiliatepartners
+    - generic [ref=e151]:
+      - img "Angi Logo" [ref=e152]
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - link "Terms of Use" [ref=e155] [cursor=pointer]:
+            - /url: https://legal.angi.com/#contract-skmav5s0l
+          - generic [ref=e156]: "|"
+          - link "Privacy Policy" [ref=e157] [cursor=pointer]:
+            - /url: https://legal.angi.com/#privacy-policy
+        - generic [ref=e158]:
+          - generic [ref=e159]:
+            - button "Accessibility Tools" [ref=e161] [cursor=pointer]
+            - generic [ref=e162]: "|"
+          - link "Do Not Sell or Share My Personal Information" [ref=e163] [cursor=pointer]:
+            - /url: https://www.angi.com/do-not-sell
+        - generic [ref=e165]: © Copyright 1995-2026, Angi. All Rights Reserved.
+    - generic [ref=e167]:
+      - link "Twitter" [ref=e168] [cursor=pointer]:
+        - /url: https://x.com/angi_home
+        - img "Twitter" [ref=e169]
+      - link "Facebook" [ref=e170] [cursor=pointer]:
+        - /url: https://www.facebook.com/Angi/
+        - img "Facebook" [ref=e171]
+      - link "Pinterest" [ref=e172] [cursor=pointer]:
+        - /url: https://www.pinterest.com/angi/
+        - img "Pinterest" [ref=e173]
+      - link "YouTube" [ref=e174] [cursor=pointer]:
+        - /url: https://www.youtube.com/channel/UCzcJolZXhDi6VU77VI2cNDg
+        - img "YouTube" [ref=e175]
+      - link "Instagram" [ref=e176] [cursor=pointer]:
+        - /url: https://www.instagram.com/angi/
+        - img "Instagram" [ref=e177]
+  - alert [ref=e178]

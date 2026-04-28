@@ -1,0 +1,255 @@
+- generic [active] [ref=e1]:
+  - link [ref=e2] [cursor=pointer]:
+    - /url: "#"
+    - text: ___
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - banner [ref=e6]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - generic:
+              - link "Angi":
+                - /url: https://www.angi.com
+                - img "Angi" [ref=e10] [cursor=pointer]
+          - navigation [ref=e12]:
+            - link "Sign Up Now" [ref=e13] [cursor=pointer]:
+              - /url: https://www.angi.com/create-account
+            - link "Sign In" [ref=e14] [cursor=pointer]:
+              - /url: https://www.angi.com/login
+            - link "Business Owners" [ref=e15] [cursor=pointer]:
+              - /url: https://signup.angi.com
+      - navigation [ref=e20]:
+        - button "Interior" [ref=e22] [cursor=pointer]
+        - button "Exterior" [ref=e24] [cursor=pointer]
+        - button "Lawn & Garden" [ref=e26] [cursor=pointer]
+        - button "More" [ref=e28] [cursor=pointer]
+        - button "Articles & Advice" [ref=e30] [cursor=pointer]
+    - generic [ref=e32]:
+      - heading "Hmm, we can't find the page you're looking for." [level=1] [ref=e33]
+      - heading "Start a new search or go to the homepage to get back on track." [level=5] [ref=e34]:
+        - text: Start a new search or go to the
+        - link "homepage" [ref=e36] [cursor=pointer]:
+          - /url: https://www.angi.com
+        - text: to get back on track.
+      - generic [ref=e42]:
+        - img [ref=e44]
+        - combobox [ref=e47]:
+          - search [ref=e48]:
+            - searchbox [ref=e50]
+        - button "Search" [ref=e51] [cursor=pointer]
+      - paragraph [ref=e53]: Popular projects near you
+      - list [ref=e54]:
+        - listitem [ref=e55]:
+          - link "Cleaning Services" [ref=e56] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/house-cleaning/
+        - listitem [ref=e57]:
+          - link "Handyperson Services" [ref=e58] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/handyman/
+        - listitem [ref=e59]:
+          - link "Plumbing Services" [ref=e60] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/plumbers/
+        - listitem [ref=e61]:
+          - link "Additions & Remodeling" [ref=e62] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/home-additions/
+      - list [ref=e63]:
+        - listitem [ref=e64]:
+          - link "Lawn & Garden Care" [ref=e65] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/lawn-care/
+        - listitem [ref=e66]:
+          - link "Painting Services" [ref=e67] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/interior-painting/
+        - listitem [ref=e68]:
+          - link "Moving Services" [ref=e69] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/local-moving-companies/
+        - listitem [ref=e70]:
+          - link "Electrical Services" [ref=e71] [cursor=pointer]:
+            - /url: https://www.angi.com/nearme/electrician/
+      - img [ref=e73]
+      - img [ref=e76]
+      - img [ref=e79]
+    - contentinfo [ref=e81]:
+      - generic [ref=e82]:
+        - list "Top cities" [ref=e85]:
+          - text: Top cities
+          - listitem [ref=e86]:
+            - text: "|"
+            - link "New York" [ref=e87] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/new-york-tristate-area/
+          - listitem [ref=e88]:
+            - text: "|"
+            - link "Houston" [ref=e89] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/houston/
+          - listitem [ref=e90]:
+            - text: "|"
+            - link "Chicago" [ref=e91] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/chicago/
+          - listitem [ref=e92]:
+            - text: "|"
+            - link "Indianapolis" [ref=e93] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/indianapolis/
+          - listitem [ref=e94]:
+            - text: "|"
+            - link "Boston" [ref=e95] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/boston/
+          - listitem [ref=e96]:
+            - text: "|"
+            - link "Atlanta" [ref=e97] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/atlanta/
+          - listitem [ref=e98]:
+            - text: "|"
+            - link "Cincinnati" [ref=e99] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/cincinnati/
+          - listitem [ref=e100]:
+            - text: "|"
+            - link "Los Angeles" [ref=e101] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/los-angeles/
+          - listitem [ref=e102]:
+            - text: "|"
+            - link "Dallas" [ref=e103] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/dallas/
+          - listitem [ref=e104]:
+            - text: "|"
+            - link "Pittsburgh" [ref=e105] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/pittsburgh/
+          - listitem [ref=e106]:
+            - text: "|"
+            - link "Minneapolis" [ref=e107] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/minneapolis/
+          - listitem [ref=e108]:
+            - text: "|"
+            - link "Las Vegas" [ref=e109] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/las-vegas/
+          - listitem [ref=e110]:
+            - text: "|"
+            - link "San Antonio" [ref=e111] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/san-antonio/
+          - listitem [ref=e112]:
+            - text: "|"
+            - link "Tampa" [ref=e113] [cursor=pointer]:
+              - /url: https://www.angi.com/companylist/tampa-bay/
+        - generic [ref=e114]:
+          - generic [ref=e116]:
+            - heading "Sign up for free project cost information" [level=4] [ref=e117]
+            - generic [ref=e118]:
+              - textbox "Email" [ref=e121]
+              - textbox "ZIP code" [ref=e124]
+              - button "Sign up" [ref=e126] [cursor=pointer]
+            - generic [ref=e127]:
+              - paragraph [ref=e128]: Download the app
+              - list [ref=e129]:
+                - listitem [ref=e130]:
+                  - link "App Store" [ref=e131] [cursor=pointer]:
+                    - /url: https://xy59r.app.goo.gl/92S9
+                    - img "App Store" [ref=e132]
+                - listitem [ref=e133]:
+                  - link "Google Play" [ref=e134] [cursor=pointer]:
+                    - /url: https://xy59r.app.goo.gl/Qwp8
+                    - img "Google Play" [ref=e135]
+          - list "Homeowner services" [ref=e137]:
+            - text: Homeowner services
+            - listitem [ref=e138]:
+              - link "Find local businesses" [ref=e139] [cursor=pointer]:
+                - /url: https://www.angi.com/companylist/
+            - listitem [ref=e140]:
+              - link "Services near me" [ref=e141] [cursor=pointer]:
+                - /url: /nearme/
+          - list "For service pros" [ref=e143]:
+            - text: For service pros
+            - listitem [ref=e144]:
+              - link "Register your business" [ref=e145] [cursor=pointer]:
+                - /url: https://signup.angi.com/
+            - listitem [ref=e146]:
+              - link "Business center" [ref=e147] [cursor=pointer]:
+                - /url: https://signup.angi.com
+          - list "Resources" [ref=e149]:
+            - text: Resources
+            - listitem [ref=e150]:
+              - link "Solution center" [ref=e151] [cursor=pointer]:
+                - /url: https://www.angi.com/articles
+            - listitem [ref=e152]:
+              - link "Project cost center" [ref=e153] [cursor=pointer]:
+                - /url: https://www.angi.com/articles/cost
+            - listitem [ref=e154]:
+              - link "FAQs" [ref=e155] [cursor=pointer]:
+                - /url: https://www.angi.com/faq
+            - listitem [ref=e156]:
+              - link "Angi Key membership" [ref=e157] [cursor=pointer]:
+                - /url: https://my.angi.com/membership
+            - listitem [ref=e158]:
+              - link "Financing" [ref=e159] [cursor=pointer]:
+                - /url: https://em.angi.com/affirm/
+          - list "About us" [ref=e161]:
+            - text: About us
+            - listitem [ref=e162]:
+              - link "How it works" [ref=e163] [cursor=pointer]:
+                - /url: https://www.angi.com/how-it-works.htm
+            - listitem [ref=e164]:
+              - link "Who we are" [ref=e165] [cursor=pointer]:
+                - /url: https://www.angi.com/aboutus.htm
+            - listitem [ref=e166]:
+              - link "Careers" [ref=e167] [cursor=pointer]:
+                - /url: https://www.angi.com/careers
+            - listitem [ref=e168]:
+              - link "Press" [ref=e169] [cursor=pointer]:
+                - /url: https://www.angi.com/in-the-press.htm
+            - listitem [ref=e170]:
+              - link "Economics & research" [ref=e171] [cursor=pointer]:
+                - /url: https://www.angi.com/research/
+            - listitem [ref=e172]:
+              - link "Investor relations" [ref=e173] [cursor=pointer]:
+                - /url: https://ir.angi.com/
+            - listitem [ref=e174]:
+              - link "Contact us" [ref=e175] [cursor=pointer]:
+                - /url: https://www.angi.com/contact-us
+            - listitem [ref=e176]:
+              - link "Happiness guarantee" [ref=e177] [cursor=pointer]:
+                - /url: https://www.angi.com/happiness-guarantee.htm
+        - generic [ref=e178]:
+          - generic [ref=e180]:
+            - link "Angi Logo" [ref=e181] [cursor=pointer]:
+              - /url: https://www.angi.com
+              - img "Angi Logo" [ref=e182]
+            - list [ref=e183]:
+              - listitem [ref=e184]:
+                - link "Terms of Use" [ref=e185] [cursor=pointer]:
+                  - /url: https://legal.angi.com/#contract-skmav5s0l
+              - listitem [ref=e186]: "|"
+              - listitem [ref=e187]:
+                - link "Privacy Policy" [ref=e188] [cursor=pointer]:
+                  - /url: https://legal.angi.com/#privacy-policy
+              - listitem [ref=e189]: "|"
+              - listitem [ref=e190]:
+                - link "Sitemap" [ref=e191] [cursor=pointer]:
+                  - /url: https://www.angi.com/sitemap-index/
+              - listitem [ref=e192]: "|"
+              - listitem
+              - listitem [ref=e193]:
+                - button "Accessibility Tools" [ref=e195] [cursor=pointer]
+              - listitem [ref=e196]: "|"
+              - listitem [ref=e197]:
+                - link "Do Not Sell or Share My Personal Information" [ref=e198] [cursor=pointer]:
+                  - /url: https://www.angi.com/do-not-sell
+              - listitem [ref=e199]:
+                - generic [ref=e200]: © Copyright 1995-2026, Angi. All Rights Reserved.
+          - list [ref=e202]:
+            - listitem [ref=e203]:
+              - link "Twitter" [ref=e204] [cursor=pointer]:
+                - /url: https://twitter.com/angi_home
+                - img "Twitter" [ref=e205]
+            - listitem [ref=e206]:
+              - link "Facebook" [ref=e207] [cursor=pointer]:
+                - /url: https://www.facebook.com/angi
+                - img "Facebook" [ref=e208]
+            - listitem [ref=e209]:
+              - link "Pinterest" [ref=e210] [cursor=pointer]:
+                - /url: https://www.pinterest.com/angi/
+                - img "Pinterest" [ref=e211]
+            - listitem [ref=e212]:
+              - link "YouTube" [ref=e213] [cursor=pointer]:
+                - /url: https://www.youtube.com/channel/UCzcJolZXhDi6VU77VI2cNDg
+                - img "YouTube" [ref=e214]
+            - listitem [ref=e215]:
+              - link "Instagram" [ref=e216] [cursor=pointer]:
+                - /url: https://www.instagram.com/angi
+                - img "Instagram" [ref=e217]
+  - alert [ref=e218]

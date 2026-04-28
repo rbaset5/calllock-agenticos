@@ -1,0 +1,43 @@
+- generic [active] [ref=e1]:
+  - heading "HUD v2 Test Harness" [level=1] [ref=e2]
+  - paragraph [ref=e3]:
+    - text: Open
+    - link /hud/ [ref=e4] [cursor=pointer]:
+      - /url: /hud/
+    - text: in another tab (same browser). Then use the buttons below to simulate call events.
+  - generic [ref=e5]:
+    - heading "1. Start Call" [level=2] [ref=e6]
+    - generic [ref=e7]:
+      - textbox "Prospect name (e.g., John Smith)" [ref=e8]: John Smith
+      - textbox "Business name (e.g., Smith Plumbing)" [ref=e9]: Smith Plumbing
+    - button "Start Call" [ref=e10] [cursor=pointer]
+    - button "End Call" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - heading "2. Prospect Says..." [level=2] [ref=e13]
+    - textbox "Type custom prospect response..." [ref=e14]
+    - button "Send" [ref=e15] [cursor=pointer]
+    - paragraph [ref=e16]: "Or click a preset response:"
+    - generic [ref=e17]:
+      - button "What is this?" [ref=e18] [cursor=pointer]
+      - button "We have someone" [ref=e19] [cursor=pointer]
+      - button "How much?" [ref=e20] [cursor=pointer]
+      - button "Not interested" [ref=e21] [cursor=pointer]
+      - button "Too busy" [ref=e22] [cursor=pointer]
+      - button "Send info" [ref=e23] [cursor=pointer]
+      - button "Wrong person" [ref=e24] [cursor=pointer]
+      - button "Pain reveal" [ref=e25] [cursor=pointer]
+      - button "Curious" [ref=e26] [cursor=pointer]
+      - button "Yes / Book it" [ref=e27] [cursor=pointer]
+      - button "Hedge" [ref=e28] [cursor=pointer]
+      - button "Answering service" [ref=e29] [cursor=pointer]
+      - button "Too expensive" [ref=e30] [cursor=pointer]
+      - button "Hostile" [ref=e31] [cursor=pointer]
+  - generic [ref=e32]:
+    - heading "3. Full Scenario (auto-play)" [level=2] [ref=e33]
+    - button "Discovery Flow" [ref=e34] [cursor=pointer]
+    - button "Objection Handling" [ref=e35] [cursor=pointer]
+    - button "Pricing Redirect" [ref=e36] [cursor=pointer]
+    - button "Wrong Person" [ref=e37] [cursor=pointer]
+    - button "Hostile Exit" [ref=e38] [cursor=pointer]
+    - paragraph [ref=e39]: Auto-plays a sequence of prospect responses with 3-second gaps.
+  - heading "Event Log" [level=2] [ref=e41]

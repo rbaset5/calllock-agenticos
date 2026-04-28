@@ -1,0 +1,308 @@
+[    1478ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1151
+[   28806ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1151
+[   34454ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   34455ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   34456ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[   37440ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   37440ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   37440ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[   40444ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   40444ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   40444ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[   43450ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[   43450ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[   43450ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[   47638ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   47639ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  137434ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1151
+[  143446ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  143446ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  143447ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[  146951ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  146951ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  146951ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[  150456ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  150456ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  150456ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  153958ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  153959ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  153959ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  158161ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[  158161ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[  739513ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  744151ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  744154ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  744155ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[  747118ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  747118ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  747118ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[  750131ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  750131ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  750131ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  753133ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  753133ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  753133ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  756257ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  757778ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  757778ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  757778ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  760780ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  760780ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  760780ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  763783ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  763783ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  763783ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  772979ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  774496ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  774497ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  774497ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  783504ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  783504ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  783504ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[  786507ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  786507ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  786507ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[  789581ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  806198ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  819826ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  824356ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  824357ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  824357ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[  830366ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  830367ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  830367ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[  836475ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  841004ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  841005ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  841005ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:443
+[  844009ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  844009ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  844009ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:443
+[  853031ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  853031ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  853031ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[  856127ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  860655ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  860655ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  860655ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[  863662ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  863662ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  863662ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[  869677ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  869678ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  869678ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[  872774ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  874294ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  874294ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  874294ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  883315ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  883315ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  883315ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[  886413ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  887934ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  887934ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  887935ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  900020ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  910540ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  910541ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  910541ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[  913605ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  918120ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  918120ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  918120ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[  921122ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  921122ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  921122ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[  927198ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  934716ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  934717ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  934717ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[  937719ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  937719ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  937719ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[  940788ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  945303ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  945303ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  945303ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:443
+[  951480ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  962121ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  962121ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  962121ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage EXIT @ http://localhost:3004/hud/ui.js:443
+[  965123ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  965123ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  965123ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage EXIT @ http://localhost:3004/hud/ui.js:443
+[  968204ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  975721ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  975721ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  975721ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:443
+[  981789ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  986326ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  986326ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  986326ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[  995429ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[  996943ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[  996943ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[  996943ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1009034ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1010545ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1010546ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1010546ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1013549ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1013549ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1013549ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1016552ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1016552ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1016553ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1022639ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1024158ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1024158ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1024158ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1033160ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1033160ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1033160ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[ 1036248ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1043836ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1054453ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1055980ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1055980ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1055980ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1058985ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1058985ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1058985ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1065092ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1066616ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1066616ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1066617ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1069621ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1069621ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1069621ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1072628ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1072628ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1072628ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1075724ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1083339ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1084860ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1084861ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1084861ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1087954ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1089478ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1089479ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1089479ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1092485ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1092485ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1092485ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1098587ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1106314ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1117165ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1124789ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1126315ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1126315ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1126315ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1138393ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1142906ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1142906ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1142906ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:443
+[ 1145910ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1145910ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1145910ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1151986ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1156502ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1156502ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1156502ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1162507ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1162507ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1162507ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[ 1165589ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1173106ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1173106ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1173106ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: Qualifier answer vague; treat as unknown pain @ http://localhost:3004/hud/ui.js:443
+[ 1176187ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1177700ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1177700ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1177700ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1189791ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1191302ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1191302ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1191302ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1194308ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1194308ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1194308ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1200390ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1207992ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1209502ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1209503ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1209503ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1224582ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1226097ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1226097ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1226098ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1229100ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1229100ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1229100ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1238196ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1239718ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1239718ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1239718ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1242719ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1242719ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1242719ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1245724ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1245724ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1245724ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1251795ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1254314ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1254315ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1254315ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[ 1254815ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1254815ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1254816ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[ 1255319ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1255319ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1255319ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[ 1255887ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1272524ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1274036ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1274036ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1274036ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1277040ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1277040ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1277040ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1283049ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1283049ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1283049ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear objection bucket @ http://localhost:3004/hud/ui.js:443
+[ 1286126ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1290650ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1290650ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1290650ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage WRONG_PERSON @ http://localhost:3004/hud/ui.js:443
+[ 1293724ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1298290ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1298290ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1298290ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1304396ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1311937ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1311938ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1311938ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[ 1314943ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1314943ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1314943ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[ 1318041ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1324574ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1324574ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1324574ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage MINI_PITCH @ http://localhost:3004/hud/ui.js:443
+[ 1335683ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1343306ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1347839ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1347839ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1347839ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1359860ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1359860ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1359860ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No deterministic classifier for stage PRICING @ http://localhost:3004/hud/ui.js:443
+[ 1362925ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1153
+[ 1364435ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1364435ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1364435ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1367440ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/groq-classify:0
+[ 1367440ms] [WARNING] [hud/llm] Server returned 503 @ http://localhost:3004/hud/llm.js:32
+[ 1367440ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: No clear bridge angle; use fallback question @ http://localhost:3004/hud/ui.js:443
+[ 1377306ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[ 1377306ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85

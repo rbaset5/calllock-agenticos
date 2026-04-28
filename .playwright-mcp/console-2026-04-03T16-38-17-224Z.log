@@ -1,0 +1,8 @@
+[      74ms] [LOG] [hud/ui] Sales HUD initialized. Listening on BroadcastChannel "calllock-hud". @ http://localhost:3004/hud/ui.js:1209
+[   22686ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3004/hud/groq-classify:0
+[   22686ms] [WARNING] [hud/llm] Server returned 400 @ http://localhost:3004/hud/llm.js:51
+[   22686ms] [WARNING] [hud/llm] LLM unavailable, falling through to rules result: MINI_PITCH: no clear bridge signal, awaiting LLM @ http://localhost:3004/hud/ui.js:466
+[   33330ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   33331ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
+[   52862ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3004/hud/session-log:0
+[   52862ms] [ERROR] [hud/session] Save failed: 503 @ http://localhost:3004/hud/session.js:85
