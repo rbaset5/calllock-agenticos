@@ -265,7 +265,13 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
             extra={"call_id": call_id},
             exc_info=True,
         )
-        final_extraction = _merge_quarantine_fields(extraction, ["supervisor_failed"])
+        final_extraction = dict(extraction)
+        final_extraction["extraction_status"] = extraction.get(
+            "extraction_status",
+            "complete",
+        )
+        final_extraction["supervisor_status"] = "failed"
+        final_extraction["supervisor_error"] = "supervisor_failed"
 
     try:
         db_repo.update_call_record_extraction(

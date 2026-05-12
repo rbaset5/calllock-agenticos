@@ -199,6 +199,34 @@ class TestPipelinePartialExtraction:
         assert event_obj.extraction_status == "partial"
 
 
+class TestPipelineSupervisorFailure:
+    """Supervisor errors should not quarantine otherwise valid voice extractions."""
+
+    def test_supervisor_failure_preserves_extraction_status(self, client: TestClient) -> None:
+        payload = _realistic_payload(call_id="ret-supervisor-failure-001")
+
+        with patch(
+            "voice.post_call_router._run_voice_supervisor",
+            side_effect=RuntimeError("missing kill_switches table"),
+        ):
+            response = _post_call_ended(client, payload)
+
+        assert response.status_code == 200
+        assert response.json()["extraction_status"] == "pending"
+
+        records = _state()["call_records"]
+        assert len(records) == 1
+        record = records[0]
+        assert record["extraction_status"] == "complete"
+
+        extracted_fields = record["extracted_fields"]
+        assert extracted_fields["extraction_status"] == "complete"
+        assert extracted_fields.get("quarantine") is not True
+        assert "supervisor_failed" not in extracted_fields.get("gate_failures", [])
+        assert extracted_fields["supervisor_status"] == "failed"
+        assert extracted_fields["supervisor_error"] == "supervisor_failed"
+
+
 class TestPipelineDuplicate:
     """Same call_id -> second request returns 200 with status='duplicate'."""
 
