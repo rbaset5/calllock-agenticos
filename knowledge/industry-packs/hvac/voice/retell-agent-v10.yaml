@@ -304,7 +304,7 @@ config:
         \ operator notes. Call this immediately \u2014 it uses the caller's phone\
         \ number automatically."
       type: custom
-      url: https://calllock-server.onrender.com/webhook/retell/lookup_caller
+      url: https://calllock-harness.onrender.com/webhook/retell/lookup_caller
       args_at_root: false
       timeout_ms: 8000
       speak_after_execution: true
@@ -930,7 +930,7 @@ config:
         and manage_booking callbacks. Do NOT call for wrong_number, spam, vendor,
         applicant, or none.
       type: custom
-      url: https://calllock-server.onrender.com/webhook/retell/create_callback
+      url: https://calllock-harness.onrender.com/webhook/retell/create_callback
       args_at_root: false
       timeout_ms: 8000
       speak_after_execution: true
@@ -971,7 +971,7 @@ config:
         Sends immediate SMS to the comfort advisor/owner with lead details. ONLY call
         for callback_type 'estimate' with lead_type 'high_ticket'.
       type: custom
-      url: https://calllock-server.onrender.com/webhook/retell/send_sales_lead_alert
+      url: https://calllock-harness.onrender.com/webhook/retell/send_sales_lead_alert
       args_at_root: false
       timeout_ms: 8000
       speak_after_execution: false

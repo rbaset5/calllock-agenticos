@@ -40,7 +40,8 @@ async def handle_inbound_webhook(request: Request) -> JSONResponse:
         signature = request.headers.get("x-retell-signature", "")
         timestamp = request.headers.get("x-retell-timestamp", "")
         verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError:
+    except (HMACVerificationError, RuntimeError) as exc:
+        logger.warning("voice.hmac.failed", extra={"error": str(exc)})
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     import json
@@ -76,6 +77,7 @@ def _resolve_tenant_from_call(agent_id: str, to_number: str) -> str | None:
     # This is the single phone number registered in Retell.
     _PHONE_TO_TENANT = {
         "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+        "+13126463826": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
     }
     return _PHONE_TO_TENANT.get(to_number)
 
@@ -87,7 +89,7 @@ async def require_retell_hmac(request: Request) -> None:
     timestamp = request.headers.get("x-retell-timestamp", "")
     try:
         verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError as exc:
+    except (HMACVerificationError, RuntimeError) as exc:
         logger.warning("voice.hmac.failed", extra={"error": str(exc)})
         raise HMACVerificationError(str(exc)) from exc
 
@@ -116,7 +118,8 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
         signature = request.headers.get("x-retell-signature", "")
         timestamp = request.headers.get("x-retell-timestamp", "")
         verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError:
+    except (HMACVerificationError, RuntimeError) as exc:
+        logger.warning("voice.hmac.failed", extra={"error": str(exc)})
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     payload = RetellToolCallRequest.model_validate_json(body)
@@ -143,7 +146,8 @@ async def handle_create_callback(request: Request) -> JSONResponse:
         signature = request.headers.get("x-retell-signature", "")
         timestamp = request.headers.get("x-retell-timestamp", "")
         verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError:
+    except (HMACVerificationError, RuntimeError) as exc:
+        logger.warning("voice.hmac.failed", extra={"error": str(exc)})
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     payload = RetellToolCallRequest.model_validate_json(body)
@@ -167,7 +171,8 @@ async def handle_sales_lead_alert(request: Request) -> JSONResponse:
         signature = request.headers.get("x-retell-signature", "")
         timestamp = request.headers.get("x-retell-timestamp", "")
         verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError:
+    except (HMACVerificationError, RuntimeError) as exc:
+        logger.warning("voice.hmac.failed", extra={"error": str(exc)})
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     payload = RetellToolCallRequest.model_validate_json(body)

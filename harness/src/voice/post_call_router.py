@@ -287,7 +287,8 @@ async def handle_call_ended(
     timestamp = request.headers.get("x-retell-timestamp", "")
     try:
         verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError:
+    except (HMACVerificationError, RuntimeError) as exc:
+        logger.warning("post_call.hmac.failed", extra={"error": str(exc)})
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     try:
