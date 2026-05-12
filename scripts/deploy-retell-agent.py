@@ -113,7 +113,14 @@ def load_yaml_config(path: str) -> dict[str, Any]:
     Strips the frontmatter (id, title, graph, etc.) and returns the 'config' dict.
     """
     with open(path) as f:
-        doc = yaml.safe_load(f)
+        content = f.read()
+
+    if content.startswith("---"):
+        parts = content.split("---", 2)
+        if len(parts) == 3:
+            content = parts[2]
+
+    doc = yaml.safe_load(content)
 
     if not isinstance(doc, dict) or "config" not in doc:
         print(f"Error: YAML file {path} has no 'config' key.", file=sys.stderr)

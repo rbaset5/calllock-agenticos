@@ -17,6 +17,8 @@ services:
         sync: false
       - key: LITELLM_BASE_URL
         sync: false
+      - key: RETELL_API_KEY
+        sync: false
       - key: RETELL_WEBHOOK_SECRET
         sync: false
       - key: VOICE_CREDENTIAL_KEY

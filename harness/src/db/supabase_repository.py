@@ -30,6 +30,20 @@ def is_configured() -> bool:
     return bool(httpx and os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_SERVICE_ROLE_KEY"))
 
 
+def health_check() -> dict[str, Any]:
+    if not is_configured():
+        return {"configured": False, "reachable": False}
+    try:
+        _request("GET", "tenants", params={"select": "id", "limit": "1"})
+    except Exception as exc:
+        return {
+            "configured": True,
+            "reachable": False,
+            "error": str(exc)[:240],
+        }
+    return {"configured": True, "reachable": True}
+
+
 def _headers() -> dict[str, str]:
     key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     return {
