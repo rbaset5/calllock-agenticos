@@ -141,6 +141,29 @@ class TestPipelineIntegrationHappyPath:
         assert event_obj.tenant_id == "tenant-ace-001"
         assert event_obj.extraction_status == "complete"
 
+    def test_full_pipeline_uses_phone_tenant_fallback_when_metadata_missing(self, client: TestClient) -> None:
+        captured_payloads: list[dict[str, Any]] = []
+
+        def capture_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
+            captured_payloads.append(payload)
+            return {"guardian_gate": {"gate_passed": True, "quarantine": False, "gate_failures": []}}
+
+        payload = _realistic_payload(call_id="ret-phone-fallback-001", tenant_id="")
+        payload["call"]["metadata"] = {}
+        payload["call"]["to_number"] = "+13126463816"
+
+        with patch("voice.post_call_router._run_voice_supervisor", side_effect=capture_supervisor):
+            response = _post_call_ended(client, payload)
+
+        assert response.status_code == 200
+        records = _state()["call_records"]
+        assert len(records) == 1
+        record = records[0]
+        assert record["tenant_id"] == "e51d9ae7-9cde-4dca-a49c-4744c39240bc"
+        assert record["call_id"] == "ret-phone-fallback-001"
+        assert record["extraction_status"] == "complete"
+        assert captured_payloads[0]["tenant_id"] == "e51d9ae7-9cde-4dca-a49c-4744c39240bc"
+
 
 class TestPipelinePartialExtraction:
     """When one extraction step throws, extraction_status should be 'partial'."""

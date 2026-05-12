@@ -98,6 +98,13 @@ def _load_voice_worker_spec() -> dict[str, Any]:
 _validate_voice_worker_spec()
 
 
+def _resolve_tenant_id(raw_payload: dict[str, Any]) -> str:
+    tenant_id = str((raw_payload.get("custom_metadata") or {}).get("tenant_id") or "")
+    if tenant_id:
+        return tenant_id
+    return _PHONE_TO_TENANT.get(str(raw_payload.get("to_number") or ""), "")
+
+
 def _run_voice_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
     """Run the supervisor directly instead of going through Inngest."""
     from harness.graphs.supervisor import run_supervisor
@@ -210,7 +217,7 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
     from db import repository as db_repo
 
     call_id = str(raw_payload.get("call_id") or "")
-    tenant_id = str((raw_payload.get("custom_metadata") or {}).get("tenant_id") or "")
+    tenant_id = _resolve_tenant_id(raw_payload)
     extraction: dict[str, Any] = {}
 
     try:
@@ -347,8 +354,9 @@ async def handle_call_ended(
             content={"error": f"Unexpected event type: {payload.event}"},
         )
 
-    tenant_id = payload.custom_metadata.get("tenant_id", "")
     retell_call_id = payload.call_id
+    raw_payload = payload.model_dump(by_alias=True)
+    tenant_id = _resolve_tenant_id(raw_payload)
 
     if not tenant_id:
         tenant_id = _PHONE_TO_TENANT.get(payload.to_number or "", "")
@@ -373,7 +381,15 @@ async def handle_call_ended(
         )
 
     call_id = retell_call_id
-    raw_payload = payload.model_dump(by_alias=True)
+    if not payload.custom_metadata.get("tenant_id") and tenant_id:
+        logger.warning(
+            "post_call.tenant_fallback",
+            extra={
+                "call_id": retell_call_id,
+                "to_number": payload.to_number,
+                "tenant_id": tenant_id,
+            },
+        )
 
     from db import repository as db_repo
 
