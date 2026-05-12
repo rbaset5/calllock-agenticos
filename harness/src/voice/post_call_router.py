@@ -27,6 +27,10 @@ from voice.models import RetellCallEndedPayload
 logger = logging.getLogger(__name__)
 
 post_call_router = APIRouter(tags=["voice-post-call"])
+_PHONE_TO_TENANT = {
+    "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+    "+13126463826": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+}
 
 VOICE_WORKER_SPEC_PATH = Path(__file__).resolve().parents[3] / "knowledge" / "worker-specs" / "eng-ai-voice.yaml"
 VOICE_WORKER_SPEC_FALLBACK = {
@@ -345,6 +349,18 @@ async def handle_call_ended(
 
     tenant_id = payload.custom_metadata.get("tenant_id", "")
     retell_call_id = payload.call_id
+
+    if not tenant_id:
+        tenant_id = _PHONE_TO_TENANT.get(payload.to_number or "", "")
+        if tenant_id:
+            logger.warning(
+                "post_call.tenant_fallback",
+                extra={
+                    "call_id": retell_call_id,
+                    "to_number": payload.to_number,
+                    "tenant_id": tenant_id,
+                },
+            )
 
     if not tenant_id:
         logger.error(

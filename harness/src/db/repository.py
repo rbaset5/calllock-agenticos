@@ -9,6 +9,10 @@ def using_supabase() -> bool:
     return supabase_repository.is_configured()
 
 
+def check_supabase_health() -> dict[str, Any]:
+    return supabase_repository.health_check()
+
+
 def get_tenant(identifier: str) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.get_tenant(identifier)
