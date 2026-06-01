@@ -1,4 +1,4 @@
-"""Cal.com API client for booking lookup, cancel, and reschedule.
+"""Cal.com API client for booking create, lookup, cancel, and reschedule.
 
 Credentials come from CalcomConfig (per-tenant, resolved via config.py).
 On timeout/error: raises CalcomError (propagates as 503 to booking API caller).
@@ -67,6 +67,56 @@ async def lookup_by_phone(phone: str, config: CalcomConfig) -> list[dict[str, An
         raise CalcomError(f"Cal.com lookup failed: {exc}") from exc
 
 
+async def create_booking(
+    *,
+    customer_name: str,
+    customer_phone: str,
+    service_address: str,
+    preferred_time: str,
+    issue_description: str,
+    urgency_tier: str,
+    config: CalcomConfig,
+) -> dict[str, Any]:
+    """Create a Cal.com booking for a Retell call."""
+    payload = {
+        "eventTypeId": config.calcom_event_type_id,
+        "start": preferred_time,
+        "attendee": {
+            "name": customer_name,
+            "phoneNumber": customer_phone,
+            "timeZone": config.calcom_timezone,
+        },
+        "metadata": {
+            "service_address": service_address,
+            "issue_description": issue_description,
+            "urgency_tier": urgency_tier,
+            "source": "calllock_voice",
+        },
+    }
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            response = await client.post(
+                f"{_CAL_API_BASE}/bookings",
+                json=payload,
+                headers=_headers(config),
+            )
+
+        if response.status_code >= 400:
+            raise CalcomError(f"Cal.com booking failed: HTTP {response.status_code}")
+
+        data = response.json()
+        if isinstance(data.get("data"), dict):
+            return data["data"]
+        return data
+
+    except CalcomError:
+        raise
+    except httpx.TimeoutException as exc:
+        raise CalcomError(f"Cal.com booking timed out: {exc}") from exc
+    except Exception as exc:
+        raise CalcomError(f"Cal.com booking failed: {exc}") from exc
+
+
 async def cancel_booking(booking_uid: str, reason: str, config: CalcomConfig) -> bool:
     """Cancel a booking by UID."""
     try:
@@ -120,6 +170,7 @@ async def reschedule_booking(
 __all__ = [
     "CalcomError",
     "cancel_booking",
+    "create_booking",
     "lookup_by_phone",
     "reschedule_booking",
 ]

@@ -304,7 +304,7 @@ config:
         \ operator notes. Call this immediately \u2014 it uses the caller's phone\
         \ number automatically."
       type: custom
-      url: https://calllock-server.onrender.com/webhook/retell/lookup_caller
+      url: https://calllock-harness.onrender.com/webhook/retell/lookup_caller
       args_at_root: false
       timeout_ms: 8000
       speak_after_execution: true
@@ -409,18 +409,21 @@ config:
       description: End the call after delivering 911 safety instructions to the caller.
     interruption_sensitivity: 0.3
   - name: service_area
-    state_prompt: "## State: SERVICE_AREA\n\nVerify the caller is in our service area.\
-      \ ZIP must start with 787.\n\nIf {{zip_code}} is already known from lookup AND\
-      \ is exactly 5 digits starting with 787, \u2192 [discovery] immediately.\nIf\
-      \ {{zip_code}} is less than 5 digits, empty, or not a valid 5-digit number \u2014\
-      \ treat it as unknown and ask the caller. A partial ZIP like '787' is NOT valid.\n\
-      \nIf not: \"What's your ZIP code?\"\n\n- ZIP starts with 787 \u2192 \"Got it.\"\
-      \ \u2192 [discovery]\n- ZIP does NOT start with 787 \u2192 \"We're only servicing\
-      \ Austin 787 ZIP codes right now.\" \u2192 end_call\n- Unclear \u2192 \"Mind\
-      \ saying that ZIP one more time?\" \u2192 one retry\n\nThat is your ONLY job.\
-      \ Proceed after ZIP is validated.\n\nCRITICAL: After the caller gives a valid\
-      \ 787 ZIP, your ONLY next action is to call the edge to [discovery]. Do NOT\
-      \ ask any other questions. Do NOT discuss the problem, timing, address, or scheduling.\
+    state_prompt: "## State: SERVICE_AREA\n\nValidate the caller is in our service\
+      \ area using the validate_service_area tool. Do NOT rely on your own prompt\
+      \ judgment.\n\nIf {{zip_code}} is already known from lookup AND is exactly 5\
+      \ digits, call validate_service_area immediately with that ZIP.\nIf {{zip_code}}\
+      \ is less than 5 digits, empty, or not a valid 5-digit number \u2014 treat it\
+      \ as unknown and ask the caller. A partial ZIP like '787' is NOT valid.\n\nIf\
+      \ not known: \"What's your ZIP code?\"\n\nAfter the caller gives a 5-digit ZIP,\
+      \ call validate_service_area with zip_code and service_address if available.\n\
+      \n- Tool returns in_service_area: true \u2192 \"Got it.\" \u2192 [discovery]\n\
+      - Tool returns in_service_area: false \u2192 \"We're not servicing that ZIP\
+      \ code right now.\" \u2192 end_call\n- Unclear ZIP \u2192 \"Mind saying that\
+      \ ZIP one more time?\" \u2192 one retry\n\nThat is your ONLY job. Proceed after\
+      \ the tool validates the ZIP.\n\nCRITICAL: After validate_service_area returns\
+      \ true, your ONLY next action is to call the edge to [discovery]. Do NOT ask\
+      \ any other questions. Do NOT discuss the problem, timing, address, or scheduling.\
       \ Do NOT generate ANY text beyond a short acknowledgment ('Got it.'). If the\
       \ caller volunteers extra info while you validate ZIP, IGNORE it \u2014 later\
       \ states will collect that info. MAX 2 exchanges in this state.\n\n## Data Passthrough\n\
@@ -429,8 +432,7 @@ config:
       \ do NOT change them to 'Not provided' or any other value. Do not mention these\
       \ to the caller."
     edges:
-    - description: Valid 787 ZIP confirmed (or already known from lookup). Proceed
-        immediately.
+    - description: validate_service_area returned in_service_area true. Proceed immediately.
       speak_during_transition: true
       destination_state_name: discovery
       parameters:
@@ -442,7 +444,7 @@ config:
               If it was empty string, pass empty string.
           zip_code:
             type: string
-            description: The validated ZIP code starting with 787
+            description: The ZIP code validated by the harness
           customer_name:
             type: string
             description: Customer name. Pass EXACTLY as received from previous state.
@@ -452,11 +454,39 @@ config:
         - service_address
         - customer_name
     tools:
+    - headers: {}
+      parameter_type: json
+      method: POST
+      query_params: {}
+      description: Validate whether a caller's ZIP or service address is inside the
+        tenant's configured service area. Call this before discovery and before any
+        booking attempt.
+      type: custom
+      url: https://calllock-harness.onrender.com/webhook/retell/validate_service_area
+      args_at_root: false
+      timeout_ms: 5000
+      speak_after_execution: false
+      name: validate_service_area
+      response_variables: {}
+      execution_message: Checking that ZIP...
+      speak_during_execution: true
+      parameters:
+        type: object
+        properties:
+          zip_code:
+            type: string
+            description: The caller's 5-digit ZIP code
+          service_address:
+            type: string
+            description: Service address if already known, otherwise empty string
+        required:
+        - zip_code
     - type: end_call
       name: end_call
-      description: "End the call ONLY if the caller's ZIP code is outside the 787\
-        \ service area. NEVER end the call because the caller has an existing appointment\
-        \ \u2014 that is NOT a valid reason to end. Not for any other reason."
+      description: "End the call ONLY if validate_service_area returns false for the\
+        \ caller's ZIP code. NEVER end the call because the caller has an existing\
+        \ appointment \u2014 that is NOT a valid reason to end. Not for any other\
+        \ reason."
     interruption_sensitivity: 0.8
   - name: discovery
     state_prompt: "## State: DISCOVERY\n\nCollect three things: name, problem, address.\
@@ -706,7 +736,7 @@ config:
       \ the actual booked slot may differ from what was requested.\n\nPass these values\
       \ to book_service:\n- customer_name: The caller's real name (already confirmed\
       \ in confirm)\n- customer_phone: \"auto\"\n- service_address: Their address\
-      \ or \"TBD\"\n- preferred_time: EXACTLY what they said\n- issue_description:\
+      \ or \"TBD\"\n- zip_code: The ZIP validated in service_area\n- preferred_time: EXACTLY what they said\n- issue_description:\
       \ Their problem description. If site_contact_name is not empty, append: \" |\
       \ Site contact: [name] at [phone]\"\n- urgency_tier: \"urgent\" or \"routine\"\
       \n- Use the EXACT urgency_tier value passed from the [confirm] edge. Do NOT\
@@ -801,10 +831,11 @@ config:
       parameter_type: json
       method: POST
       query_params: {}
-      description: Books an HVAC service appointment. Checks availability and books
-        in one step. Returns confirmation or alternative times if requested slot unavailable.
+      description: Books an HVAC service appointment through the CallLock harness.
+        The harness validates tenant policy, service area, and fallback routing before
+        any calendar write.
       type: custom
-      url: https://calllock-dashboard-2.vercel.app/api/retell/book-service
+      url: https://calllock-harness.onrender.com/webhook/retell/book_service
       args_at_root: false
       timeout_ms: 15000
       speak_after_execution: true
@@ -837,6 +868,9 @@ config:
           service_address:
             type: string
             description: Service address or 'TBD' if not collected
+          zip_code:
+            type: string
+            description: The ZIP code validated by validate_service_area
           force_book:
             type: boolean
             description: 'Set to true ONLY when the caller explicitly confirms they
@@ -930,7 +964,7 @@ config:
         and manage_booking callbacks. Do NOT call for wrong_number, spam, vendor,
         applicant, or none.
       type: custom
-      url: https://calllock-server.onrender.com/webhook/retell/create_callback
+      url: https://calllock-harness.onrender.com/webhook/retell/create_callback
       args_at_root: false
       timeout_ms: 8000
       speak_after_execution: true
@@ -971,7 +1005,7 @@ config:
         Sends immediate SMS to the comfort advisor/owner with lead details. ONLY call
         for callback_type 'estimate' with lead_type 'high_ticket'.
       type: custom
-      url: https://calllock-server.onrender.com/webhook/retell/send_sales_lead_alert
+      url: https://calllock-harness.onrender.com/webhook/retell/send_sales_lead_alert
       args_at_root: false
       timeout_ms: 8000
       speak_after_execution: false

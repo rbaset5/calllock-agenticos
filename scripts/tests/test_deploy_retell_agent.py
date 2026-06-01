@@ -62,6 +62,27 @@ class TestLoadYamlConfig:
         assert result["model"] == "gpt-4o-mini"
         assert result["model_temperature"] == 0.3
 
+    def test_loads_config_after_knowledge_frontmatter_document(self, tmp_path: Path) -> None:
+        """Knowledge nodes use frontmatter as the first YAML document."""
+        yaml_content = textwrap.dedent("""\
+            ---
+            id: retell-agent-v10
+            title: HVAC Voice Agent
+            graph: industry-pack
+            ---
+            source_file: original.json
+            config:
+              general_prompt: "You are a helpful HVAC assistant."
+              model: gpt-4o-mini
+        """)
+        config_file = tmp_path / "agent.yaml"
+        config_file.write_text(yaml_content)
+
+        result = load_yaml_config(str(config_file))
+
+        assert result["general_prompt"] == "You are a helpful HVAC assistant."
+        assert result["model"] == "gpt-4o-mini"
+
     def test_loads_config_with_states(self, tmp_path: Path) -> None:
         """Config with nested states array."""
         yaml_content = textwrap.dedent("""\
