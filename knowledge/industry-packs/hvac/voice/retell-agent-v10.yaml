@@ -879,6 +879,7 @@ config:
         required:
         - customer_name
         - customer_phone
+        - zip_code
         - preferred_time
         - issue_description
     interruption_sensitivity: 0.7
