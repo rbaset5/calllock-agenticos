@@ -27,6 +27,10 @@ from voice.models import RetellCallEndedPayload
 logger = logging.getLogger(__name__)
 
 post_call_router = APIRouter(tags=["voice-post-call"])
+_PHONE_TO_TENANT = {
+    "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+    "+13126463826": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+}
 
 VOICE_WORKER_SPEC_PATH = Path(__file__).resolve().parents[3] / "knowledge" / "worker-specs" / "eng-ai-voice.yaml"
 VOICE_WORKER_SPEC_FALLBACK = {
@@ -92,6 +96,13 @@ def _load_voice_worker_spec() -> dict[str, Any]:
 
 
 _validate_voice_worker_spec()
+
+
+def _resolve_tenant_id(raw_payload: dict[str, Any]) -> str:
+    tenant_id = str((raw_payload.get("custom_metadata") or {}).get("tenant_id") or "")
+    if tenant_id:
+        return tenant_id
+    return _PHONE_TO_TENANT.get(str(raw_payload.get("to_number") or ""), "")
 
 
 def _run_voice_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
@@ -206,7 +217,7 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
     from db import repository as db_repo
 
     call_id = str(raw_payload.get("call_id") or "")
-    tenant_id = str((raw_payload.get("custom_metadata") or {}).get("tenant_id") or "")
+    tenant_id = _resolve_tenant_id(raw_payload)
     extraction: dict[str, Any] = {}
 
     try:
@@ -254,7 +265,13 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
             extra={"call_id": call_id},
             exc_info=True,
         )
-        final_extraction = _merge_quarantine_fields(extraction, ["supervisor_failed"])
+        final_extraction = dict(extraction)
+        final_extraction["extraction_status"] = extraction.get(
+            "extraction_status",
+            "complete",
+        )
+        final_extraction["supervisor_status"] = "failed"
+        final_extraction["supervisor_error"] = "supervisor_failed"
 
     try:
         db_repo.update_call_record_extraction(
@@ -287,7 +304,8 @@ async def handle_call_ended(
     timestamp = request.headers.get("x-retell-timestamp", "")
     try:
         verify_retell_hmac(body, signature, timestamp)
-    except HMACVerificationError:
+    except (HMACVerificationError, RuntimeError) as exc:
+        logger.warning("post_call.hmac.failed", extra={"error": str(exc)})
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     try:
@@ -342,8 +360,21 @@ async def handle_call_ended(
             content={"error": f"Unexpected event type: {payload.event}"},
         )
 
-    tenant_id = payload.custom_metadata.get("tenant_id", "")
     retell_call_id = payload.call_id
+    raw_payload = payload.model_dump(by_alias=True)
+    tenant_id = _resolve_tenant_id(raw_payload)
+
+    if not tenant_id:
+        tenant_id = _PHONE_TO_TENANT.get(payload.to_number or "", "")
+        if tenant_id:
+            logger.warning(
+                "post_call.tenant_fallback",
+                extra={
+                    "call_id": retell_call_id,
+                    "to_number": payload.to_number,
+                    "tenant_id": tenant_id,
+                },
+            )
 
     if not tenant_id:
         logger.error(
@@ -356,7 +387,15 @@ async def handle_call_ended(
         )
 
     call_id = retell_call_id
-    raw_payload = payload.model_dump(by_alias=True)
+    if not payload.custom_metadata.get("tenant_id") and tenant_id:
+        logger.warning(
+            "post_call.tenant_fallback",
+            extra={
+                "call_id": retell_call_id,
+                "to_number": payload.to_number,
+                "tenant_id": tenant_id,
+            },
+        )
 
     from db import repository as db_repo
 

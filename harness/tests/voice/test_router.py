@@ -97,6 +97,53 @@ class TestLookupCallerEndpoint:
 
         assert response.status_code == 401
 
+    def test_missing_retell_api_key_returns_401(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("RETELL_API_KEY", raising=False)
+        body = json.dumps({
+            "call_id": "ret-004",
+            "args": {"phone_number": "+15125550101"},
+            "metadata": {"tenant_id": "tenant-test"},
+        }).encode()
+
+        response = client.post(
+            "/webhook/retell/lookup_caller",
+            content=body,
+            headers={
+                "x-retell-signature": "v=1,d=sig",
+                "content-type": "application/json",
+            },
+        )
+
+        assert response.status_code == 401
+
+
+class TestInboundEndpoint:
+    @pytest.mark.parametrize("to_number", ["+13126463816", "+13126463826"])
+    def test_maps_live_retell_number_to_tenant(self, client: TestClient, to_number: str) -> None:
+        body = json.dumps({
+            "agent_id": "agent-test",
+            "to_number": to_number,
+        }).encode()
+        sig = _sign_body(body)
+
+        response = client.post(
+            "/webhook/retell/inbound",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "metadata": {"tenant_id": "e51d9ae7-9cde-4dca-a49c-4744c39240bc"}
+        }
+
 
 class TestCreateCallbackEndpoint:
     def test_returns_success(self, client: TestClient) -> None:
