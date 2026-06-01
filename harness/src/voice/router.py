@@ -8,14 +8,18 @@ Retell v10 sends each tool call to its own URL.
 from __future__ import annotations
 
 import logging
+import re
+from dataclasses import asdict
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse
 
 from voice.auth import HMACVerificationError, verify_retell_hmac
-from voice.config import VoiceConfigError, resolve_voice_config
+from voice.config import VoiceConfigError, resolve_calcom_config, resolve_voice_config
+from voice.fallback_router import FallbackContext, FallbackPolicy, route_call_fallback
 from voice.models import RetellToolCallRequest
+from voice.tools.book_service import book_service
 from voice.tools.create_callback import create_callback
 from voice.tools.lookup_caller import lookup_caller
 from voice.tools.sales_lead_alert import send_sales_lead_alert
@@ -110,6 +114,32 @@ def _resolve_config(tenant_id: str | None) -> Any:
         return None
 
 
+def _resolve_calcom_config(tenant_id: str | None) -> Any:
+    """Resolve CalcomConfig, returning None on failure."""
+    if not tenant_id:
+        return None
+    try:
+        return resolve_calcom_config(tenant_id)
+    except (VoiceConfigError, NotImplementedError):
+        logger.error("voice.calcom_config.resolve_failed", extra={"tenant_id": tenant_id})
+        return None
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    """Parse Retell JSON args that may arrive as booleans or strings."""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "off"}:
+            return False
+    return bool(value)
+
+
 @voice_router.post("/lookup_caller")
 async def handle_lookup_caller(request: Request) -> JSONResponse:
     """Handle lookup_caller tool call from Retell."""
@@ -187,6 +217,108 @@ async def handle_sales_lead_alert(request: Request) -> JSONResponse:
         voice_config=config,
     )
     return JSONResponse(content=result)
+
+
+@voice_router.post("/book_service")
+async def handle_book_service(request: Request) -> JSONResponse:
+    """Handle book_service tool call from Retell.
+
+    The harness owns this write path so policy, service-area validation, booking,
+    fallback routing, and audit can live in one backend.
+    """
+    try:
+        body = await request.body()
+        signature = request.headers.get("x-retell-signature", "")
+        timestamp = request.headers.get("x-retell-timestamp", "")
+        verify_retell_hmac(body, signature, timestamp)
+    except HMACVerificationError:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+    payload = RetellToolCallRequest.model_validate_json(body)
+    tenant_id = _extract_tenant_id(payload)
+    voice_config = _resolve_config(tenant_id)
+    calcom_config = _resolve_calcom_config(tenant_id)
+    args = payload.args
+
+    result = await book_service(
+        customer_name=args.get("customer_name", ""),
+        customer_phone=args.get("customer_phone", args.get("phone", "")),
+        service_address=args.get("service_address", args.get("address", "")),
+        preferred_time=args.get("preferred_time", ""),
+        issue_description=args.get("issue_description", args.get("problem_description", "")),
+        urgency_tier=args.get("urgency_tier", "routine"),
+        voice_config=voice_config,
+        calcom_config=calcom_config,
+        zip_code=args.get("zip_code", ""),
+    )
+    return JSONResponse(content=result)
+
+
+@voice_router.post("/route_call_fallback")
+async def handle_route_call_fallback(request: Request) -> JSONResponse:
+    """Return the deterministic fallback decision Retell should follow."""
+    try:
+        body = await request.body()
+        signature = request.headers.get("x-retell-signature", "")
+        timestamp = request.headers.get("x-retell-timestamp", "")
+        verify_retell_hmac(body, signature, timestamp)
+    except HMACVerificationError:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+    payload = RetellToolCallRequest.model_validate_json(body)
+    args = payload.args
+    decision = route_call_fallback(
+        FallbackContext(
+            urgency_tier=args.get("urgency_tier", "routine"),
+            route=args.get("route", "legitimate"),
+            business_open=_as_bool(args.get("business_open"), False),
+            caller_requested_human=_as_bool(args.get("caller_requested_human"), False),
+            booking_failed=_as_bool(args.get("booking_failed"), False),
+            confidence=float(args.get("confidence", 1.0)),
+        ),
+        FallbackPolicy(
+            live_transfer_enabled=_as_bool(args.get("live_transfer_enabled"), False),
+            callback_tasks_enabled=_as_bool(args.get("callback_tasks_enabled"), True),
+            voicemail_enabled=_as_bool(args.get("voicemail_enabled"), False),
+            default_transfer_number=args.get("default_transfer_number"),
+            emergency_transfer_number=args.get("emergency_transfer_number"),
+            voicemail_number=args.get("voicemail_number"),
+        ),
+    )
+    return JSONResponse(content=asdict(decision))
+
+
+@voice_router.post("/validate_service_area")
+async def handle_validate_service_area(request: Request) -> JSONResponse:
+    """Validate service area from tenant voice config before booking."""
+    try:
+        body = await request.body()
+        signature = request.headers.get("x-retell-signature", "")
+        timestamp = request.headers.get("x-retell-timestamp", "")
+        verify_retell_hmac(body, signature, timestamp)
+    except HMACVerificationError:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+
+    payload = RetellToolCallRequest.model_validate_json(body)
+    tenant_id = _extract_tenant_id(payload)
+    config = _resolve_config(tenant_id)
+    zip_code = _extract_zip(payload.args.get("zip_code", ""))
+    if not zip_code:
+        zip_code = _extract_zip(payload.args.get("service_address", ""))
+    allowed_zips = set(getattr(config, "service_area_zips", []) or [])
+    return JSONResponse(
+        content={
+            "in_service_area": bool(zip_code and zip_code in allowed_zips),
+            "zip_code": zip_code,
+        }
+    )
+
+
+def _extract_zip(value: str) -> str | None:
+    match = re.search(r"\b(\d{5})\b", value or "")
+    if not match:
+        return None
+    return match.group(1)
 
 
 __all__ = ["voice_router"]

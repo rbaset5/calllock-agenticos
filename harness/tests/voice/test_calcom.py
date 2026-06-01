@@ -10,6 +10,7 @@ from voice.models import CalcomConfig
 from voice.services.calcom import (
     CalcomError,
     cancel_booking,
+    create_booking,
     lookup_by_phone,
     reschedule_booking,
 )
@@ -116,6 +117,62 @@ class TestCancelBooking:
 
             with pytest.raises(CalcomError):
                 await cancel_booking("cal-uid-bad", "test", calcom_config)
+
+
+class TestCreateBooking:
+    @pytest.mark.asyncio
+    async def test_successful_create_booking(self, calcom_config: CalcomConfig) -> None:
+        booking_response = {
+            "status": "success",
+            "data": {
+                "uid": "cal-uid-created",
+                "startTime": "2026-03-25T14:00:00Z",
+            },
+        }
+
+        with patch("voice.services.calcom.httpx") as mock_httpx:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.post = AsyncMock(return_value=_mock_response(200, booking_response))
+            mock_httpx.AsyncClient.return_value = mock_client
+
+            result = await create_booking(
+                customer_name="Jane Customer",
+                customer_phone="+15125550101",
+                service_address="123 Main St, Austin, TX 78701",
+                preferred_time="2026-03-25T14:00:00Z",
+                issue_description="AC not cooling",
+                urgency_tier="soon",
+                config=calcom_config,
+            )
+
+        assert result["uid"] == "cal-uid-created"
+        mock_client.post.assert_awaited_once()
+        _, kwargs = mock_client.post.call_args
+        assert kwargs["json"]["eventTypeId"] == 12345
+        assert kwargs["json"]["attendee"]["phoneNumber"] == "+15125550101"
+        assert kwargs["json"]["metadata"]["source"] == "calllock_voice"
+
+    @pytest.mark.asyncio
+    async def test_create_booking_error_raises(self, calcom_config: CalcomConfig) -> None:
+        with patch("voice.services.calcom.httpx") as mock_httpx:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.post = AsyncMock(return_value=_mock_response(500))
+            mock_httpx.AsyncClient.return_value = mock_client
+
+            with pytest.raises(CalcomError):
+                await create_booking(
+                    customer_name="Jane Customer",
+                    customer_phone="+15125550101",
+                    service_address="123 Main St, Austin, TX 78701",
+                    preferred_time="2026-03-25T14:00:00Z",
+                    issue_description="AC not cooling",
+                    urgency_tier="soon",
+                    config=calcom_config,
+                )
 
 
 class TestRescheduleBooking:
