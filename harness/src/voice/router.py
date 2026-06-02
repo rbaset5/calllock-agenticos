@@ -242,6 +242,7 @@ async def handle_book_service(request: Request) -> JSONResponse:
 
     result = await book_service(
         customer_name=args.get("customer_name", ""),
+        customer_email=args.get("customer_email", args.get("email", "")),
         customer_phone=args.get("customer_phone", args.get("phone", "")),
         service_address=args.get("service_address", args.get("address", "")),
         preferred_time=args.get("preferred_time", ""),

@@ -70,6 +70,7 @@ async def lookup_by_phone(phone: str, config: CalcomConfig) -> list[dict[str, An
 async def create_booking(
     *,
     customer_name: str,
+    customer_email: str,
     customer_phone: str,
     service_address: str,
     preferred_time: str,
@@ -83,6 +84,7 @@ async def create_booking(
         "start": preferred_time,
         "attendee": {
             "name": customer_name,
+            "email": customer_email,
             "phoneNumber": customer_phone,
             "timeZone": config.calcom_timezone,
         },
