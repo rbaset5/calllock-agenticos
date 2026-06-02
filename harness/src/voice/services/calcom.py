@@ -23,10 +23,10 @@ class CalcomError(Exception):
     """Cal.com API call failed."""
 
 
-def _headers(config: CalcomConfig) -> dict[str, str]:
+def _headers(config: CalcomConfig, *, api_version: str = "2024-08-13") -> dict[str, str]:
     return {
         "Authorization": f"Bearer {config.calcom_api_key}",
-        "cal-api-version": "2024-08-13",
+        "cal-api-version": api_version,
         "Content-Type": "application/json",
     }
 
@@ -119,6 +119,55 @@ async def create_booking(
         raise CalcomError(f"Cal.com booking failed: {exc}") from exc
 
 
+async def list_available_slots(
+    *,
+    config: CalcomConfig,
+    start: str,
+    end: str,
+    time_zone: str,
+) -> list[dict[str, Any]]:
+    """Return flattened Cal.com slots for a tenant event type."""
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            response = await client.get(
+                f"{_CAL_API_BASE}/slots",
+                params={
+                    "eventTypeId": config.calcom_event_type_id,
+                    "start": start,
+                    "end": end,
+                    "timeZone": time_zone,
+                },
+                headers=_headers(config, api_version="2024-09-04"),
+            )
+
+        if response.status_code >= 400:
+            raise CalcomError(f"Cal.com slot lookup failed: HTTP {response.status_code}")
+
+        data = response.json()
+        return _flatten_slots(data.get("data", data))
+
+    except CalcomError:
+        raise
+    except httpx.TimeoutException as exc:
+        raise CalcomError(f"Cal.com slot lookup timed out: {exc}") from exc
+    except Exception as exc:
+        raise CalcomError(f"Cal.com slot lookup failed: {exc}") from exc
+
+
+def _flatten_slots(data: object) -> list[dict[str, Any]]:
+    if isinstance(data, list):
+        return [slot for slot in data if isinstance(slot, dict)]
+
+    if not isinstance(data, dict):
+        return []
+
+    slots: list[dict[str, Any]] = []
+    for day_slots in data.values():
+        if isinstance(day_slots, list):
+            slots.extend(slot for slot in day_slots if isinstance(slot, dict))
+    return slots
+
+
 async def cancel_booking(booking_uid: str, reason: str, config: CalcomConfig) -> bool:
     """Cancel a booking by UID."""
     try:
@@ -173,6 +222,7 @@ __all__ = [
     "CalcomError",
     "cancel_booking",
     "create_booking",
+    "list_available_slots",
     "lookup_by_phone",
     "reschedule_booking",
 ]
