@@ -754,7 +754,11 @@ config:
       \ Site contact: [name] at [phone]\"\n- urgency_tier: \"urgent\" or \"routine\"\
       \n- Use the EXACT urgency_tier value passed from the [confirm] edge. Do NOT\
       \ upgrade or downgrade urgency in this state unless the caller explicitly changed\
-      \ urgency after confirm.\n\n## Step 2: Handle the Response (ONLY after tool\
+      \ urgency after confirm.\n\nThe harness resolves natural timing phrases against\
+      \ Cal.com and defaults vague availability to appointment starts from 9:00 AM\
+      \ through before 5:00 PM in the client's calendar timezone. If the requested\
+      \ window is not open, the tool may return available_slots for you to offer.\n\
+      \n## Step 2: Handle the Response (ONLY after tool\
       \ returns)\n\nIMPORTANT RESPONSE SCHEMA COMPATIBILITY\n- Some backends return\
       \ booking success as `booking_confirmed`; others return `booked`.\n- Treat `booking_confirmed:\
       \ true` and `booked: true` as the SAME success signal.\n- Treat `booking_confirmed:\
@@ -865,7 +869,9 @@ config:
           preferred_time:
             type: string
             description: 'When they want service: ''soonest available'', ''tomorrow
-              morning'', ''Monday at 2pm'', etc. Pass exactly what they said.'
+              morning'', ''Monday at 2pm'', etc. Pass exactly what they said. The
+              harness resolves natural phrases against Cal.com slots and defaults
+              vague availability to 9am-5pm.'
           issue_description:
             type: string
             description: 'The HVAC problem described by the caller. If a site contact

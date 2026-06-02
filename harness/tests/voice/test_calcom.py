@@ -11,6 +11,7 @@ from voice.services.calcom import (
     CalcomError,
     cancel_booking,
     create_booking,
+    list_available_slots,
     lookup_by_phone,
     reschedule_booking,
 )
@@ -175,6 +176,69 @@ class TestCreateBooking:
                     issue_description="AC not cooling",
                     urgency_tier="soon",
                     config=calcom_config,
+                )
+
+
+class TestListAvailableSlots:
+    @pytest.mark.asyncio
+    async def test_flattens_calcom_slot_response(self, calcom_config: CalcomConfig) -> None:
+        slots_response = {
+            "status": "success",
+            "data": {
+                "2026-06-03": [
+                    {"start": "2026-06-03T09:00:00.000-05:00"},
+                    {"start": "2026-06-03T09:30:00.000-05:00"},
+                ],
+                "2026-06-04": [
+                    {"start": "2026-06-04T10:00:00.000-05:00"},
+                ],
+            },
+        }
+
+        with patch("voice.services.calcom.httpx") as mock_httpx:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.get = AsyncMock(return_value=_mock_response(200, slots_response))
+            mock_httpx.AsyncClient.return_value = mock_client
+
+            result = await list_available_slots(
+                config=calcom_config,
+                start="2026-06-03T00:00:00-05:00",
+                end="2026-06-05T00:00:00-05:00",
+                time_zone="America/Chicago",
+            )
+
+        assert result == [
+            {"start": "2026-06-03T09:00:00.000-05:00"},
+            {"start": "2026-06-03T09:30:00.000-05:00"},
+            {"start": "2026-06-04T10:00:00.000-05:00"},
+        ]
+        mock_client.get.assert_awaited_once()
+        _, kwargs = mock_client.get.call_args
+        assert kwargs["params"] == {
+            "eventTypeId": 12345,
+            "start": "2026-06-03T00:00:00-05:00",
+            "end": "2026-06-05T00:00:00-05:00",
+            "timeZone": "America/Chicago",
+        }
+        assert kwargs["headers"]["cal-api-version"] == "2024-09-04"
+
+    @pytest.mark.asyncio
+    async def test_slot_lookup_error_raises(self, calcom_config: CalcomConfig) -> None:
+        with patch("voice.services.calcom.httpx") as mock_httpx:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.get = AsyncMock(return_value=_mock_response(500))
+            mock_httpx.AsyncClient.return_value = mock_client
+
+            with pytest.raises(CalcomError):
+                await list_available_slots(
+                    config=calcom_config,
+                    start="2026-06-03T00:00:00-05:00",
+                    end="2026-06-05T00:00:00-05:00",
+                    time_zone="America/Chicago",
                 )
 
 

@@ -14,7 +14,8 @@ from typing import Any
 
 from voice.fallback_router import FallbackContext, FallbackPolicy, route_call_fallback
 from voice.models import CalcomConfig, VoiceConfig
-from voice.services.calcom import CalcomError, create_booking
+from voice.services.calcom import CalcomError, create_booking, list_available_slots
+from voice.tools.slot_selection import ListAvailableSlotsFn, NowFn, is_exact_datetime, resolve_preferred_slot
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,8 @@ async def book_service(
     zip_code: str = "",
     fallback_policy: FallbackPolicy | None = None,
     create_booking_fn: CreateBookingFn | None = None,
+    list_available_slots_fn: ListAvailableSlotsFn | None = None,
+    now_fn: NowFn | None = None,
 ) -> dict[str, Any]:
     """Validate and create a service booking.
 
@@ -52,6 +55,24 @@ async def book_service(
     if not _is_valid_email(customer_email):
         return _failed_booking("customer_email_missing", urgency_tier, policy)
 
+    resolved_time = preferred_time.strip()
+    if not is_exact_datetime(resolved_time):
+        slots_fn = list_available_slots_fn or list_available_slots
+        try:
+            resolution = await resolve_preferred_slot(
+                preferred_time=resolved_time,
+                config=calcom_config,
+                list_available_slots_fn=slots_fn,
+                now_fn=now_fn,
+            )
+        except (CalcomError, Exception):
+            logger.warning("book_service.slot_lookup_failed", exc_info=True)
+            return _failed_booking("booking_failed", urgency_tier, policy)
+
+        if resolution.selected_start is None:
+            return _slot_unavailable("no_matching_slot", resolution.available_starts)
+        resolved_time = resolution.selected_start
+
     booking_fn = create_booking_fn or create_booking
     try:
         booking = await booking_fn(
@@ -59,7 +80,7 @@ async def book_service(
             customer_email=customer_email,
             customer_phone=customer_phone,
             service_address=service_address,
-            preferred_time=preferred_time,
+            preferred_time=resolved_time,
             issue_description=issue_description,
             urgency_tier=urgency_tier,
             config=calcom_config,
@@ -77,6 +98,21 @@ async def book_service(
         "booking_id": booking_id,
         "appointment_time": appointment_time,
         "message": "Appointment booked successfully.",
+    }
+
+
+def _slot_unavailable(reason: str, available_slots: list[str]) -> dict[str, Any]:
+    if available_slots:
+        message = "That requested window is not open. I found other available slots."
+    else:
+        message = "I am not seeing any openings right now."
+    return {
+        "success": False,
+        "booking_confirmed": False,
+        "booked": False,
+        "reason": reason,
+        "available_slots": available_slots,
+        "message": message,
     }
 
 

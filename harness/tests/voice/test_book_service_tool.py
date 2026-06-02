@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import pytest
 
 from voice.fallback_router import FallbackPolicy
@@ -29,7 +32,7 @@ async def test_book_service_creates_booking_after_service_area_passes(
         customer_phone="+15125550101",
         service_address="123 Oak St, Austin TX 78701",
         zip_code="",
-        preferred_time="tomorrow afternoon",
+        preferred_time="2026-06-02T15:00:00-04:00",
         issue_description="AC not cooling",
         urgency_tier="urgent",
         voice_config=mock_voice_config,
@@ -61,7 +64,7 @@ async def test_book_service_uses_zip_code_when_address_lacks_zip(
         customer_phone="+15125550101",
         service_address="123 Oak St, Austin TX",
         zip_code="78701",
-        preferred_time="tomorrow afternoon",
+        preferred_time="2026-06-02T16:00:00-04:00",
         issue_description="AC not cooling",
         urgency_tier="routine",
         voice_config=mock_voice_config,
@@ -71,6 +74,131 @@ async def test_book_service_uses_zip_code_when_address_lacks_zip(
 
     assert result["booking_confirmed"] is True
     assert result["booking_id"] == "cal-002"
+
+
+@pytest.mark.asyncio
+async def test_book_service_resolves_soonest_available_inside_default_business_hours(
+    mock_voice_config: VoiceConfig,
+    mock_calcom_config: CalcomConfig,
+) -> None:
+    booking_calls: list[dict[str, object]] = []
+
+    async def fake_list_available_slots(**_: object) -> list[dict[str, object]]:
+        return [
+            {"start": "2026-06-02T08:30:00.000-05:00"},
+            {"start": "2026-06-02T17:00:00.000-05:00"},
+            {"start": "2026-06-03T09:00:00.000-05:00"},
+        ]
+
+    async def fake_create_booking(**kwargs: object) -> dict[str, object]:
+        booking_calls.append(kwargs)
+        return {
+            "uid": "cal-soonest",
+            "start": kwargs["preferred_time"],
+        }
+
+    result = await book_service(
+        customer_name="Jane Doe",
+        customer_email="jane@example.com",
+        customer_phone="+15125550101",
+        service_address="123 Oak St, Austin TX 78701",
+        zip_code="78701",
+        preferred_time="soonest available",
+        issue_description="AC not cooling",
+        urgency_tier="routine",
+        voice_config=mock_voice_config,
+        calcom_config=mock_calcom_config,
+        create_booking_fn=fake_create_booking,
+        list_available_slots_fn=fake_list_available_slots,
+        now_fn=lambda: datetime(2026, 6, 2, 10, 0, tzinfo=ZoneInfo("America/Chicago")),
+    )
+
+    assert result["booking_confirmed"] is True
+    assert result["booking_id"] == "cal-soonest"
+    assert booking_calls[0]["preferred_time"] == "2026-06-03T09:00:00.000-05:00"
+
+
+@pytest.mark.asyncio
+async def test_book_service_resolves_tomorrow_morning_to_first_matching_slot(
+    mock_voice_config: VoiceConfig,
+    mock_calcom_config: CalcomConfig,
+) -> None:
+    slot_calls: list[dict[str, object]] = []
+    booking_calls: list[dict[str, object]] = []
+
+    async def fake_list_available_slots(**kwargs: object) -> list[dict[str, object]]:
+        slot_calls.append(kwargs)
+        return [
+            {"start": "2026-06-03T08:30:00.000-05:00"},
+            {"start": "2026-06-03T09:30:00.000-05:00"},
+            {"start": "2026-06-03T13:00:00.000-05:00"},
+        ]
+
+    async def fake_create_booking(**kwargs: object) -> dict[str, object]:
+        booking_calls.append(kwargs)
+        return {
+            "uid": "cal-tomorrow",
+            "start": kwargs["preferred_time"],
+        }
+
+    result = await book_service(
+        customer_name="Jane Doe",
+        customer_email="jane@example.com",
+        customer_phone="+15125550101",
+        service_address="123 Oak St, Austin TX 78701",
+        zip_code="78701",
+        preferred_time="tomorrow morning",
+        issue_description="AC not cooling",
+        urgency_tier="routine",
+        voice_config=mock_voice_config,
+        calcom_config=mock_calcom_config,
+        create_booking_fn=fake_create_booking,
+        list_available_slots_fn=fake_list_available_slots,
+        now_fn=lambda: datetime(2026, 6, 2, 10, 0, tzinfo=ZoneInfo("America/Chicago")),
+    )
+
+    assert result["booking_confirmed"] is True
+    assert result["appointment_time"] == "2026-06-03T09:30:00.000-05:00"
+    assert booking_calls[0]["preferred_time"] == "2026-06-03T09:30:00.000-05:00"
+    assert slot_calls[0]["time_zone"] == "America/Chicago"
+
+
+@pytest.mark.asyncio
+async def test_book_service_returns_available_slots_when_preference_has_no_match(
+    mock_voice_config: VoiceConfig,
+    mock_calcom_config: CalcomConfig,
+) -> None:
+    async def fake_list_available_slots(**_: object) -> list[dict[str, object]]:
+        return [
+            {"start": "2026-06-03T09:00:00.000-05:00"},
+            {"start": "2026-06-03T15:30:00.000-05:00"},
+        ]
+
+    async def fake_create_booking(**_: object) -> dict[str, object]:
+        raise AssertionError("Cal.com booking should wait for the caller to choose an offered slot")
+
+    result = await book_service(
+        customer_name="Jane Doe",
+        customer_email="jane@example.com",
+        customer_phone="+15125550101",
+        service_address="123 Oak St, Austin TX 78701",
+        zip_code="78701",
+        preferred_time="tomorrow evening",
+        issue_description="AC not cooling",
+        urgency_tier="routine",
+        voice_config=mock_voice_config,
+        calcom_config=mock_calcom_config,
+        create_booking_fn=fake_create_booking,
+        list_available_slots_fn=fake_list_available_slots,
+        now_fn=lambda: datetime(2026, 6, 2, 10, 0, tzinfo=ZoneInfo("America/Chicago")),
+    )
+
+    assert result["booking_confirmed"] is False
+    assert result["reason"] == "no_matching_slot"
+    assert result["available_slots"] == [
+        "2026-06-03T09:00:00.000-05:00",
+        "2026-06-03T15:30:00.000-05:00",
+    ]
 
 
 @pytest.mark.asyncio
