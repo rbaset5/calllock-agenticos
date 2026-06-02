@@ -139,6 +139,7 @@ class TestCreateBooking:
 
             result = await create_booking(
                 customer_name="Jane Customer",
+                customer_email="jane@example.com",
                 customer_phone="+15125550101",
                 service_address="123 Main St, Austin, TX 78701",
                 preferred_time="2026-03-25T14:00:00Z",
@@ -151,6 +152,7 @@ class TestCreateBooking:
         mock_client.post.assert_awaited_once()
         _, kwargs = mock_client.post.call_args
         assert kwargs["json"]["eventTypeId"] == 12345
+        assert kwargs["json"]["attendee"]["email"] == "jane@example.com"
         assert kwargs["json"]["attendee"]["phoneNumber"] == "+15125550101"
         assert kwargs["json"]["metadata"]["source"] == "calllock_voice"
 
@@ -166,6 +168,7 @@ class TestCreateBooking:
             with pytest.raises(CalcomError):
                 await create_booking(
                     customer_name="Jane Customer",
+                    customer_email="jane@example.com",
                     customer_phone="+15125550101",
                     service_address="123 Main St, Austin, TX 78701",
                     preferred_time="2026-03-25T14:00:00Z",

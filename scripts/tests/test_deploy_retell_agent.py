@@ -108,7 +108,7 @@ class TestLoadYamlConfig:
         assert result["states"][1]["name"] == "collect_info"
 
     def test_real_retell_config_requires_validated_zip_for_booking(self) -> None:
-        """The deployed Retell tool schema must carry the validated ZIP into booking."""
+        """The deployed Retell tool schema must carry required booking fields."""
         config_path = Path(__file__).parents[2] / DEFAULT_CONFIG
 
         result = load_yaml_config(str(config_path))
@@ -117,6 +117,8 @@ class TestLoadYamlConfig:
 
         assert "zip_code" in book_tool["parameters"]["properties"]
         assert "zip_code" in book_tool["parameters"]["required"]
+        assert "customer_email" in book_tool["parameters"]["properties"]
+        assert "customer_email" in book_tool["parameters"]["required"]
 
     def test_raises_on_missing_config_key(self, tmp_path: Path) -> None:
         """YAML without a 'config' key should exit."""

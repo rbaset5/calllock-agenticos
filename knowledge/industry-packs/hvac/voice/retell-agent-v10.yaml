@@ -70,7 +70,8 @@ config:
     \ urgency.\n- The booking state ONLY executes after confirm approval.\n- If the\
     \ caller corrects info in confirm, update and re-confirm.\n\n## Dynamic Variables\
     \ (Track These)\nReference these to avoid re-asking:\n- {{customer_name}} - Caller's\
-    \ name (may be pre-filled from lookup)\n- {{zip_code}} - Their ZIP code (may be\
+    \ name (may be pre-filled from lookup)\n- {{customer_email}} - Caller's email\
+    \ for the calendar booking\n- {{zip_code}} - Their ZIP code (may be\
     \ pre-filled from lookup)\n- {{problem_description}} - What's wrong with their\
     \ system\n- {{urgency_tier}} - \"urgent\" or \"routine\"\n- {{preferred_time}}\
     \ - When they want service\n- {{service_address}} - Where the service is needed\
@@ -501,7 +502,9 @@ config:
       \   - For returning callers with lookup name, SKIP this entirely.\n\n2. PROBLEM\
       \ (if missing): \"What's going on with the system?\"\n   - Paraphrase their\
       \ answer professionally.\n\n3. ADDRESS (if missing and not pre-filled): \"What's\
-      \ the street address for the service call?\"\n\n## HIGH-TICKET SALES LEAD DETECTION\n\
+      \ the street address for the service call?\"\n\n4. EMAIL (if missing): \"What's\
+      \ the best email for the appointment confirmation?\"\n   - Must be a real email\
+      \ address with an @ sign.\n\n## HIGH-TICKET SALES LEAD DETECTION\n\
       After collecting the problem description, check if the caller mentioned ANY\
       \ of these keywords:\n- \"replacement\", \"replace\", \"new system\", \"new\
       \ unit\", \"new AC\", \"new furnace\"\n- \"quote\", \"estimate\", \"how much\
@@ -519,7 +522,7 @@ config:
       \ = REPLACEMENT \u2192 lead_type = \"high_ticket\"\n\"How much for a new furnace?\"\
       \ = REPLACEMENT \u2192 lead_type = \"high_ticket\"\n\nWhen in doubt, default\
       \ to empty string. A misclassified repair costs a booking.\n\n## PROPERTY MANAGER\
-      \ / LANDLORD DETECTION\nAfter collecting name + problem + address, check if\
+      \ / LANDLORD DETECTION\nAfter collecting name + problem + address + email, check if\
       \ the caller used ANY of these phrases:\n- \"property manager\", \"landlord\"\
       , \"I manage\", \"managing properties\"\n- \"rental property\", \"tenant\",\
       \ \"property management\", \"my tenant\"\n- \"calling on behalf of\", \"the\
@@ -529,11 +532,11 @@ config:
       \u2192 If someone else: \"Got it \u2014 what's the best name and number for\
       \ the person at the property?\"\n  \u2192 Capture site_contact_name and site_contact_phone\n\
       \  \u2192 Set is_third_party to true\n\nDo NOT add extra questions beyond this\
-      \ ONE. \u2192 [confirm] after.\n\n## When You Have All Three (name + problem\
-      \ + address)\n\u2192 [confirm]. Say 'Got it.' while proceeding.\n\nCRITICAL:\
-      \ Once you have all three, proceed IMMEDIATELY. Do NOT ask follow-up diagnostic\
+      \ ONE. \u2192 [confirm] after.\n\n## When You Have All Four (name + problem\
+      \ + address + email)\n\u2192 [confirm]. Say 'Got it.' while proceeding.\n\nCRITICAL:\
+      \ Once you have all four, proceed IMMEDIATELY. Do NOT ask follow-up diagnostic\
       \ questions, clarifying questions, or 'anything else?' questions. The tech will\
-      \ diagnose on-site. Your only job is name + problem + address \u2192 proceed.\n\
+      \ diagnose on-site. Your only job is name + problem + address + email \u2192 proceed.\n\
       \n## Equipment Type (OPTIONAL \u2014 do NOT ask separately)\nIf the caller naturally\
       \ mentions their equipment type (AC, furnace, heat pump, boiler, thermostat),\
       \ capture it in the equipment_type edge parameter.\nDo NOT add an extra question\
@@ -549,7 +552,7 @@ config:
       \ \u2014 confirm handles that. Do NOT read back a summary \u2014 confirm handles\
       \ that too."
     edges:
-    - description: Proceed once you have name + problem + address. Pass any timing
+    - description: Proceed once you have name + problem + address + email. Pass any timing
         info the caller volunteered as preferred_time. Flag high-ticket leads and
         property manager info.
       speak_during_transition: true
@@ -584,6 +587,9 @@ config:
             type: string
             description: "Caller's real name \u2014 must be a plausible human name.\
               \ Use lookup name for returning callers."
+          customer_email:
+            type: string
+            description: Caller's email address for the calendar booking confirmation
           is_third_party:
             type: boolean
             description: true if caller is a property manager/landlord calling on
@@ -603,6 +609,7 @@ config:
               couple weeks'). Empty string if not mentioned.
         required:
         - customer_name
+        - customer_email
         - problem_description
         - service_address
     tools: []
@@ -621,14 +628,16 @@ config:
       \ what name should I put on the work order?\" WAIT for their answer.\n2. problem_description:\
       \ Do you have a real HVAC issue description? If NOT \u2192 ask: \"And what's\
       \ going on with the system?\"\n3. service_address: Do you have a real street\
-      \ address? If NOT \u2192 ask: \"What's the service address?\"\n\nCRITICAL: If\
+      \ address? If NOT \u2192 ask: \"What's the service address?\"\n4. customer_email:\
+      \ Do you have a real email address with an @ sign? If NOT \u2192 ask: \"What's\
+      \ the best email for the appointment confirmation?\"\n\nCRITICAL: If\
       \ you would say the words \"customer_name\" or \"{{\" out loud, the field is\
-      \ NOT filled. Stop and ask.\nDo NOT read back ANY summary until ALL three fields\
+      \ NOT filled. Stop and ask.\nDo NOT read back ANY summary until ALL four fields\
       \ contain real values.\n\n## Step 1: Summarize + Ask About Timing\n\nIf timing\
       \ is ALREADY KNOWN (preferred_time is not empty):\n\u2192 \"Alright [Name],\
-      \ you've got a [problem] at [address], and you're looking for [timing]. Sound\
+      \ you've got a [problem] at [address], email [customer_email], and you're looking for [timing]. Sound\
       \ right?\"\n\nIf timing is NOT KNOWN:\n\u2192 \"Alright [Name], you've got a\
-      \ [problem] at [address]. How urgent is this \u2014 need someone today, or sometime\
+      \ [problem] at [address], email [customer_email]. How urgent is this \u2014 need someone today, or sometime\
       \ this week works?\"\n\nKeep it natural and brief \u2014 one or two sentences\
       \ max.\n\n## Step 2: Determine Urgency from Their Response\n\nIf they confirmed\
       \ the summary (\"yes\", \"that's right\", \"correct\", \"yep\", \"sounds good\"\
@@ -646,7 +655,7 @@ config:
       \ = their EXACT phrase\n\u2192 Confirm: \"Got it \u2014 [timing]. Sound good?\"\
       \ \u2192 wait for yes \u2192 [booking]\n\n## Step 3: Handle Special Cases\n\n\
       ### CORRECTION NEEDED\nCaller corrects a detail (name spelling, address, timing,\
-      \ problem)\n\u2192 Acknowledge: \"Got it \u2014 so that's [corrected detail].\"\
+      \ problem, email)\n\u2192 Acknowledge: \"Got it \u2014 so that's [corrected detail].\"\
       \n\u2192 Update the variable\n\u2192 Ask: \"Everything else look good?\"\n\u2192\
       \ Once they confirm \u2192 [booking]\n\n### CALLBACK REQUESTED\nCaller says:\
       \ \"just have someone call me\", \"I don't want to schedule right now\", \"\
@@ -693,8 +702,12 @@ config:
           urgency_tier:
             type: string
             description: '''urgent'' for same-day/ASAP, ''routine'' for flexible timing'
+          customer_email:
+            type: string
+            description: Caller's confirmed email address for the calendar booking
         required:
         - confirmed
+        - customer_email
         - preferred_time
         - urgency_tier
     - description: Caller wants a callback instead of scheduling, this is a high-ticket
@@ -735,7 +748,7 @@ config:
       \ Do NOT include the specific requested time in the execution_message, because\
       \ the actual booked slot may differ from what was requested.\n\nPass these values\
       \ to book_service:\n- customer_name: The caller's real name (already confirmed\
-      \ in confirm)\n- customer_phone: \"auto\"\n- service_address: Their address\
+      \ in confirm)\n- customer_email: The email confirmed in confirm\n- customer_phone: \"auto\"\n- service_address: Their address\
       \ or \"TBD\"\n- zip_code: The ZIP validated in service_area\n- preferred_time: EXACTLY what they said\n- issue_description:\
       \ Their problem description. If site_contact_name is not empty, append: \" |\
       \ Site contact: [name] at [phone]\"\n- urgency_tier: \"urgent\" or \"routine\"\
@@ -865,6 +878,9 @@ config:
           customer_name:
             type: string
             description: Customer's name
+          customer_email:
+            type: string
+            description: Customer's email address for the calendar booking
           service_address:
             type: string
             description: Service address or 'TBD' if not collected
@@ -878,6 +894,7 @@ config:
               do not pass this parameter.'
         required:
         - customer_name
+        - customer_email
         - customer_phone
         - zip_code
         - preferred_time

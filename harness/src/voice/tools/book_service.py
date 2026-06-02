@@ -24,6 +24,7 @@ CreateBookingFn = Callable[..., Awaitable[dict[str, Any]]]
 async def book_service(
     *,
     customer_name: str,
+    customer_email: str,
     customer_phone: str,
     service_address: str,
     preferred_time: str,
@@ -48,10 +49,14 @@ async def book_service(
     if not _location_in_service_area(service_address, zip_code, voice_config.service_area_zips):
         return _failed_booking("service_area_blocked", urgency_tier, policy)
 
+    if not _is_valid_email(customer_email):
+        return _failed_booking("customer_email_missing", urgency_tier, policy)
+
     booking_fn = create_booking_fn or create_booking
     try:
         booking = await booking_fn(
             customer_name=customer_name,
+            customer_email=customer_email,
             customer_phone=customer_phone,
             service_address=service_address,
             preferred_time=preferred_time,
@@ -125,6 +130,10 @@ def _extract_zip(value: str) -> str | None:
     if not match:
         return None
     return match.group(1)
+
+
+def _is_valid_email(value: str) -> bool:
+    return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value.strip()))
 
 
 def _first_present(mapping: dict[str, Any], *keys: str) -> Any:
