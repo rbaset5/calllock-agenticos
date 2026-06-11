@@ -66,6 +66,11 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("email_accounts", [])
     seed.setdefault("call_records", [])
     seed.setdefault("voice_api_keys", [])
+    seed.setdefault("voice_call_events", [])
+    seed.setdefault("voice_tool_calls", [])
+    seed.setdefault("voice_config_snapshots", [])
+    seed.setdefault("voice_safety_findings", [])
+    seed.setdefault("voice_call_debug_packets", [])
     return seed
 
 
@@ -1755,3 +1760,154 @@ def get_voice_api_keys() -> list[dict[str, Any]]:
         row for row in _state()["voice_api_keys"]
         if row.get("revoked_at") is None
     ]
+
+
+def record_voice_call_event(event: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    record = {
+        "id": event.get("id", str(uuid4())),
+        "tenant_id": event.get("tenant_id"),
+        "call_id": event["call_id"],
+        "retell_call_id": event["retell_call_id"],
+        "event_type": event["event_type"],
+        "event_timestamp": event.get("event_timestamp"),
+        "source": event.get("source", "retell"),
+        "payload": deepcopy(event["payload"]),
+        "payload_hash": event["payload_hash"],
+        "created_at": event.get("created_at", now),
+    }
+    _state()["voice_call_events"].append(record)
+    return record
+
+
+def list_voice_call_events(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row for row in _state()["voice_call_events"]
+        if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id
+    ]
+    return _sort_by_created_at([deepcopy(row) for row in rows])
+
+
+def record_voice_tool_call(tool_call: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    record = {
+        "id": tool_call.get("id", str(uuid4())),
+        "tenant_id": tool_call.get("tenant_id"),
+        "call_id": tool_call["call_id"],
+        "retell_call_id": tool_call.get("retell_call_id"),
+        "tool_name": tool_call["tool_name"],
+        "request_payload": deepcopy(tool_call["request_payload"]),
+        "response_payload": deepcopy(tool_call.get("response_payload")),
+        "status": tool_call["status"],
+        "latency_ms": tool_call.get("latency_ms"),
+        "error_type": tool_call.get("error_type"),
+        "error_message": tool_call.get("error_message"),
+        "created_at": tool_call.get("created_at", now),
+    }
+    _state()["voice_tool_calls"].append(record)
+    return record
+
+
+def list_voice_tool_calls(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row for row in _state()["voice_tool_calls"]
+        if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id
+    ]
+    return _sort_by_created_at([deepcopy(row) for row in rows])
+
+
+def record_voice_config_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    tenant_id = snapshot.get("tenant_id")
+    call_id = snapshot["call_id"]
+    for row in _state()["voice_config_snapshots"]:
+        if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id:
+            row.update(
+                {
+                    "retell_agent_id": snapshot.get("retell_agent_id"),
+                    "retell_llm_id": snapshot.get("retell_llm_id"),
+                    "config_source_path": snapshot.get("config_source_path"),
+                    "config_hash": snapshot["config_hash"],
+                    "config_snapshot": deepcopy(snapshot["config_snapshot"]),
+                }
+            )
+            return row
+
+    record = {
+        "id": snapshot.get("id", str(uuid4())),
+        "tenant_id": tenant_id,
+        "call_id": call_id,
+        "retell_agent_id": snapshot.get("retell_agent_id"),
+        "retell_llm_id": snapshot.get("retell_llm_id"),
+        "config_source_path": snapshot.get("config_source_path"),
+        "config_hash": snapshot["config_hash"],
+        "config_snapshot": deepcopy(snapshot["config_snapshot"]),
+        "created_at": snapshot.get("created_at", now),
+    }
+    _state()["voice_config_snapshots"].append(record)
+    return record
+
+
+def get_voice_config_snapshot(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    for row in _state()["voice_config_snapshots"]:
+        if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id:
+            return deepcopy(row)
+    return None
+
+
+def record_voice_safety_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    now = datetime.now(timezone.utc).isoformat()
+    stored: list[dict[str, Any]] = []
+    for finding in findings:
+        record = {
+            "id": finding.get("id", str(uuid4())),
+            "tenant_id": finding["tenant_id"],
+            "call_id": finding["call_id"],
+            "finding_type": finding["finding_type"],
+            "severity": finding["severity"],
+            "status": finding.get("status", "open"),
+            "evidence": deepcopy(finding.get("evidence", {})),
+            "created_at": finding.get("created_at", now),
+        }
+        _state()["voice_safety_findings"].append(record)
+        stored.append(record)
+    return stored
+
+
+def list_voice_safety_findings(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    rows = [
+        row for row in _state()["voice_safety_findings"]
+        if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id
+    ]
+    return _sort_by_created_at([deepcopy(row) for row in rows])
+
+
+def upsert_voice_call_debug_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    tenant_id = packet["tenant_id"]
+    call_id = packet["call_id"]
+    for row in _state()["voice_call_debug_packets"]:
+        if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id:
+            row["packet"] = deepcopy(packet["packet"])
+            row["failure_bucket"] = packet.get("failure_bucket")
+            row["updated_at"] = now
+            return row
+
+    record = {
+        "id": packet.get("id", str(uuid4())),
+        "tenant_id": tenant_id,
+        "call_id": call_id,
+        "packet": deepcopy(packet["packet"]),
+        "failure_bucket": packet.get("failure_bucket"),
+        "created_at": packet.get("created_at", now),
+        "updated_at": packet.get("updated_at", now),
+    }
+    _state()["voice_call_debug_packets"].append(record)
+    return record
+
+
+def get_voice_call_debug_packet(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    for row in _state()["voice_call_debug_packets"]:
+        if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id:
+            return deepcopy(row)
+    return None

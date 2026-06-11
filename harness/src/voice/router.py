@@ -7,7 +7,9 @@ Retell v10 sends each tool call to its own URL.
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -16,6 +18,7 @@ from fastapi.responses import JSONResponse
 from voice.auth import HMACVerificationError, verify_retell_hmac
 from voice.config import VoiceConfigError, resolve_voice_config
 from voice.models import RetellToolCallRequest
+from voice.production.evidence import record_event, record_tool_call
 from voice.tools.create_callback import create_callback
 from voice.tools.lookup_caller import lookup_caller
 from voice.tools.sales_lead_alert import send_sales_lead_alert
@@ -25,6 +28,74 @@ logger = logging.getLogger(__name__)
 _GRACEFUL_ERROR = "We're experiencing technical difficulties. Please call back or leave a message."
 
 voice_router = APIRouter(tags=["voice"])
+
+
+def _latency_ms(start: float) -> int:
+    return int((time.perf_counter() - start) * 1000)
+
+
+def _safe_record_event(
+    *,
+    tenant_id: str | None,
+    call_id: str,
+    retell_call_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+) -> None:
+    try:
+        record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=retell_call_id,
+            event_type=event_type,
+            payload=payload,
+        )
+    except Exception:
+        logger.warning(
+            "voice.evidence.event_capture_failed",
+            extra={"call_id": call_id, "event_type": event_type},
+            exc_info=True,
+        )
+
+
+def _safe_record_tool_call(
+    *,
+    tenant_id: str | None,
+    call_id: str,
+    retell_call_id: str | None,
+    tool_name: str,
+    request_payload: dict[str, Any],
+    response_payload: dict[str, Any],
+    status: str,
+    latency_ms: int,
+    error_type: str | None = None,
+    error_message: str | None = None,
+) -> None:
+    try:
+        record_tool_call(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=retell_call_id,
+            tool_name=tool_name,
+            request_payload=request_payload,
+            response_payload=response_payload,
+            status=status,
+            latency_ms=latency_ms,
+            error_type=error_type,
+            error_message=error_message,
+        )
+    except Exception:
+        logger.warning(
+            "voice.evidence.tool_capture_failed",
+            extra={"call_id": call_id, "tool_name": tool_name},
+            exc_info=True,
+        )
+
+
+def _tool_status(result: dict[str, Any], default: str = "success") -> str:
+    if result.get("success") is False:
+        return "graceful_failure"
+    return default
 
 
 @voice_router.post("/inbound")
@@ -43,19 +114,26 @@ async def handle_inbound_webhook(request: Request) -> JSONResponse:
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
-    import json
     payload = json.loads(body) if body else {}
     agent_id = payload.get("agent_id", "")
     to_number = payload.get("to_number", "")
 
     # Resolve tenant_id from the phone number → tenant mapping
     tenant_id = _resolve_tenant_from_call(agent_id, to_number)
+    call_id = str(payload.get("call_id") or f"inbound:{agent_id or 'unknown'}:{to_number or 'unknown'}")
 
     logger.info("voice.inbound", extra={
         "agent_id": agent_id,
         "to_number": to_number,
         "tenant_id": tenant_id or "unknown",
     })
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        event_type="inbound",
+        payload=payload,
+    )
 
     if not tenant_id:
         # Still accept the call — tools will degrade gracefully without tenant_id
@@ -119,19 +197,83 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
+    start = time.perf_counter()
+    raw_payload = json.loads(body) if body else {}
     payload = RetellToolCallRequest.model_validate_json(body)
     tenant_id = _extract_tenant_id(payload)
+    call_id = payload.call_id
+    tool_name = "lookup_caller"
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        event_type="tool_call",
+        payload=raw_payload,
+    )
     phone = payload.args.get("phone_number", payload.args.get("phone", ""))
 
     if not phone:
-        return JSONResponse(content={"found": False, "message": "No caller ID available."})
+        result = {"found": False, "message": "No caller ID available."}
+        _safe_record_tool_call(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            tool_name=tool_name,
+            request_payload=raw_payload,
+            response_payload=result,
+            status="validation_failed",
+            latency_ms=_latency_ms(start),
+        )
+        _safe_record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            event_type="tool_result",
+            payload={"tool_name": tool_name, "status": "validation_failed", "response": result},
+        )
+        return JSONResponse(content=result)
 
     if not tenant_id:
         logger.error("voice.lookup_caller.no_tenant_id")
-        return JSONResponse(content={"found": False, "message": "Configuration error."})
+        result = {"found": False, "message": "Configuration error."}
+        _safe_record_tool_call(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            tool_name=tool_name,
+            request_payload=raw_payload,
+            response_payload=result,
+            status="validation_failed",
+            latency_ms=_latency_ms(start),
+        )
+        _safe_record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            event_type="tool_result",
+            payload={"tool_name": tool_name, "status": "validation_failed", "response": result},
+        )
+        return JSONResponse(content=result)
 
     from db import repository as _db_repo
     result = lookup_caller(phone_number=phone, tenant_id=tenant_id, db=_db_repo)
+    _safe_record_tool_call(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        tool_name=tool_name,
+        request_payload=raw_payload,
+        response_payload=result,
+        status="success",
+        latency_ms=_latency_ms(start),
+    )
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        event_type="tool_result",
+        payload={"tool_name": tool_name, "status": "success", "response": result},
+    )
     return JSONResponse(content=result)
 
 
@@ -146,8 +288,19 @@ async def handle_create_callback(request: Request) -> JSONResponse:
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
+    start = time.perf_counter()
+    raw_payload = json.loads(body) if body else {}
     payload = RetellToolCallRequest.model_validate_json(body)
     tenant_id = _extract_tenant_id(payload)
+    call_id = payload.call_id
+    tool_name = "create_callback"
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        event_type="tool_call",
+        payload=raw_payload,
+    )
     config = _resolve_config(tenant_id)
 
     result = create_callback(
@@ -155,6 +308,24 @@ async def handle_create_callback(request: Request) -> JSONResponse:
         reason=payload.args.get("reason", ""),
         callback_minutes=int(payload.args.get("callback_minutes", 30)),
         voice_config=config,
+    )
+    status = _tool_status(result)
+    _safe_record_tool_call(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        tool_name=tool_name,
+        request_payload=raw_payload,
+        response_payload=result,
+        status=status,
+        latency_ms=_latency_ms(start),
+    )
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        event_type="tool_result",
+        payload={"tool_name": tool_name, "status": status, "response": result},
     )
     return JSONResponse(content=result)
 
@@ -170,8 +341,19 @@ async def handle_sales_lead_alert(request: Request) -> JSONResponse:
     except HMACVerificationError:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
+    start = time.perf_counter()
+    raw_payload = json.loads(body) if body else {}
     payload = RetellToolCallRequest.model_validate_json(body)
     tenant_id = _extract_tenant_id(payload)
+    call_id = payload.call_id
+    tool_name = "send_sales_lead_alert"
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        event_type="tool_call",
+        payload=raw_payload,
+    )
     config = _resolve_config(tenant_id)
 
     result = send_sales_lead_alert(
@@ -180,6 +362,24 @@ async def handle_sales_lead_alert(request: Request) -> JSONResponse:
         customer_phone=payload.args.get("customer_phone", payload.args.get("phone", "")),
         address=payload.args.get("address", ""),
         voice_config=config,
+    )
+    status = _tool_status(result)
+    _safe_record_tool_call(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        tool_name=tool_name,
+        request_payload=raw_payload,
+        response_payload=result,
+        status=status,
+        latency_ms=_latency_ms(start),
+    )
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=call_id,
+        event_type="tool_result",
+        payload={"tool_name": tool_name, "status": status, "response": result},
     )
     return JSONResponse(content=result)
 

@@ -1368,3 +1368,123 @@ def get_voice_api_keys() -> list[dict[str, Any]]:
         "voice_api_keys",
         params={"revoked_at": "is.null"},
     ) or []
+
+
+def record_voice_call_event(event: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_call_events",
+        json=event,
+        prefer="return=representation",
+    )
+    return data[0] if data else event
+
+
+def list_voice_call_events(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "voice_call_events",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "order": "created_at.asc",
+        },
+    ) or []
+
+
+def record_voice_tool_call(tool_call: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_tool_calls",
+        json=tool_call,
+        prefer="return=representation",
+    )
+    return data[0] if data else tool_call
+
+
+def list_voice_tool_calls(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "voice_tool_calls",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "order": "created_at.asc",
+        },
+    ) or []
+
+
+def record_voice_config_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_config_snapshots",
+        params={"on_conflict": "tenant_id,call_id"},
+        json=snapshot,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else snapshot
+
+
+def get_voice_config_snapshot(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    data = _request(
+        "GET",
+        "voice_config_snapshots",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "limit": "1",
+        },
+    )
+    if not data:
+        return None
+    return data[0]
+
+
+def record_voice_safety_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not findings:
+        return []
+    data = _request(
+        "POST",
+        "voice_safety_findings",
+        json=findings,
+        prefer="return=representation",
+    )
+    return data or findings
+
+
+def list_voice_safety_findings(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "voice_safety_findings",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "order": "created_at.asc",
+        },
+    ) or []
+
+
+def upsert_voice_call_debug_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_call_debug_packets",
+        params={"on_conflict": "tenant_id,call_id"},
+        json=packet,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else packet
+
+
+def get_voice_call_debug_packet(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    data = _request(
+        "GET",
+        "voice_call_debug_packets",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "limit": "1",
+        },
+    )
+    if not data:
+        return None
+    return data[0]
