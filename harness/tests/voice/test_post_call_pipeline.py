@@ -152,6 +152,29 @@ class TestPipelineIntegrationHappyPath:
         assert _state()["voice_config_snapshots"][0]["call_id"] == "ret-integration-001"
         assert _state()["voice_call_debug_packets"][0]["failure_bucket"] == "clean"
 
+    def test_full_pipeline_uses_phone_tenant_fallback_when_metadata_missing(self, client: TestClient) -> None:
+        captured_payloads: list[dict[str, Any]] = []
+
+        def capture_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
+            captured_payloads.append(payload)
+            return {"guardian_gate": {"gate_passed": True, "quarantine": False, "gate_failures": []}}
+
+        payload = _realistic_payload(call_id="ret-phone-fallback-001", tenant_id="")
+        payload["call"]["metadata"] = {}
+        payload["call"]["to_number"] = "+13126463816"
+
+        with patch("voice.post_call_router._run_voice_supervisor", side_effect=capture_supervisor):
+            response = _post_call_ended(client, payload)
+
+        assert response.status_code == 200
+        records = _state()["call_records"]
+        assert len(records) == 1
+        record = records[0]
+        assert record["tenant_id"] == "e51d9ae7-9cde-4dca-a49c-4744c39240bc"
+        assert record["call_id"] == "ret-phone-fallback-001"
+        assert record["extraction_status"] == "complete"
+        assert captured_payloads[0]["tenant_id"] == "e51d9ae7-9cde-4dca-a49c-4744c39240bc"
+
 
 class TestPipelinePartialExtraction:
     """When one extraction step throws, extraction_status should be 'partial'."""
@@ -187,6 +210,34 @@ class TestPipelinePartialExtraction:
 
         event_obj = CallEndedEvent.model_validate(event_payload)
         assert event_obj.extraction_status == "partial"
+
+
+class TestPipelineSupervisorFailure:
+    """Supervisor errors should not quarantine otherwise valid voice extractions."""
+
+    def test_supervisor_failure_preserves_extraction_status(self, client: TestClient) -> None:
+        payload = _realistic_payload(call_id="ret-supervisor-failure-001")
+
+        with patch(
+            "voice.post_call_router._run_voice_supervisor",
+            side_effect=RuntimeError("missing kill_switches table"),
+        ):
+            response = _post_call_ended(client, payload)
+
+        assert response.status_code == 200
+        assert response.json()["extraction_status"] == "pending"
+
+        records = _state()["call_records"]
+        assert len(records) == 1
+        record = records[0]
+        assert record["extraction_status"] == "complete"
+
+        extracted_fields = record["extracted_fields"]
+        assert extracted_fields["extraction_status"] == "complete"
+        assert extracted_fields.get("quarantine") is not True
+        assert "supervisor_failed" not in extracted_fields.get("gate_failures", [])
+        assert extracted_fields["supervisor_status"] == "failed"
+        assert extracted_fields["supervisor_error"] == "supervisor_failed"
 
 
 class TestPipelineDuplicate:

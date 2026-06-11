@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import json
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -97,6 +97,53 @@ class TestLookupCallerEndpoint:
 
         assert response.status_code == 401
 
+    def test_missing_retell_api_key_returns_401(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("RETELL_API_KEY", raising=False)
+        body = json.dumps({
+            "call_id": "ret-004",
+            "args": {"phone_number": "+15125550101"},
+            "metadata": {"tenant_id": "tenant-test"},
+        }).encode()
+
+        response = client.post(
+            "/webhook/retell/lookup_caller",
+            content=body,
+            headers={
+                "x-retell-signature": "v=1,d=sig",
+                "content-type": "application/json",
+            },
+        )
+
+        assert response.status_code == 401
+
+
+class TestInboundEndpoint:
+    @pytest.mark.parametrize("to_number", ["+13126463816", "+13126463826"])
+    def test_maps_live_retell_number_to_tenant(self, client: TestClient, to_number: str) -> None:
+        body = json.dumps({
+            "agent_id": "agent-test",
+            "to_number": to_number,
+        }).encode()
+        sig = _sign_body(body)
+
+        response = client.post(
+            "/webhook/retell/inbound",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "metadata": {"tenant_id": "e51d9ae7-9cde-4dca-a49c-4744c39240bc"}
+        }
+
 
 class TestCreateCallbackEndpoint:
     def test_returns_success(self, client: TestClient) -> None:
@@ -157,3 +204,167 @@ class TestSalesLeadAlertEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "success" in data
+
+
+class TestBookServiceEndpoint:
+    def test_returns_booking_result(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "book_service",
+            "args": {
+                "customer_name": "Jane Doe",
+                "customer_phone": "+15125550101",
+                "service_address": "123 Oak St, Austin TX 78701",
+                "zip_code": "78701",
+                "preferred_time": "2026-06-02T15:00:00-04:00",
+                "issue_description": "AC not cooling",
+                "urgency_tier": "urgent",
+            },
+            "call": {
+                "call_id": "ret-030",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.router.book_service", new_callable=AsyncMock, return_value={
+            "success": True,
+            "booking_confirmed": True,
+            "booking_id": "cal-001",
+        }) as mock_book_service:
+            response = client.post(
+                "/webhook/retell/book_service",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["booking_confirmed"] is True
+        assert data["booking_id"] == "cal-001"
+        assert mock_book_service.await_args.kwargs["zip_code"] == "78701"
+
+
+class TestFallbackAndServiceAreaEndpoints:
+    def test_route_call_fallback_returns_policy_decision(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "route_call_fallback",
+            "args": {
+                "urgency_tier": "emergency",
+                "route": "legitimate",
+                "business_open": False,
+                "caller_requested_human": False,
+                "booking_failed": False,
+                "confidence": 0.95,
+                "live_transfer_enabled": True,
+                "callback_tasks_enabled": True,
+                "voicemail_enabled": True,
+                "default_transfer_number": "+15125550001",
+                "emergency_transfer_number": "+15125559111",
+                "voicemail_number": "+15125559999",
+            },
+            "call": {
+                "call_id": "ret-040",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        response = client.post(
+            "/webhook/retell/route_call_fallback",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["action"] == "transfer"
+        assert data["target_number"] == "+15125559111"
+        assert data["backup_action"] == "callback_task"
+
+    def test_route_call_fallback_parses_string_booleans(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "route_call_fallback",
+            "args": {
+                "urgency_tier": "emergency",
+                "route": "legitimate",
+                "live_transfer_enabled": "false",
+                "callback_tasks_enabled": "true",
+                "voicemail_enabled": "false",
+                "emergency_transfer_number": "+15125559111",
+            },
+            "call": {
+                "call_id": "ret-040b",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        response = client.post(
+            "/webhook/retell/route_call_fallback",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["action"] == "callback_task"
+        assert data["target_number"] is None
+
+    def test_validate_service_area_uses_tenant_voice_config(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "validate_service_area",
+            "args": {"service_address": "123 Oak St, Austin TX 78701"},
+            "call": {
+                "call_id": "ret-041",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.router._resolve_config") as mock_resolve:
+            mock_resolve.return_value.service_area_zips = ["78701", "78702"]
+            response = client.post(
+                "/webhook/retell/validate_service_area",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.json() == {"in_service_area": True, "zip_code": "78701"}
+
+    def test_validate_service_area_accepts_direct_zip_code(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "validate_service_area",
+            "args": {"zip_code": "78702"},
+            "call": {
+                "call_id": "ret-042",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.router._resolve_config") as mock_resolve:
+            mock_resolve.return_value.service_area_zips = ["78701", "78702"]
+            response = client.post(
+                "/webhook/retell/validate_service_area",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.json() == {"in_service_area": True, "zip_code": "78702"}

@@ -4,7 +4,7 @@ Structured decision records for CallLock AgentOS. Check here before proposing ch
 
 ## Voice Pipeline
 
-(none yet)
+- [Decision 001: Voice-First Harness-Owned Booking](001-voice-first-harness-owned-booking.md)
 
 ## Product
 

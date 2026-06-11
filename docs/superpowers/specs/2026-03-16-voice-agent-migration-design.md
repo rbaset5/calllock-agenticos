@@ -2,6 +2,8 @@
 
 > **Deprecation note (2026-03-17):** The `app_sync` webhook service and `app_webhook_url`/`app_webhook_secret` config fields described in this document have been removed. The CallLock App now reads directly from `call_records` via Supabase realtime subscriptions. References to webhook sync in this document are historical.
 
+> **Voice-first correction (2026-06-01):** CallLock is not a missed-call SMS product. The client business number rings staff first, then unanswered or after-hours calls forward to CallLock's voice agent before voicemail. Retell remains the short-term speech runtime, but the harness now owns booking, service-area validation, and fallback routing. Earlier references to app-owned `book_service` are historical.
+
 **Date:** March 16, 2026
 **Status:** Draft
 **Owner:** Founder
@@ -9,7 +11,7 @@
 
 ## Summary
 
-Port the Valencia v10-simplified Express voice agent backend into rabat as a new `harness/src/voice/` Python package. Real-time Retell tool calls (`lookup_caller`, `create_callback_request`, `send_sales_lead_alert`) are handled by FastAPI endpoints on the same Render service. `book_service` remains on the CallLock App (`app.calllock.co`, Vercel) — it already works and the app owns the Cal.com integration. Post-call processing fires an Inngest event and fans out through existing harness infrastructure (growth memory, alerts, job dispatch). Multi-tenant from day one. Zero-downtime cutover by running both services in parallel during transition.
+Port the Valencia v10-simplified Express voice agent backend into rabat as a new `harness/src/voice/` Python package. Real-time Retell tool calls (`lookup_caller`, `book_service`, `validate_service_area`, `route_call_fallback`, `create_callback_request`, `send_sales_lead_alert`) are handled by FastAPI endpoints on the same Render service. The harness owns the Cal.com booking write path and deterministic fallback routing; the CallLock App reads/manages resulting call records. Post-call processing fires an Inngest event and fans out through existing harness infrastructure (growth memory, alerts, job dispatch). Multi-tenant from day one.
 
 **Source correction:** The original spec referenced Alexandria (v9-triage, 15-state FSM, deployed Feb 12). The actual production agent is Valencia (v10-simplified, 10-state FSM, deployed Feb 14, Retell version 79). v10 was a structural redesign that cut 5 states based on the lesson: "Prompt-based guards: 0% success rate. Structural fixes (removing tools): 100% success rate."
 
@@ -27,7 +29,7 @@ Port the Valencia v10-simplified Express voice agent backend into rabat as a new
 | CallLock App | Same webhook contract | CallLock App stays on Vercel, receives same HMAC-signed payloads. |
 | Taxonomy storage | YAML knowledge node | `knowledge/industry-packs/hvac/taxonomy.yaml`. Reusable by other industry packs. |
 | Agent config storage | YAML knowledge node | `knowledge/industry-packs/hvac/voice/retell-agent-v10.yaml`. Versionable, no secrets. Source: Valencia `retell-llm-v10-simplified.json`. |
-| book_service ownership | Stays on CallLock App | `book_service` tool calls `app.calllock.co/api/retell/book-service` directly. CallLock App owns Cal.com booking integration. FastAPI does NOT handle bookings. |
+| book_service ownership | Moves to harness | `book_service` tool calls `/webhook/retell/book_service`. The harness validates tenant policy, service area, fallback routing, and Cal.com writes before returning a booking confirmation. |
 | Voice credential storage | New migration: `voice_config` JSONB column on `tenant_configs` | Existing `tenant_configs` (migration 002) has only named columns, no generic JSONB. New migration adds the column. |
 | Retell webhook routing | Per-tool URLs | Retell v10 sends each tool call to a dedicated URL (e.g., `/webhook/retell/lookup_caller`). Each tool has its own endpoint — no dispatcher needed. |
 | Call records persistence | New `call_records` table | Post-call data needs a home. New migration alongside voice config column. |
@@ -38,13 +40,13 @@ Port the Valencia v10-simplified Express voice agent backend into rabat as a new
 
 ### Architectural boundary (updated)
 
-The original architecture spec drew the boundary as: harness orchestrates everything except real-time voice conversation. This migration moves the boundary — the harness now also handles real-time voice tool execution. Retell AI remains the voice *conversation* runtime (LLM, FSM transitions, speech). The harness handles most webhook-driven work: tool calls, post-call processing, booking management API. The one exception is `book_service`, which stays on the CallLock App.
+The original architecture spec drew the boundary as: harness orchestrates everything except real-time voice conversation. This migration moves the boundary — Retell AI remains the voice *conversation* runtime (LLM, FSM transitions, speech), while the harness owns operational decisions and side effects: tool calls, service-area validation, booking, fallback routing, post-call processing, and booking management API.
 
 ```
   ┌─────────────────────────────────────────────────────────┐
   │              AGENT HARNESS (LangGraph + FastAPI)          │
   │  Workers, Jobs, Policy, Eval, Improvement Lab             │
-  │  Voice Tools (lookup, callback, sales alert),             │
+  │  Voice Tools (lookup, booking, fallback, callback, alerts),│
   │  Post-Call Processing, Booking Management API             │
   └──────────────────────┬────────────────────────────────────┘
                          │ orchestrates
@@ -53,19 +55,18 @@ The original architecture spec drew the boundary as: harness orchestrates everyt
   │  PRODUCT CORE        │    VOICE RUNTIME                 │
   │  (Next.js CallLock   │    (Retell AI v10-simplified)    │
   │   + Supabase         │                                  │
-  │   + Cal.com          │    Handles: real-time calls,     │
-  │   + Twilio)          │    10-state FSM, GPT-4o,         │
+  │   + Supabase UI)     │    Handles: real-time calls,     │
+  │                      │    10-state FSM, GPT-4o,         │
   │                      │    speech synthesis               │
-  │  book_service tool   │                                  │
-  │  (app.calllock.co)   │                                  │
+  │  Reads call_records  │                                  │
   └──────────────────────┴──────────────────────────────────┘
 ```
 
 ### Runtime split
 
 - **Retell AI:** Real-time voice conversation (GPT-4o LLM, 10-state FSM, speech-to-text, text-to-speech)
-- **Python (FastAPI):** Tool call handlers (`lookup_caller`, `create_callback_request`, `send_sales_lead_alert`), post-call extraction, booking management REST API
-- **CallLock App (Next.js, Vercel):** `book_service` tool handler (Cal.com integration), customer-facing UI
+- **Python (FastAPI):** Tool call handlers (`lookup_caller`, `book_service`, `validate_service_area`, `route_call_fallback`, `create_callback_request`, `send_sales_lead_alert`), post-call extraction, booking management REST API
+- **CallLock App (Next.js, Vercel):** Reads call records and exposes customer-facing/operator UI; does not own the live booking write path
 - **TypeScript (Inngest):** Thin event proxies — `calllock/call.ended` triggers fan-out to harness endpoints
 - **Supabase:** Persistence for call records, bookings, sessions, tenant configs
 
@@ -82,11 +83,12 @@ harness/src/voice/
 ├── tools/
 │   ├── __init__.py
 │   ├── lookup_caller.py     # lookup_caller — full caller history from Supabase
+│   ├── book_service.py      # book_service — policy + service-area + Cal.com booking
 │   ├── create_callback.py   # create_callback_request — callback + SMS notification
 │   └── sales_lead_alert.py  # send_sales_lead_alert — high-ticket lead SMS to owner
 ├── services/
 │   ├── __init__.py
-│   ├── calcom.py            # Cal.com API client (lookup, cancel, reschedule — NOT booking)
+│   ├── calcom.py            # Cal.com API client (create, lookup, cancel, reschedule)
 │   ├── twilio_sms.py        # SMS: callback alerts, sales lead alerts, emergency alerts
 │   └── app_sync.py          # CallLock App webhook sync (payload transform, HMAC signing)
 ├── extraction/
@@ -101,11 +103,11 @@ harness/src/voice/
     ├── revenue.py            # Revenue tier classification
     └── traffic.py            # Traffic controller: spam/vendor/legitimate routing
 
-NOTE: `book_service` is NOT in this package. It stays on the CallLock App at
-`app.calllock.co/api/retell/book-service`. The CallLock App owns Cal.com booking.
+NOTE: `book_service` is in this package. It is the harness-owned live booking
+write path used by Retell.
 `end_call` is Retell-internal (no webhook — Retell handles it natively).
-`validate_service_area` and `check_calendar_availability` do not exist as tools —
-ZIP validation is in-prompt logic, calendar availability is part of book_service.
+`validate_service_area` and `route_call_fallback` are harness tools. ZIP/service
+area validation must not live only in the prompt.
 ```
 
 ### Router mounting
@@ -150,6 +152,15 @@ Retell v10 configures each tool with its own webhook URL. There is **no dispatch
 @voice_router.post("/lookup_caller")
 async def handle_lookup_caller(request: RetellToolCallRequest): ...
 
+@voice_router.post("/book_service")
+async def handle_book_service(request: RetellToolCallRequest): ...
+
+@voice_router.post("/validate_service_area")
+async def handle_validate_service_area(request: RetellToolCallRequest): ...
+
+@voice_router.post("/route_call_fallback")
+async def handle_route_call_fallback(request: RetellToolCallRequest): ...
+
 @voice_router.post("/create_callback")
 async def handle_create_callback(request: RetellToolCallRequest): ...
 
@@ -157,7 +168,6 @@ async def handle_create_callback(request: RetellToolCallRequest): ...
 async def handle_sales_lead_alert(request: RetellToolCallRequest): ...
 
 # Tools NOT handled by FastAPI:
-# - book_service → app.calllock.co/api/retell/book-service (CallLock App)
 # - end_call → Retell-internal (no webhook)
 ```
 
@@ -180,6 +190,9 @@ Every tool handler follows the same structure:
 | Tool | Retell URL | External dependency | Latency budget | States |
 |---|---|---|---|---|
 | `lookup_caller` | `/webhook/retell/lookup_caller` | Supabase (last 10 jobs, last 5 calls, last 5 bookings — LIMIT per table) | <500ms | lookup |
+| `book_service` | `/webhook/retell/book_service` | Cal.com via harness policy | <3s | booking |
+| `validate_service_area` | `/webhook/retell/validate_service_area` | Tenant `VoiceConfig` | <500ms | service_area |
+| `route_call_fallback` | `/webhook/retell/route_call_fallback` | None | <500ms | callback/fallback |
 | `create_callback_request` | `/webhook/retell/create_callback` | Twilio SMS (callback notification) | <1s | callback |
 | `send_sales_lead_alert` | `/webhook/retell/send_sales_lead_alert` | Twilio SMS (owner alert) | <1s | callback |
 
@@ -187,15 +200,13 @@ Every tool handler follows the same structure:
 
 | Tool | Owner | Notes |
 |---|---|---|
-| `book_service` | CallLock App (`app.calllock.co/api/retell/book-service`) | Cal.com booking. Stays on CallLock App. |
 | `end_call` | Retell-internal | No webhook — Retell handles natively. States: safety_exit, service_area, done, callback |
 
 **Not tools (in-prompt logic):**
 
 | Capability | How it works | States |
 |---|---|---|
-| ZIP validation | LLM checks ZIP prefix "787" per prompt rules | service_area |
-| Calendar availability | Part of `book_service` flow on CallLock App | booking |
+| Calendar availability | Part of harness-owned `book_service` flow | booking |
 | Safety screening | LLM asks question, routes via edges only | safety |
 
 ### Error handling
@@ -345,7 +356,7 @@ class VoiceConfig(BaseModel):
     business_phone: str
 ```
 
-Note: Cal.com credentials are NOT in `VoiceConfig` because `book_service` stays on the CallLock App. The booking management REST API (Section 7) uses Cal.com for lookup/cancel/reschedule — those credentials are stored in a separate `calcom_config` field on `tenant_configs`, shared with the CallLock App:
+Note: Cal.com credentials are NOT in `VoiceConfig` because calendar access is a separate integration boundary. The harness-owned `book_service` tool and booking management REST API use Cal.com for create/lookup/cancel/reschedule. Those credentials are stored in a separate `calcom_config` field on `tenant_configs`:
 
 ```python
 class CalcomConfig(BaseModel):
@@ -355,7 +366,7 @@ class CalcomConfig(BaseModel):
     calcom_timezone: str                # e.g., "America/Chicago"
 ```
 
-`CalcomConfig` is encrypted using the same AES-256-GCM pattern as `VoiceConfig` (same `VOICE_CREDENTIAL_KEY` env var). Both the booking management REST API and the CallLock App use Cal.com credentials — the CallLock App reads them from its own env vars, while the FastAPI booking API reads from `tenant_configs.calcom_config`.
+`CalcomConfig` is encrypted using the same AES-256-GCM pattern as `VoiceConfig` (same `VOICE_CREDENTIAL_KEY` env var). The FastAPI voice module reads `tenant_configs.calcom_config` for live booking writes and booking management operations; the CallLock App reads the resulting records/UI state and does not own the live booking write path.
 
 ### New migration: `048_voice_config.sql`
 
@@ -589,9 +600,11 @@ Voice routes mount on the existing harness FastAPI app. `render.yaml` updated to
 2. **Smoke test** each voice endpoint with test payloads. Verify lookup_caller returns correct data, create_callback sends SMS, Inngest event fires on call-ended.
 3. **Update Retell agent tool URLs** — only 3 tool URLs change (per-tool, not a single webhook):
    - `lookup_caller`: `calllock-server.onrender.com/webhook/retell/lookup_caller` → `{rabat-service}/webhook/retell/lookup_caller`
+   - `book_service`: app-owned booking URL → `{rabat-service}/webhook/retell/book_service`
+   - `validate_service_area`: add `{rabat-service}/webhook/retell/validate_service_area`
+   - `route_call_fallback`: add `{rabat-service}/webhook/retell/route_call_fallback`
    - `create_callback_request`: `calllock-server.onrender.com/webhook/retell/create_callback` → `{rabat-service}/webhook/retell/create_callback`
    - `send_sales_lead_alert`: `calllock-server.onrender.com/webhook/retell/send_sales_lead_alert` → `{rabat-service}/webhook/retell/send_sales_lead_alert`
-   - `book_service`: **NO CHANGE** — stays at `app.calllock.co/api/retell/book-service`
    - Also update the post-call webhook URL in Retell agent settings.
 4. **Monitor** first 10-20 live calls. Check tool call latency, CallLock App card correctness, Inngest event processing.
 5. **Decommission** Express service on Render.
@@ -616,7 +629,7 @@ For Inngest event compatibility: during the cutover period, the Express service 
 | `touchpoint_log` | Growth system (via Inngest) | Call event as touchpoint |
 | Alert records | Alert evaluator (via Inngest) | Emergency assessment |
 | Job records | Job dispatcher (via Inngest) | Post-call job creation |
-| Cal.com bookings | CallLock App (`book_service` tool) | Created during call via Retell → CallLock App |
+| Cal.com bookings | Voice module (`book_service` tool) | Created during call via Retell → FastAPI harness |
 | Twilio SMS (callbacks) | Voice module (real-time `create_callback_request`) | Callback notifications |
 | Twilio SMS (sales leads) | Voice module (real-time `send_sales_lead_alert`) | High-ticket owner alerts |
 | Twilio SMS (emergency, post-call) | Voice module (via Inngest, conditional) | Safety emergency alerts |
@@ -728,7 +741,7 @@ The production Retell agent uses a 10-state FSM (v10-simplified, deployed Feb 14
 | service_area | `end_call` (out-of-area only) | Retell-internal |
 | discovery | (none) | — |
 | confirm | (none) | — |
-| booking | `book_service` (NO end_call) | CallLock App |
+| booking | `book_service` (NO end_call) | FastAPI |
 | done | `end_call` | Retell-internal |
 | callback | `create_callback_request`, `send_sales_lead_alert`, `end_call` | FastAPI (callback, alert), Retell-internal (end_call) |
 
@@ -745,7 +758,7 @@ The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/
 | Valencia workspace (`retellai-calllock/valencia/`) | Archive after migration complete — v10 config is source of truth |
 | 23 city git worktrees | Archive — deployment artifacts only |
 | `retellai-calllock/` workspace | Archive after migration complete |
-| Node.js/TypeScript runtime for voice | Eliminated entirely (except `book_service` which stays on CallLock App) |
+| Node.js/TypeScript runtime for voice | Eliminated entirely |
 
 ## 15. Dependencies
 
@@ -790,7 +803,7 @@ The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/
 | 13 | voice_event_to_process_call field name bug | Fix: `metadata` → `call_metadata` | ProcessCallRequest uses call_metadata with extra=forbid |
 | 14 | server.py doesn't use include_router | Voice module introduces routers (correct FastAPI pattern) | Sets precedent, existing monolithic server.py is tech debt |
 | 15 | Booking mgmt API missing from Error & Rescue Registry | Add 4 entries (Cal.com timeout, error, validation, auth) | Consistency with failure modes registry |
-| 16 | booking_id source unclear (book_service on CallLock App) | Parsed from Retell's tool_call_results in raw payload | Retell includes tool results in call-ended webhook |
+| 16 | booking_id source unclear | Parsed from the harness-owned `book_service` result in Retell's raw tool_call_results payload | Retell includes tool results in call-ended webhook |
 | 17 | Global HMAC secret is single point of compromise | Accept — Retell platform limitation. Document as known risk | Per-agent signing not supported by Retell |
 | 18 | Empty/short transcript handling unspecified | Default: urgency=Routine, route=legitimate | Show low-priority card rather than silently drop |
 | 19 | No pipeline smoke test (webhook → extraction → Inngest → CallLock App) | Add one integration test covering full pipeline | The 2am Friday confidence test |
@@ -886,7 +899,7 @@ The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/
 | Cross-channel attribution (call + email) | Growth system Phase 2 concern, not voice migration |
 | Automated agent config deployment (Retell API) | Nice-to-have, manual deploy via Retell admin console is fine |
 | CallLock App UI changes | CallLock App receives same payloads, no UI changes needed |
-| `book_service` migration to FastAPI | Explicitly kept on CallLock App — revisit only if app is retired |
+| Voice agent eval framework for booking optimization | Expansion scope — booking guardrails are deterministic now; eval-driven tuning comes later |
 | Voice agent prompt optimization | Out of scope — port v10 faithfully, optimize later |
 | Multi-language support | No current need, ACE Cooling is English-only |
 
@@ -913,6 +926,6 @@ The taxonomy engine (`extraction/tags.py`) loads `knowledge/industry-packs/hvac/
   Automated agent tuning via evals        ❌ Not in scope (Expansion)
   Voice-to-text enrichment → growth mem   ✅ calllock/call.ended → growth touchpoint
   Cross-channel attribution               ❌ Not in scope (Growth Phase 2)
-  One runtime, one repo                   ✅ Express retired (except book_service on CallLock App)
+  One runtime, one repo                   ✅ Express retired; live booking write path in harness
   Retell agent version management         ⚠️  YAML in knowledge/ but no deployment automation
 ```

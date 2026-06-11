@@ -89,6 +89,29 @@ class TestCallEndedHappyPath:
         assert data["extraction_status"] == "pending"
         mock_add_task.assert_called_once()
 
+    def test_falls_back_to_live_phone_mapping_when_metadata_missing(self, client: TestClient) -> None:
+        payload = _call_ended_payload(tenant_id="", call_id="ret-call-phone-fallback")
+        payload["call"]["metadata"] = {}
+        payload["call"]["to_number"] = "+13126463816"
+        body = json.dumps(payload).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.post_call_router.BackgroundTasks.add_task") as mock_add_task:
+            response = client.post(
+                "/webhook/retell/call-ended",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["call_id"] == "ret-call-phone-fallback"
+        mock_add_task.assert_called_once()
+
     def test_extraction_runs_on_transcript(self, client: TestClient) -> None:
         payload = _call_ended_payload(
             transcript="Agent: How can I help? User: Hi my name is Jane Doe. My heater stopped working. I live at 456 Elm St, Austin TX 78702."

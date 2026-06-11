@@ -33,6 +33,7 @@ _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
 SYNC_FIELDS = _mod.SYNC_FIELDS
+DEFAULT_CONFIG = _mod.DEFAULT_CONFIG
 compute_diff = _mod.compute_diff
 load_yaml_config = _mod.load_yaml_config
 
@@ -62,6 +63,28 @@ class TestLoadYamlConfig:
         assert result["model"] == "gpt-4o-mini"
         assert result["model_temperature"] == 0.3
 
+    def test_loads_config_from_knowledge_node_frontmatter(self, tmp_path: Path) -> None:
+        """Knowledge node frontmatter is stripped before parsing the runtime config."""
+        yaml_content = textwrap.dedent("""\
+            ---
+            id: retell-agent-v10
+            title: HVAC Voice Agent
+            graph: industry-pack
+            ---
+
+            source_file: source.json
+            config:
+              general_prompt: "You are a helpful HVAC assistant."
+              model: gpt-4o
+        """)
+        config_file = tmp_path / "agent.yaml"
+        config_file.write_text(yaml_content)
+
+        result = load_yaml_config(str(config_file))
+
+        assert result["general_prompt"] == "You are a helpful HVAC assistant."
+        assert result["model"] == "gpt-4o"
+
     def test_loads_config_with_states(self, tmp_path: Path) -> None:
         """Config with nested states array."""
         yaml_content = textwrap.dedent("""\
@@ -83,6 +106,19 @@ class TestLoadYamlConfig:
         assert len(result["states"]) == 2
         assert result["states"][0]["name"] == "greeting"
         assert result["states"][1]["name"] == "collect_info"
+
+    def test_real_retell_config_requires_validated_zip_for_booking(self) -> None:
+        """The deployed Retell tool schema must carry required booking fields."""
+        config_path = Path(__file__).parents[2] / DEFAULT_CONFIG
+
+        result = load_yaml_config(str(config_path))
+        booking_state = next(state for state in result["states"] if state["name"] == "booking")
+        book_tool = next(tool for tool in booking_state["tools"] if tool["name"] == "book_service")
+
+        assert "zip_code" in book_tool["parameters"]["properties"]
+        assert "zip_code" in book_tool["parameters"]["required"]
+        assert "customer_email" in book_tool["parameters"]["properties"]
+        assert "customer_email" in book_tool["parameters"]["required"]
 
     def test_raises_on_missing_config_key(self, tmp_path: Path) -> None:
         """YAML without a 'config' key should exit."""

@@ -1,6 +1,7 @@
 from db.repository import create_alert, create_job
 from fastapi.testclient import TestClient
 
+from harness import server
 from harness.server import app
 
 
@@ -23,6 +24,29 @@ def test_process_call_endpoint_executes_customer_analyst() -> None:
     assert payload["verification_passed"] is True
     assert payload["verification_verdict"] == "pass"
     assert payload["output"]["lead_route"] == "dispatcher"
+
+
+def test_health_reports_supabase_reachability(monkeypatch) -> None:
+    class Cache:
+        def ping(self) -> bool:
+            return True
+
+    monkeypatch.setattr(server, "build_cache_client", lambda: Cache())
+    monkeypatch.setattr(server, "_check_external_connectivity", lambda *args, **kwargs: {"reachable": True})
+    monkeypatch.setattr(
+        server.db_repository,
+        "check_supabase_health",
+        lambda: {"configured": True, "reachable": False, "error": "Invalid API key"},
+    )
+
+    client = TestClient(app)
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "degraded"
+    assert payload["supabase"]["configured"] is True
+    assert payload["supabase"]["reachable"] is False
 
 
 def test_process_call_endpoint_uses_local_seed_defaults() -> None:

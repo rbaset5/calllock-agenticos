@@ -173,11 +173,16 @@ def _check_external_connectivity(url: str, timeout: float = 3.0) -> dict[str, An
 def health_dependencies() -> dict[str, Any]:
     cache = build_cache_client()
     redis_ok = cache.ping()
+    supabase = db_repository.check_supabase_health()
 
     calcom = _check_external_connectivity("https://api.cal.com")
     twilio = _check_external_connectivity("https://api.twilio.com")
 
-    all_reachable = calcom.get("reachable", False) and twilio.get("reachable", False)
+    all_reachable = (
+        calcom.get("reachable", False)
+        and twilio.get("reachable", False)
+        and (not supabase.get("configured") or supabase.get("reachable", False))
+    )
     base_status = "ok" if redis_ok else "degraded"
     status = base_status if all_reachable else "degraded"
 
@@ -185,7 +190,7 @@ def health_dependencies() -> dict[str, Any]:
         "status": status,
         "redis": {"ok": redis_ok},
         "litellm": {"configured": bool(os.getenv("LITELLM_BASE_URL"))},
-        "supabase": {"configured": using_supabase()},
+        "supabase": supabase,
         "langsmith": {"configured": bool(os.getenv("LANGSMITH_API_KEY"))},
         "event_secret": {"configured": bool(os.getenv("HARNESS_EVENT_SECRET"))},
         "calcom": calcom,
