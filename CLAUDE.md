@@ -44,3 +44,10 @@ Compliance rules are database-backed in Supabase, not file-backed markdown. Mark
 
 - Python harness for orchestration, context assembly, policy gate, verification, and persistence.
 - TypeScript only where it interfaces with Inngest or repository validation/extraction.
+
+## Voice Production Assurance
+
+- Retell AI remains the real-time voice runtime; the harness owns post-call evidence, safety checks, debug packets, evals, and reporting around it.
+- Run `python scripts/run-voice-eval.py` after changing voice extraction, safety monitor logic, or golden-set fixtures.
+- Run `python scripts/run-voice-production-report.py --days 7` for the weekly JSON production report. Add `--tenant-id <tenant_uuid>` to filter to one tenant.
+- Run `pytest harness/tests/voice -q` for the full local voice verification suite.

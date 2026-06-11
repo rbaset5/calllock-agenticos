@@ -5,7 +5,10 @@ on:
     paths:
       - "knowledge/industry-packs/hvac/voice/**"
       - "harness/src/voice/extraction/**"
+      - "harness/src/voice/production/**"
       - "knowledge/voice-pipeline/eval/**"
+      - "scripts/run-voice-eval.py"
+      - "scripts/tests/test_run_voice_eval.py"
 
 permissions:
   contents: read
