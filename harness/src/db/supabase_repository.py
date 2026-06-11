@@ -1277,6 +1277,19 @@ def insert_call_record(
     return data[0]
 
 
+def list_voice_call_records(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "call_records", params=params) or []
+
+
 def update_call_record_extraction(
     tenant_id: str,
     call_id: str,
@@ -1414,6 +1427,19 @@ def list_voice_tool_calls(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
     ) or []
 
 
+def list_voice_tool_calls_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "voice_tool_calls", params=params) or []
+
+
 def record_voice_config_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
     data = _request(
         "POST",
@@ -1440,6 +1466,19 @@ def get_voice_config_snapshot(tenant_id: str, call_id: str) -> dict[str, Any] | 
     return data[0]
 
 
+def list_voice_config_snapshots_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "voice_config_snapshots", params=params) or []
+
+
 def record_voice_safety_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not findings:
         return []
@@ -1462,6 +1501,19 @@ def list_voice_safety_findings(tenant_id: str, call_id: str) -> list[dict[str, A
             "order": "created_at.asc",
         },
     ) or []
+
+
+def list_voice_safety_findings_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "voice_safety_findings", params=params) or []
 
 
 def upsert_voice_call_debug_packet(packet: dict[str, Any]) -> dict[str, Any]:

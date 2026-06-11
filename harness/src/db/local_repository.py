@@ -120,6 +120,20 @@ def _sort_by_created_at(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(records, key=lambda record: record.get("created_at", ""))
 
 
+def _created_at_on_or_after(record: dict[str, Any], created_since: str | None) -> bool:
+    if not created_since:
+        return True
+    value = record.get("created_at")
+    if not value:
+        return False
+    try:
+        record_dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        since_dt = datetime.fromisoformat(created_since.replace("Z", "+00:00"))
+    except ValueError:
+        return str(value) >= created_since
+    return record_dt >= since_dt
+
+
 def _parse_iso_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -1695,6 +1709,20 @@ def insert_call_record(
     return record
 
 
+def list_voice_call_records(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["call_records"]
+        if (tenant_id is None or row.get("tenant_id") == tenant_id)
+        and _created_at_on_or_after(row, created_since)
+    ]
+    return _sort_by_created_at([deepcopy(row) for row in rows])
+
+
 def update_call_record_extraction(
     tenant_id: str,
     call_id: str,
@@ -1816,6 +1844,20 @@ def list_voice_tool_calls(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
     return _sort_by_created_at([deepcopy(row) for row in rows])
 
 
+def list_voice_tool_calls_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["voice_tool_calls"]
+        if (tenant_id is None or row.get("tenant_id") == tenant_id)
+        and _created_at_on_or_after(row, created_since)
+    ]
+    return _sort_by_created_at([deepcopy(row) for row in rows])
+
+
 def record_voice_config_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat()
     tenant_id = snapshot.get("tenant_id")
@@ -1855,6 +1897,20 @@ def get_voice_config_snapshot(tenant_id: str, call_id: str) -> dict[str, Any] | 
     return None
 
 
+def list_voice_config_snapshots_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["voice_config_snapshots"]
+        if (tenant_id is None or row.get("tenant_id") == tenant_id)
+        and _created_at_on_or_after(row, created_since)
+    ]
+    return _sort_by_created_at([deepcopy(row) for row in rows])
+
+
 def record_voice_safety_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     now = datetime.now(timezone.utc).isoformat()
     stored: list[dict[str, Any]] = []
@@ -1878,6 +1934,20 @@ def list_voice_safety_findings(tenant_id: str, call_id: str) -> list[dict[str, A
     rows = [
         row for row in _state()["voice_safety_findings"]
         if row.get("tenant_id") == tenant_id and row.get("call_id") == call_id
+    ]
+    return _sort_by_created_at([deepcopy(row) for row in rows])
+
+
+def list_voice_safety_findings_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in _state()["voice_safety_findings"]
+        if (tenant_id is None or row.get("tenant_id") == tenant_id)
+        and _created_at_on_or_after(row, created_since)
     ]
     return _sort_by_created_at([deepcopy(row) for row in rows])
 
