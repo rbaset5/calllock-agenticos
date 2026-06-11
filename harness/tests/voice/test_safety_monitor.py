@@ -84,10 +84,37 @@ def test_emergency_mishandled_without_safe_handling() -> None:
     assert findings[0]["severity"] == "critical"
 
 
+def test_detected_emergency_still_requires_safe_handling() -> None:
+    findings = evaluate_call_safety(
+        call_record=_call_record(
+            transcript="User: I smell gas near the furnace. Agent: We can schedule you tomorrow.",
+            extracted_fields={"safety_emergency": True},
+        ),
+        tool_calls=[],
+    )
+
+    assert _finding_types(findings) == {"emergency_mishandled"}
+    assert findings[0]["severity"] == "critical"
+
+
 def test_emergency_with_evacuate_instruction_is_clean() -> None:
     findings = evaluate_call_safety(
         call_record=_call_record(
             transcript="User: I smell gas near the furnace. Agent: Leave the house and call the gas company."
+        ),
+        tool_calls=[],
+    )
+
+    assert findings == []
+
+
+def test_negated_emergency_phrase_does_not_raise_emergency_finding() -> None:
+    findings = evaluate_call_safety(
+        call_record=_call_record(
+            transcript=(
+                "User: Water is pooling around the furnace but there is no smoke or electrical issue. "
+                "Agent: We will note the leak and get someone to look."
+            )
         ),
         tool_calls=[],
     )
@@ -119,4 +146,3 @@ def test_tool_exception_raises_tool_error_or_timeout() -> None:
 
     assert _finding_types(findings) == {"tool_error_or_timeout"}
     assert findings[0]["severity"] == "medium"
-
