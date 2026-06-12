@@ -33,6 +33,12 @@ _GRACEFUL_ERROR = "We're experiencing technical difficulties. Please call back o
 
 voice_router = APIRouter(tags=["voice"])
 
+_PHONE_TO_TENANT = {
+    "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+    "+13126463826": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
+}
+_AUTO_PHONE_VALUES = {"", "auto", "caller", "caller_id", "unknown"}
+
 
 def _latency_ms(start: float) -> int:
     return int((time.perf_counter() - start) * 1000)
@@ -152,15 +158,9 @@ async def handle_inbound_webhook(request: Request) -> JSONResponse:
 def _resolve_tenant_from_call(agent_id: str, to_number: str) -> str | None:
     """Map a Retell agent_id or phone number to a tenant_id.
 
-    Uses a simple DB lookup: phone numbers and agent IDs are registered
-    per-tenant during onboarding. Falls back to None if no match.
+    Uses the same temporary phone-number mapping as the tool endpoints until
+    tenant onboarding writes phone/agent routing records.
     """
-    # For now: hardcoded mapping until we have a proper agent_id → tenant table.
-    # This is the single phone number registered in Retell.
-    _PHONE_TO_TENANT = {
-        "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
-        "+13126463826": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
-    }
     return _PHONE_TO_TENANT.get(to_number)
 
 
@@ -176,9 +176,53 @@ async def require_retell_hmac(request: Request) -> None:
         raise HMACVerificationError(str(exc)) from exc
 
 
-def _extract_tenant_id(payload: RetellToolCallRequest) -> str | None:
-    """Extract tenant_id from Retell metadata."""
-    return payload.metadata.get("tenant_id")
+def _query_hint(request: Request | None, name: str) -> str | None:
+    if request is None:
+        return None
+    value = request.query_params.get(name)
+    if not value:
+        return None
+    value = value.strip()
+    return value or None
+
+
+def _extract_tenant_id(payload: RetellToolCallRequest, request: Request | None = None) -> str | None:
+    """Extract tenant_id from metadata, query params, or the receiving phone number."""
+    metadata_tenant = str(payload.metadata.get("tenant_id") or "").strip()
+    if metadata_tenant:
+        return metadata_tenant
+
+    query_tenant = _query_hint(request, "tenant_id")
+    if query_tenant:
+        return query_tenant
+
+    if payload.to_number:
+        tenant_id = _PHONE_TO_TENANT.get(payload.to_number.strip())
+        if tenant_id:
+            return tenant_id
+
+    query_to_number = _query_hint(request, "to_number")
+    if query_to_number:
+        return _PHONE_TO_TENANT.get(query_to_number)
+
+    return None
+
+
+def _normalize_phone_arg(value: Any) -> str:
+    if value is None:
+        return ""
+    phone = str(value).strip()
+    if phone.lower() in _AUTO_PHONE_VALUES:
+        return ""
+    return phone
+
+
+def _resolve_caller_phone(payload: RetellToolCallRequest, *arg_names: str) -> str:
+    for name in arg_names:
+        phone = _normalize_phone_arg(payload.args.get(name))
+        if phone:
+            return phone
+    return str(payload.from_number or "").strip()
 
 
 def _resolve_config(tenant_id: str | None) -> Any:
@@ -233,7 +277,7 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
     start = time.perf_counter()
     raw_payload = json.loads(body) if body else {}
     payload = RetellToolCallRequest.model_validate_json(body)
-    tenant_id = _extract_tenant_id(payload)
+    tenant_id = _extract_tenant_id(payload, request)
     call_id = payload.call_id
     tool_name = "lookup_caller"
     _safe_record_event(
@@ -243,7 +287,7 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
         event_type="tool_call",
         payload=raw_payload,
     )
-    phone = payload.args.get("phone_number", payload.args.get("phone", ""))
+    phone = _resolve_caller_phone(payload, "phone_number", "phone")
 
     if not phone:
         result = {"found": False, "message": "No caller ID available."}
@@ -325,7 +369,7 @@ async def handle_create_callback(request: Request) -> JSONResponse:
     start = time.perf_counter()
     raw_payload = json.loads(body) if body else {}
     payload = RetellToolCallRequest.model_validate_json(body)
-    tenant_id = _extract_tenant_id(payload)
+    tenant_id = _extract_tenant_id(payload, request)
     call_id = payload.call_id
     tool_name = "create_callback"
     _safe_record_event(
@@ -338,7 +382,7 @@ async def handle_create_callback(request: Request) -> JSONResponse:
     config = _resolve_config(tenant_id)
 
     result = create_callback(
-        caller_phone=payload.args.get("caller_phone", payload.args.get("phone", "")),
+        caller_phone=_resolve_caller_phone(payload, "caller_phone", "phone"),
         reason=payload.args.get("reason", ""),
         callback_minutes=int(payload.args.get("callback_minutes", 30)),
         voice_config=config,
@@ -379,7 +423,7 @@ async def handle_sales_lead_alert(request: Request) -> JSONResponse:
     start = time.perf_counter()
     raw_payload = json.loads(body) if body else {}
     payload = RetellToolCallRequest.model_validate_json(body)
-    tenant_id = _extract_tenant_id(payload)
+    tenant_id = _extract_tenant_id(payload, request)
     call_id = payload.call_id
     tool_name = "send_sales_lead_alert"
     _safe_record_event(
@@ -394,7 +438,7 @@ async def handle_sales_lead_alert(request: Request) -> JSONResponse:
     result = send_sales_lead_alert(
         equipment=payload.args.get("equipment", ""),
         customer_name=payload.args.get("customer_name", ""),
-        customer_phone=payload.args.get("customer_phone", payload.args.get("phone", "")),
+        customer_phone=_resolve_caller_phone(payload, "customer_phone", "phone"),
         address=payload.args.get("address", ""),
         voice_config=config,
     )
@@ -438,7 +482,7 @@ async def handle_book_service(request: Request) -> JSONResponse:
     start = time.perf_counter()
     raw_payload = json.loads(body) if body else {}
     payload = RetellToolCallRequest.model_validate_json(body)
-    tenant_id = _extract_tenant_id(payload)
+    tenant_id = _extract_tenant_id(payload, request)
     call_id = payload.call_id
     tool_name = "book_service"
     _safe_record_event(
@@ -455,7 +499,7 @@ async def handle_book_service(request: Request) -> JSONResponse:
     result = await book_service(
         customer_name=args.get("customer_name", ""),
         customer_email=args.get("customer_email", args.get("email", "")),
-        customer_phone=args.get("customer_phone", args.get("phone", "")),
+        customer_phone=_resolve_caller_phone(payload, "customer_phone", "phone"),
         service_address=args.get("service_address", args.get("address", "")),
         preferred_time=args.get("preferred_time", ""),
         issue_description=args.get("issue_description", args.get("problem_description", "")),
@@ -531,7 +575,7 @@ async def handle_validate_service_area(request: Request) -> JSONResponse:
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
 
     payload = RetellToolCallRequest.model_validate_json(body)
-    tenant_id = _extract_tenant_id(payload)
+    tenant_id = _extract_tenant_id(payload, request)
     config = _resolve_config(tenant_id)
     zip_code = _extract_zip(payload.args.get("zip_code", ""))
     if not zip_code:

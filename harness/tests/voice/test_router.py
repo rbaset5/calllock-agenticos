@@ -56,6 +56,36 @@ class TestLookupCallerEndpoint:
         data = response.json()
         assert "found" in data
 
+    def test_uses_call_fields_when_metadata_missing(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "lookup_caller",
+            "args": {"phone_number": "auto"},
+            "call": {
+                "call_id": "ret-no-inbound-001",
+                "from_number": "+12487391087",
+                "to_number": "+13126463816",
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch(
+            "voice.router.lookup_caller",
+            return_value={"found": False, "jobs": [], "calls": [], "bookings": []},
+        ) as mock_lookup:
+            response = client.post(
+                "/webhook/retell/lookup_caller",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        mock_lookup.assert_called_once()
+        assert mock_lookup.call_args.kwargs["phone_number"] == "+12487391087"
+        assert mock_lookup.call_args.kwargs["tenant_id"] == "e51d9ae7-9cde-4dca-a49c-4744c39240bc"
+
     def test_missing_phone_returns_not_found(self, client: TestClient) -> None:
         body = json.dumps({
             "name": "lookup_caller",
@@ -246,6 +276,49 @@ class TestBookServiceEndpoint:
         assert data["booking_id"] == "cal-001"
         assert mock_book_service.await_args.kwargs["zip_code"] == "78701"
 
+    def test_uses_query_tenant_and_caller_id_when_metadata_missing(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "book_service",
+            "args": {
+                "customer_name": "Jane Doe",
+                "customer_phone": "auto",
+                "service_address": "123 Oak St, Austin TX 78701",
+                "zip_code": "78701",
+                "preferred_time": "2026-06-02T15:00:00-04:00",
+                "issue_description": "AC not cooling",
+                "urgency_tier": "urgent",
+            },
+            "call": {
+                "call_id": "ret-no-inbound-030",
+                "from_number": "+12487391087",
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with (
+            patch("voice.router._resolve_config") as mock_resolve_config,
+            patch("voice.router._resolve_calcom_config") as mock_resolve_calcom_config,
+            patch("voice.router.book_service", new_callable=AsyncMock, return_value={
+                "success": True,
+                "booking_confirmed": True,
+                "booking_id": "cal-002",
+            }) as mock_book_service,
+        ):
+            response = client.post(
+                "/webhook/retell/book_service?tenant_id=tenant-test",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.json()["booking_id"] == "cal-002"
+        mock_resolve_config.assert_called_once_with("tenant-test")
+        mock_resolve_calcom_config.assert_called_once_with("tenant-test")
+        assert mock_book_service.await_args.kwargs["customer_phone"] == "+12487391087"
+
 
 class TestFallbackAndServiceAreaEndpoints:
     def test_route_call_fallback_returns_policy_decision(self, client: TestClient) -> None:
@@ -342,6 +415,31 @@ class TestFallbackAndServiceAreaEndpoints:
             )
 
         assert response.status_code == 200
+        assert response.json() == {"in_service_area": True, "zip_code": "78701"}
+
+    def test_validate_service_area_uses_query_tenant_without_metadata(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "validate_service_area",
+            "args": {"service_address": "123 Oak St, Austin TX 78701"},
+            "call": {
+                "call_id": "ret-no-inbound-041",
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.router._resolve_config") as mock_resolve:
+            mock_resolve.return_value.service_area_zips = ["78701", "78702"]
+            response = client.post(
+                "/webhook/retell/validate_service_area?tenant_id=tenant-test",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        mock_resolve.assert_called_once_with("tenant-test")
         assert response.json() == {"in_service_area": True, "zip_code": "78701"}
 
     def test_validate_service_area_accepts_direct_zip_code(self, client: TestClient) -> None:
