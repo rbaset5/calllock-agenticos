@@ -31,6 +31,7 @@ from voice.production.safety_monitor import evaluate_call_safety
 logger = logging.getLogger(__name__)
 
 post_call_router = APIRouter(tags=["voice-post-call"])
+_IGNORED_RETELL_EVENTS = {"call_started", "call_analyzed"}
 _PHONE_TO_TENANT = {
     "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
     "+13126463826": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
@@ -509,14 +510,32 @@ async def handle_call_ended(
             },
         )
 
+    retell_call_id = payload.call_id
+    raw_payload = payload.model_dump(by_alias=True)
+
+    if payload.event in _IGNORED_RETELL_EVENTS:
+        tenant_id = _resolve_tenant_id(raw_payload) or _PHONE_TO_TENANT.get(payload.to_number or "")
+        if tenant_id:
+            _safe_record_event(
+                tenant_id=tenant_id,
+                call_id=retell_call_id,
+                retell_call_id=retell_call_id,
+                event_type=payload.event,
+                payload=raw_payload,
+            )
+        return JSONResponse(
+            content={
+                "status": "ignored",
+                "event": payload.event,
+            }
+        )
+
     if payload.event and payload.event != "call_ended":
         return JSONResponse(
             status_code=400,
             content={"error": f"Unexpected event type: {payload.event}"},
         )
 
-    retell_call_id = payload.call_id
-    raw_payload = payload.model_dump(by_alias=True)
     tenant_id = _resolve_tenant_id(raw_payload)
 
     if not tenant_id:

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from db.local_repository import reset_local_state
+from db.local_repository import _state, reset_local_state
 
 
 @pytest.fixture(autouse=True)
@@ -130,6 +130,34 @@ class TestCallEndedHappyPath:
             )
 
         assert response.status_code == 200
+
+
+class TestCallLifecycleEvents:
+    @pytest.mark.parametrize("event", ["call_started", "call_analyzed"])
+    def test_non_call_ended_events_return_200_without_pipeline(
+        self,
+        client: TestClient,
+        event: str,
+    ) -> None:
+        payload = _call_ended_payload(call_id=f"ret-{event}")
+        payload["event"] = event
+        body = json.dumps(payload).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.post_call_router.BackgroundTasks.add_task") as mock_add_task:
+            response = client.post(
+                "/webhook/retell/call-ended",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ignored", "event": event}
+        mock_add_task.assert_not_called()
+        assert _state()["call_records"] == []
 
 
 class TestCallEndedDuplicate:
