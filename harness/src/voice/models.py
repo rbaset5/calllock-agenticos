@@ -116,6 +116,8 @@ class RetellToolCallRequest(LooseModel):
 
     call_id: str
     tool_name: str | None = None
+    name: str | None = None
+    call: dict[str, Any] | None = None
     args: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
     from_number: str | None = None
