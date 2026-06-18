@@ -24,7 +24,7 @@ from voice.models import RetellToolCallRequest
 from voice.production.evidence import record_event, record_tool_call
 from voice.tools.book_service import book_service
 from voice.tools.create_callback import create_callback
-from voice.tools.lookup_caller import lookup_caller
+from voice.tools.lookup_caller import empty_lookup_response, lookup_caller
 from voice.tools.sales_lead_alert import send_sales_lead_alert
 
 logger = logging.getLogger(__name__)
@@ -290,7 +290,7 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
     phone = _resolve_caller_phone(payload, "phone_number", "phone")
 
     if not phone:
-        result = {"found": False, "message": "No caller ID available."}
+        result = empty_lookup_response(lookup_status="no_caller_id", message="No caller ID available.")
         _safe_record_tool_call(
             tenant_id=tenant_id,
             call_id=call_id,
@@ -312,7 +312,7 @@ async def handle_lookup_caller(request: Request) -> JSONResponse:
 
     if not tenant_id:
         logger.error("voice.lookup_caller.no_tenant_id")
-        result = {"found": False, "message": "Configuration error."}
+        result = empty_lookup_response(lookup_status="configuration_error", message="Configuration error.")
         _safe_record_tool_call(
             tenant_id=tenant_id,
             call_id=call_id,

@@ -11,6 +11,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from db.local_repository import _state
+
+
+_EMPTY_LOOKUP_RESPONSE = {
+    "found": False,
+    "jobs": [],
+    "calls": [],
+    "bookings": [],
+    "known_caller": None,
+    "customerName": "",
+    "zipCode": "",
+    "lookupStatus": "not_found",
+}
+
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
@@ -42,7 +56,7 @@ class TestLookupCallerEndpoint:
         }).encode()
         sig = _sign_body(body)
 
-        with patch("voice.router.lookup_caller", return_value={"found": False, "jobs": [], "calls": [], "bookings": []}):
+        with patch("voice.router.lookup_caller", return_value=_EMPTY_LOOKUP_RESPONSE):
             response = client.post(
                 "/webhook/retell/lookup_caller",
                 content=body,
@@ -55,6 +69,10 @@ class TestLookupCallerEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "found" in data
+        assert data["known_caller"] is None
+        assert data["customerName"] == ""
+        assert data["zipCode"] == ""
+        assert data["lookupStatus"] == "not_found"
 
     def test_uses_call_fields_when_metadata_missing(self, client: TestClient) -> None:
         body = json.dumps({
@@ -70,7 +88,7 @@ class TestLookupCallerEndpoint:
 
         with patch(
             "voice.router.lookup_caller",
-            return_value={"found": False, "jobs": [], "calls": [], "bookings": []},
+            return_value=_EMPTY_LOOKUP_RESPONSE,
         ) as mock_lookup:
             response = client.post(
                 "/webhook/retell/lookup_caller",
@@ -85,6 +103,47 @@ class TestLookupCallerEndpoint:
         mock_lookup.assert_called_once()
         assert mock_lookup.call_args.kwargs["phone_number"] == "+12487391087"
         assert mock_lookup.call_args.kwargs["tenant_id"] == "e51d9ae7-9cde-4dca-a49c-4744c39240bc"
+
+    def test_known_caller_response_is_recorded_in_tool_evidence(self, client: TestClient) -> None:
+        result = {
+            "found": True,
+            "jobs": [],
+            "calls": [{"call_id": "call-1", "extracted_fields": {"customer_name": "John Smith"}}],
+            "bookings": [],
+            "known_caller": {
+                "first_name": "John",
+                "full_name": "John Smith",
+                "confidence": "high",
+                "source": "call_records",
+                "last_seen_at": None,
+            },
+            "customerName": "John",
+            "zipCode": "",
+            "lookupStatus": "found",
+        }
+        body = json.dumps({
+            "name": "lookup_caller",
+            "args": {"phone_number": "+15125550101"},
+            "call": {
+                "call_id": "ret-known-001",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch("voice.router.lookup_caller", return_value=result):
+            response = client.post(
+                "/webhook/retell/lookup_caller",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.json()["customerName"] == "John"
+        assert _state()["voice_tool_calls"][0]["response_payload"]["known_caller"]["first_name"] == "John"
 
     def test_missing_phone_returns_not_found(self, client: TestClient) -> None:
         body = json.dumps({
@@ -107,7 +166,68 @@ class TestLookupCallerEndpoint:
         )
 
         assert response.status_code == 200
-        assert response.json()["found"] is False
+        data = response.json()
+        assert data["found"] is False
+        assert data["known_caller"] is None
+        assert data["customerName"] == ""
+        assert data["zipCode"] == ""
+        assert data["lookupStatus"] == "no_caller_id"
+
+    def test_missing_tenant_returns_stable_configuration_error(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "lookup_caller",
+            "args": {"phone_number": "+15125550101"},
+            "call": {
+                "call_id": "ret-no-tenant-001",
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        response = client.post(
+            "/webhook/retell/lookup_caller",
+            content=body,
+            headers={
+                "x-retell-signature": sig,
+                "content-type": "application/json",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["found"] is False
+        assert data["known_caller"] is None
+        assert data["customerName"] == ""
+        assert data["zipCode"] == ""
+        assert data["lookupStatus"] == "configuration_error"
+
+    def test_repository_error_degrades_with_observable_lookup_status(self, client: TestClient) -> None:
+        body = json.dumps({
+            "name": "lookup_caller",
+            "args": {"phone_number": "+15125550101"},
+            "call": {
+                "call_id": "ret-db-error-001",
+                "metadata": {"tenant_id": "tenant-test"},
+            },
+        }).encode()
+        sig = _sign_body(body)
+
+        with patch("db.repository.get_caller_history", side_effect=TimeoutError("DB timeout")):
+            response = client.post(
+                "/webhook/retell/lookup_caller",
+                content=body,
+                headers={
+                    "x-retell-signature": sig,
+                    "content-type": "application/json",
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["found"] is False
+        assert data["known_caller"] is None
+        assert data["customerName"] == ""
+        assert data["lookupStatus"] == "error"
+        assert _state()["voice_tool_calls"][0]["response_payload"]["lookupStatus"] == "error"
 
     def test_invalid_hmac_returns_401(self, client: TestClient) -> None:
         body = json.dumps({
