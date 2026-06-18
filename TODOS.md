@@ -4,6 +4,17 @@ Stage 0 contract-lock and follow-through items after the authority restore (2026
 
 Items marked `Status: Contract locked in docs` now have an implementation-safe spec shape in the authoritative docs. They remain here until code, tests, and operational rollout satisfy that contract.
 
+## QA Deferred Bugs
+
+### Serve a favicon or suppress favicon 404 noise on the local harness
+**Severity:** Low
+**Category:** Console
+**Status:** Deferred by `/qa` on `codex/retell-production-layer`, 2026-06-18.
+**What:** Browser loads of `http://localhost:8000/health` request `/favicon.ico`, which currently returns `404`.
+**Why:** This is cosmetic browser console noise. It does not affect Retell webhook behavior, Swagger docs, or caller-name memory, so Standard-tier QA deferred it.
+**Repro:** Start the harness locally, open `/health` in a browser, and check console errors.
+**Source:** `.gstack/qa-reports/qa-report-localhost-2026-06-18.md`, ISSUE-001.
+
 ## P1 — Stage 0 Contract Lock Before Stage 2-4
 
 ### Extract HVAC logic from V2 backend into industry pack format

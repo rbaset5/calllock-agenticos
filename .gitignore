@@ -18,3 +18,5 @@ coverage.xml
 .context/
 supabase/.branches/
 .next/
+.gstack/
+.playwright-mcp/
