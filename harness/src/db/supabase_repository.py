@@ -1344,16 +1344,6 @@ def update_call_record_extraction(
 
 
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
-    jobs = _request(
-        "GET",
-        "jobs",
-        params={
-            "tenant_id": f"eq.{tenant_id}",
-            "customer_phone": f"eq.{phone}",
-            "order": "created_at.desc",
-            "limit": "10",
-        },
-    ) or []
     calls = _request(
         "GET",
         "call_records",
@@ -1364,16 +1354,29 @@ def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
             "limit": "5",
         },
     ) or []
-    bookings = _request(
-        "GET",
-        "bookings",
-        params={
-            "tenant_id": f"eq.{tenant_id}",
-            "customer_phone": f"eq.{phone}",
-            "order": "created_at.desc",
-            "limit": "5",
-        },
-    ) or []
+
+    def _optional_history_rows(table: str, *, limit: str) -> list[dict[str, Any]]:
+        try:
+            return _request(
+                "GET",
+                table,
+                params={
+                    "tenant_id": f"eq.{tenant_id}",
+                    "customer_phone": f"eq.{phone}",
+                    "order": "created_at.desc",
+                    "limit": limit,
+                },
+            ) or []
+        except Exception:
+            logger.warning(
+                "caller_history.optional_source_failed",
+                extra={"table": table, "tenant_id": tenant_id},
+                exc_info=True,
+            )
+            return []
+
+    jobs = _optional_history_rows("jobs", limit="10")
+    bookings = _optional_history_rows("bookings", limit="5")
     return {"jobs": jobs, "calls": calls, "bookings": bookings}
 
 
