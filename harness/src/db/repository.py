@@ -496,6 +496,117 @@ def claim_scheduler_backlog_entries(
     )
 
 
+def upsert_ring_out_prospect(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_ring_out_prospect(payload)
+    return local_repository.upsert_ring_out_prospect(payload)
+
+
+def list_ring_out_prospects(
+    *,
+    tenant_id: str | None = None,
+    source_batch: str | None = None,
+    prospect_id: str | None = None,
+) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_ring_out_prospects(
+            tenant_id=tenant_id,
+            source_batch=source_batch,
+            prospect_id=prospect_id,
+        )
+    return local_repository.list_ring_out_prospects(
+        tenant_id=tenant_id,
+        source_batch=source_batch,
+        prospect_id=prospect_id,
+    )
+
+
+def update_ring_out_prospect(prospect_id: str, updates: dict[str, Any], *, tenant_id: str | None = None) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_ring_out_prospect(prospect_id, updates, tenant_id=tenant_id)
+    return local_repository.update_ring_out_prospect(prospect_id, updates, tenant_id=tenant_id)
+
+
+def upsert_ring_out_attempt(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_ring_out_attempt(payload)
+    return local_repository.upsert_ring_out_attempt(payload)
+
+
+def list_ring_out_attempts(
+    prospect_id: str | None = None,
+    *,
+    tenant_id: str | None = None,
+    status: str | None = None,
+    call_sid: str | None = None,
+) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_ring_out_attempts(
+            prospect_id=prospect_id,
+            tenant_id=tenant_id,
+            status=status,
+            call_sid=call_sid,
+        )
+    return local_repository.list_ring_out_attempts(
+        prospect_id=prospect_id,
+        tenant_id=tenant_id,
+        status=status,
+        call_sid=call_sid,
+    )
+
+
+def get_ring_out_attempt(attempt_id: str) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.get_ring_out_attempt(attempt_id)
+    return local_repository.get_ring_out_attempt(attempt_id)
+
+
+def update_ring_out_attempt(attempt_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.update_ring_out_attempt(attempt_id, updates)
+    return local_repository.update_ring_out_attempt(attempt_id, updates)
+
+
+def create_ring_out_outcome(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.create_ring_out_outcome(payload)
+    return local_repository.create_ring_out_outcome(payload)
+
+
+def list_ring_out_outcomes(
+    *,
+    prospect_id: str | None = None,
+    attempt_id: str | None = None,
+    call_sid: str | None = None,
+    tenant_id: str | None = None,
+) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_ring_out_outcomes(
+            prospect_id=prospect_id,
+            attempt_id=attempt_id,
+            call_sid=call_sid,
+            tenant_id=tenant_id,
+        )
+    return local_repository.list_ring_out_outcomes(
+        prospect_id=prospect_id,
+        attempt_id=attempt_id,
+        call_sid=call_sid,
+        tenant_id=tenant_id,
+    )
+
+
+def upsert_ring_out_caller_health(payload: dict[str, Any]) -> dict[str, Any]:
+    if using_supabase():
+        return supabase_repository.upsert_ring_out_caller_health(payload)
+    return local_repository.upsert_ring_out_caller_health(payload)
+
+
+def list_ring_out_caller_health(*, caller_number: str | None = None) -> list[dict[str, Any]]:
+    if using_supabase():
+        return supabase_repository.list_ring_out_caller_health(caller_number=caller_number)
+    return local_repository.list_ring_out_caller_health(caller_number=caller_number)
+
+
 def insert_inbound_message(msg: dict[str, Any]) -> dict[str, Any]:
     if using_supabase():
         return supabase_repository.insert_inbound_message(msg)

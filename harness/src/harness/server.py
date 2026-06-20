@@ -254,10 +254,12 @@ if FastAPI:
     from voice.router import voice_router
     from voice.post_call_router import post_call_router
     from voice.booking_router import booking_router
+    from ring_out_audit.router import router as ring_out_audit_router
 
     app.include_router(voice_router, prefix="/webhook/retell")
     app.include_router(post_call_router, prefix="/webhook/retell")
     app.include_router(booking_router, prefix="/api/bookings")
+    app.include_router(ring_out_audit_router)
 
     @app.get("/health")
     def health() -> dict[str, Any]:
