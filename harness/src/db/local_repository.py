@@ -71,6 +71,10 @@ def _initial_state() -> dict[str, Any]:
     seed.setdefault("voice_config_snapshots", [])
     seed.setdefault("voice_safety_findings", [])
     seed.setdefault("voice_call_debug_packets", [])
+    seed.setdefault("ring_out_audit_prospects", [])
+    seed.setdefault("ring_out_audit_attempts", [])
+    seed.setdefault("ring_out_audit_outcomes", [])
+    seed.setdefault("ring_out_audit_caller_health", [])
     return seed
 
 
@@ -1082,6 +1086,163 @@ def claim_scheduler_backlog_entries(
         entry["updated_at"] = claimed_before_iso
         claimed.append(entry)
     return claimed
+
+
+def upsert_ring_out_prospect(payload: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    prospects = _state()["ring_out_audit_prospects"]
+    for prospect in prospects:
+        if (
+            prospect.get("tenant_id") == payload.get("tenant_id")
+            and prospect.get("prospect_id") == payload.get("prospect_id")
+            and prospect.get("source_batch") == payload.get("source_batch")
+        ):
+            prospect.update(deepcopy(payload))
+            prospect["updated_at"] = payload.get("updated_at", now)
+            return prospect
+    prospect = deepcopy(payload)
+    prospect.setdefault("id", str(uuid4()))
+    prospect.setdefault("status", "scheduled")
+    prospect.setdefault("attempt_count", 0)
+    prospect.setdefault("first_decisive_outcome", None)
+    prospect.setdefault("target_segment", None)
+    prospect.setdefault("priority_score", 0)
+    prospect.setdefault("sales_angle", "")
+    prospect.setdefault("created_at", now)
+    prospect.setdefault("updated_at", now)
+    prospects.append(prospect)
+    return prospect
+
+
+def list_ring_out_prospects(
+    *,
+    tenant_id: str | None = None,
+    source_batch: str | None = None,
+    prospect_id: str | None = None,
+) -> list[dict[str, Any]]:
+    prospects = list(_state()["ring_out_audit_prospects"])
+    if tenant_id is not None:
+        prospects = [record for record in prospects if record.get("tenant_id") == tenant_id]
+    if source_batch is not None:
+        prospects = [record for record in prospects if record.get("source_batch") == source_batch]
+    if prospect_id is not None:
+        prospects = [record for record in prospects if record.get("prospect_id") == prospect_id]
+    return sorted(prospects, key=lambda record: (record.get("source_batch", ""), record.get("prospect_id", "")))
+
+
+def update_ring_out_prospect(prospect_id: str, updates: dict[str, Any], *, tenant_id: str | None = None) -> dict[str, Any]:
+    for prospect in _state()["ring_out_audit_prospects"]:
+        if prospect.get("prospect_id") != prospect_id:
+            continue
+        if tenant_id is not None and prospect.get("tenant_id") != tenant_id:
+            continue
+        prospect.update(deepcopy(updates))
+        prospect["updated_at"] = updates.get("updated_at", datetime.now(timezone.utc).isoformat())
+        return prospect
+    raise KeyError(f"Unknown ring-out prospect: {prospect_id}")
+
+
+def upsert_ring_out_attempt(payload: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    attempts = _state()["ring_out_audit_attempts"]
+    for attempt in attempts:
+        if attempt.get("attempt_id") == payload.get("attempt_id"):
+            attempt.update(deepcopy(payload))
+            attempt["updated_at"] = payload.get("updated_at", now)
+            return attempt
+    attempt = deepcopy(payload)
+    attempt.setdefault("id", str(uuid4()))
+    attempt.setdefault("status", "pending")
+    attempt.setdefault("call_sid", None)
+    attempt.setdefault("outcome", None)
+    attempt.setdefault("created_at", now)
+    attempt.setdefault("updated_at", now)
+    attempts.append(attempt)
+    return attempt
+
+
+def list_ring_out_attempts(
+    prospect_id: str | None = None,
+    *,
+    tenant_id: str | None = None,
+    status: str | None = None,
+    call_sid: str | None = None,
+) -> list[dict[str, Any]]:
+    attempts = list(_state()["ring_out_audit_attempts"])
+    if prospect_id is not None:
+        attempts = [record for record in attempts if record.get("prospect_id") == prospect_id]
+    if tenant_id is not None:
+        attempts = [record for record in attempts if record.get("tenant_id") == tenant_id]
+    if status is not None:
+        attempts = [record for record in attempts if record.get("status") == status]
+    if call_sid is not None:
+        attempts = [record for record in attempts if record.get("call_sid") == call_sid]
+    return sorted(attempts, key=lambda record: (record.get("prospect_id", ""), int(record.get("attempt_number", 0))))
+
+
+def get_ring_out_attempt(attempt_id: str) -> dict[str, Any]:
+    for attempt in _state()["ring_out_audit_attempts"]:
+        if attempt.get("attempt_id") == attempt_id or attempt.get("id") == attempt_id:
+            return attempt
+    raise KeyError(f"Unknown ring-out attempt: {attempt_id}")
+
+
+def update_ring_out_attempt(attempt_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    for attempt in _state()["ring_out_audit_attempts"]:
+        if attempt.get("attempt_id") == attempt_id or attempt.get("id") == attempt_id:
+            attempt.update(deepcopy(updates))
+            attempt["updated_at"] = updates.get("updated_at", datetime.now(timezone.utc).isoformat())
+            return attempt
+    raise KeyError(f"Unknown ring-out attempt: {attempt_id}")
+
+
+def create_ring_out_outcome(payload: dict[str, Any]) -> dict[str, Any]:
+    outcome = deepcopy(payload)
+    outcome.setdefault("id", str(uuid4()))
+    outcome.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+    _state()["ring_out_audit_outcomes"].append(outcome)
+    return outcome
+
+
+def list_ring_out_outcomes(
+    *,
+    prospect_id: str | None = None,
+    attempt_id: str | None = None,
+    call_sid: str | None = None,
+    tenant_id: str | None = None,
+) -> list[dict[str, Any]]:
+    outcomes = list(_state()["ring_out_audit_outcomes"])
+    if prospect_id is not None:
+        outcomes = [record for record in outcomes if record.get("prospect_id") == prospect_id]
+    if attempt_id is not None:
+        outcomes = [record for record in outcomes if record.get("attempt_id") == attempt_id]
+    if call_sid is not None:
+        outcomes = [record for record in outcomes if record.get("call_sid") == call_sid]
+    if tenant_id is not None:
+        outcomes = [record for record in outcomes if record.get("tenant_id") == tenant_id]
+    return sorted(outcomes, key=lambda record: record.get("created_at", ""))
+
+
+def upsert_ring_out_caller_health(payload: dict[str, Any]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat()
+    for record in _state()["ring_out_audit_caller_health"]:
+        if record.get("caller_number") == payload.get("caller_number"):
+            record.update(deepcopy(payload))
+            record["updated_at"] = payload.get("updated_at", now)
+            return record
+    record = deepcopy(payload)
+    record.setdefault("id", str(uuid4()))
+    record.setdefault("created_at", now)
+    record.setdefault("updated_at", now)
+    _state()["ring_out_audit_caller_health"].append(record)
+    return record
+
+
+def list_ring_out_caller_health(*, caller_number: str | None = None) -> list[dict[str, Any]]:
+    records = list(_state()["ring_out_audit_caller_health"])
+    if caller_number is not None:
+        records = [record for record in records if record.get("caller_number") == caller_number]
+    return sorted(records, key=lambda record: record.get("caller_number", ""))
 
 
 def insert_inbound_message(msg: dict[str, Any]) -> dict[str, Any]:

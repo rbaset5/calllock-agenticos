@@ -824,6 +824,143 @@ def claim_scheduler_backlog_entries(
     return data or []
 
 
+def upsert_ring_out_prospect(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "ring_out_audit_prospects",
+        params={"on_conflict": "tenant_id,prospect_id,source_batch"},
+        json=payload,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else payload
+
+
+def list_ring_out_prospects(
+    *,
+    tenant_id: str | None = None,
+    source_batch: str | None = None,
+    prospect_id: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if tenant_id:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if source_batch:
+        params["source_batch"] = f"eq.{source_batch}"
+    if prospect_id:
+        params["prospect_id"] = f"eq.{prospect_id}"
+    return _request("GET", "ring_out_audit_prospects", params=params)
+
+
+def update_ring_out_prospect(prospect_id: str, updates: dict[str, Any], *, tenant_id: str | None = None) -> dict[str, Any]:
+    params = {"prospect_id": f"eq.{prospect_id}"}
+    if tenant_id:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    data = _request(
+        "PATCH",
+        "ring_out_audit_prospects",
+        params=params,
+        json=updates,
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown ring-out prospect: {prospect_id}")
+    return data[0]
+
+
+def upsert_ring_out_attempt(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "ring_out_audit_attempts",
+        params={"on_conflict": "attempt_id"},
+        json=payload,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else payload
+
+
+def list_ring_out_attempts(
+    prospect_id: str | None = None,
+    *,
+    tenant_id: str | None = None,
+    status: str | None = None,
+    call_sid: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if prospect_id:
+        params["prospect_id"] = f"eq.{prospect_id}"
+    if tenant_id:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if status:
+        params["status"] = f"eq.{status}"
+    if call_sid:
+        params["call_sid"] = f"eq.{call_sid}"
+    return _request("GET", "ring_out_audit_attempts", params=params)
+
+
+def get_ring_out_attempt(attempt_id: str) -> dict[str, Any]:
+    return _fetch_first("ring_out_audit_attempts", {"attempt_id": f"eq.{attempt_id}"})
+
+
+def update_ring_out_attempt(attempt_id: str, updates: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "PATCH",
+        "ring_out_audit_attempts",
+        params={"attempt_id": f"eq.{attempt_id}"},
+        json=updates,
+        prefer="return=representation",
+    )
+    if not data:
+        raise KeyError(f"Unknown ring-out attempt: {attempt_id}")
+    return data[0]
+
+
+def create_ring_out_outcome(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "ring_out_audit_outcomes",
+        json=payload,
+        prefer="return=representation",
+    )
+    return data[0] if data else payload
+
+
+def list_ring_out_outcomes(
+    *,
+    prospect_id: str | None = None,
+    attempt_id: str | None = None,
+    call_sid: str | None = None,
+    tenant_id: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if prospect_id:
+        params["prospect_id"] = f"eq.{prospect_id}"
+    if attempt_id:
+        params["attempt_id"] = f"eq.{attempt_id}"
+    if call_sid:
+        params["call_sid"] = f"eq.{call_sid}"
+    if tenant_id:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    return _request("GET", "ring_out_audit_outcomes", params=params)
+
+
+def upsert_ring_out_caller_health(payload: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "ring_out_audit_caller_health",
+        params={"on_conflict": "caller_number"},
+        json=payload,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else payload
+
+
+def list_ring_out_caller_health(*, caller_number: str | None = None) -> list[dict[str, Any]]:
+    params: dict[str, str] = {}
+    if caller_number:
+        params["caller_number"] = f"eq.{caller_number}"
+    return _request("GET", "ring_out_audit_caller_health", params=params)
+
+
 def insert_inbound_message(msg: dict[str, Any]) -> dict[str, Any]:
     data = _request(
         "POST",
