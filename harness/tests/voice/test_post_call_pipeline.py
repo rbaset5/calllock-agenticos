@@ -141,6 +141,17 @@ class TestPipelineIntegrationHappyPath:
         assert event_obj.tenant_id == "tenant-ace-001"
         assert event_obj.extraction_status == "complete"
 
+        event_types = [row["event_type"] for row in _state()["voice_call_events"]]
+        assert event_types == [
+            "call_ended",
+            "extraction_completed",
+            "supervisor_completed",
+            "safety_monitor_completed",
+            "debug_packet_built",
+        ]
+        assert _state()["voice_config_snapshots"][0]["call_id"] == "ret-integration-001"
+        assert _state()["voice_call_debug_packets"][0]["failure_bucket"] == "clean"
+
     def test_full_pipeline_uses_phone_tenant_fallback_when_metadata_missing(self, client: TestClient) -> None:
         captured_payloads: list[dict[str, Any]] = []
 
@@ -189,6 +200,8 @@ class TestPipelinePartialExtraction:
 
         records = _state()["call_records"]
         assert len(records) == 1
+        assert [row["event_type"] for row in _state()["voice_call_events"]].count("call_ended") == 1
+        assert len(_state()["voice_config_snapshots"]) == 1
         assert records[0]["extraction_status"] == "partial"
 
         assert len(captured_payloads) == 1

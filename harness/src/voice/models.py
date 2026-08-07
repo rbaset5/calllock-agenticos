@@ -116,8 +116,12 @@ class RetellToolCallRequest(LooseModel):
 
     call_id: str
     tool_name: str | None = None
+    name: str | None = None
+    call: dict[str, Any] | None = None
     args: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    from_number: str | None = None
+    to_number: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -130,6 +134,10 @@ class RetellToolCallRequest(LooseModel):
         if isinstance(call, dict):
             if "call_id" not in normalized and call.get("call_id"):
                 normalized["call_id"] = call["call_id"]
+            if "from_number" not in normalized and call.get("from_number"):
+                normalized["from_number"] = call["from_number"]
+            if "to_number" not in normalized and call.get("to_number"):
+                normalized["to_number"] = call["to_number"]
             if ("metadata" not in normalized or not isinstance(normalized.get("metadata"), dict)) and isinstance(
                 call.get("metadata"), dict
             ):

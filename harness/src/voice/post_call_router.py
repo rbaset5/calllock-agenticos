@@ -23,10 +23,15 @@ from pydantic import ValidationError
 from voice.auth import HMACVerificationError, verify_retell_hmac
 from voice.extraction.pipeline import run_extraction
 from voice.models import RetellCallEndedPayload
+from voice.production.config_snapshot import record_retell_config_snapshot
+from voice.production.debug_packet import build_debug_packet
+from voice.production.evidence import record_event
+from voice.production.safety_monitor import evaluate_call_safety
 
 logger = logging.getLogger(__name__)
 
 post_call_router = APIRouter(tags=["voice-post-call"])
+_IGNORED_RETELL_EVENTS = {"call_started", "call_analyzed"}
 _PHONE_TO_TENANT = {
     "+13126463816": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
     "+13126463826": "e51d9ae7-9cde-4dca-a49c-4744c39240bc",
@@ -103,6 +108,121 @@ def _resolve_tenant_id(raw_payload: dict[str, Any]) -> str:
     if tenant_id:
         return tenant_id
     return _PHONE_TO_TENANT.get(str(raw_payload.get("to_number") or ""), "")
+
+
+def _safe_record_event(
+    *,
+    tenant_id: str | None,
+    call_id: str,
+    retell_call_id: str,
+    event_type: str,
+    payload: dict[str, Any],
+) -> None:
+    try:
+        record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=retell_call_id,
+            event_type=event_type,
+            payload=payload,
+        )
+    except Exception:
+        logger.warning(
+            "post_call.evidence_event_failed",
+            extra={"call_id": call_id, "event_type": event_type},
+            exc_info=True,
+        )
+
+
+def _safe_record_config_snapshot(*, tenant_id: str, call_id: str) -> None:
+    try:
+        record_retell_config_snapshot(call_id=call_id, tenant_id=tenant_id)
+    except Exception:
+        logger.warning(
+            "post_call.config_snapshot_failed",
+            extra={"call_id": call_id, "tenant_id": tenant_id},
+            exc_info=True,
+        )
+
+
+def _safe_build_debug_packet(
+    *,
+    tenant_id: str,
+    call_id: str,
+    call_record: dict[str, Any],
+) -> None:
+    from db import repository as db_repo
+
+    try:
+        events = db_repo.list_voice_call_events(tenant_id, call_id)
+        tool_calls = db_repo.list_voice_tool_calls(tenant_id, call_id)
+        config_snapshot = db_repo.get_voice_config_snapshot(tenant_id, call_id)
+        safety_findings = db_repo.list_voice_safety_findings(tenant_id, call_id)
+        packet = build_debug_packet(
+            call_record=call_record,
+            events=events,
+            tool_calls=tool_calls,
+            config_snapshot=config_snapshot,
+            safety_findings=safety_findings,
+        )
+        db_repo.upsert_voice_call_debug_packet(
+            {
+                "tenant_id": tenant_id,
+                "call_id": call_id,
+                "packet": packet,
+                "failure_bucket": packet["failure_bucket"],
+            }
+        )
+        _safe_record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            event_type="debug_packet_built",
+            payload={"failure_bucket": packet["failure_bucket"]},
+        )
+    except Exception:
+        logger.warning(
+            "post_call.debug_packet_failed",
+            extra={"call_id": call_id, "tenant_id": tenant_id},
+            exc_info=True,
+        )
+
+
+def _safe_run_safety_monitor(
+    *,
+    tenant_id: str,
+    call_id: str,
+    call_record: dict[str, Any],
+) -> list[dict[str, Any]]:
+    from db import repository as db_repo
+
+    try:
+        events = db_repo.list_voice_call_events(tenant_id, call_id)
+        tool_calls = db_repo.list_voice_tool_calls(tenant_id, call_id)
+        findings = evaluate_call_safety(
+            call_record=call_record,
+            tool_calls=tool_calls,
+            events=events,
+        )
+        stored_findings = db_repo.record_voice_safety_findings(findings)
+        _safe_record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            event_type="safety_monitor_completed",
+            payload={
+                "finding_count": len(stored_findings),
+                "finding_types": [finding.get("finding_type") for finding in stored_findings],
+            },
+        )
+        return stored_findings
+    except Exception:
+        logger.warning(
+            "post_call.safety_monitor_failed",
+            extra={"call_id": call_id, "tenant_id": tenant_id},
+            exc_info=True,
+        )
+        return []
 
 
 def _run_voice_supervisor(payload: dict[str, Any]) -> dict[str, Any]:
@@ -235,6 +355,7 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
     duration_seconds = int(raw_payload.get("duration_ms") or 0) // 1000
     end_call_reason = extraction.get("end_call_reason") or "agent_hangup"
     final_extraction = dict(extraction)
+    supervisor_event_payload: dict[str, Any] = {"status": "not_started"}
 
     supervisor_payload = _build_supervisor_payload(
         raw_payload=raw_payload,
@@ -249,6 +370,10 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
     try:
         supervisor_result = _run_voice_supervisor(supervisor_payload)
         guardian_gate = supervisor_result.get("guardian_gate", {})
+        supervisor_event_payload = {
+            "status": "success",
+            "guardian_gate": guardian_gate,
+        }
         if guardian_gate.get("quarantine"):
             final_extraction = _merge_quarantine_fields(
                 extraction,
@@ -272,9 +397,13 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
         )
         final_extraction["supervisor_status"] = "failed"
         final_extraction["supervisor_error"] = "supervisor_failed"
+        supervisor_event_payload = {
+            "status": "failed",
+            "gate_failures": ["supervisor_failed"],
+        }
 
     try:
-        db_repo.update_call_record_extraction(
+        call_record = db_repo.update_call_record_extraction(
             tenant_id=tenant_id,
             call_id=call_id,
             extracted_fields=final_extraction,
@@ -283,6 +412,33 @@ async def _process_call_ended(raw_payload: dict[str, Any]) -> None:
             callback_scheduled=callback_scheduled,
             call_duration_seconds=duration_seconds,
             call_recording_url=raw_payload.get("recording_url"),
+        )
+        _safe_record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            event_type="extraction_completed",
+            payload={
+                "extraction_status": final_extraction.get("extraction_status", "complete"),
+                "extracted_fields": final_extraction,
+            },
+        )
+        _safe_record_event(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            retell_call_id=call_id,
+            event_type="supervisor_completed",
+            payload=supervisor_event_payload,
+        )
+        _safe_run_safety_monitor(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            call_record=call_record,
+        )
+        _safe_build_debug_packet(
+            tenant_id=tenant_id,
+            call_id=call_id,
+            call_record=call_record,
         )
     except Exception:
         logger.error(
@@ -354,14 +510,32 @@ async def handle_call_ended(
             },
         )
 
+    retell_call_id = payload.call_id
+    raw_payload = payload.model_dump(by_alias=True)
+
+    if payload.event in _IGNORED_RETELL_EVENTS:
+        tenant_id = _resolve_tenant_id(raw_payload) or _PHONE_TO_TENANT.get(payload.to_number or "")
+        if tenant_id:
+            _safe_record_event(
+                tenant_id=tenant_id,
+                call_id=retell_call_id,
+                retell_call_id=retell_call_id,
+                event_type=payload.event,
+                payload=raw_payload,
+            )
+        return JSONResponse(
+            content={
+                "status": "ignored",
+                "event": payload.event,
+            }
+        )
+
     if payload.event and payload.event != "call_ended":
         return JSONResponse(
             status_code=400,
             content={"error": f"Unexpected event type: {payload.event}"},
         )
 
-    retell_call_id = payload.call_id
-    raw_payload = payload.model_dump(by_alias=True)
     tenant_id = _resolve_tenant_id(raw_payload)
 
     if not tenant_id:
@@ -422,6 +596,15 @@ async def handle_call_ended(
         return JSONResponse(
             content={"status": "duplicate", "retell_call_id": retell_call_id}
         )
+
+    _safe_record_event(
+        tenant_id=tenant_id,
+        call_id=call_id,
+        retell_call_id=retell_call_id,
+        event_type="call_ended",
+        payload=raw_payload,
+    )
+    _safe_record_config_snapshot(tenant_id=tenant_id, call_id=call_id)
 
     background_tasks.add_task(_process_call_ended, raw_payload)
 

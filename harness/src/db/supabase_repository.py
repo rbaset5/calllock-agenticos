@@ -1291,6 +1291,19 @@ def insert_call_record(
     return data[0]
 
 
+def list_voice_call_records(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "call_records", params=params) or []
+
+
 def update_call_record_extraction(
     tenant_id: str,
     call_id: str,
@@ -1331,16 +1344,6 @@ def update_call_record_extraction(
 
 
 def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
-    jobs = _request(
-        "GET",
-        "jobs",
-        params={
-            "tenant_id": f"eq.{tenant_id}",
-            "customer_phone": f"eq.{phone}",
-            "order": "created_at.desc",
-            "limit": "10",
-        },
-    ) or []
     calls = _request(
         "GET",
         "call_records",
@@ -1351,16 +1354,29 @@ def get_caller_history(tenant_id: str, phone: str) -> dict[str, Any]:
             "limit": "5",
         },
     ) or []
-    bookings = _request(
-        "GET",
-        "bookings",
-        params={
-            "tenant_id": f"eq.{tenant_id}",
-            "customer_phone": f"eq.{phone}",
-            "order": "created_at.desc",
-            "limit": "5",
-        },
-    ) or []
+
+    def _optional_history_rows(table: str, *, limit: str) -> list[dict[str, Any]]:
+        try:
+            return _request(
+                "GET",
+                table,
+                params={
+                    "tenant_id": f"eq.{tenant_id}",
+                    "customer_phone": f"eq.{phone}",
+                    "order": "created_at.desc",
+                    "limit": limit,
+                },
+            ) or []
+        except Exception:
+            logger.warning(
+                "caller_history.optional_source_failed",
+                extra={"table": table, "tenant_id": tenant_id},
+                exc_info=True,
+            )
+            return []
+
+    jobs = _optional_history_rows("jobs", limit="10")
+    bookings = _optional_history_rows("bookings", limit="5")
     return {"jobs": jobs, "calls": calls, "bookings": bookings}
 
 
@@ -1382,3 +1398,162 @@ def get_voice_api_keys() -> list[dict[str, Any]]:
         "voice_api_keys",
         params={"revoked_at": "is.null"},
     ) or []
+
+
+def record_voice_call_event(event: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_call_events",
+        json=event,
+        prefer="return=representation",
+    )
+    return data[0] if data else event
+
+
+def list_voice_call_events(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "voice_call_events",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "order": "created_at.asc",
+        },
+    ) or []
+
+
+def record_voice_tool_call(tool_call: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_tool_calls",
+        json=tool_call,
+        prefer="return=representation",
+    )
+    return data[0] if data else tool_call
+
+
+def list_voice_tool_calls(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "voice_tool_calls",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "order": "created_at.asc",
+        },
+    ) or []
+
+
+def list_voice_tool_calls_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "voice_tool_calls", params=params) or []
+
+
+def record_voice_config_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_config_snapshots",
+        params={"on_conflict": "tenant_id,call_id"},
+        json=snapshot,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else snapshot
+
+
+def get_voice_config_snapshot(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    data = _request(
+        "GET",
+        "voice_config_snapshots",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "limit": "1",
+        },
+    )
+    if not data:
+        return None
+    return data[0]
+
+
+def list_voice_config_snapshots_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "voice_config_snapshots", params=params) or []
+
+
+def record_voice_safety_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not findings:
+        return []
+    data = _request(
+        "POST",
+        "voice_safety_findings",
+        json=findings,
+        prefer="return=representation",
+    )
+    return data or findings
+
+
+def list_voice_safety_findings(tenant_id: str, call_id: str) -> list[dict[str, Any]]:
+    return _request(
+        "GET",
+        "voice_safety_findings",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "order": "created_at.asc",
+        },
+    ) or []
+
+
+def list_voice_safety_findings_for_period(
+    *,
+    tenant_id: str | None = None,
+    created_since: str | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, str] = {"order": "created_at.asc"}
+    if tenant_id is not None:
+        params["tenant_id"] = f"eq.{tenant_id}"
+    if created_since is not None:
+        params["created_at"] = f"gte.{created_since}"
+    return _request("GET", "voice_safety_findings", params=params) or []
+
+
+def upsert_voice_call_debug_packet(packet: dict[str, Any]) -> dict[str, Any]:
+    data = _request(
+        "POST",
+        "voice_call_debug_packets",
+        params={"on_conflict": "tenant_id,call_id"},
+        json=packet,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    return data[0] if data else packet
+
+
+def get_voice_call_debug_packet(tenant_id: str, call_id: str) -> dict[str, Any] | None:
+    data = _request(
+        "GET",
+        "voice_call_debug_packets",
+        params={
+            "tenant_id": f"eq.{tenant_id}",
+            "call_id": f"eq.{call_id}",
+            "limit": "1",
+        },
+    )
+    if not data:
+        return None
+    return data[0]

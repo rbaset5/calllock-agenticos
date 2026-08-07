@@ -86,6 +86,20 @@ node scripts/validate-worker-specs.ts
 node scripts/validate-packs.ts
 ```
 
+### Voice production assurance
+
+Retell AI remains the real-time voice runtime. The Python harness owns the post-call production assurance layer around it: Retell evidence capture, config snapshots, deterministic safety findings, operator debug packets, expanded voice evals, and a weekly JSON production report.
+
+```bash
+pytest harness/tests/voice -q
+pytest scripts/tests/test_run_voice_eval.py -q
+python scripts/run-voice-eval.py
+python scripts/run-voice-production-report.py --days 7
+python scripts/run-voice-production-report.py --tenant-id <tenant_uuid> --days 7
+```
+
+`scripts/run-voice-eval.py` requires at least 50 golden-set calls and now checks safety expectations when `expected_safety_findings` is present in `knowledge/voice-pipeline/eval/golden-set.yaml`. `scripts/run-voice-production-report.py` reports call volume, booked calls, callback calls, safety findings, tool failures and latency, extraction drift, unresolved findings, the top recommended fix, and a conservative Retell migration gate.
+
 ### Local extraction
 
 ```bash
